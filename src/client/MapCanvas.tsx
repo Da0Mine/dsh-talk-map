@@ -150,8 +150,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // gesture commits.
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
   const [liveFrame, setLiveFrame] = useState<{ groupId: string; rect: FrameGeometry } | null>(null)
-  const liveFrameRef = useRef<{ groupId: string; rect: FrameGeometry } | null>(null)
-  liveFrameRef.current = liveFrame
   // While a rubber-band drag is running, the node/edge arrays are frozen:
   // a mid-drag data refresh (digest SSE, running-state flip) re-renders the
   // flow and corrupts React Flow's in-flight hit testing — the intermittent

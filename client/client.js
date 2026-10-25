@@ -11106,8 +11106,6 @@ function CanvasInner(props) {
   const wrapperRef = (0, import_react9.useRef)(null);
   const [draggingCardId, setDraggingCardId] = (0, import_react9.useState)(null);
   const [liveFrame, setLiveFrame] = (0, import_react9.useState)(null);
-  const liveFrameRef = (0, import_react9.useRef)(null);
-  liveFrameRef.current = liveFrame;
   const [isSelecting, setIsSelecting] = (0, import_react9.useState)(false);
   const frozenRef = (0, import_react9.useRef)(null);
   const locale = (0, import_react9.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
