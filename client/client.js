@@ -47,7 +47,7 @@ var require_use_sync_external_store_shim_production = __commonJS({
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
     var useState8 = React.useState;
-    var useEffect7 = React.useEffect;
+    var useEffect8 = React.useEffect;
     var useLayoutEffect2 = React.useLayoutEffect;
     var useDebugValue2 = React.useDebugValue;
     function useSyncExternalStore$2(subscribe2, getSnapshot2) {
@@ -60,7 +60,7 @@ var require_use_sync_external_store_shim_production = __commonJS({
         },
         [subscribe2, value, getSnapshot2]
       );
-      useEffect7(
+      useEffect8(
         function() {
           checkIfSnapshotChanged(inst) && forceUpdate({ inst });
           return subscribe2(function() {
@@ -113,12 +113,12 @@ var require_with_selector_production = __commonJS({
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
     var useSyncExternalStore5 = shim.useSyncExternalStore;
-    var useRef5 = React.useRef;
-    var useEffect7 = React.useEffect;
+    var useRef6 = React.useRef;
+    var useEffect8 = React.useEffect;
     var useMemo3 = React.useMemo;
     var useDebugValue2 = React.useDebugValue;
     exports.useSyncExternalStoreWithSelector = function(subscribe2, getSnapshot2, getServerSnapshot, selector, isEqual) {
-      var instRef = useRef5(null);
+      var instRef = useRef6(null);
       if (null === instRef.current) {
         var inst = { hasValue: false, value: null };
         instRef.current = inst;
@@ -158,7 +158,7 @@ var require_with_selector_production = __commonJS({
         [getSnapshot2, getServerSnapshot, selector, isEqual]
       );
       var value = useSyncExternalStore5(subscribe2, instRef[0], instRef[1]);
-      useEffect7(
+      useEffect8(
         function() {
           inst.hasValue = true;
           inst.value = value;
@@ -341,6 +341,10 @@ var zh = {
   "spawn.apiUnavailable": "界面服务还在初始化，稍等一下再试",
   "frame.unknown": "分组",
   "frame.hiddenTitle": "还有卡片被折叠在框外，放大分组框可见",
+  "stack.open": "展开这一堆对话",
+  "stack.total": "共 {n} 个对话",
+  "stack.hint": "滚轮上下切换",
+  "stack.close": "收起（Esc）",
   "menu.empty": "（没有可选项）",
   "menu.search": "搜索…",
   "menu.alreadyImported": "已在地图 · 点击同步新会话",
@@ -439,6 +443,10 @@ var en = {
   "spawn.apiUnavailable": "The UI services are still starting up — try again in a moment",
   "frame.unknown": "Group",
   "frame.hiddenTitle": "Some cards are folded outside the frame — enlarge it to see them",
+  "stack.open": "Open this stack of conversations",
+  "stack.total": "{n} conversations",
+  "stack.hint": "Scroll to page",
+  "stack.close": "Close (Esc)",
   "menu.empty": "(nothing to pick)",
   "menu.search": "Search…",
   "menu.alreadyImported": "on map · click to sync new sessions",
@@ -1076,10 +1084,10 @@ function forkSessionInUi(sessionId) {
 }
 
 // src/client/MapOverlay.tsx
-var import_react11 = require("react");
+var import_react12 = require("react");
 
 // src/client/MapCanvas.tsx
-var import_react9 = require("react");
+var import_react10 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
 var import_jsx_runtime = require("react/jsx-runtime");
@@ -10283,7 +10291,7 @@ var import_react3 = require("react");
 
 // dsh-css: dsh-css:src/client/talk-map.module.css
 var __tagId2 = "dsh-talk-map/talk-map.module.css";
-var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: calc(8px + var(--dsh-frame-overlay-top, var(--dsh-frame-top-clearance, 0px))) 14px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_hotkeyButton { flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_hotkeyButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-white 2.4s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.42), 0 0 16px 2px rgba(52, 199, 89, 0.30), 0 0 46px 14px rgba(52, 199, 89, 0.16); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-white { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.40), 0 0 14px 1px rgba(255, 255, 255, 0.26), 0 0 34px 8px rgba(255, 255, 255, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.80), 0 0 24px 5px rgba(255, 255, 255, 0.46), 0 0 62px 20px rgba(255, 255, 255, 0.24); } } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.55; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeCorner { right: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_wsFrameResize:hover { border-color: var(--dsw-alias-brand-primary); opacity: 1; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_draftCard { width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--dsw-alias-brand-primary); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); font-size: 13px; } .tm_draftHeading { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_draftRow { display: flex; align-items: center; gap: 8px; } .tm_draftLabel { flex: none; width: 52px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_modeSwitch { display: flex; flex: 1; min-width: 0; gap: 6px; } .tm_modeChip { flex: 1; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease; } .tm_modeChip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_modeChipActive { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 600; } .tm_draftSelect { flex: 1; min-width: 0; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; } .tm_draftGrow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .tm_draftInput { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_draftPathPreview { font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_draftTextarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 88px; padding: 9px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1); } .tm_colorToolbarLabel { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-right: 2px; } .tm_colorSwatch { width: 18px; height: 18px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-secondary); display: flex; align-items: center; justify-content: center; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { background: transparent; } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }";
+var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: calc(8px + var(--dsh-frame-overlay-top, var(--dsh-frame-top-clearance, 0px))) 14px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_hotkeyButton { flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_hotkeyButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-white 2.4s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.42), 0 0 16px 2px rgba(52, 199, 89, 0.30), 0 0 46px 14px rgba(52, 199, 89, 0.16); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-white { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.40), 0 0 14px 1px rgba(255, 255, 255, 0.26), 0 0 34px 8px rgba(255, 255, 255, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.80), 0 0 24px 5px rgba(255, 255, 255, 0.46), 0 0 62px 20px rgba(255, 255, 255, 0.24); } } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.55; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeCorner { right: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_wsFrameResize:hover { border-color: var(--dsw-alias-brand-primary); opacity: 1; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_draftCard { width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--dsw-alias-brand-primary); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); font-size: 13px; } .tm_draftHeading { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_draftRow { display: flex; align-items: center; gap: 8px; } .tm_draftLabel { flex: none; width: 52px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_modeSwitch { display: flex; flex: 1; min-width: 0; gap: 6px; } .tm_modeChip { flex: 1; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease; } .tm_modeChip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_modeChipActive { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 600; } .tm_draftSelect { flex: 1; min-width: 0; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; } .tm_draftGrow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .tm_draftInput { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_draftPathPreview { font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_draftTextarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 88px; padding: 9px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1); } .tm_colorToolbarLabel { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-right: 2px; } .tm_colorSwatch { width: 18px; height: 18px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-secondary); display: flex; align-items: center; justify-content: center; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { background: transparent; } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: 11px; font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(640px, 92%); max-height: 76%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 16px; line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px; } .tm_drawerCard { flex: none; width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); }";
 if (typeof document !== "undefined") {
   const __selector = "style[data-plugin-css=" + JSON.stringify(__tagId2) + "]";
   if (document.querySelector(__selector) === null) {
@@ -10294,7 +10302,7 @@ if (typeof document !== "undefined") {
     document.head.appendChild(__tag);
   }
 }
-var talk_map_default = { "backButton": "tm_backButton", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "draftCard": "tm_draftCard", "draftGrow": "tm_draftGrow", "draftHeading": "tm_draftHeading", "draftInput": "tm_draftInput", "draftLabel": "tm_draftLabel", "draftPathPreview": "tm_draftPathPreview", "draftRow": "tm_draftRow", "draftSelect": "tm_draftSelect", "draftTextarea": "tm_draftTextarea", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "hotkeyButton": "tm_hotkeyButton", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "modeChip": "tm_modeChip", "modeChipActive": "tm_modeChipActive", "modeSwitch": "tm_modeSwitch", "panel": "tm_panel", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeCorner": "tm_wsFrameResizeCorner", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
+var talk_map_default = { "backButton": "tm_backButton", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "draftCard": "tm_draftCard", "draftGrow": "tm_draftGrow", "draftHeading": "tm_draftHeading", "draftInput": "tm_draftInput", "draftLabel": "tm_draftLabel", "draftPathPreview": "tm_draftPathPreview", "draftRow": "tm_draftRow", "draftSelect": "tm_draftSelect", "draftTextarea": "tm_draftTextarea", "drawer": "tm_drawer", "drawerBackdrop": "tm_drawerBackdrop", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerScroll": "tm_drawerScroll", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "hotkeyButton": "tm_hotkeyButton", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "modeChip": "tm_modeChip", "modeChipActive": "tm_modeChipActive", "modeSwitch": "tm_modeSwitch", "panel": "tm_panel", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeCorner": "tm_wsFrameResizeCorner", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
 
 // src/client/ContextMenu.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
@@ -11029,9 +11037,17 @@ var FRAME_PAD = 32;
 var FRAME_LABEL_H = 30;
 var TOP_INSET = FRAME_PAD + FRAME_LABEL_H;
 var MIN_FRAME_WIDTH = CARD_W + FRAME_PAD * 2;
+var MIN_FRAME_HEIGHT = TOP_INSET + CARD_H + FRAME_PAD;
 function colsForWidth(width) {
   const usable = Math.max(CARD_W, width - FRAME_PAD * 2);
   return Math.max(1, Math.floor((usable + GAP_X) / (CARD_W + GAP_X)));
+}
+function rowsForHeight(height) {
+  const usable = Math.max(CARD_H, height - TOP_INSET - FRAME_PAD);
+  return Math.max(1, Math.floor((usable + GAP_Y) / (CARD_H + GAP_Y)));
+}
+function capacityFor(rect) {
+  return colsForWidth(rect.width) * rowsForHeight(rect.height);
 }
 function slotPoint(rect, index2, cols = colsForWidth(rect.width)) {
   const col = index2 % cols;
@@ -11041,34 +11057,167 @@ function slotPoint(rect, index2, cols = colsForWidth(rect.width)) {
     y: rect.y + TOP_INSET + row * (CARD_H + GAP_Y)
   };
 }
-function contentHeight(count, cols) {
-  const rows = Math.max(1, Math.ceil(Math.max(count, 1) / cols));
-  return TOP_INSET + rows * CARD_H + (rows - 1) * GAP_Y + FRAME_PAD;
-}
-function frameRect(stored, count) {
-  const width = Math.max(MIN_FRAME_WIDTH, stored.width);
-  const cols = colsForWidth(width);
+function frameRect(stored) {
   return {
     x: stored.x,
     y: stored.y,
-    width,
-    height: Math.max(stored.height, contentHeight(count, cols))
+    width: Math.max(MIN_FRAME_WIDTH, stored.width),
+    height: Math.max(MIN_FRAME_HEIGHT, stored.height)
   };
 }
-function orderByTime(entries) {
-  return [...entries].sort((a, b) => b.time - a.time || a.cardId.localeCompare(b.cardId));
-}
-function layoutFor(rect, entries) {
+function layoutFor(rect, orderedIds) {
   const cols = colsForWidth(rect.width);
   const out = {};
-  orderByTime(entries).forEach((entry, index2) => {
-    out[entry.cardId] = slotPoint(rect, index2, cols);
+  orderedIds.forEach((cardId, index2) => {
+    out[cardId] = slotPoint(rect, index2, cols);
   });
   return out;
 }
+function visibleCount(capacity, total) {
+  if (total <= capacity) return total;
+  return Math.max(1, capacity - 1);
+}
+function readingOrder(cards) {
+  return [...cards].sort((a, b) => a.y - b.y || a.x - b.x || a.cardId.localeCompare(b.cardId)).map((card) => card.cardId);
+}
+
+// src/client/StackDrawer.tsx
+var import_react8 = require("react");
+var import_jsx_runtime7 = require("react/jsx-runtime");
+var LAMP_CLASS2 = {
+  running: "cardLampRunning",
+  done: "cardLampDone",
+  error: "cardLampError",
+  waiting: "cardLampWaiting"
+};
+function StackDrawer(props) {
+  const scrollerRef = (0, import_react8.useRef)(null);
+  (0, import_react8.useEffect)(() => {
+    const release = mapUi.claimEscape("stack-drawer");
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      props.onClose();
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+      release();
+    };
+  }, []);
+  (0, import_react8.useEffect)(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    const onWheel = (event) => {
+      event.preventDefault();
+      const first = scroller.querySelector("[data-stack-card]");
+      const step = first instanceof HTMLElement ? first.offsetHeight + 12 : 140;
+      scroller.scrollBy({ top: event.deltaY >= 0 ? step : -step, behavior: "smooth" });
+    };
+    scroller.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      scroller.removeEventListener("wheel", onWheel);
+    };
+  }, []);
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+    "div",
+    {
+      className: talk_map_default["drawerBackdrop"],
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) props.onClose();
+      },
+      children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["drawer"], role: "dialog", "aria-label": props.workspaceTitle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+            "button",
+            {
+              type: "button",
+              className: talk_map_default["drawerClose"],
+              title: t("stack.close"),
+              "aria-label": t("stack.close"),
+              onClick: props.onClose,
+              children: "×"
+            }
+          )
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["drawerScroll"], ref: scrollerRef, children: props.items.map((item) => {
+          const classNames = [talk_map_default["card"], talk_map_default["drawerCard"]];
+          if (item.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS2[item.glow]] ?? "");
+          return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+            "button",
+            {
+              type: "button",
+              "data-stack-card": "",
+              className: classNames.filter(Boolean).join(" "),
+              onClick: () => {
+                props.onOpenCard(item.cardId);
+              },
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title }) }),
+                item.summary !== void 0 && item.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["cardSummary"], children: item.summary }) : null,
+                item.nextStep !== void 0 && item.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["cardNext"], children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardNextText"], children: item.nextStep })
+                ] }) : null,
+                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
+                  item.running === true ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardBadgeRunning"], children: t("card.running") }) : null
+                ] })
+              ]
+            },
+            item.cardId
+          );
+        }) })
+      ] })
+    }
+  );
+}
+
+// src/client/StackNode.tsx
+var import_jsx_runtime8 = require("react/jsx-runtime");
+function StackNode(props) {
+  const { data } = props;
+  const open = () => {
+    data.onOpen();
+  };
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+    "div",
+    {
+      className: talk_map_default["stackCell"],
+      role: "button",
+      tabIndex: 0,
+      title: t("stack.open"),
+      "aria-label": t("stack.open"),
+      onClick: (event) => {
+        event.stopPropagation();
+        open();
+      },
+      onKeyDown: (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open();
+      },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["stackFace"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["stackBadge"], children: [
+            "+",
+            data.count
+          ] })
+        ] })
+      ]
+    }
+  );
+}
 
 // src/client/use-dark.ts
-var import_react8 = require("react");
+var import_react9 = require("react");
 var DARK_ATTRIBUTE = "data-ds-dark-theme";
 function subscribe(listener) {
   if (typeof document === "undefined") return () => {
@@ -11084,12 +11233,17 @@ function getSnapshot() {
   return document.body.hasAttribute(DARK_ATTRIBUTE);
 }
 function useDsDarkTheme() {
-  return (0, import_react8.useSyncExternalStore)(subscribe, getSnapshot);
+  return (0, import_react9.useSyncExternalStore)(subscribe, getSnapshot);
 }
 
 // src/client/MapCanvas.tsx
-var import_jsx_runtime7 = require("react/jsx-runtime");
-var nodeTypes = { sessionCard: SessionCardNode, wsFrame: WsFrameNode, draftCard: DraftCardNode };
+var import_jsx_runtime9 = require("react/jsx-runtime");
+var nodeTypes = {
+  sessionCard: SessionCardNode,
+  wsFrame: WsFrameNode,
+  draftCard: DraftCardNode,
+  stackCell: StackNode
+};
 var GRID = 16;
 var COLS = 3;
 var LAYOUT_VERSION = 4;
@@ -11132,37 +11286,38 @@ function fitRect(members) {
 }
 function CanvasInner(props) {
   const dark = useDsDarkTheme();
-  const canvasState = (0, import_react9.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  const canvasState = (0, import_react10.useSyncExternalStore)(canvas.subscribe, canvas.get);
   const sessions = props.useSessions((state3) => state3);
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
-  const alertById = (0, import_react9.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const alertById = (0, import_react10.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
   const { screenToFlowPosition, zoomTo } = useReactFlow();
-  const [panMode, setPanMode] = (0, import_react9.useState)(true);
-  const [selectedIds, setSelectedIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
-  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
-  const [connecting, setConnecting] = (0, import_react9.useState)(false);
-  const connectCancelledRef = (0, import_react9.useRef)(false);
-  const [toast, setToast] = (0, import_react9.useState)(null);
-  const toastTimer = (0, import_react9.useRef)(void 0);
-  const [pendingSpawn, setPendingSpawn] = (0, import_react9.useState)(null);
-  const [draft, setDraft] = (0, import_react9.useState)(null);
-  const [menu, setMenu] = (0, import_react9.useState)(null);
-  const wrapperRef = (0, import_react9.useRef)(null);
-  const [draggingCardId, setDraggingCardId] = (0, import_react9.useState)(null);
-  const [liveFrame, setLiveFrame] = (0, import_react9.useState)(null);
-  const [isSelecting, setIsSelecting] = (0, import_react9.useState)(false);
-  const frozenRef = (0, import_react9.useRef)(null);
-  const locale = (0, import_react9.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const sessionWs = (0, import_react9.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
-  const wsTitles = (0, import_react9.useMemo)(
+  const [panMode, setPanMode] = (0, import_react10.useState)(true);
+  const [selectedIds, setSelectedIds] = (0, import_react10.useState)(/* @__PURE__ */ new Set());
+  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react10.useState)(/* @__PURE__ */ new Set());
+  const [connecting, setConnecting] = (0, import_react10.useState)(false);
+  const connectCancelledRef = (0, import_react10.useRef)(false);
+  const [toast, setToast] = (0, import_react10.useState)(null);
+  const toastTimer = (0, import_react10.useRef)(void 0);
+  const [pendingSpawn, setPendingSpawn] = (0, import_react10.useState)(null);
+  const [draft, setDraft] = (0, import_react10.useState)(null);
+  const [menu, setMenu] = (0, import_react10.useState)(null);
+  const [drawer, setDrawer] = (0, import_react10.useState)(null);
+  const wrapperRef = (0, import_react10.useRef)(null);
+  const [draggingCardId, setDraggingCardId] = (0, import_react10.useState)(null);
+  const [liveFrame, setLiveFrame] = (0, import_react10.useState)(null);
+  const [isSelecting, setIsSelecting] = (0, import_react10.useState)(false);
+  const frozenRef = (0, import_react10.useRef)(null);
+  const locale = (0, import_react10.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const sessionWs = (0, import_react10.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
+  const wsTitles = (0, import_react10.useMemo)(
     () => new Map(workspaces.items.map((item) => [item.workspaceId, item.title])),
     [workspaces]
   );
   const workspacesReady = workspaces.baselinesReady !== false;
   const wsFrames = canvasState.global?.wsFrames ?? {};
   const layoutVersion = canvasState.global?.layoutVersion ?? 1;
-  (0, import_react9.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (canvasState.phase !== "ready" || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return;
     const byGroup = /* @__PURE__ */ new Map();
     for (const card of Object.values(canvasState.cards)) {
@@ -11176,12 +11331,12 @@ function CanvasInner(props) {
       if (stored === void 0 && members.length > 0) {
         framesNext[groupId] = fitRect(members);
       } else if (stored !== void 0) {
-        framesNext[groupId] = frameRect(stored, members.length);
+        framesNext[groupId] = frameRect(stored);
       }
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext });
   }, [canvasState.phase, layoutVersion, workspacesReady, canvasState.cards, canvasState.global, sessionWs]);
-  const visibleCards = (0, import_react9.useMemo)(() => {
+  const visibleCards = (0, import_react10.useMemo)(() => {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
@@ -11189,7 +11344,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
-  const membersByGroup = (0, import_react9.useMemo)(() => {
+  const membersByGroup = (0, import_react10.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       const groupId = sessionWs.get(card.sessionId);
@@ -11198,28 +11353,48 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards, sessionWs]);
-  const frameRects = (0, import_react9.useMemo)(() => {
+  const frameRects = (0, import_react10.useMemo)(() => {
     const out = {};
     for (const [groupId, stored] of Object.entries(wsFrames)) {
-      const count = (membersByGroup.get(groupId) ?? []).length;
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored;
-      out[groupId] = frameRect(base, count);
+      out[groupId] = frameRect(base);
     }
     return out;
-  }, [wsFrames, membersByGroup, liveFrame]);
-  const cardLayout = (0, import_react9.useMemo)(() => {
+  }, [wsFrames, liveFrame]);
+  const folderLayouts = (0, import_react10.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
         const card = visibleCards[cardId];
-        if (card === void 0) return void 0;
-        return { cardId, time: sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt };
+        return card === void 0 ? void 0 : { cardId, x: card.x, y: card.y };
       }).filter((entry) => entry !== void 0);
-      for (const [cardId, point] of Object.entries(layoutFor(rect, members))) out[cardId] = point;
+      const ordered = readingOrder(members);
+      const capacity = capacityFor(rect);
+      const visibleSlots = visibleCount(capacity, ordered.length);
+      out[groupId] = {
+        rect,
+        ordered,
+        shown: ordered.slice(0, visibleSlots),
+        folded: ordered.length > capacity ? ordered.slice(visibleSlots) : []
+      };
     }
     return out;
-  }, [frameRects, membersByGroup, visibleCards, sessions]);
-  (0, import_react9.useEffect)(() => {
+  }, [frameRects, membersByGroup, visibleCards]);
+  const cardLayout = (0, import_react10.useMemo)(() => {
+    const out = {};
+    for (const layout of Object.values(folderLayouts)) {
+      Object.assign(out, layoutFor(layout.rect, layout.ordered));
+    }
+    return out;
+  }, [folderLayouts]);
+  const foldedCards = (0, import_react10.useMemo)(() => {
+    const out = {};
+    for (const [groupId, layout] of Object.entries(folderLayouts)) {
+      if (layout.folded.length > 0) out[groupId] = layout.folded;
+    }
+    return out;
+  }, [folderLayouts]);
+  (0, import_react10.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const stale = {};
@@ -11230,7 +11405,39 @@ function CanvasInner(props) {
     }
     if (Object.keys(stale).length > 0) canvas.moveCards(stale);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
-  (0, import_react9.useEffect)(() => {
+  const foldedSet = (0, import_react10.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
+  const activityRef = (0, import_react10.useRef)(/* @__PURE__ */ new Map());
+  (0, import_react10.useEffect)(() => {
+    if (canvasState.phase !== "ready") return;
+    if (draggingCardId !== null || liveFrame !== null) return;
+    const seen = activityRef.current;
+    const stamps = /* @__PURE__ */ new Map();
+    for (const card of Object.values(visibleCards)) {
+      stamps.set(card.sessionId, sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt);
+    }
+    if (seen.size === 0) {
+      for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
+      return;
+    }
+    const promoted = {};
+    for (const layout of Object.values(folderLayouts)) {
+      let candidate;
+      for (const cardId of layout.ordered) {
+        const card = visibleCards[cardId];
+        if (card === void 0) continue;
+        const stamp = stamps.get(card.sessionId) ?? 0;
+        const before = seen.get(card.sessionId);
+        if (before === void 0 || stamp <= before) continue;
+        if (candidate === void 0 || stamp > candidate.stamp) candidate = { cardId, stamp };
+      }
+      if (candidate === void 0 || layout.ordered[0] === candidate.cardId) continue;
+      const next = [candidate.cardId, ...layout.ordered.filter((id2) => id2 !== candidate.cardId)];
+      Object.assign(promoted, layoutFor(layout.rect, next));
+    }
+    for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
+    if (Object.keys(promoted).length > 0) canvas.moveCards(promoted);
+  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame]);
+  (0, import_react10.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
     const onKeyDown = (event) => {
@@ -11251,7 +11458,7 @@ function CanvasInner(props) {
       release();
     };
   }, [connecting]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     const onKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.code !== "KeyZ") return;
       const target = event.target;
@@ -11266,7 +11473,7 @@ function CanvasInner(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  const liveSelectedIds = (0, import_react9.useMemo)(() => {
+  const liveSelectedIds = (0, import_react10.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedIds) {
       if (id2.startsWith("frame-")) {
@@ -11277,7 +11484,7 @@ function CanvasInner(props) {
     }
     return next;
   }, [selectedIds, visibleCards, wsFrames]);
-  const liveSelectedEdgeIds = (0, import_react9.useMemo)(() => {
+  const liveSelectedEdgeIds = (0, import_react10.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedEdgeIds) {
       if (canvasState.edges[id2] !== void 0) next.add(id2);
@@ -11285,7 +11492,7 @@ function CanvasInner(props) {
     return next;
   }, [selectedEdgeIds, canvasState.edges]);
   const hasSelection = liveSelectedIds.size > 0 || liveSelectedEdgeIds.size > 0;
-  (0, import_react9.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     if (!hasSelection) return;
     const release = mapUi.claimEscape("selection");
     const onKeyDown = (event) => {
@@ -11337,13 +11544,22 @@ function CanvasInner(props) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
       setLiveFrame(null);
-      canvas.setWsFrameRect(groupId, frameRect(next, count));
+      canvas.setWsFrameRect(groupId, frameRect(next));
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
     window.addEventListener("pointercancel", onUp);
   };
-  const liveNodes = (0, import_react9.useMemo)(() => {
+  const glowOf = (sessionId) => {
+    const status = statusById.get(sessionId);
+    const summary = sessions.byId[sessionId];
+    if (alertById.has(sessionId)) return "error";
+    if (status !== void 0 && status.pendingInteraction !== void 0) return "waiting";
+    if (status?.running === true || summary?.running === true) return "running";
+    if (status?.completionUnread === true) return "done";
+    return void 0;
+  };
+  const liveNodes = (0, import_react10.useMemo)(() => {
     const wsColors = canvasState.global?.wsColors ?? {};
     const frameNodes = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? [];
@@ -11394,10 +11610,7 @@ function CanvasInner(props) {
         summary: digest?.summary,
         waiting: status !== void 0 ? status.pendingInteraction !== void 0 : summary?.pendingInteraction !== void 0,
         done: status?.completionUnread === true,
-        // One lamp per card, most urgent first: a failure must not be hidden
-        // behind a "finished" glow, and being blocked on the user outranks
-        // merely still running.
-        glow: alertById.has(card.sessionId) ? "error" : status !== void 0 && status.pendingInteraction !== void 0 ? "waiting" : status?.running === true || summary?.running === true ? "running" : status?.completionUnread === true ? "done" : void 0,
+        glow: glowOf(card.sessionId),
         ...card.colorTag !== void 0 ? { colorTag: card.colorTag } : {}
       };
       return {
@@ -11407,6 +11620,9 @@ function CanvasInner(props) {
         // slot (and glides there — the CSS transition owns the animation).
         position: dragging || slot === void 0 ? { x: card.x, y: card.y } : { x: slot.x, y: slot.y },
         selected: liveSelectedIds.has(cardId),
+        // Cards folded into the stack cell stay in the model (their edges and
+        // selection survive) but must not paint over the grid.
+        hidden: foldedSet.has(cardId),
         className: dragging ? "tmDragging" : "",
         data
       };
@@ -11430,18 +11646,44 @@ function CanvasInner(props) {
         }
       }
     }];
-    return [...frameNodes, ...cardNodes, ...draftNodes];
-  }, [frameRects, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale]);
-  const sessionIdToCardId = (0, import_react9.useMemo)(() => {
+    const stackNodes = Object.entries(foldedCards).map(([groupId, folded]) => {
+      const layout = folderLayouts[groupId];
+      const rect = layout?.rect ?? frameRects[groupId];
+      const index2 = layout?.shown.length ?? 0;
+      const point = rect === void 0 ? { x: 0, y: 0 } : slotPoint(rect, index2);
+      const newest = [...folded].map((cardId) => sessions.byId[visibleCards[cardId]?.sessionId ?? ""]?.updatedAt ?? 0).reduce((best, stamp, position) => stamp > best.stamp ? { stamp, position } : best, { stamp: -1, position: 0 });
+      const topCardId = folded[newest.position];
+      const topSessionId = topCardId === void 0 ? void 0 : visibleCards[topCardId]?.sessionId;
+      return {
+        id: `stack-${groupId}`,
+        type: "stackCell",
+        position: point,
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: 5,
+        data: {
+          workspaceId: groupId,
+          count: folded.length,
+          ...topSessionId !== void 0 && sessions.byId[topSessionId] !== void 0 ? { topTitle: sessions.byId[topSessionId].displayTitle } : {},
+          onOpen: () => {
+            setDrawer({ groupId });
+          }
+        }
+      };
+    });
+    return [...frameNodes, ...cardNodes, ...stackNodes, ...draftNodes];
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale]);
+  const sessionIdToCardId = (0, import_react10.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
     }
     return index2;
   }, [visibleCards]);
-  const liveEdges = (0, import_react9.useMemo)(() => {
+  const liveEdges = (0, import_react10.useMemo)(() => {
     const out = [];
-    const present = new Set(Object.keys(visibleCards));
+    const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
     const explicitPairs = /* @__PURE__ */ new Set();
     for (const [edgeId, edge] of Object.entries(canvasState.edges)) {
       explicitPairs.add(`${edge.fromCardId}->${edge.toCardId}`);
@@ -11468,6 +11710,7 @@ function CanvasInner(props) {
       });
     }
     for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (foldedSet.has(cardId)) continue;
       const parentSessionId = sessions.byId[card.sessionId]?.parentId;
       if (parentSessionId === void 0) continue;
       const parentCardId = sessionIdToCardId.get(parentSessionId);
@@ -11486,7 +11729,7 @@ function CanvasInner(props) {
       });
     }
     return out;
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, locale]);
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale]);
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes;
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges;
   const onSelectionStart = () => {
@@ -11585,8 +11828,8 @@ function CanvasInner(props) {
     }
     if (removedIds.length > 0) canvas.removeEdges(removedIds);
   };
-  const mountedRef = (0, import_react9.useRef)(true);
-  (0, import_react9.useEffect)(() => {
+  const mountedRef = (0, import_react10.useRef)(true);
+  (0, import_react10.useEffect)(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -11689,6 +11932,29 @@ function CanvasInner(props) {
   const openSession = (sessionId) => {
     if (openSessionInUi(sessionId)) closeMapPanel();
   };
+  const drawerItems = (groupId) => {
+    const layout = folderLayouts[groupId];
+    const ids = layout === void 0 ? [] : [...layout.shown, ...layout.folded];
+    const items = [];
+    for (const cardId of ids) {
+      const card = visibleCards[cardId];
+      if (card === void 0) continue;
+      const summary = sessions.byId[card.sessionId];
+      const digest = canvasState.digests[card.sessionId];
+      const glow = glowOf(card.sessionId);
+      const nextStep = digest?.nextStep ?? digest?.todoNext;
+      items.push({
+        cardId,
+        title: summary?.displayTitle ?? card.sessionId,
+        ...digest?.summary !== void 0 ? { summary: digest.summary } : {},
+        ...nextStep !== void 0 ? { nextStep } : {},
+        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
+        running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
+        ...glow !== void 0 ? { glow } : {}
+      });
+    }
+    return items;
+  };
   const groupAtPoint = (x, y) => {
     let best;
     for (const [groupId, rect] of Object.entries(frameRects)) {
@@ -11710,7 +11976,7 @@ function CanvasInner(props) {
       ...groupId !== void 0 ? { groupId } : {}
     });
   };
-  const boardSessionIds = (0, import_react9.useMemo)(
+  const boardSessionIds = (0, import_react10.useMemo)(
     () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
     [canvasState.cards]
   );
@@ -11810,7 +12076,7 @@ function CanvasInner(props) {
       view: "root"
     });
   };
-  const menuState = (0, import_react9.useMemo)(() => {
+  const menuState = (0, import_react10.useMemo)(() => {
     if (menu === null) return null;
     const close = () => {
       setMenu(null);
@@ -11996,7 +12262,7 @@ function CanvasInner(props) {
   }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, locale]);
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID);
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "div",
     {
       ref: wrapperRef,
@@ -12023,7 +12289,7 @@ function CanvasInner(props) {
         if (menu !== null) setMenu(null);
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
           index,
           {
             nodes,
@@ -12089,12 +12355,12 @@ function CanvasInner(props) {
             proOptions: { hideAttribution: true },
             ...savedCamera !== void 0 ? { defaultViewport: savedCamera } : { fitView: hasContent },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(Controls, { showInteractive: false, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Controls, { showInteractive: false, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
                   void zoomTo(1, { duration: 200 });
-                }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+                }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
                   ControlButton,
                   {
                     title: panMode ? "拖拽平移中（点一下切成框选）" : "框选模式（点一下切成拖拽平移）",
@@ -12102,28 +12368,43 @@ function CanvasInner(props) {
                     onClick: () => {
                       setPanMode((v) => !v);
                     },
-                    children: panMode ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" }) }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, strokeDasharray: "3 3" }) })
+                    children: panMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" }) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, strokeDasharray: "3 3" }) })
                   }
                 )
               ] })
             ]
           }
         ),
-        liveSelectedIds.size > 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        liveSelectedIds.size > 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           ColorToolbar,
           {
             selectedIds: liveSelectedIds,
             visibleCards
           }
         ) : null,
-        hasContent || draft !== null ? null : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ContextMenu, { menu: menuState, onClose: () => {
+        hasContent || draft !== null ? null : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
+        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,
-        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
+        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
           setPendingSpawn(null);
         } }) : null,
-        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
+        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          StackDrawer,
+          {
+            workspaceTitle: wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
+            items: drawerItems(drawer.groupId),
+            onOpenCard: (cardId) => {
+              const card = visibleCards[cardId];
+              setDrawer(null);
+              if (card !== void 0) openSession(card.sessionId);
+            },
+            onClose: () => {
+              setDrawer(null);
+            }
+          }
+        ) : null,
+        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
       ]
     }
   );
@@ -12135,9 +12416,9 @@ function ColorToolbar(props) {
     if (selectedCardIds.length > 0) canvas.setCardsColor(selectedCardIds, colorTag);
     for (const workspaceId of selectedFrameWs) canvas.setWorkspaceColor(workspaceId, colorTag);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
-    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
+    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       "button",
       {
         type: "button",
@@ -12151,7 +12432,7 @@ function ColorToolbar(props) {
       },
       tag.id
     )),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
       "button",
       {
         type: "button",
@@ -12167,18 +12448,18 @@ function ColorToolbar(props) {
   ] });
 }
 function MapCanvas(props) {
-  const canvasState = (0, import_react9.useSyncExternalStore)(canvas.subscribe, canvas.get);
-  (0, import_react9.useEffect)(() => {
+  const canvasState = (0, import_react10.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  (0, import_react10.useEffect)(() => {
     canvas.ensureLoaded();
     canvas.refresh();
     return canvas.connect();
   }, []);
   if (canvasState.phase === "error") {
-    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
       t("map.loadError"),
       " ",
       canvasState.error,
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         "button",
         {
           type: "button",
@@ -12193,17 +12474,17 @@ function MapCanvas(props) {
     ] }) });
   }
   if (canvasState.phase !== "ready") {
-    return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(CanvasInner, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(CanvasInner, { ...props }) });
 }
 
 // src/client/MapOverlay.tsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function HotkeyButton() {
-  const hotkey = (0, import_react11.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.hotkey ?? DEFAULT_HOTKEY);
-  const [capturing, setCapturing] = (0, import_react11.useState)(false);
-  (0, import_react11.useEffect)(() => {
+  const hotkey = (0, import_react12.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.hotkey ?? DEFAULT_HOTKEY);
+  const [capturing, setCapturing] = (0, import_react12.useState)(false);
+  (0, import_react12.useEffect)(() => {
     if (!capturing) return;
     const release = mapUi.claimEscape("hotkey-capture");
     const onKeyDown = (event) => {
@@ -12225,7 +12506,7 @@ function HotkeyButton() {
       release();
     };
   }, [capturing]);
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
     "button",
     {
       type: "button",
@@ -12239,10 +12520,10 @@ function HotkeyButton() {
   );
 }
 function LanguageButton() {
-  const pref = (0, import_react11.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.locale ?? "auto");
+  const pref = (0, import_react12.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.locale ?? "auto");
   const index2 = LOCALE_CYCLE.indexOf(pref);
   const next = LOCALE_CYCLE[(index2 + 1) % LOCALE_CYCLE.length] ?? "auto";
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
     "button",
     {
       type: "button",
@@ -12256,20 +12537,20 @@ function LanguageButton() {
   );
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
 function CloseIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
-  (0, import_react11.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  (0, import_react12.useEffect)(() => {
     mapUi.setOpen(true);
     return () => {
       mapUi.setOpen(false);
     };
   }, []);
-  (0, import_react11.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       if (mapUi.escapeClaimed()) return;
@@ -12281,9 +12562,9 @@ function MapOverlay(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["panel"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["header"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["panel"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["header"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
         "button",
         {
           type: "button",
@@ -12292,15 +12573,15 @@ function MapOverlay(props) {
           "aria-label": t("map.back"),
           onClick: closeMapPanel,
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(BackIcon, {}),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: t("map.back") })
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(BackIcon, {}),
+            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: t("map.back") })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["headerSpace"] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LanguageButton, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HotkeyButton, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["headerSpace"] }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(LanguageButton, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(HotkeyButton, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
           type: "button",
@@ -12308,31 +12589,31 @@ function MapOverlay(props) {
           title: t("map.close"),
           "aria-label": t("map.close"),
           onClick: closeMapPanel,
-          children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CloseIcon, {})
+          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(CloseIcon, {})
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MapCanvas, { ...props })
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(MapCanvas, { ...props })
   ] });
 }
 
 // src/client/MapToggleButton.tsx
-var import_react12 = require("react");
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_react13 = require("react");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 function MapIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M9 4v14" }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M15 6v14" })
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M9 4v14" }),
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M15 6v14" })
   ] });
 }
 function MapToggleButton(props) {
-  const open = (0, import_react12.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  const locale = (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const open = (0, import_react13.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
+  const locale = (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const wide = props.wide;
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
     "button",
     {
       type: "button",
@@ -12345,8 +12626,8 @@ function MapToggleButton(props) {
         mapUi.toggle();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MapIcon, {}),
-        wide ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(MapIcon, {}),
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
       ]
     }
   );

@@ -44,7 +44,8 @@ export interface SessionCardData extends Record<string, unknown> {
 
 export type SessionCardNodeType = Node<SessionCardData, 'sessionCard'>
 
-function relativeTime(timestamp: number | undefined): string {
+/** Compact relative stamp, shared with the folder drawer's card list. */
+export function relativeTime(timestamp: number | undefined): string {
   if (timestamp === undefined) return ''
   const delta = Date.now() - timestamp
   const minutes = Math.round(delta / 60_000)

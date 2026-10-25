@@ -69,9 +69,10 @@
   sessionRows.s3.completed = true
   sessionRows.s8.blank = true // a blank session must not render a card
 
-  const sessionsState = { ids: Object.keys(sessionRows), byId: sessionRows }
-  const workspacesState = { items: workspaceList, baselinesReady: true }
-  // ui-session's projection: s1 still running (white lamp), s3 finished while
+  // `let` so touch() can hand the tree a NEW object — the client's memos compare
+  // identity, so mutating in place would look like "nothing changed".
+  let sessionsState = { ids: Object.keys(sessionRows), byId: sessionRows }
+  const workspacesState = { items: workspaceList, baselinesReady: true }  // ui-session's projection: s1 still running (white lamp), s3 finished while
   // unwatched (green lamp) — the two states the probe asserts on.
   const statusById = new Map([
     ['s1', { running: true }],
@@ -84,16 +85,21 @@
   const CARD_H = 120
   const GAP_X = 48
   const GAP_Y = 56
+  const FRAME_SHAPE = {
+    'ws-daily': { cols: 3, rows: 1 },
+    'ws-medkit': { cols: 2, rows: 1 },
+    'ws-lab': { cols: 1, rows: 1 },
+  }
 
   function frame(id) {
-    const ws = workspaceList.find(w => w.workspaceId === id)
-    const cols = Math.max(1, ws.sessionIds.length <= 1 ? 1 : 3)
-    const rows = Math.ceil(ws.sessionIds.length / cols)
+    // Fixed shapes on purpose: the daily folder is deliberately ONE row tall, so
+    // five conversations cannot fit and the overflow stack has to appear.
+    const shape = FRAME_SHAPE[id]
     return {
       x: id === 'ws-medkit' ? 960 : 0,
       y: id === 'ws-lab' ? 640 : 0,
-      width: cols * (CARD_W + GAP_X) - GAP_X + PAD * 2,
-      height: rows * (CARD_H + GAP_Y) - GAP_Y + PAD * 2 + LABEL,
+      width: shape.cols * (CARD_W + GAP_X) - GAP_X + PAD * 2,
+      height: shape.rows * (CARD_H + GAP_Y) - GAP_Y + PAD * 2 + LABEL,
     }
   }
 
@@ -282,6 +288,13 @@
     state: () => payload,
     getRoot: () => root,
     panelState: () => ({ selectedPanel }),
+    /** Pretend this conversation just sent a message: bump its stamp + re-render. */
+    touch(sessionId) {
+      if (sessionRows[sessionId] === undefined) throw new Error(`unknown session ${sessionId}`)
+      sessionRows[sessionId] = { ...sessionRows[sessionId], updatedAt: Date.now() }
+      sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+      sync()
+    },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }
       for (const el of document.querySelectorAll('.react-flow__node')) {

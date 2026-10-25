@@ -993,3 +993,175 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* ---- overflow stack cell ------------------------------------------------
+ * When a folder is too small for its cards, the last visible slot becomes a
+ * pile: two offset sheets behind a face that names the newest folded card and
+ * counts the rest. Clicking it opens the drawer. */
+.stackCell {
+  position: relative;
+  width: 224px;
+  height: 104px;
+  cursor: pointer;
+}
+
+.stackSheetBack,
+.stackSheetMid {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.stackSheetBack {
+  transform: translate(11px, 11px) scale(0.95);
+  opacity: 0.35;
+}
+
+.stackSheetMid {
+  transform: translate(5px, 5px) scale(0.977);
+  opacity: 0.6;
+}
+
+.stackFace {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  background: var(--dsw-alias-bg-layer-1);
+  transition: border-color 140ms ease, transform 140ms ease;
+}
+
+.stackCell:hover .stackFace {
+  border-color: var(--dsw-alias-brand-primary);
+  transform: translateY(-1px);
+}
+
+.stackFaceTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.stackBadge {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  color: var(--dsw-alias-label-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- the drawer behind that cell ---------------------------------------- */
+.drawerBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--dsw-alias-bg-mask-2);
+}
+
+.drawer {
+  width: min(640px, 92%);
+  max-height: 76%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 16px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2);
+  overflow: hidden;
+}
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--dsw-alias-border-l1);
+}
+
+.drawerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.drawerCount {
+  font-size: 12px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.drawerSpace {
+  flex: 1;
+}
+
+.drawerHint {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+}
+
+.drawerClose {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.drawerClose:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* One notch of the wheel lands on the next card: snap points, not free scroll. */
+.drawerScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y proximity;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+}
+
+/* Cards render at 1:1 — 224px wide, exactly what the map shows at 100%. */
+.drawerCard {
+  flex: none;
+  width: 224px;
+  box-sizing: border-box;
+  scroll-snap-align: start;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  background: var(--dsw-alias-bg-layer-1);
+}
+
+.drawerCard:hover {
+  border-color: var(--dsw-alias-brand-primary);
+}

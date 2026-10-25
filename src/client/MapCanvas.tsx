@@ -28,26 +28,33 @@ import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi } fro
 import { sessionAlerts } from './session-alerts.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { DraftCardNode, type DraftCardNodeType } from './DraftCard.tsx'
-import { SessionCardNode, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
+import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
 import { WsFrameNode, type ResizeAxis, type WsFrameNodeType } from './WsFrame.tsx'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
 import {
   CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y,
-  frameRect, layoutFor, type SlotEntry,
+  capacityFor, frameRect, layoutFor, readingOrder, slotPoint, visibleCount, type PlacedCard,
 } from './grid-layout.ts'
+import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
+import { StackNode, type StackNodeType } from './StackNode.tsx'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
-const nodeTypes = { sessionCard: SessionCardNode, wsFrame: WsFrameNode, draftCard: DraftCardNode }
+const nodeTypes = {
+  sessionCard: SessionCardNode,
+  wsFrame: WsFrameNode,
+  draftCard: DraftCardNode,
+  stackCell: StackNode,
+}
 
 const GRID = 16
 const COLS = 3
 /** v4: frames became user-sized containers with slot layout inside. */
 const LAYOUT_VERSION = 4
 
-type TalkMapNode = SessionCardNodeType | WsFrameNodeType | DraftCardNodeType
+type TalkMapNode = SessionCardNodeType | WsFrameNodeType | DraftCardNodeType | StackNodeType
 
 /** Stable empty projection for a runtime without the ui-session status hook. */
 const EMPTY_SESSION_STATUS: ReadonlyMap<string, SessionStatusFact> = new Map()
@@ -143,6 +150,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [pendingSpawn, setPendingSpawn] = useState<PendingSpawn | null>(null)
   const [draft, setDraft] = useState<DraftState | null>(null)
   const [menu, setMenu] = useState<MenuContext | null>(null)
+  /** Folder whose stack cell was clicked: the drawer lists all of its cards. */
+  const [drawer, setDrawer] = useState<{ groupId: string } | null>(null)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   // Slot layout bookkeeping: the card under the pointer renders at its raw
   // drag position (everything else is snapped), and a frame being moved or
@@ -189,11 +198,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     for (const [groupId, members] of byGroup) {
       const stored = framesNext[groupId]
       if (stored === undefined && members.length > 0) {
+        // A frame born from cards is sized to fit them once; after that the size
+        // is the user's, and overflow collapses into the stack cell.
         framesNext[groupId] = fitRect(members)
       } else if (stored !== undefined) {
-        // A rect left over from the derived-frame era can be wider than the
-        // cards need; the slot layout re-derives it from the member count.
-        framesNext[groupId] = frameRect(stored, members.length)
+        framesNext[groupId] = frameRect(stored)
       }
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext })
@@ -223,36 +232,68 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }, [visibleCards, sessionWs])
 
   // Folder geometry as rendered: the stored rect (the user's wish, clamped to
-  // one column and to the height its cards need) with a live gesture rect on
-  // top while a frame is being moved or resized.
+  // one column / one row) with a live gesture rect on top while a frame is
+  // being moved or resized. The folder does NOT grow to fit its cards any more:
+  // what does not fit collapses into the stack cell at the end of the grid.
   const frameRects = useMemo(() => {
     const out: Record<string, FrameGeometry> = {}
     for (const [groupId, stored] of Object.entries(wsFrames)) {
-      const count = (membersByGroup.get(groupId) ?? []).length
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored
-      out[groupId] = frameRect(base, count)
+      out[groupId] = frameRect(base)
     }
     return out
-  }, [wsFrames, membersByGroup, liveFrame])
+  }, [wsFrames, liveFrame])
 
-  // Slot positions for every card that lives in a folder, ordered by recency:
-  // the freshest conversation takes the first slot, so "newest" is always the
-  // top-left card. Positions are derived, never stored-and-trusted: that is
-  // what makes a resize reflow and a removal close the gap.
-  const cardLayout = useMemo(() => {
-    const out: Record<string, { x: number; y: number }> = {}
+  /** Per folder: the slot order, how many slots it can show, and the split. */
+  const folderLayouts = useMemo(() => {
+    const out: Record<string, {
+      rect: FrameGeometry
+      /** Member ids in reading order (drag = reorder, activity = promote). */
+      ordered: string[]
+      /** Cards rendered on the grid. */
+      shown: string[]
+      /** Cards folded into the stack cell (empty = no stack). */
+      folded: string[]
+    }> = {}
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? [])
-        .map((cardId): SlotEntry | undefined => {
+        .map((cardId): PlacedCard | undefined => {
           const card = visibleCards[cardId]
-          if (card === undefined) return undefined
-          return { cardId, time: sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt }
+          return card === undefined ? undefined : { cardId, x: card.x, y: card.y }
         })
-        .filter((entry): entry is SlotEntry => entry !== undefined)
-      for (const [cardId, point] of Object.entries(layoutFor(rect, members))) out[cardId] = point
+        .filter((entry): entry is PlacedCard => entry !== undefined)
+      const ordered = readingOrder(members)
+      const capacity = capacityFor(rect)
+      const visibleSlots = visibleCount(capacity, ordered.length)
+      out[groupId] = {
+        rect,
+        ordered,
+        shown: ordered.slice(0, visibleSlots),
+        folded: ordered.length > capacity ? ordered.slice(visibleSlots) : [],
+      }
     }
     return out
-  }, [frameRects, membersByGroup, visibleCards, sessions])
+  }, [frameRects, membersByGroup, visibleCards])
+
+  // Slot positions for every card that lives in a folder. Positions are derived
+  // from the order, never stored-and-trusted: that is what makes a resize
+  // reflow, a promotion rewrite the arrangement and a removal close the gap.
+  const cardLayout = useMemo(() => {
+    const out: Record<string, { x: number; y: number }> = {}
+    for (const layout of Object.values(folderLayouts)) {
+      Object.assign(out, layoutFor(layout.rect, layout.ordered))
+    }
+    return out
+  }, [folderLayouts])
+
+  /** card ids folded into a stack cell, and which folder each cell belongs to. */
+  const foldedCards = useMemo(() => {
+    const out: Record<string, string[]> = {}
+    for (const [groupId, layout] of Object.entries(folderLayouts)) {
+      if (layout.folded.length > 0) out[groupId] = layout.folded
+    }
+    return out
+  }, [folderLayouts])
 
   // Persist the derived arrangement whenever it drifts from the store: a card
   // was added, removed, dropped somewhere else, or a folder changed shape. The
@@ -269,6 +310,48 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
     if (Object.keys(stale).length > 0) canvas.moveCards(stale)
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame])
+
+  /** Cards folded into a stack cell — kept in the model, hidden from the grid. */
+  const foldedSet = useMemo(() => new Set(Object.values(foldedCards).flat()), [foldedCards])
+
+  // "An active conversation jumps the queue": when a session's stamp advances
+  // (a message was just sent, or it started running), its card is promoted to
+  // the first slot of its folder — once. The watcher seeds itself from the
+  // current stamps, so opening the map never reshuffles anything, and a card
+  // that already sits in front costs nothing.
+  const activityRef = useRef<Map<string, number>>(new Map())
+  useEffect(() => {
+    if (canvasState.phase !== 'ready') return
+    if (draggingCardId !== null || liveFrame !== null) return
+    const seen = activityRef.current
+    const stamps = new Map<string, number>()
+    for (const card of Object.values(visibleCards)) {
+      stamps.set(card.sessionId, sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt)
+    }
+    if (seen.size === 0) {
+      for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp)
+      return
+    }
+    const promoted: Record<string, { x: number; y: number }> = {}
+    for (const layout of Object.values(folderLayouts)) {
+      let candidate: { cardId: string; stamp: number } | undefined
+      for (const cardId of layout.ordered) {
+        const card = visibleCards[cardId]
+        if (card === undefined) continue
+        const stamp = stamps.get(card.sessionId) ?? 0
+        const before = seen.get(card.sessionId)
+        // A card that just appeared has no previous stamp: it is a new import,
+        // not activity, so it keeps its place at the end.
+        if (before === undefined || stamp <= before) continue
+        if (candidate === undefined || stamp > candidate.stamp) candidate = { cardId, stamp }
+      }
+      if (candidate === undefined || layout.ordered[0] === candidate.cardId) continue
+      const next = [candidate.cardId, ...layout.ordered.filter(id => id !== candidate.cardId)]
+      Object.assign(promoted, layoutFor(layout.rect, next))
+    }
+    for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp)
+    if (Object.keys(promoted).length > 0) canvas.moveCards(promoted)
+  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame])
 
   // While a connection drag is live, Esc belongs to it. React Flow (this
   // @xyflow version) has NO Escape handling of its own and exposes no
@@ -408,11 +491,26 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       setLiveFrame(null)
-      canvas.setWsFrameRect(groupId, frameRect(next, count))
+      canvas.setWsFrameRect(groupId, frameRect(next))
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onUp)
+  }
+
+  /**
+   * One lamp per card, most urgent first: a failure must not be hidden behind a
+   * "finished" glow, and being blocked on the user outranks merely still
+   * running. Shared by the grid cards and the folder drawer.
+   */
+  const glowOf = (sessionId: string): CardGlow | undefined => {
+    const status = statusById.get(sessionId)
+    const summary = sessions.byId[sessionId]
+    if (alertById.has(sessionId)) return 'error'
+    if (status !== undefined && status.pendingInteraction !== undefined) return 'waiting'
+    if (status?.running === true || summary?.running === true) return 'running'
+    if (status?.completionUnread === true) return 'done'
+    return undefined
   }
 
   const liveNodes = useMemo<TalkMapNode[]>(() => {
@@ -468,18 +566,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           summary: digest?.summary,
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
-          // One lamp per card, most urgent first: a failure must not be hidden
-          // behind a "finished" glow, and being blocked on the user outranks
-          // merely still running.
-          glow: alertById.has(card.sessionId)
-            ? 'error'
-            : status !== undefined && status.pendingInteraction !== undefined
-              ? 'waiting'
-              : status?.running === true || summary?.running === true
-                ? 'running'
-                : status?.completionUnread === true
-                  ? 'done'
-                  : undefined,
+          glow: glowOf(card.sessionId),
           ...(card.colorTag !== undefined ? { colorTag: card.colorTag } : {}),
         }
         return {
@@ -489,6 +576,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           // slot (and glides there — the CSS transition owns the animation).
           position: dragging || slot === undefined ? { x: card.x, y: card.y } : { x: slot.x, y: slot.y },
           selected: liveSelectedIds.has(cardId),
+          // Cards folded into the stack cell stay in the model (their edges and
+          // selection survive) but must not paint over the grid.
+          hidden: foldedSet.has(cardId),
           className: dragging ? 'tmDragging' : '',
           data,
         }
@@ -512,8 +602,38 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             onClose: () => { setDraft(null) },
           },
         }]
-    return [...frameNodes, ...cardNodes, ...draftNodes]
-  }, [frameRects, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale])
+    // Overflow cells: one per folder that cannot show all of its cards, sitting
+    // in the last visible slot with a count of what it swallowed.
+    const stackNodes: TalkMapNode[] = Object.entries(foldedCards).map(([groupId, folded]) => {
+      const layout = folderLayouts[groupId]
+      const rect = layout?.rect ?? frameRects[groupId]
+      const index = layout?.shown.length ?? 0
+      const point = rect === undefined ? { x: 0, y: 0 } : slotPoint(rect, index)
+      const newest = [...folded]
+        .map(cardId => sessions.byId[visibleCards[cardId]?.sessionId ?? '']?.updatedAt ?? 0)
+        .reduce((best, stamp, position) => (stamp > best.stamp ? { stamp, position } : best), { stamp: -1, position: 0 })
+      const topCardId = folded[newest.position]
+      const topSessionId = topCardId === undefined ? undefined : visibleCards[topCardId]?.sessionId
+      return {
+        id: `stack-${groupId}`,
+        type: 'stackCell' as const,
+        position: point,
+        draggable: false,
+        selectable: false,
+        focusable: false,
+        zIndex: 5,
+        data: {
+          workspaceId: groupId,
+          count: folded.length,
+          ...(topSessionId !== undefined && sessions.byId[topSessionId] !== undefined
+            ? { topTitle: sessions.byId[topSessionId].displayTitle }
+            : {}),
+          onOpen: () => { setDrawer({ groupId }) },
+        },
+      }
+    })
+    return [...frameNodes, ...cardNodes, ...stackNodes, ...draftNodes]
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -525,7 +645,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   const liveEdges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
-    const present = new Set(Object.keys(visibleCards))
+    // A folded card is not painted, so its edges must not be either (an edge to
+    // a hidden node would otherwise dangle on the board).
+    const present = new Set(Object.keys(visibleCards).filter(cardId => !foldedSet.has(cardId)))
     // Card pairs with an explicit user-drawn edge, registered in BOTH
     // directions: the derived lineage dashes yield to a stored edge no
     // matter which way it was drawn — otherwise the two lines overlap on
@@ -562,6 +684,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
     }
     for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (foldedSet.has(cardId)) continue
       const parentSessionId = sessions.byId[card.sessionId]?.parentId
       if (parentSessionId === undefined) continue
       const parentCardId = sessionIdToCardId.get(parentSessionId)
@@ -580,7 +703,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
     }
     return out
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, locale])
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale])
 
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges
@@ -856,6 +979,31 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     // Open first: if the runtime has no session opener, the map stays up (and
     // the reason lands in the console) instead of closing onto the old chat.
     if (openSessionInUi(sessionId)) closeMapPanel()
+  }
+
+  /** Every card of a folder (shown and folded), in the folder's own order. */
+  const drawerItems = (groupId: string): StackEntry[] => {
+    const layout = folderLayouts[groupId]
+    const ids = layout === undefined ? [] : [...layout.shown, ...layout.folded]
+    const items: StackEntry[] = []
+    for (const cardId of ids) {
+      const card = visibleCards[cardId]
+      if (card === undefined) continue
+      const summary = sessions.byId[card.sessionId]
+      const digest = canvasState.digests[card.sessionId]
+      const glow = glowOf(card.sessionId)
+      const nextStep = digest?.nextStep ?? digest?.todoNext
+      items.push({
+        cardId,
+        title: summary?.displayTitle ?? card.sessionId,
+        ...(digest?.summary !== undefined ? { summary: digest.summary } : {}),
+        ...(nextStep !== undefined ? { nextStep } : {}),
+        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+        running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
+        ...(glow !== undefined ? { glow } : {}),
+      })
+    }
+    return items
   }
 
   /**
@@ -1342,6 +1490,20 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         : null}
       {pendingSpawn !== null
         ? <SpawnPreview pending={pendingSpawn} onClose={() => { setPendingSpawn(null) }} />
+        : null}
+      {drawer !== null
+        ? (
+            <StackDrawer
+              workspaceTitle={wsTitles.get(drawer.groupId) ?? t('frame.unknown')}
+              items={drawerItems(drawer.groupId)}
+              onOpenCard={(cardId) => {
+                const card = visibleCards[cardId]
+                setDrawer(null)
+                if (card !== undefined) openSession(card.sessionId)
+              }}
+              onClose={() => { setDrawer(null) }}
+            />
+          )
         : null}
       {toast !== null ? <div className={styles['toast']}>{toast}</div> : null}
     </div>

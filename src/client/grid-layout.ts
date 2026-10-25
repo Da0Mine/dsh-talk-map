@@ -2,15 +2,20 @@
  * Folder-style slot layout for the board.
  *
  * A workspace frame is a container, not a decoration: its rect is owned by the
- * user (drag the label to move it, drag the corner to resize it) and the cards
+ * user (drag the label to move it, drag the edge to resize it) and the cards
  * inside are laid out by THIS module into fixed slots, like home-screen icons.
  * Nothing here touches the store — every function is pure, so the invariants
  * ("never overlap", "reflow when the folder changes width", "compact when a
- * card leaves") are unit-testable without a browser.
+ * card leaves", "overflow collapses into the last cell") are unit-testable
+ * without a browser.
+ *
+ * Slot ORDER is not decided here: the canvas keeps its own order (insertion
+ * order, with an active conversation promoted to the front) and hands this
+ * module an ordered list of card ids.
  *
  * Coordinates are flow coordinates (the same space as Card.x/Card.y).
  */
-import type { Card, FrameGeometry } from '../shared/model.ts'
+import type { FrameGeometry } from '../shared/model.ts'
 
 export const CARD_W = 224
 export const CARD_H = 120
@@ -24,6 +29,8 @@ const TOP_INSET = FRAME_PAD + FRAME_LABEL_H
 
 /** A folder always fits at least one column. */
 export const MIN_FRAME_WIDTH = CARD_W + FRAME_PAD * 2
+/** …and at least one row. */
+export const MIN_FRAME_HEIGHT = TOP_INSET + CARD_H + FRAME_PAD
 
 export interface Point {
   x: number
@@ -34,6 +41,17 @@ export interface Point {
 export function colsForWidth(width: number): number {
   const usable = Math.max(CARD_W, width - FRAME_PAD * 2)
   return Math.max(1, Math.floor((usable + GAP_X) / (CARD_W + GAP_X)))
+}
+
+/** How many card rows are fully visible in a frame of this height. */
+export function rowsForHeight(height: number): number {
+  const usable = Math.max(CARD_H, height - TOP_INSET - FRAME_PAD)
+  return Math.max(1, Math.floor((usable + GAP_Y) / (CARD_H + GAP_Y)))
+}
+
+/** Slots a frame can show before cards have to collapse into the stack cell. */
+export function capacityFor(rect: FrameGeometry): number {
+  return colsForWidth(rect.width) * rowsForHeight(rect.height)
 }
 
 /** Top-left corner of slot `index` in a frame with this geometry. */
@@ -54,61 +72,63 @@ export function contentHeight(count: number, cols: number): number {
 
 /**
  * The rect a frame actually renders at. The stored rect is the user's wish;
- * a folder may be too small for its contents (a card was just dropped in, or
- * the session count grew), and then it grows — it never hides a card, and it
- * never shrinks below one column.
+ * the only clamps are "at least one column" and "at least one row" — the folder
+ * does NOT grow to fit its contents any more. Cards that do not fit collapse
+ * into the stack cell instead (the caller decides that with `capacityFor`).
  */
-export function frameRect(stored: FrameGeometry, count: number): FrameGeometry {
-  const width = Math.max(MIN_FRAME_WIDTH, stored.width)
-  const cols = colsForWidth(width)
+export function frameRect(stored: FrameGeometry): FrameGeometry {
   return {
     x: stored.x,
     y: stored.y,
-    width,
-    height: Math.max(stored.height, contentHeight(count, cols)),
+    width: Math.max(MIN_FRAME_WIDTH, stored.width),
+    height: Math.max(MIN_FRAME_HEIGHT, stored.height),
   }
 }
 
-/**
- * One card's slot input: the card and the recency stamp that orders it.
- * `time` is the session's last activity (updatedAt), falling back to the card's
- * own creation stamp.
- */
-export interface SlotEntry {
-  cardId: string
-  time: number
-}
-
-/**
- * Reading order of a folder: newest activity first, so the freshest
- * conversations sit at the top-left corner and older ones trail away
- * right-and-down. Ties break on the card id, which keeps the order stable
- * across renders (and therefore keeps the snapped positions stable too).
- */
-export function orderByTime(entries: readonly SlotEntry[]): SlotEntry[] {
-  return [...entries].sort((a, b) => (b.time - a.time) || a.cardId.localeCompare(b.cardId))
-}
-
-/** Slot position for every member, newest first. */
-export function layoutFor(rect: FrameGeometry, entries: readonly SlotEntry[]): Record<string, Point> {
-  const cols = colsForWidth(rect.width)
-  const out: Record<string, Point> = {}
-  orderByTime(entries).forEach((entry, index) => {
-    out[entry.cardId] = slotPoint(rect, index, cols)
-  })
-  return out
-}
-
-/**
- * Slot index nearest to a flow-space point. The board uses it to answer "which
- * folder is this card over"; ordering itself is by recency, so this is only a
- * hit-test helper, not an insertion policy.
- */
+/** Which slot a point falls on — a hit-test helper for callers, not an order. */
 export function slotIndexAt(rect: FrameGeometry, point: Point): number {
   const cols = colsForWidth(rect.width)
   const col = clamp(Math.round((point.x - rect.x - FRAME_PAD) / (CARD_W + GAP_X)), 0, cols - 1)
   const row = Math.max(0, Math.round((point.y - rect.y - TOP_INSET) / (CARD_H + GAP_Y)))
   return row * cols + col
+}
+
+/**
+ * Slot position for every card, in the order it was given. Cards past
+ * `capacity` still get coordinates (the slots after the visible grid), so a
+ * folder that is enlarged later brings them back without extra bookkeeping.
+ */
+export function layoutFor(rect: FrameGeometry, orderedIds: readonly string[]): Record<string, Point> {
+  const cols = colsForWidth(rect.width)
+  const out: Record<string, Point> = {}
+  orderedIds.forEach((cardId, index) => {
+    out[cardId] = slotPoint(rect, index, cols)
+  })
+  return out
+}
+
+/** How many cards render normally once the overflow cell takes the last slot. */
+export function visibleCount(capacity: number, total: number): number {
+  if (total <= capacity) return total
+  // One slot is spent on the stack cell, so the grid shows one card fewer.
+  return Math.max(1, capacity - 1)
+}
+
+export interface PlacedCard {
+  cardId: string
+  x: number
+  y: number
+}
+
+/**
+ * Reading order of the current arrangement: top row first, left to right. The
+ * canvas derives its slot order from this, which is what makes a manual drag
+ * persist and what a promotion rewrites.
+ */
+export function readingOrder(cards: readonly PlacedCard[]): string[] {
+  return [...cards]
+    .sort((a, b) => (a.y - b.y) || (a.x - b.x) || a.cardId.localeCompare(b.cardId))
+    .map(card => card.cardId)
 }
 
 function clamp(value: number, min: number, max: number): number {
