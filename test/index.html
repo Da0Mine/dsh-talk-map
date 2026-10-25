@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8" />
+<title>dsh-talk-map offline harness</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1b1d21; color: #e7e9ee;
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #host { position: relative; height: 100vh; }
+  /* The shell's own theme variables, minimally stubbed. */
+  :root {
+    --dsw-alias-bg-base: #1b1d21;
+    --dsw-alias-bg-layer-1: #23252a;
+    --dsw-alias-bg-mask-2: rgba(0, 0, 0, .45);
+    --dsw-alias-label-primary: #e7e9ee;
+    --dsw-alias-label-secondary: #a9aeb9;
+    --dsw-alias-label-tertiary: #7d828d;
+    --dsw-alias-border-l1: #33363d;
+    --dsw-alias-border-l2: #3d4047;
+    --dsw-alias-border-l3: #4a4e57;
+    --dsw-alias-brand-primary: #6f8dff;
+    --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, .07);
+    --dsw-alias-interactive-bg-active: rgba(255, 255, 255, .12);
+  }
+</style>
+</head>
+<body>
+  <div id="host"></div>
+  <script src="../node_modules/react/umd/react.production.min.js"></script>
+  <script src="../node_modules/react-dom/umd/react-dom.production.min.js"></script>
+  <script src="harness.js"></script>
+  <script src="../client/client.js"></script>
+  <script>__harness.boot()</script>
+</body>
+</html>

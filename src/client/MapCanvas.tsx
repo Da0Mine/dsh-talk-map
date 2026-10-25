@@ -30,23 +30,22 @@ import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { DraftCardNode, type DraftCardNodeType } from './DraftCard.tsx'
 import { SessionCardNode, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
-import { WsFrameNode, type WsFrameNodeType } from './WsFrame.tsx'
+import { WsFrameNode, type ResizeAxis, type WsFrameNodeType } from './WsFrame.tsx'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
+import {
+  CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y,
+  frameRect, layoutFor,
+} from './grid-layout.ts'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
 const nodeTypes = { sessionCard: SessionCardNode, wsFrame: WsFrameNode, draftCard: DraftCardNode }
 
 const GRID = 16
-const CARD_W = 224
-const CARD_H = 120
-const GAP_X = 48
-const GAP_Y = 56
 const COLS = 3
-const FRAME_PAD = 32
-const FRAME_LABEL_H = 30
-const LAYOUT_VERSION = 3
+/** v4: frames became user-sized containers with slot layout inside. */
+const LAYOUT_VERSION = 4
 
 type TalkMapNode = SessionCardNodeType | WsFrameNodeType | DraftCardNodeType
 
@@ -144,8 +143,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [pendingSpawn, setPendingSpawn] = useState<PendingSpawn | null>(null)
   const [draft, setDraft] = useState<DraftState | null>(null)
   const [menu, setMenu] = useState<MenuContext | null>(null)
-  const framePosRef = useRef<Record<string, { x: number; y: number }>>({})
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  // Slot layout bookkeeping: the card under the pointer renders at its raw
+  // drag position (everything else is snapped), and a frame being moved or
+  // resized contributes a live rect that the members reflow into before the
+  // gesture commits.
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
+  const [liveFrame, setLiveFrame] = useState<{ groupId: string; rect: FrameGeometry } | null>(null)
+  const liveFrameRef = useRef<{ groupId: string; rect: FrameGeometry } | null>(null)
+  liveFrameRef.current = liveFrame
   // While a rubber-band drag is running, the node/edge arrays are frozen:
   // a mid-drag data refresh (digest SSE, running-state flip) re-renders the
   // flow and corrupts React Flow's in-flight hit testing — the intermittent
@@ -168,9 +174,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const wsFrames = canvasState.global?.wsFrames ?? {}
   const layoutVersion = canvasState.global?.layoutVersion ?? 1
 
-  // Migration v3 → the import-based world: existing cards keep their spots,
-  // get explicit group membership stamped from the sidebar accounting, and
-  // every populated group gets a stored frame. Runs once.
+  // Migration to the folder world (v4): every group that has cards but no
+  // stored rect gets one built around its current cards, so the layout engine
+  // has a folder to arrange inside. Cards keep their reading order (the slot
+  // assignment is derived from their current positions), and the reconciliation
+  // effect below snaps them onto slots.
   useEffect(() => {
     if (canvasState.phase !== 'ready' || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return
     const byGroup = new Map<string, Card[]>()
@@ -181,8 +189,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
     const framesNext = { ...canvasState.global?.wsFrames }
     for (const [groupId, members] of byGroup) {
-      if (framesNext[groupId] === undefined && members.length > 0) {
+      const stored = framesNext[groupId]
+      if (stored === undefined && members.length > 0) {
         framesNext[groupId] = fitRect(members)
+      } else if (stored !== undefined) {
+        // A rect left over from the derived-frame era can be wider than the
+        // cards need; the slot layout re-derives it from the member count.
+        framesNext[groupId] = frameRect(stored, members.length)
       }
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext })
@@ -211,24 +224,48 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return index
   }, [visibleCards, sessionWs])
 
-  // Frame geometry FOLLOWS its members (free dragging stretches the frame);
-  // the stored rect only positions a group that currently has no cards.
-  const frameGeometry = useMemo(() => {
+  // Folder geometry as rendered: the stored rect (the user's wish, clamped to
+  // one column and to the height its cards need) with a live gesture rect on
+  // top while a frame is being moved or resized.
+  const frameRects = useMemo(() => {
     const out: Record<string, FrameGeometry> = {}
     for (const [groupId, stored] of Object.entries(wsFrames)) {
-      const members = (membersByGroup.get(groupId) ?? [])
-        .map(id => visibleCards[id])
-        .filter((card): card is Card => card !== undefined)
-      out[groupId] = members.length > 0 ? fitRect(members) : stored
+      const count = (membersByGroup.get(groupId) ?? []).length
+      const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored
+      out[groupId] = frameRect(base, count)
     }
     return out
-  }, [wsFrames, membersByGroup, visibleCards])
+  }, [wsFrames, membersByGroup, liveFrame])
 
+  // Slot positions for every card that lives in a folder. Positions are derived,
+  // never stored-and-trusted: that is what makes a resize reflow, a drop push
+  // the others aside, and a removal close the gap.
+  const cardLayout = useMemo(() => {
+    const out: Record<string, { x: number; y: number }> = {}
+    for (const [groupId, rect] of Object.entries(frameRects)) {
+      const members = (membersByGroup.get(groupId) ?? [])
+        .map(cardId => [cardId, visibleCards[cardId]] as const)
+        .filter((entry): entry is readonly [string, Card] => entry[1] !== undefined)
+      for (const [cardId, point] of Object.entries(layoutFor(rect, members))) out[cardId] = point
+    }
+    return out
+  }, [frameRects, membersByGroup, visibleCards])
+
+  // Persist the derived arrangement whenever it drifts from the store: a card
+  // was added, removed, dropped somewhere else, or a folder changed shape. The
+  // write is skipped mid-gesture (the dragged card's position IS the gesture)
+  // and is a no-op once everything matches, so it cannot loop.
   useEffect(() => {
-    framePosRef.current = Object.fromEntries(
-      Object.entries(frameGeometry).map(([groupId, rect]) => [`frame-${groupId}`, { x: rect.x, y: rect.y }]),
-    )
-  }, [frameGeometry])
+    if (canvasState.phase !== 'ready') return
+    if (draggingCardId !== null || liveFrame !== null) return
+    const stale: Record<string, { x: number; y: number }> = {}
+    for (const [cardId, point] of Object.entries(cardLayout)) {
+      const card = canvasState.cards[cardId]
+      if (card === undefined) continue
+      if (card.x !== point.x || card.y !== point.y) stale[cardId] = point
+    }
+    if (Object.keys(stale).length > 0) canvas.moveCards(stale)
+  }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame])
 
   // While a connection drag is live, Esc belongs to it. React Flow (this
   // @xyflow version) has NO Escape handling of its own and exposes no
@@ -340,9 +377,44 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
   })
 
+  /**
+   * Resize a folder. Screen-space pointer deltas become flow-space growth, the
+   * members reflow live into the new width (that is the whole point of a
+   * container), and only the release persists the rect.
+   */
+  const beginResize = (groupId: string, axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>): void => {
+    const start = frameRects[groupId] ?? wsFrames[groupId]
+    if (start === undefined) return
+    const origin = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+    const count = (membersByGroup.get(groupId) ?? []).length
+    let next: FrameGeometry = { ...start }
+    const onMove = (moveEvent: PointerEvent): void => {
+      const now = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY })
+      const dx = now.x - origin.x
+      const dy = now.y - origin.y
+      next = {
+        x: start.x,
+        y: start.y,
+        width: axis === 's' ? start.width : start.width + dx,
+        height: axis === 'e' ? start.height : start.height + dy,
+      }
+      setLiveFrame({ groupId, rect: next })
+    }
+    const onUp = (): void => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      setLiveFrame(null)
+      canvas.setWsFrameRect(groupId, frameRect(next, count))
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+  }
+
   const liveNodes = useMemo<TalkMapNode[]>(() => {
     const wsColors = canvasState.global?.wsColors ?? {}
-    const frameNodes: TalkMapNode[] = Object.entries(frameGeometry).map(([groupId, rect]) => {
+    const frameNodes: TalkMapNode[] = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? []
       return {
         id: `frame-${groupId}`,
@@ -355,6 +427,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           width: rect.width,
           height: rect.height,
           ...(wsColors[groupId] !== undefined ? { colorTag: wsColors[groupId] } : {}),
+          onResizeStart: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => {
+            beginResize(groupId, axis, event)
+          },
         },
         draggable: true,
         // NOT selectable by React Flow: rubber-band selection grows in
@@ -364,6 +439,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         focusable: false,
         selected: liveSelectedIds.has(`frame-${groupId}`),
         zIndex: -1,
+        // Folders no longer eat pointer events: the body has to stay
+        // transparent so a double-click inside it reaches the pane (that is
+        // "new chat in this workspace"). The label and border strips are the
+        // frame's own physical surfaces and keep their own pointer events.
         style: { pointerEvents: 'none' as const },
       }
     })
@@ -373,6 +452,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const summary = sessions.byId[card.sessionId]
         const digest = canvasState.digests[card.sessionId]
         const status = statusById.get(card.sessionId)
+        const slot = cardLayout[cardId]
+        const dragging = draggingCardId === cardId
         const data: SessionCardData = {
           cardId,
           sessionId: card.sessionId,
@@ -401,8 +482,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         return {
           id: cardId,
           type: 'sessionCard' as const,
-          position: { x: card.x, y: card.y },
+          // The dragged card follows the pointer; every other card sits on its
+          // slot (and glides there — the CSS transition owns the animation).
+          position: dragging || slot === undefined ? { x: card.x, y: card.y } : { x: slot.x, y: slot.y },
           selected: liveSelectedIds.has(cardId),
+          className: dragging ? 'tmDragging' : '',
           data,
         }
       })
@@ -426,7 +510,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           },
         }]
     return [...frameNodes, ...cardNodes, ...draftNodes]
-  }, [frameGeometry, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale])
+  }, [frameRects, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -519,30 +603,32 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             ? previous
             : { ...previous, x: change.position?.x ?? previous.x, y: change.position?.y ?? previous.y })
         } else if (change.id.startsWith('frame-')) {
-          const previous = framePosRef.current[change.id]
+          // Moving a folder: the members are not translated card by card any
+          // more — their slots are derived from the folder's rect, so a live
+          // rect moves (and animates) the whole group in one pass.
           const groupId = change.id.slice('frame-'.length)
-          if (previous !== undefined) {
-            const dx = change.position.x - previous.x
-            const dy = change.position.y - previous.y
-            if (dx !== 0 || dy !== 0) {
-              for (const cardId of membersByGroup.get(groupId) ?? []) {
-                const card = canvasState.cards[cardId]
-                if (card !== undefined) canvas.moveCard(cardId, card.x + dx, card.y + dy)
-              }
-            }
+          const base = frameRects[groupId] ?? wsFrames[groupId]
+          if (base === undefined) continue
+          const rect: FrameGeometry = {
+            x: change.position.x,
+            y: change.position.y,
+            width: base.width,
+            height: base.height,
           }
-          framePosRef.current[change.id] = { x: change.position.x, y: change.position.y }
-          const rect = wsFrames[groupId]
-          if (rect !== undefined) {
-            canvas.setWsFrameRect(groupId, {
-              x: change.position.x,
-              y: change.position.y,
-              width: rect.width,
-              height: rect.height,
-            })
+          if (change.dragging === false) {
+            setLiveFrame(null)
+            canvas.setWsFrameRect(groupId, rect)
+          } else if (change.dragging === true) {
+            setLiveFrame({ groupId, rect })
           }
-        } else {
-          // Free dragging — the frame stretches after its members.
+        } else if (change.dragging === false) {
+          // Card dropped: keep the release point, let the layout snap it into
+          // the nearest slot and push the others aside.
+          setDraggingCardId(null)
+          canvas.moveCard(change.id, snap(change.position.x), snap(change.position.y))
+        } else if (change.dragging === true) {
+          // Live drag — this card is the only one that ignores its slot.
+          setDraggingCardId(change.id)
           canvas.moveCard(change.id, change.position.x, change.position.y)
         }
       } else if (change.type === 'select') {
@@ -768,18 +854,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (openSessionInUi(sessionId)) mapUi.setOpen(false)
   }
 
+  /** Which folder is under a flow-space point (rendered rects, not the stored ones). */
   const groupAtPoint = (x: number, y: number): string | undefined => {
-    for (const [groupId, rect] of Object.entries(wsFrames)) {
+    for (const [groupId, rect] of Object.entries(frameRects)) {
       if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) return groupId
     }
     return undefined
   }
 
-  const openDraftAt = (flowX: number, flowY: number): void => {
+  /**
+   * Open the in-place composer. Inside a folder the new conversation belongs to
+   * that workspace and is created with that workspace preselected; on empty
+   * canvas the composer falls back to its own workspace picker.
+   */
+  const openDraftAt = (flowX: number, flowY: number, forcedGroupId?: string): void => {
     const x = snap(flowX - CARD_W / 2)
     const y = snap(flowY - 40)
-    const groupId = groupAtPoint(flowX, flowY)
-    const isWorkspace = groupId !== undefined && wsTitles.has(groupId)
+    const groupId = forcedGroupId ?? groupAtPoint(flowX, flowY)
+    const isWorkspace = groupId !== undefined && (wsTitles.has(groupId) || frameRects[groupId] !== undefined)
     setDraft({
       x,
       y,
@@ -855,7 +947,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   const syncGroup = (groupId: string): void => {
-    const rect = frameGeometry[groupId]
+    const rect = frameRects[groupId] ?? wsFrames[groupId]
     if (rect === undefined) return
     const fresh = placeableSessionIds(sessions)
       .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
@@ -1119,7 +1211,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         // React Flow renders nodes INSIDE the pane, so the pane check below is
         // true for a card as well. A card owns its own double-click (open the
         // conversation) — never drop a draft card on top of one.
-        if (target.closest('.react-flow__node') !== null) return
+        const nodeElement = target.closest('.react-flow__node')
+        if (nodeElement !== null) {
+          const nodeId = nodeElement.getAttribute('data-id') ?? ''
+          // A double-click anywhere on a FOLDER (its label, its border, or the
+          // transparent body that lets the event through to the pane) starts a
+          // conversation in that workspace, at the point you clicked.
+          if (nodeId.startsWith('frame-')) {
+            const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
+            openDraftAt(position.x, position.y, nodeId.slice('frame-'.length))
+          }
+          return
+        }
         if (target.closest('.react-flow__pane') === null) return
         const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
         openDraftAt(position.x, position.y)

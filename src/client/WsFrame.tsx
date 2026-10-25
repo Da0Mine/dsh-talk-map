@@ -1,14 +1,22 @@
 /**
- * Workspace frame: a derived region drawn behind the cards of one map group.
- * Geometry follows its members — drag a card anywhere and the frame
- * stretches after it. The body center is pointer-transparent (pan and
- * double-click pass through); the dashed border strips and the label chip
- * are the frame's physical surfaces — click to select, drag to move the
- * whole group (the canvas translates every member card).
+ * Workspace frame: the folder a group of cards lives in.
+ *
+ * Geometry is the user's: drag the label chip (or any border strip) to move the
+ * whole folder, drag the right / bottom / corner handle to resize it. The cards
+ * inside are laid out by grid-layout.ts, so a resize reflows them live — the
+ * frame reports every candidate rect through `data.onResizeStart` and the canvas
+ * decides what to persist.
+ *
+ * The body centre stays pointer-transparent (pan and double-click pass through
+ * to the pane, which is how "double-click inside a folder = new chat here"
+ * works without the frame swallowing the gesture).
  */
 import type { NodeProps, Node } from '@xyflow/react'
+import type { FrameGeometry } from '../shared/model.ts'
 import { colorOf } from './colors.ts'
 import styles from './talk-map.module.css'
+
+export type ResizeAxis = 'e' | 's' | 'se'
 
 export interface WsFrameData extends Record<string, unknown> {
   workspaceId: string
@@ -17,6 +25,8 @@ export interface WsFrameData extends Record<string, unknown> {
   width: number
   height: number
   colorTag?: string
+  /** Pointer-down on a resize handle; the canvas owns the pointer capture. */
+  onResizeStart?: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => void
 }
 
 export type WsFrameNodeType = Node<WsFrameData, 'wsFrame'>
@@ -26,6 +36,11 @@ const EDGE = 10
 export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Element {
   const { data, selected } = props
   const color = colorOf(data.colorTag)
+  const start = (axis: ResizeAxis) => (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+    data.onResizeStart?.(axis, event)
+  }
   return (
     <div
       className={`${styles['wsFrame']}${selected === true ? ` ${styles['wsFrameSelected']}` : ''}`}
@@ -35,6 +50,7 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
         ...(color !== undefined ? { borderColor: color.border, background: color.faint } : {}),
       }}
       data-talkmap-frame=""
+      data-talkmap-workspace={data.workspaceId}
     >
       <div
         className={styles['wsFrameLabel']}
@@ -50,6 +66,26 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
       <div className={styles['wsFrameEdge']} style={{ bottom: 0, left: 0, right: 0, height: EDGE }} />
       <div className={styles['wsFrameEdge']} style={{ top: 0, bottom: 0, left: 0, width: EDGE }} />
       <div className={styles['wsFrameEdge']} style={{ top: 0, bottom: 0, right: 0, width: EDGE }} />
+      {/* resize handles: the folder's own edges, like a desktop folder */}
+      <div
+        className={`${styles['wsFrameResize']} ${styles['wsFrameResizeE']}`}
+        style={{ top: EDGE, bottom: EDGE, right: -3, width: 12 }}
+        onPointerDown={start('e')}
+        title="拖拽改变宽度"
+      />
+      <div
+        className={`${styles['wsFrameResize']} ${styles['wsFrameResizeS']}`}
+        style={{ left: EDGE, right: EDGE, bottom: -3, height: 12 }}
+        onPointerDown={start('s')}
+        title="拖拽改变高度"
+      />
+      <div
+        className={`${styles['wsFrameResize']} ${styles['wsFrameResizeCorner']}`}
+        onPointerDown={start('se')}
+        title="拖拽改变大小"
+      />
     </div>
   )
 }
+
+export type { FrameGeometry }

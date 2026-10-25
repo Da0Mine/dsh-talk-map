@@ -33,6 +33,9 @@ export interface DraftCardData extends Record<string, unknown> {
 export type DraftCardNodeType = Node<DraftCardData, 'draftCard'>
 
 const NEW_WORKSPACE = '__new__'
+const MODE_STANDARD = 'standard'
+const MODE_CREATIVE = 'cordis'
+const MODE_IDS = [MODE_STANDARD, MODE_CREATIVE] as const
 const GRID = 16
 const snap = (value: number): number => Math.round(value / GRID) * GRID
 
@@ -55,6 +58,9 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
   const [workspaceId, setWorkspaceId] = useState(data.defaultWorkspaceId ?? data.workspaceOptions[0]?.id ?? NEW_WORKSPACE)
   const [newWsName, setNewWsName] = useState('')
   const [modelKey, setModelKey] = useState('')
+  // Mode = the agent preset the new conversation is composed with. The map
+  // offers the two built-ins the shell itself offers: 标准模式 / 创造模式.
+  const [mode, setMode] = useState(MODE_STANDARD)
   const [presetId, setPresetId] = useState('')
   const [text, setText] = useState('')
   const [groups, setGroups] = useState<ModelProviderGroup[]>([])
@@ -111,6 +117,10 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
   const creatingWorkspace = workspaceId === NEW_WORKSPACE
   const wsParent = newWorkspaceParent(data.workspaceOptions)
   const newWsPath = `${wsParent}/${newWsName.trim()}`
+  // Only offer the modes this deployment actually exposes (a lean composition
+  // may ship neither preset); the generic dropdown stays as the fallback.
+  const availableModes = MODE_IDS.filter(id => presets.some(preset => preset.id === id))
+  const selectedPreset = availableModes.length > 0 ? mode : presetId
   const sendDisabled = busy || text.trim() === '' || (creatingWorkspace && newWsName.trim() === '')
 
   const send = async (): Promise<void> => {
@@ -132,7 +142,7 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
       if (creatingWorkspace) throw new Error(t('draft.newWorkspaceUnsupported'))
       ui.startSession(workspaceId, {
         prompt: text,
-        ...(presetId !== '' ? { agentPreset: presetId } : {}),
+        ...(selectedPreset !== '' ? { agentPreset: selectedPreset } : {}),
       })
       data.onClose()
       mapUi.setOpen(false)
@@ -191,6 +201,28 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
             </div>
           )
         : null}
+      {availableModes.length > 0
+        ? (
+            <div className={styles['draftRow']}>
+              <label className={styles['draftLabel']}>{t('draft.mode')}</label>
+              <div className={styles['modeSwitch']} role="radiogroup" aria-label={t('draft.mode')}>
+                {availableModes.map(id => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === id}
+                    className={`${styles['modeChip']}${mode === id ? ` ${styles['modeChipActive']}` : ''} nodrag`}
+                    title={id === MODE_CREATIVE ? t('draft.modeCreativeHint') : t('draft.modeStandardHint')}
+                    onClick={() => { setMode(id) }}
+                  >
+                    {id === MODE_CREATIVE ? t('draft.modeCreative') : t('draft.modeStandard')}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )
+        : null}
       <div className={styles['draftRow']}>
         <label className={styles['draftLabel']}>{t('draft.model')}</label>
         <select
@@ -208,7 +240,7 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
           )))}
         </select>
       </div>
-      {presets.length > 0
+      {presets.length > 0 && availableModes.length === 0
         ? (
             <div className={styles['draftRow']}>
               <label className={styles['draftLabel']}>{t('draft.preset')}</label>

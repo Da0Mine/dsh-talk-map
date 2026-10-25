@@ -221,6 +221,28 @@ export const canvas = {
     scheduleCardFlush()
   },
 
+  /**
+   * Batch position write — one undo frame, one state copy, one flush. The slot
+   * layout moves a whole folder of cards at once (drop, resize, compaction),
+   * and per-card calls would push an undo frame per card and post N times.
+   */
+  moveCards(points: Record<string, { x: number; y: number }>): void {
+    const cards = { ...state.cards }
+    let changed = false
+    for (const [id, point] of Object.entries(points)) {
+      const card = cards[id]
+      if (card === undefined) continue
+      if (card.x === point.x && card.y === point.y) continue
+      cards[id] = { ...card, x: point.x, y: point.y }
+      dirtyCards.add(id)
+      changed = true
+    }
+    if (!changed) return
+    pushUndo()
+    setState({ cards })
+    scheduleCardFlush()
+  },
+
   /** Immediate-persist upsert (new cards from double-click / auto-placement). */
   addCards(entries: Record<string, Card>): void {
     pushUndo()

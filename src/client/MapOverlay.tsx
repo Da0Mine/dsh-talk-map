@@ -73,17 +73,15 @@ function LanguageButton(): React.JSX.Element {
   )
 }
 
-function CloseIcon(): React.JSX.Element {
+function BackIcon(): React.JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M6 6l12 12M18 6L6 18" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M15 5l-7 7 7 7" />
     </svg>
   )
 }
 
 function OpenMapOverlay(props: RootSlotStandardProps): React.JSX.Element {
-  const sessionCount = props.useSessions(state => state.ids.length)
-
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
@@ -100,20 +98,19 @@ function OpenMapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   return (
     <div className={styles['overlay']} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
       <div className={styles['header']}>
-        <span className={styles['headerTitle']}>{t('map.title')}</span>
-        <span className={styles['headerBadge']}>{sessionCount} {t('map.sessions')}</span>
+        <button
+          type="button"
+          className={styles['backButton']}
+          title={t('map.back')}
+          aria-label={t('map.back')}
+          onClick={() => { mapUi.setOpen(false) }}
+        >
+          <BackIcon />
+          <span>{t('map.back')}</span>
+        </button>
         <span className={styles['headerSpace']} />
         <LanguageButton />
         <HotkeyButton />
-        <button
-          type="button"
-          className={styles['closeButton']}
-          title={t('map.close')}
-          aria-label={t('map.close')}
-          onClick={() => { mapUi.setOpen(false) }}
-        >
-          <CloseIcon />
-        </button>
       </div>
       <MapCanvas {...props} />
     </div>

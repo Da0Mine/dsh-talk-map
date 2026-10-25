@@ -78,15 +78,24 @@
   flex: none;
 }
 
-.headerTitle {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary);
+/* Leftmost header control: leave the map and go back to the conversation. */
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  padding: 4px 12px 4px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
 }
 
-.headerBadge {
-  font-size: 12px;
-  color: var(--dsw-alias-label-tertiary);
+.backButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
 }
 
 .headerSpace {
@@ -136,29 +145,21 @@
   letter-spacing: -0.5px;
 }
 
-.closeButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  cursor: pointer;
-}
-
-.closeButton:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
-}
-
 .canvas {
   flex: 1;
   min-height: 0;
   position: relative;
+}
+
+/* Slot layout: a card that gets pushed aside or fills a gap glides to its new
+ * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
+.canvas :global(.react-flow__node) {
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1);
+}
+
+.canvas :global(.react-flow__node.dragging),
+.canvas :global(.react-flow__node.tmDragging) {
+  transition: none;
 }
 
 /* React Flow draws a huge translucent bounding rect over the whole selected
@@ -616,18 +617,36 @@
   cursor: grabbing;
 }
 
+/* Resize handles: the folder's own edges, like a desktop folder. The east and
+ * south strips sit on the border, the corner keeps the classic diagonal. */
 .wsFrameResize {
   position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  opacity: 0.55;
+}
+
+.wsFrameResizeE {
+  cursor: ew-resize;
+  border-right: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 0 14px 14px 0;
+}
+
+.wsFrameResizeS {
+  cursor: ns-resize;
+  border-bottom: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 0 0 14px 14px;
+}
+
+.wsFrameResizeCorner {
   right: -2px;
   bottom: -2px;
-  width: 16px;
-  height: 16px;
-  pointer-events: auto;
+  width: 18px;
+  height: 18px;
   cursor: nwse-resize;
   border-right: 3px solid var(--dsw-alias-border-l3);
   border-bottom: 3px solid var(--dsw-alias-border-l3);
   border-bottom-right-radius: 14px;
-  opacity: 0.7;
 }
 
 .wsFrameResize:hover {
@@ -671,6 +690,39 @@
   width: 52px;
   font-size: 12px;
   color: var(--dsw-alias-label-tertiary);
+}
+
+/* Mode picker (标准模式 / 创造模式) — the same choice the shell's own new-task
+ * composer offers, kept as two chips so it reads at a glance. */
+.modeSwitch {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  gap: 6px;
+}
+
+.modeChip {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.modeChip:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+.modeChipActive {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-interactive-bg-active);
+  color: var(--dsw-alias-label-primary);
+  font-weight: 600;
 }
 
 .draftSelect {
