@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID, newCardId } from './canvas-store.ts'
 import { buildInjectionText } from './digest-text.ts'
-import { connectionApi, forkSessionInUi, getServices, mapUi, openSessionInUi } from './map-state.ts'
+import { closeMapPanel, connectionApi, forkSessionInUi, getServices, mapUi, openSessionInUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import type { Card, EdgeInjection } from '../shared/model.ts'
 import styles from './talk-map.module.css'
@@ -85,7 +85,7 @@ export function SpawnPreview(props: {
 
   const jumpIn = (sessionId: string): void => {
     props.onClose()
-    if (openSessionInUi(sessionId)) mapUi.setOpen(false)
+    if (openSessionInUi(sessionId)) closeMapPanel()
   }
 
   const confirm = async (): Promise<void> => {

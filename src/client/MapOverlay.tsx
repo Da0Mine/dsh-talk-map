@@ -1,8 +1,13 @@
 /**
- * The full-screen map surface, registered into 'shell.overlay' (root-scope
- * list slot: the layer is click-through, this entry opts back into pointer
- * events only while open). Closed state renders null so the app underneath
- * stays fully interactive.
+ * The map as a `main` panel: an ordinary centre-column page, the same seat the
+ * Plugins page or the recycle bin occupies. Being a panel (instead of a
+ * frame-wide overlay) is what makes the "finished while you were elsewhere"
+ * signal work — the shell is no longer holding a conversation on screen, so a
+ * session that finishes is still unread and its card can glow.
+ *
+ * The shell owns the selection: this component exists only while the panel is
+ * selected, so mount/unmount is the real open/closed state and the sidebar
+ * button mirrors it.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { LocalePref } from '../shared/model.ts'
@@ -10,7 +15,7 @@ import type { RootSlotStandardProps } from './dsh.ts'
 import { canvas } from './canvas-store.ts'
 import { DEFAULT_HOTKEY, hotkeyFromEvent, hotkeyLabel } from './hotkey.ts'
 import { activeLocale, LOCALE_CYCLE, subscribeLocale, t } from './i18n.ts'
-import { mapUi } from './map-state.ts'
+import { closeMapPanel, mapUi } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
 
@@ -75,35 +80,53 @@ function LanguageButton(): React.JSX.Element {
 
 function BackIcon(): React.JSX.Element {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M15 5l-7 7 7 7" />
     </svg>
   )
 }
 
-function OpenMapOverlay(props: RootSlotStandardProps): React.JSX.Element {
+function CloseIcon(): React.JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
+  )
+}
+
+export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
+  // Subscribing here re-renders the whole panel on a language switch;
+  // MapCanvas re-keys its own memos so the React-Flow nodes follow.
+  useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
+
+  // The shell selected this panel: publish that so the sidebar button, the
+  // hotkey and the draft card's "send then leave" all agree on the state.
+  useEffect(() => {
+    mapUi.setOpen(true)
+    return () => { mapUi.setOpen(false) }
+  }, [])
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') {
-        // An inner surface (draft card, spawn preview) claims Esc for itself.
-        if (mapUi.escapeClaimed()) return
-        event.stopPropagation()
-        mapUi.setOpen(false)
-      }
+      if (event.key !== 'Escape') return
+      // An inner surface (draft card, spawn preview, hotkey capture) claims Esc.
+      if (mapUi.escapeClaimed()) return
+      event.stopPropagation()
+      closeMapPanel()
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
     return () => { window.removeEventListener('keydown', onKeyDown, { capture: true }) }
   }, [])
 
   return (
-    <div className={styles['overlay']} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
+    <div className={styles['panel']} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
       <div className={styles['header']}>
         <button
           type="button"
           className={styles['backButton']}
           title={t('map.back')}
           aria-label={t('map.back')}
-          onClick={() => { mapUi.setOpen(false) }}
+          onClick={closeMapPanel}
         >
           <BackIcon />
           <span>{t('map.back')}</span>
@@ -111,17 +134,17 @@ function OpenMapOverlay(props: RootSlotStandardProps): React.JSX.Element {
         <span className={styles['headerSpace']} />
         <LanguageButton />
         <HotkeyButton />
+        <button
+          type="button"
+          className={styles['closeButton']}
+          title={t('map.close')}
+          aria-label={t('map.close')}
+          onClick={closeMapPanel}
+        >
+          <CloseIcon />
+        </button>
       </div>
       <MapCanvas {...props} />
     </div>
   )
-}
-
-export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element | null {
-  const open = useSyncExternalStore(mapUi.subscribe, () => mapUi.get().open)
-  // Subscribing here re-renders the whole overlay on a language switch;
-  // MapCanvas re-keys its own memos so the React-Flow nodes follow.
-  useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
-  if (!open) return null
-  return <OpenMapOverlay {...props} />
 }

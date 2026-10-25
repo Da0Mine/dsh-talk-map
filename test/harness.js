@@ -57,16 +57,26 @@
     s6: '医学影像标注流程', s7: '标注工具离线化', s8: '数据集切分脚本',
     s9: '代理端口探测',
   }
+  // Distinct recency stamps: the folder must lay these out newest-first, so the
+  // probe can assert the slot order against this table.
+  const minutesAgo = { s1: 2, s2: 15, s3: 90, s4: 240, s5: 40, s6: 5, s7: 60, s8: 30, s9: 8 }
   for (const ws of workspaceList) {
-    for (const id of ws.sessionIds) sessionRows[id] = session(id, titles[id])
+    for (const id of ws.sessionIds) {
+      sessionRows[id] = session(id, titles[id], { updatedAt: T0 - minutesAgo[id] * MIN })
+    }
   }
   sessionRows.s1.running = true
-  sessionRows.s3.updatedAt = T0 - 90 * MIN
+  sessionRows.s3.completed = true
   sessionRows.s8.blank = true // a blank session must not render a card
 
   const sessionsState = { ids: Object.keys(sessionRows), byId: sessionRows }
   const workspacesState = { items: workspaceList, baselinesReady: true }
-  const statusById = new Map([['s1', { running: true }]])
+  // ui-session's projection: s1 still running (white lamp), s3 finished while
+  // unwatched (green lamp) — the two states the probe asserts on.
+  const statusById = new Map([
+    ['s1', { running: true }],
+    ['s3', { completionUnread: true }],
+  ])
 
   const PAD = 32
   const LABEL = 30
@@ -162,6 +172,9 @@
 
   // ---- fake cordis context --------------------------------------------
   const registered = {}
+  /** `main` entries by key — the map is one now, like the recycle bin's page. */
+  const panels = {}
+  let selectedPanel = null
   const ctx = {
     sessions: {
       // ctx.sessions.list is itself the list surface (getSnapshot/subscribe).
@@ -187,12 +200,27 @@
       startSession: (workspaceId, options) => log('ui.startSession', { workspaceId, options }),
       forkSession: () => Promise.resolve('s-fork'),
     },
+    // Panel navigation: the map registers a `main` entry and selects it here,
+    // exactly like the recycle bin / Plugins page do in the real shell.
+    layout: {
+      selectPanel(panelId) {
+        if (panelId !== null && panels[panelId] === undefined) {
+          throw new Error(`selectPanel: no main entry registered for ${panelId}`)
+        }
+        selectedPanel = panelId
+        sync()
+      },
+    },
     effect(fn) { const dispose = fn(); return typeof dispose === 'function' ? dispose : () => {} },
     slots: {
       inject(_name, callback) { callback() },
       register(descriptor, component) {
         registered[descriptor.name] = { descriptor, component }
-        return () => { delete registered[descriptor.name] }
+        if (descriptor.name === 'main' && typeof descriptor.key === 'string') panels[descriptor.key] = component
+        return () => {
+          delete registered[descriptor.name]
+          if (descriptor.name === 'main') delete panels[descriptor.key]
+        }
       },
     },
     get(name) { return ctx[name] },
@@ -215,12 +243,19 @@
   }
 
   function sync() {
-    const Overlay = registered['shell.overlay']?.component
-    if (Overlay === undefined) throw new Error('shell.overlay was never registered')
+    const MapPanel = panels['talk-map']
     if (root === null) {
       root = ReactDOM.createRoot(document.getElementById('host'))
     }
-    root.render(React.createElement(Overlay, props))
+    if (selectedPanel === 'talk-map' && MapPanel !== undefined) {
+      root.render(React.createElement(MapPanel, props))
+      return
+    }
+    // Standing in for the conversation column the shell would show.
+    root.render(React.createElement('div', {
+      'data-harness-placeholder': 'conversation',
+      style: { padding: 24, fontSize: 13, color: '#8b90a0' },
+    }, '会话（占位）'))
   }
 
   window.__harness = {
@@ -239,13 +274,14 @@
       // The overlay subscribes to the map-ui store; the plugin's own hotkey
       // (alt+F) is the supported way to open it, so drive that.
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true, bubbles: true }))
-      return { registered: Object.keys(registered) }
+      return { registered: Object.keys(registered), panels: Object.keys(panels), selectedPanel }
     },
     sync,
     posts,
     log: logEntries,
     state: () => payload,
     getRoot: () => root,
+    panelState: () => ({ selectedPanel }),
     nodeBoxes() {
       const out = { cards: {}, frames: {} }
       for (const el of document.querySelectorAll('.react-flow__node')) {

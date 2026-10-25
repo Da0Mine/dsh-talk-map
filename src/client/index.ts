@@ -7,10 +7,10 @@
  * boot when a plugin apply throws, and an external plugin must not take the
  * GUI down (policy proven by dsh-plugin-market).
  */
-import type { AlertSource, TalkMapClientContext, UiWorkspaceService } from './dsh.ts'
+import type { AlertSource, LayoutService, TalkMapClientContext, UiWorkspaceService } from './dsh.ts'
 import { canvas } from './canvas-store.ts'
 import { DEFAULT_HOTKEY, hotkeyMatches } from './hotkey.ts'
-import { attachServices, mapUi } from './map-state.ts'
+import { attachServices, mapUi, MAP_PANEL_ID } from './map-state.ts'
 import { MapOverlay } from './MapOverlay.tsx'
 import { MapToggleButton } from './MapToggleButton.tsx'
 import { attachAlertSource } from './session-alerts.ts'
@@ -31,6 +31,22 @@ function resolveUiWorkspace(ctx: TalkMapClientContext): UiWorkspaceService | und
   try {
     const value = typeof ctx.get === 'function' ? ctx.get('uiWorkspace') : undefined
     return value === undefined || value === null ? undefined : value as UiWorkspaceService
+  } catch {
+    return undefined
+  }
+}
+
+/** ctx.layout — panel navigation; reached the same way as uiWorkspace. */
+function resolveLayout(ctx: TalkMapClientContext): LayoutService | undefined {
+  try {
+    const direct = ctx.layout
+    if (direct !== undefined) return direct
+  } catch {
+    // Not registered yet: fall through to the optional lookup.
+  }
+  try {
+    const value = typeof ctx.get === 'function' ? ctx.get('layout') : undefined
+    return value === undefined || value === null ? undefined : value as LayoutService
   } catch {
     return undefined
   }
@@ -70,6 +86,7 @@ export function apply(ctx: TalkMapClientContext): void {
       workspaces: ctx.workspaces,
       connection: ctx.connection,
       uiWorkspace: resolveUiWorkspace(ctx),
+      layout: resolveLayout(ctx),
       // Also kept live: a cold boot reaches this plugin before ui-workspace
       // registers, so the click resolves the service through ctx instead.
       ctx: { get: typeof ctx.get === 'function' ? (name: string) => ctx.get?.(name) : undefined },
@@ -88,6 +105,7 @@ export function apply(ctx: TalkMapClientContext): void {
             workspaces: ctx.workspaces,
             connection: scoped.connection ?? ctx.connection,
             uiWorkspace: scoped.uiWorkspace,
+            layout: resolveLayout(scoped),
             ctx: { get: typeof scoped.get === 'function' ? (name: string) => scoped.get?.(name) : undefined },
           })
         })
@@ -117,10 +135,16 @@ export function apply(ctx: TalkMapClientContext): void {
       label: () => t('map.toggle'),
     }, MapToggleButton))
 
-    ctx.slots.inject('shell.overlay', () => ctx.slots.register({
-      name: 'shell.overlay',
-      id: 'talk-map',
-      order: 100,
+    // The map is an ordinary `main` panel (the seat the Plugins page, the map's
+    // recycle-bin neighbour and the Plugin Market use), NOT a frame-wide
+    // overlay. Two consequences that matter here:
+    //   - it reads as a window over the conversation, with the sidebar live;
+    //   - with a panel selected and no Session on screen, a session that
+    //     finishes is still "unread", so its card can glow (the overlay used to
+    //     keep the old conversation mounted, which silently acknowledged it).
+    ctx.slots.inject('main', () => ctx.slots.register({
+      name: 'main',
+      key: MAP_PANEL_ID,
       label: () => t('map.title'),
     }, MapOverlay))
 

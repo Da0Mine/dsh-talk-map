@@ -3,7 +3,7 @@
  * two components registered into unrelated slots, so they meet through this
  * module-level external store (useSyncExternalStore on the React side).
  */
-import type { ConnectionService, SessionsService, UiWorkspaceService, WorkspacesService } from './dsh.ts'
+import type { ConnectionService, LayoutService, SessionsService, UiWorkspaceService, WorkspacesService } from './dsh.ts'
 
 export interface MapUiState {
   readonly open: boolean
@@ -32,13 +32,18 @@ export const mapUi = {
     listeners.add(listener)
     return () => { listeners.delete(listener) }
   },
+  /**
+   * Mirror of "the map panel is the selected main panel". The panel component
+   * drives it from its own mount/unmount — the shell owns the real selection.
+   */
   setOpen(open: boolean): void {
     if (state.open === open) return
     state = { ...state, open }
     emit()
   },
   toggle(): void {
-    mapUi.setOpen(!state.open)
+    if (state.open) closeMapPanel()
+    else openMapPanel()
   },
   claimEscape(id: string): () => void {
     escGuards.add(id)
@@ -58,6 +63,8 @@ export interface MapServices {
   workspaces: WorkspacesService
   connection: ConnectionService
   uiWorkspace?: UiWorkspaceService
+  /** ctx.layout — panel navigation (selectPanel). */
+  layout?: LayoutService
   /**
    * The client context itself, kept so services that were not registered when
    * apply() ran can still be resolved at click time (a cold boot activates this
@@ -65,6 +72,9 @@ export interface MapServices {
    */
   ctx?: { get?: (name: string) => unknown }
 }
+
+/** Key of this plugin's `main` entry — the id `selectPanel` selects. */
+export const MAP_PANEL_ID = 'talk-map'
 
 let services: MapServices | undefined
 
@@ -120,6 +130,56 @@ export function servicesDiag(): string {
 export function uiWorkspaceService(): UiWorkspaceService | undefined {
   const current = getServices()
   return current === undefined ? undefined : resolveUiWorkspace(current)
+}
+
+/** ctx.layout, resolved as late as the click (same cold-boot trap as uiWorkspace). */
+function resolveLayout(current: MapServices): LayoutService | undefined {
+  if (current.layout !== undefined) return current.layout
+  const get = current.ctx?.get
+  if (typeof get !== 'function') return undefined
+  try {
+    const value = get.call(current.ctx, 'layout')
+    return value === undefined || value === null ? undefined : value as LayoutService
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Show the map in the centre column (`main` panel), the way the recycle bin or
+ * the Plugins page do — a window over the conversation, not a frame-wide cover.
+ * The shell keeps the current Session as the *previous* view, so a session that
+ * finishes while the map is up still counts as unread and can glow.
+ */
+export function openMapPanel(): void {
+  const current = getServices()
+  const layout = current === undefined ? undefined : resolveLayout(current)
+  if (layout === undefined) {
+    mapUi.setOpen(true)
+    return
+  }
+  try {
+    layout.selectPanel(MAP_PANEL_ID)
+  } catch (error) {
+    console.error('[dsh-talk-map] selectPanel failed:', error)
+    mapUi.setOpen(true)
+  }
+}
+
+/** Back to the conversation (the shell's own "show the Session" selection). */
+export function closeMapPanel(): void {
+  const current = getServices()
+  const layout = current === undefined ? undefined : resolveLayout(current)
+  if (layout === undefined) {
+    mapUi.setOpen(false)
+    return
+  }
+  try {
+    layout.selectPanel(null)
+  } catch (error) {
+    console.error('[dsh-talk-map] selectPanel(null) failed:', error)
+    mapUi.setOpen(false)
+  }
 }
 
 /**

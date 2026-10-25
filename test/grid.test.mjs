@@ -2,17 +2,17 @@
  * Pure-function checks for the slot layout (no browser, no build):
  *   node --experimental-strip-types test/grid.test.mjs
  *
- * These are the invariants the UI relies on — fixed slots, no overlap, reflow on
- * width change, compaction when a card leaves, clamp-safe drops.
+ * These are the invariants the UI relies on — fixed slots, no overlap, newest
+ * first, reflow on width change, compaction when a card leaves.
  */
 import assert from 'node:assert/strict'
 import {
   CARD_H, CARD_W, GAP_X, GAP_Y, MIN_FRAME_WIDTH,
-  colsForWidth, contentHeight, dropIndex, frameRect, layoutFor, orderCards, slotPoint,
+  colsForWidth, contentHeight, frameRect, layoutFor, orderByTime, slotIndexAt, slotPoint,
 } from '../src/client/grid-layout.ts'
 
-const card = (id, x, y) => ({ boardId: 'inbox', sessionId: id, x, y, createdAt: 0 })
 const rect = (width, count, x = 0, y = 0) => frameRect({ x, y, width, height: contentHeight(count, colsForWidth(width)) }, count)
+const entry = (cardId, time) => ({ cardId, time })
 
 let checks = 0
 function ok(name, fn) {
@@ -42,7 +42,6 @@ ok('slots never overlap, for any count and width', () => {
           assert.equal(overlap, false, `overlap at ${width}px / ${count} cards: ${i}-${j}`)
         }
       }
-      // every slot stays inside the folder box
       const last = points.at(-1)
       assert.ok(last.x + CARD_W <= geometry.x + geometry.width, 'slot overflows folder width')
       assert.ok(last.y + CARD_H <= geometry.y + geometry.height, 'slot overflows folder height')
@@ -58,18 +57,25 @@ ok('height grows with rows, never below one row', () => {
   assert.equal(contentHeight(0, 3), contentHeight(1, 3), 'an empty folder keeps one row')
 })
 
-ok('reading order is row-major', () => {
-  const entries = [
-    ['d', card('d', 0, 200)],
-    ['b', card('b', 300, 0)],
-    ['a', card('a', 0, 0)],
-    ['c', card('c', 300, 200)],
-  ]
-  assert.deepEqual(orderCards(entries).map(([id]) => id), ['a', 'b', 'd', 'c'])
+ok('order is newest first, ties stable by id', () => {
+  const entries = [entry('b', 100), entry('a', 300), entry('d', 200), entry('c', 200)]
+  assert.deepEqual(orderByTime(entries).map(e => e.cardId), ['a', 'c', 'd', 'b'])
+})
+
+ok('the newest card owns the first slot (leftmost, top row)', () => {
+  const geometry = rect(832, 4)
+  const layout = layoutFor(geometry, [
+    entry('old', 10), entry('newest', 900), entry('mid', 500), entry('third', 300),
+  ])
+  const first = slotPoint(geometry, 0)
+  assert.deepEqual(layout['newest'], first)
+  assert.equal(layout['mid'].x, first.x + CARD_W + GAP_X, 'second newest sits to its right')
+  assert.equal(layout['third'].x, first.x + 2 * (CARD_W + GAP_X), 'third one further right')
+  assert.equal(layout['old'].y, first.y + CARD_H + GAP_Y, 'the oldest wraps to the next row')
 })
 
 ok('a wider folder reflows the same order into more columns', () => {
-  const members = ['a', 'b', 'c', 'd', 'e'].map((id, i) => [id, card(id, (i % 2) * 300, Math.floor(i / 2) * 200)])
+  const members = [entry('a', 500), entry('b', 400), entry('c', 300), entry('d', 200), entry('e', 100)]
   const narrow = layoutFor(rect(MIN_FRAME_WIDTH, 5), members)
   const wide = layoutFor(rect(832, 5), members)
   assert.equal(narrow.b.x, narrow.a.x, 'one column: b sits under a')
@@ -79,21 +85,28 @@ ok('a wider folder reflows the same order into more columns', () => {
   assert.deepEqual(Object.keys(narrow).sort(), Object.keys(wide).sort())
 })
 
-ok('removing a card closes the gap', () => {
-  const members = ['a', 'b', 'c', 'd'].map((id, i) => [id, card(id, i * 300, 0)])
-  const five = layoutFor(rect(832, 4), [...members, ['e', card('e', 4 * 300, 0)]])
-  const four = layoutFor(rect(832, 4), members)
-  assert.equal(five.c.x, 2 * (CARD_W + GAP_X) + 32)
-  assert.equal(four.c.x, five.c.x, 'c keeps its slot when e leaves')
+ok('removing the newest card pulls everyone forward', () => {
+  const geometry = rect(832, 4)
+  const before = layoutFor(geometry, [entry('a', 500), entry('b', 400), entry('c', 300)])
+  const after = layoutFor(geometry, [entry('b', 400), entry('c', 300)])
+  assert.deepEqual(after['b'], before['a'], 'the survivor takes the freed first slot')
+  assert.deepEqual(after['c'], before['b'])
 })
 
-ok('drop index is clamped to the folder', () => {
+ok('a refreshed session moves to the front', () => {
+  const geometry = rect(832, 3)
+  const before = layoutFor(geometry, [entry('a', 900), entry('b', 800), entry('c', 100)])
+  const after = layoutFor(geometry, [entry('a', 900), entry('b', 800), entry('c', 1000)])
+  assert.deepEqual(before['c'], slotPoint(geometry, 2))
+  assert.deepEqual(after['c'], slotPoint(geometry, 0), 'c just ran, so it takes the first slot')
+})
+
+ok('slotIndexAt maps a point to the slot under it', () => {
   const geometry = rect(832, 5)
-  assert.equal(dropIndex(geometry, { x: geometry.x + 40, y: geometry.y + 70 }, 5), 0, 'top-left slot')
-  assert.equal(dropIndex(geometry, { x: geometry.x - 500, y: geometry.y - 500 }, 5), 0)
-  assert.equal(dropIndex(geometry, { x: geometry.x + 5000, y: geometry.y + 5000 }, 5), 5, 'past the end appends')
-  const second = dropIndex(geometry, { x: geometry.x + 32 + CARD_W + GAP_X + 10, y: geometry.y + 62 + 10 }, 5)
+  assert.equal(slotIndexAt(geometry, { x: geometry.x + 40, y: geometry.y + 70 }), 0)
+  const second = slotIndexAt(geometry, { x: geometry.x + 32 + CARD_W + GAP_X + 10, y: geometry.y + 62 + 10 })
   assert.equal(second, 1)
+  assert.equal(slotIndexAt(geometry, { x: geometry.x + 40, y: geometry.y + 62 + CARD_H + GAP_Y + 10 }), 3, 'next row')
 })
 
 ok('a folder never renders narrower than one column nor shorter than its cards', () => {

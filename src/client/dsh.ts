@@ -91,9 +91,21 @@ export interface SidebarFooterActionOwnerProps {
 export interface SlotEntryOptions {
   name: string
   id?: string
+  /** Keyed slots ('main') address their entry by key instead of id. */
+  key?: string
   order?: number
   label?: string | (() => string)
   inject?: (...args: unknown[]) => unknown
+}
+
+/**
+ * ctx.layout — panel navigation. `selectPanel(id)` shows a registered `main`
+ * entry in the centre column without changing the current Session, which is the
+ * whole point for this plugin: with a panel (and no Session) on screen, a
+ * session that finishes is still "unread", so its card can glow.
+ */
+export interface LayoutService {
+  selectPanel(panelId: string | null): void
 }
 
 /** ctx.slots — inject defers until the slot is declared; register returns a disposer. */

@@ -24,7 +24,7 @@ import type { Card, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
-import { connectionApi, getServices, mapUi, openSessionInUi } from './map-state.ts'
+import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi } from './map-state.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { DraftCardNode, type DraftCardNodeType } from './DraftCard.tsx'
@@ -35,7 +35,7 @@ import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
 import {
   CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y,
-  frameRect, layoutFor,
+  frameRect, layoutFor, type SlotEntry,
 } from './grid-layout.ts'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
@@ -235,19 +235,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return out
   }, [wsFrames, membersByGroup, liveFrame])
 
-  // Slot positions for every card that lives in a folder. Positions are derived,
-  // never stored-and-trusted: that is what makes a resize reflow, a drop push
-  // the others aside, and a removal close the gap.
+  // Slot positions for every card that lives in a folder, ordered by recency:
+  // the freshest conversation takes the first slot, so "newest" is always the
+  // top-left card. Positions are derived, never stored-and-trusted: that is
+  // what makes a resize reflow and a removal close the gap.
   const cardLayout = useMemo(() => {
     const out: Record<string, { x: number; y: number }> = {}
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? [])
-        .map(cardId => [cardId, visibleCards[cardId]] as const)
-        .filter((entry): entry is readonly [string, Card] => entry[1] !== undefined)
+        .map((cardId): SlotEntry | undefined => {
+          const card = visibleCards[cardId]
+          if (card === undefined) return undefined
+          return { cardId, time: sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt }
+        })
+        .filter((entry): entry is SlotEntry => entry !== undefined)
       for (const [cardId, point] of Object.entries(layoutFor(rect, members))) out[cardId] = point
     }
     return out
-  }, [frameRects, membersByGroup, visibleCards])
+  }, [frameRects, membersByGroup, visibleCards, sessions])
 
   // Persist the derived arrangement whenever it drifts from the store: a card
   // was added, removed, dropped somewhere else, or a folder changed shape. The
@@ -620,10 +625,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             setLiveFrame({ groupId, rect })
           }
         } else if (change.dragging === false) {
-          // Card dropped: keep the release point, let the layout snap it into
-          // the nearest slot and push the others aside.
+          // Dropped. Slot order is recency, not position, so the card glides
+          // back to its own slot: clearing the drag flag is enough — the
+          // reconciliation effect rewrites the position it was dragged away
+          // from, and nothing else has to move.
           setDraggingCardId(null)
-          canvas.moveCard(change.id, snap(change.position.x), snap(change.position.y))
         } else if (change.dragging === true) {
           // Live drag — this card is the only one that ignores its slot.
           setDraggingCardId(change.id)
@@ -849,15 +855,22 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const openSession = (sessionId: string): void => {
     // Open first: if the runtime has no session opener, the map stays up (and
     // the reason lands in the console) instead of closing onto the old chat.
-    if (openSessionInUi(sessionId)) mapUi.setOpen(false)
+    if (openSessionInUi(sessionId)) closeMapPanel()
   }
 
-  /** Which folder is under a flow-space point (rendered rects, not the stored ones). */
+  /**
+   * Which folder is under a flow-space point (rendered rects, not the stored
+   * ones). Two folders can overlap on a free board, so the SMALLEST one wins:
+   * the more specific target is the one the pointer is really on.
+   */
   const groupAtPoint = (x: number, y: number): string | undefined => {
+    let best: { groupId: string; area: number } | undefined
     for (const [groupId, rect] of Object.entries(frameRects)) {
-      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) return groupId
+      if (x < rect.x || x > rect.x + rect.width || y < rect.y || y > rect.y + rect.height) continue
+      const area = rect.width * rect.height
+      if (best === undefined || area < best.area) best = { groupId, area }
     }
-    return undefined
+    return best?.groupId
   }
 
   /**

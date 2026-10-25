@@ -57,15 +57,16 @@
   flex: none;
 }
 
-.overlay {
-  position: absolute;
-  inset: 0;
+/* The map is a `main` panel: an ordinary centre-column page, so it fills the
+ * column it is given instead of covering the frame. */
+.panel {
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   background: var(--dsw-alias-bg-base);
   color: var(--dsw-alias-label-primary);
-  /* the shell.overlay layer is click-through; entries opt back in */
-  pointer-events: auto;
 }
 
 .header {
@@ -82,14 +83,17 @@
 .backButton {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   flex: none;
-  padding: 4px 12px 4px 8px;
+  height: 38px;
+  padding: 0 18px 0 12px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 999px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -104,12 +108,13 @@
 
 .hotkeyButton {
   flex: none;
-  padding: 3px 10px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 999px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -123,18 +128,40 @@
    as the label cycles 自动 / 中文 / English. */
 .langButton {
   flex: none;
-  min-width: 58px;
-  padding: 3px 10px;
+  min-width: 72px;
+  height: 34px;
+  padding: 0 14px;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 999px;
   background: transparent;
   color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   white-space: nowrap;
 }
 
 .langButton:hover {
+  background: var(--dsw-alias-interactive-bg-hover);
+  color: var(--dsw-alias-label-primary);
+}
+
+/* Right corner: the same "leave the map" action as the back button. */
+.closeButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  cursor: pointer;
+}
+
+.closeButton:hover {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
@@ -313,17 +340,19 @@
  * Light spilling out from BEHIND the card, not a stroke on it: box-shadow
  * already paints outside the border box, so a wide blurred outer layer reads
  * as a source behind the card while the inset hairline keeps the edge defined.
- * running = green breathing · done = steady white · error = red · waiting = amber.
+ * running = white breathing · done = steady green · error = red · waiting = amber.
+ * White is the "still working" light: it is neutral, and it is what the running
+ * badge/dot already uses. Green stays the terminal "finished, unread" light.
  */
 .cardLampRunning {
-  animation: talkmap-lamp-green 2.8s ease-in-out infinite;
+  animation: talkmap-lamp-white 2.4s ease-in-out infinite;
 }
 
 .cardLampDone {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
-    0 0 16px 2px rgba(255, 255, 255, 0.22),
-    0 0 44px 13px rgba(255, 255, 255, 0.11);
+    inset 0 0 0 1px rgba(52, 199, 89, 0.42),
+    0 0 16px 2px rgba(52, 199, 89, 0.30),
+    0 0 46px 14px rgba(52, 199, 89, 0.16);
 }
 
 .cardLampError {
@@ -332,6 +361,21 @@
 
 .cardLampWaiting {
   animation: talkmap-lamp-amber 3.4s ease-in-out infinite;
+}
+
+@keyframes talkmap-lamp-white {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.40),
+      0 0 14px 1px rgba(255, 255, 255, 0.26),
+      0 0 34px 8px rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.80),
+      0 0 24px 5px rgba(255, 255, 255, 0.46),
+      0 0 62px 20px rgba(255, 255, 255, 0.24);
+  }
 }
 
 @keyframes talkmap-lamp-green {

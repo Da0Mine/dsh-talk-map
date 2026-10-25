@@ -915,13 +915,18 @@ var mapUi = {
       listeners2.delete(listener);
     };
   },
+  /**
+   * Mirror of "the map panel is the selected main panel". The panel component
+   * drives it from its own mount/unmount — the shell owns the real selection.
+   */
   setOpen(open) {
     if (state2.open === open) return;
     state2 = { ...state2, open };
     emit();
   },
   toggle() {
-    mapUi.setOpen(!state2.open);
+    if (state2.open) closeMapPanel();
+    else openMapPanel();
   },
   claimEscape(id2) {
     escGuards.add(id2);
@@ -933,6 +938,7 @@ var mapUi = {
     return escGuards.size > 0;
   }
 };
+var MAP_PANEL_ID = "talk-map";
 var services;
 function attachServices(next) {
   services = next;
@@ -986,6 +992,45 @@ function servicesDiag() {
 function uiWorkspaceService() {
   const current = getServices();
   return current === void 0 ? void 0 : resolveUiWorkspace(current);
+}
+function resolveLayout(current) {
+  if (current.layout !== void 0) return current.layout;
+  const get3 = current.ctx?.get;
+  if (typeof get3 !== "function") return void 0;
+  try {
+    const value = get3.call(current.ctx, "layout");
+    return value === void 0 || value === null ? void 0 : value;
+  } catch {
+    return void 0;
+  }
+}
+function openMapPanel() {
+  const current = getServices();
+  const layout = current === void 0 ? void 0 : resolveLayout(current);
+  if (layout === void 0) {
+    mapUi.setOpen(true);
+    return;
+  }
+  try {
+    layout.selectPanel(MAP_PANEL_ID);
+  } catch (error) {
+    console.error("[dsh-talk-map] selectPanel failed:", error);
+    mapUi.setOpen(true);
+  }
+}
+function closeMapPanel() {
+  const current = getServices();
+  const layout = current === void 0 ? void 0 : resolveLayout(current);
+  if (layout === void 0) {
+    mapUi.setOpen(false);
+    return;
+  }
+  try {
+    layout.selectPanel(null);
+  } catch (error) {
+    console.error("[dsh-talk-map] selectPanel(null) failed:", error);
+    mapUi.setOpen(false);
+  }
 }
 function connectionApi() {
   const current = getServices();
@@ -10238,7 +10283,7 @@ var import_react3 = require("react");
 
 // dsh-css: dsh-css:src/client/talk-map.module.css
 var __tagId2 = "dsh-talk-map/talk-map.module.css";
-var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_overlay { position: absolute; inset: 0; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); pointer-events: auto; } .tm_header { display: flex; align-items: center; gap: 10px; padding: calc(8px + var(--dsh-frame-overlay-top, var(--dsh-frame-top-clearance, 0px))) 14px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 4px; flex: none; padding: 4px 12px 4px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_hotkeyButton { flex: none; padding: 3px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; white-space: nowrap; } .tm_hotkeyButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_langButton { flex: none; min-width: 58px; padding: 3px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-green 2.8s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 0 16px 2px rgba(255, 255, 255, 0.22), 0 0 44px 13px rgba(255, 255, 255, 0.11); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.55; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeCorner { right: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_wsFrameResize:hover { border-color: var(--dsw-alias-brand-primary); opacity: 1; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_draftCard { width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--dsw-alias-brand-primary); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); font-size: 13px; } .tm_draftHeading { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_draftRow { display: flex; align-items: center; gap: 8px; } .tm_draftLabel { flex: none; width: 52px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_modeSwitch { display: flex; flex: 1; min-width: 0; gap: 6px; } .tm_modeChip { flex: 1; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease; } .tm_modeChip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_modeChipActive { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 600; } .tm_draftSelect { flex: 1; min-width: 0; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; } .tm_draftGrow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .tm_draftInput { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_draftPathPreview { font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_draftTextarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 88px; padding: 9px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1); } .tm_colorToolbarLabel { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-right: 2px; } .tm_colorSwatch { width: 18px; height: 18px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-secondary); display: flex; align-items: center; justify-content: center; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { background: transparent; } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }";
+var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: calc(8px + var(--dsh-frame-overlay-top, var(--dsh-frame-top-clearance, 0px))) 14px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_hotkeyButton { flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_hotkeyButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-white 2.4s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.42), 0 0 16px 2px rgba(52, 199, 89, 0.30), 0 0 46px 14px rgba(52, 199, 89, 0.16); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-white { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.40), 0 0 14px 1px rgba(255, 255, 255, 0.26), 0 0 34px 8px rgba(255, 255, 255, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.80), 0 0 24px 5px rgba(255, 255, 255, 0.46), 0 0 62px 20px rgba(255, 255, 255, 0.24); } } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.55; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeCorner { right: -2px; bottom: -2px; width: 18px; height: 18px; cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_wsFrameResize:hover { border-color: var(--dsw-alias-brand-primary); opacity: 1; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_draftCard { width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--dsw-alias-brand-primary); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); font-size: 13px; } .tm_draftHeading { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_draftRow { display: flex; align-items: center; gap: 8px; } .tm_draftLabel { flex: none; width: 52px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_modeSwitch { display: flex; flex: 1; min-width: 0; gap: 6px; } .tm_modeChip { flex: 1; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease; } .tm_modeChip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_modeChipActive { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 600; } .tm_draftSelect { flex: 1; min-width: 0; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; } .tm_draftGrow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .tm_draftInput { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_draftPathPreview { font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_draftTextarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 88px; padding: 9px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1); } .tm_colorToolbarLabel { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-right: 2px; } .tm_colorSwatch { width: 18px; height: 18px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-secondary); display: flex; align-items: center; justify-content: center; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { background: transparent; } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }";
 if (typeof document !== "undefined") {
   const __selector = "style[data-plugin-css=" + JSON.stringify(__tagId2) + "]";
   if (document.querySelector(__selector) === null) {
@@ -10249,7 +10294,7 @@ if (typeof document !== "undefined") {
     document.head.appendChild(__tag);
   }
 }
-var talk_map_default = { "backButton": "tm_backButton", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "draftCard": "tm_draftCard", "draftGrow": "tm_draftGrow", "draftHeading": "tm_draftHeading", "draftInput": "tm_draftInput", "draftLabel": "tm_draftLabel", "draftPathPreview": "tm_draftPathPreview", "draftRow": "tm_draftRow", "draftSelect": "tm_draftSelect", "draftTextarea": "tm_draftTextarea", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "hotkeyButton": "tm_hotkeyButton", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "modeChip": "tm_modeChip", "modeChipActive": "tm_modeChipActive", "modeSwitch": "tm_modeSwitch", "overlay": "tm_overlay", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeCorner": "tm_wsFrameResizeCorner", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
+var talk_map_default = { "backButton": "tm_backButton", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "draftCard": "tm_draftCard", "draftGrow": "tm_draftGrow", "draftHeading": "tm_draftHeading", "draftInput": "tm_draftInput", "draftLabel": "tm_draftLabel", "draftPathPreview": "tm_draftPathPreview", "draftRow": "tm_draftRow", "draftSelect": "tm_draftSelect", "draftTextarea": "tm_draftTextarea", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "hotkeyButton": "tm_hotkeyButton", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "modeChip": "tm_modeChip", "modeChipActive": "tm_modeChipActive", "modeSwitch": "tm_modeSwitch", "panel": "tm_panel", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeCorner": "tm_wsFrameResizeCorner", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
 
 // src/client/ContextMenu.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
@@ -10462,7 +10507,7 @@ function DraftCardNode(props) {
         ...selectedPreset !== "" ? { agentPreset: selectedPreset } : {}
       });
       data.onClose();
-      mapUi.setOpen(false);
+      closeMapPanel();
     } catch (sendError) {
       setError(String(sendError));
       setBusy(false);
@@ -10773,7 +10818,7 @@ function SpawnPreview(props) {
   };
   const jumpIn = (sessionId) => {
     props.onClose();
-    if (openSessionInUi(sessionId)) mapUi.setOpen(false);
+    if (openSessionInUi(sessionId)) closeMapPanel();
   };
   const confirm = async () => {
     if (busy) return;
@@ -11010,14 +11055,14 @@ function frameRect(stored, count) {
     height: Math.max(stored.height, contentHeight(count, cols))
   };
 }
-function orderCards(entries) {
-  return [...entries].sort((a, b) => a[1].y - b[1].y || a[1].x - b[1].x || a[0].localeCompare(b[0]));
+function orderByTime(entries) {
+  return [...entries].sort((a, b) => b.time - a.time || a.cardId.localeCompare(b.cardId));
 }
 function layoutFor(rect, entries) {
   const cols = colsForWidth(rect.width);
   const out = {};
-  orderCards(entries).forEach(([cardId], index2) => {
-    out[cardId] = slotPoint(rect, index2, cols);
+  orderByTime(entries).forEach((entry, index2) => {
+    out[entry.cardId] = slotPoint(rect, index2, cols);
   });
   return out;
 }
@@ -11165,11 +11210,15 @@ function CanvasInner(props) {
   const cardLayout = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
-      const members = (membersByGroup.get(groupId) ?? []).map((cardId) => [cardId, visibleCards[cardId]]).filter((entry) => entry[1] !== void 0);
+      const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
+        const card = visibleCards[cardId];
+        if (card === void 0) return void 0;
+        return { cardId, time: sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt };
+      }).filter((entry) => entry !== void 0);
       for (const [cardId, point] of Object.entries(layoutFor(rect, members))) out[cardId] = point;
     }
     return out;
-  }, [frameRects, membersByGroup, visibleCards]);
+  }, [frameRects, membersByGroup, visibleCards, sessions]);
   (0, import_react9.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
@@ -11472,7 +11521,6 @@ function CanvasInner(props) {
           }
         } else if (change.dragging === false) {
           setDraggingCardId(null);
-          canvas.moveCard(change.id, snap(change.position.x), snap(change.position.y));
         } else if (change.dragging === true) {
           setDraggingCardId(change.id);
           canvas.moveCard(change.id, change.position.x, change.position.y);
@@ -11639,13 +11687,16 @@ function CanvasInner(props) {
     });
   };
   const openSession = (sessionId) => {
-    if (openSessionInUi(sessionId)) mapUi.setOpen(false);
+    if (openSessionInUi(sessionId)) closeMapPanel();
   };
   const groupAtPoint = (x, y) => {
+    let best;
     for (const [groupId, rect] of Object.entries(frameRects)) {
-      if (x >= rect.x && x <= rect.x + rect.width && y >= rect.y && y <= rect.y + rect.height) return groupId;
+      if (x < rect.x || x > rect.x + rect.width || y < rect.y || y > rect.y + rect.height) continue;
+      const area = rect.width * rect.height;
+      if (best === void 0 || area < best.area) best = { groupId, area };
     }
-    return void 0;
+    return best?.groupId;
   };
   const openDraftAt = (flowX, flowY, forcedGroupId) => {
     const x = snap(flowX - CARD_W / 2);
@@ -12205,23 +12256,32 @@ function LanguageButton() {
   );
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
-function OpenMapOverlay(props) {
+function CloseIcon() {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+}
+function MapOverlay(props) {
+  (0, import_react11.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  (0, import_react11.useEffect)(() => {
+    mapUi.setOpen(true);
+    return () => {
+      mapUi.setOpen(false);
+    };
+  }, []);
   (0, import_react11.useEffect)(() => {
     const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        if (mapUi.escapeClaimed()) return;
-        event.stopPropagation();
-        mapUi.setOpen(false);
-      }
+      if (event.key !== "Escape") return;
+      if (mapUi.escapeClaimed()) return;
+      event.stopPropagation();
+      closeMapPanel();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["overlay"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["panel"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
     /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["header"], children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
         "button",
@@ -12230,9 +12290,7 @@ function OpenMapOverlay(props) {
           className: talk_map_default["backButton"],
           title: t("map.back"),
           "aria-label": t("map.back"),
-          onClick: () => {
-            mapUi.setOpen(false);
-          },
+          onClick: closeMapPanel,
           children: [
             /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(BackIcon, {}),
             /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: t("map.back") })
@@ -12241,16 +12299,21 @@ function OpenMapOverlay(props) {
       ),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["headerSpace"] }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(LanguageButton, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HotkeyButton, {})
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(HotkeyButton, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        "button",
+        {
+          type: "button",
+          className: talk_map_default["closeButton"],
+          title: t("map.close"),
+          "aria-label": t("map.close"),
+          onClick: closeMapPanel,
+          children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CloseIcon, {})
+        }
+      )
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MapCanvas, { ...props })
   ] });
-}
-function MapOverlay(props) {
-  const open = (0, import_react11.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  (0, import_react11.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  if (!open) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(OpenMapOverlay, { ...props });
 }
 
 // src/client/MapToggleButton.tsx
@@ -12303,6 +12366,19 @@ function resolveUiWorkspace2(ctx) {
     return void 0;
   }
 }
+function resolveLayout2(ctx) {
+  try {
+    const direct = ctx.layout;
+    if (direct !== void 0) return direct;
+  } catch {
+  }
+  try {
+    const value = typeof ctx.get === "function" ? ctx.get("layout") : void 0;
+    return value === void 0 || value === null ? void 0 : value;
+  } catch {
+    return void 0;
+  }
+}
 function resolveRemote(ctx) {
   try {
     const direct = ctx.remote;
@@ -12331,6 +12407,7 @@ function apply(ctx) {
       workspaces: ctx.workspaces,
       connection: ctx.connection,
       uiWorkspace: resolveUiWorkspace2(ctx),
+      layout: resolveLayout2(ctx),
       // Also kept live: a cold boot reaches this plugin before ui-workspace
       // registers, so the click resolves the service through ctx instead.
       ctx: { get: typeof ctx.get === "function" ? (name2) => ctx.get?.(name2) : void 0 }
@@ -12346,6 +12423,7 @@ function apply(ctx) {
             workspaces: ctx.workspaces,
             connection: scoped.connection ?? ctx.connection,
             uiWorkspace: scoped.uiWorkspace,
+            layout: resolveLayout2(scoped),
             ctx: { get: typeof scoped.get === "function" ? (name2) => scoped.get?.(name2) : void 0 }
           });
         });
@@ -12368,10 +12446,9 @@ function apply(ctx) {
       order: 10,
       label: () => t("map.toggle")
     }, MapToggleButton));
-    ctx.slots.inject("shell.overlay", () => ctx.slots.register({
-      name: "shell.overlay",
-      id: "talk-map",
-      order: 100,
+    ctx.slots.inject("main", () => ctx.slots.register({
+      name: "main",
+      key: MAP_PANEL_ID,
       label: () => t("map.title")
     }, MapOverlay));
     canvas.ensureLoaded();

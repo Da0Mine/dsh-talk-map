@@ -16,7 +16,7 @@ import type { NodeProps, Node } from '@xyflow/react'
 import type { AgentPresetEntry, ModelProviderGroup } from './dsh.ts'
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID, newCardId } from './canvas-store.ts'
-import { connectionApi, getServices, mapUi, openSessionInUi, servicesDiag, uiWorkspaceService } from './map-state.ts'
+import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, servicesDiag, uiWorkspaceService } from './map-state.ts'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
 
@@ -145,7 +145,7 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
         ...(selectedPreset !== '' ? { agentPreset: selectedPreset } : {}),
       })
       data.onClose()
-      mapUi.setOpen(false)
+      closeMapPanel()
     } catch (sendError) {
       setError(String(sendError))
       setBusy(false)

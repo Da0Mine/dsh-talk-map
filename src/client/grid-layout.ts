@@ -69,39 +69,46 @@ export function frameRect(stored: FrameGeometry, count: number): FrameGeometry {
   }
 }
 
-/** Reading order of the current arrangement: top row first, left to right. */
-export function orderCards(entries: readonly (readonly [string, Card])[]): (readonly [string, Card])[] {
-  return [...entries].sort((a, b) => (a[1].y - b[1].y) || (a[1].x - b[1].x) || a[0].localeCompare(b[0]))
+/**
+ * One card's slot input: the card and the recency stamp that orders it.
+ * `time` is the session's last activity (updatedAt), falling back to the card's
+ * own creation stamp.
+ */
+export interface SlotEntry {
+  cardId: string
+  time: number
 }
 
-/** Slot position for every member, in reading order. */
-export function layoutFor(
-  rect: FrameGeometry,
-  entries: readonly (readonly [string, Card])[],
-): Record<string, Point> {
+/**
+ * Reading order of a folder: newest activity first, so the freshest
+ * conversations sit at the top-left corner and older ones trail away
+ * right-and-down. Ties break on the card id, which keeps the order stable
+ * across renders (and therefore keeps the snapped positions stable too).
+ */
+export function orderByTime(entries: readonly SlotEntry[]): SlotEntry[] {
+  return [...entries].sort((a, b) => (b.time - a.time) || a.cardId.localeCompare(b.cardId))
+}
+
+/** Slot position for every member, newest first. */
+export function layoutFor(rect: FrameGeometry, entries: readonly SlotEntry[]): Record<string, Point> {
   const cols = colsForWidth(rect.width)
   const out: Record<string, Point> = {}
-  orderCards(entries).forEach(([cardId], index) => {
-    out[cardId] = slotPoint(rect, index, cols)
+  orderByTime(entries).forEach((entry, index) => {
+    out[entry.cardId] = slotPoint(rect, index, cols)
   })
   return out
 }
 
 /**
- * Insertion index for a drop at `point`: which slot the dragged card would take
- * if it were dropped here. Clamped to `[0, count]` — dropping past the last
- * card means "append".
+ * Slot index nearest to a flow-space point. The board uses it to answer "which
+ * folder is this card over"; ordering itself is by recency, so this is only a
+ * hit-test helper, not an insertion policy.
  */
-export function dropIndex(rect: FrameGeometry, point: Point, count: number): number {
+export function slotIndexAt(rect: FrameGeometry, point: Point): number {
   const cols = colsForWidth(rect.width)
   const col = clamp(Math.round((point.x - rect.x - FRAME_PAD) / (CARD_W + GAP_X)), 0, cols - 1)
   const row = Math.max(0, Math.round((point.y - rect.y - TOP_INSET) / (CARD_H + GAP_Y)))
-  return clamp(row * cols + col, 0, count)
-}
-
-/** True when a card's top-left sits on the slot it should occupy. */
-export function isPlaced(point: Point | undefined, card: Card): boolean {
-  return point !== undefined && point.x === card.x && point.y === card.y
+  return row * cols + col
 }
 
 function clamp(value: number, min: number, max: number): number {
