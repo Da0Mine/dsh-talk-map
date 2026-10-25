@@ -1,0 +1,249 @@
+/**
+ * Two-locale copy dictionary. The default ('auto') reads <html lang>
+ * directly — the pattern dsh-plugin-market uses, so no dependency on the
+ * locale service; dsh sets the document language and anything starting with
+ * "zh" renders Chinese. A user who picks a language in the map header
+ * overrides that, and the choice is persisted in the canvas global
+ * (canvas-store pushes it back here on every state change).
+ */
+import type { LocalePref } from '../shared/model.ts'
+
+export type { LocalePref }
+export type Locale = 'zh' | 'en'
+
+const zh: Record<string, string> = {
+  'map.title': '对话地图 ·v2',
+  'map.close': '关闭地图（Esc）',
+  'map.toggle': '对话地图',
+  'map.empty': '地图是空的 —— 右键导入工作区或对话；双击空白直接开新对话',
+  'map.sessions': '个会话',
+  'map.loading': '正在加载地图……',
+  'map.retry': '重试',
+  'map.loadError': '地图数据加载失败：',
+  'card.running': '正在运行',
+  'card.ghostTitle': '会话已不存在',
+  'card.remove': '移除卡片',
+  'card.next': '下一步',
+  'card.stale': '摘要已过期',
+  'time.now': '刚刚',
+  'time.m': ' 分钟前',
+  'time.h': ' 小时前',
+  'time.d': ' 天前',
+  'card.refresh': '重新生成摘要',
+  'edge.injected': '注入',
+  'spawn.heading': '连线分叉：开一个带上下文的新对话',
+  'spawn.from': '来源',
+  'spawn.hint': '以下内容将注入新对话作为背景，可以编辑：',
+  'spawn.noDigest': '（这段对话还没有摘要——可以先点卡片右上角的 ⟳ 生成，或直接在这里手写要带过去的背景。）',
+  'spawn.confirm': '开新对话',
+  'spawn.busy': '创建中……',
+  'spawn.cancel': '取消',
+  'spawn.mode.none': '不继承',
+  'spawn.mode.digest': '摘要注入',
+  'spawn.mode.full': '完整对话',
+  'spawn.noneHint': '全新对话，只保留一条关联线。输入第一句话（回车发送）：',
+  'spawn.fullHint': '新对话将携带这段对话的完整历史继续（dsh 原生分叉）。',
+  'spawn.needText': '注入内容不能为空',
+  'spawn.needFirstMessage': '请输入第一句话',
+  'edge.none': '关联',
+  'edge.full': '完整分叉',
+  'inject.header': '【上下文注入 · 来自】',
+  'inject.summary': '摘要：',
+  'inject.findings': '关键结论：',
+  'inject.next': '下一步：',
+  'frame.ungrouped': '未分组',
+  'draft.heading': '新对话',
+  'draft.workspace': '工作区',
+  'draft.model': '模型',
+  'draft.preset': '模式',
+  'draft.default': '默认',
+  'draft.placeholder': '想聊什么？回车发送并进入对话，Shift+回车换行',
+  'draft.send': '发送',
+  'draft.sending': '发送中……',
+  'draft.newWorkspace': '＋ 新建工作区',
+  'draft.wsName': '名称',
+  'draft.wsNamePlaceholder': '新工作区文件夹名',
+  'draft.defaultSuffix': '（默认）',
+  'color.toolbar': '颜色',
+  'color.clear': '清除颜色',
+  'card.waiting': '等你回复',
+  'card.done': '待查看',
+  'draft.apiUnavailable': '界面服务还在初始化，稍等一下再发送',
+  'draft.newWorkspaceUnsupported': '地图里还不能新建工作区，请先在侧栏建好再回来选',
+  'spawn.apiUnavailable': '界面服务还在初始化，稍等一下再试',
+  'frame.unknown': '分组',
+  'frame.hiddenTitle': '还有卡片被折叠在框外，放大分组框可见',
+  'menu.empty': '（没有可选项）',
+  'menu.search': '搜索…',
+  'menu.alreadyImported': '已在地图 · 点击同步新会话',
+  'menu.newWs': '＋ 新建工作区…',
+  'menu.createAndImport': '创建并导入',
+  'menu.working': '处理中……',
+  'map.zoom100': '恢复 100% 缩放',
+  'hotkey.title': '地图切换快捷键 · 点击后按新组合键修改',
+  'hotkey.capturing': '按下新组合键…',
+  'menu.newChat': '新对话',
+  'menu.importWs': '导入工作区',
+  'menu.importSession': '导入对话',
+  'menu.moveGroup': '移动到分组（仅地图）',
+  'menu.noGroup': '移出分组（自由卡片）',
+  'menu.open': '打开对话',
+  'menu.removeCard': '从地图移除',
+  'edge.push': '推送最新摘要',
+  'edge.pushNoDigest': '来源还没有摘要',
+  'edge.delete': '删除连线',
+  'toast.pushed': '已推送给「{to}」',
+  'toast.notLive': '目标对话未激活——先打开它一次再推送',
+  'toast.pushFailed': '推送失败：',
+  'push.header': '【来自「{from}」的更新 · {time}】',
+  'lang.hint': '界面语言：{current} · 点击切换到{next}',
+  'lang.auto': '自动',
+  'lang.zh': '中文',
+  'lang.en': 'English',
+  'menu.syncGroup': '同步该工作区的新会话',
+  'menu.removeGroup': '移除分组（连同卡片）',
+}
+
+const en: Record<string, string> = {
+  'map.title': 'Talk Map ·v2',
+  'map.close': 'Close map (Esc)',
+  'map.toggle': 'Talk Map',
+  'map.empty': 'The map is empty — right-click to import a workspace or conversation; double-click to start a chat',
+  'map.sessions': 'sessions',
+  'map.loading': 'Loading map…',
+  'map.retry': 'Retry',
+  'map.loadError': 'Failed to load map data:',
+  'card.running': 'running',
+  'card.ghostTitle': 'Session no longer exists',
+  'card.remove': 'Remove card',
+  'card.next': 'Next',
+  'card.stale': 'digest stale',
+  'time.now': 'now',
+  'time.m': 'm ago',
+  'time.h': 'h ago',
+  'time.d': 'd ago',
+  'card.refresh': 'Regenerate digest',
+  'edge.injected': 'injected',
+  'spawn.heading': 'Fork with context',
+  'spawn.from': 'From',
+  'spawn.hint': 'This text will be injected into the new session as background — edit freely:',
+  'spawn.noDigest': '(No digest yet — hit ⟳ on the card first, or write the context to carry over by hand.)',
+  'spawn.confirm': 'Start session',
+  'spawn.busy': 'Creating…',
+  'spawn.cancel': 'Cancel',
+  'spawn.mode.none': 'No context',
+  'spawn.mode.digest': 'Inject digest',
+  'spawn.mode.full': 'Full history',
+  'spawn.noneHint': 'A fresh conversation, linked visually only. Type the first message (Enter sends):',
+  'spawn.fullHint': 'The new conversation continues with this one\'s FULL history (dsh-native fork).',
+  'spawn.needText': 'Injection text must not be empty',
+  'spawn.needFirstMessage': 'Type the first message',
+  'edge.none': 'linked',
+  'edge.full': 'full fork',
+  'inject.header': '[Context injected from] ',
+  'inject.summary': 'Summary: ',
+  'inject.findings': 'Key findings:',
+  'inject.next': 'Next step: ',
+  'frame.ungrouped': 'Ungrouped',
+  'draft.heading': 'New conversation',
+  'draft.workspace': 'Workspace',
+  'draft.model': 'Model',
+  'draft.preset': 'Preset',
+  'draft.default': 'Default',
+  'draft.placeholder': 'What is this about? Enter sends and opens the chat; Shift+Enter for a newline',
+  'draft.send': 'Send',
+  'draft.sending': 'Sending…',
+  'draft.newWorkspace': '＋ New workspace',
+  'draft.wsName': 'Name',
+  'draft.wsNamePlaceholder': 'New workspace folder name',
+  'draft.defaultSuffix': ' (default)',
+  'color.toolbar': 'Color',
+  'color.clear': 'Clear color',
+  'card.waiting': 'needs you',
+  'card.done': 'unread',
+  'draft.apiUnavailable': 'The UI services are still starting up — try again in a moment',
+  'draft.newWorkspaceUnsupported': 'Creating a workspace from the map is not supported yet — create it in the sidebar first',
+  'spawn.apiUnavailable': 'The UI services are still starting up — try again in a moment',
+  'frame.unknown': 'Group',
+  'frame.hiddenTitle': 'Some cards are folded outside the frame — enlarge it to see them',
+  'menu.empty': '(nothing to pick)',
+  'menu.search': 'Search…',
+  'menu.alreadyImported': 'on map · click to sync new sessions',
+  'menu.newWs': '＋ New workspace…',
+  'menu.createAndImport': 'Create & import',
+  'menu.working': 'Working…',
+  'map.zoom100': 'Reset zoom to 100%',
+  'hotkey.title': 'Map toggle hotkey · click, then press a new combo',
+  'hotkey.capturing': 'Press a combo…',
+  'menu.newChat': 'New conversation',
+  'menu.importWs': 'Import workspace',
+  'menu.importSession': 'Import conversation',
+  'menu.moveGroup': 'Move to group (map only)',
+  'menu.noGroup': 'Remove from group (free card)',
+  'menu.open': 'Open conversation',
+  'menu.removeCard': 'Remove from map',
+  'edge.push': 'Push latest digest',
+  'edge.pushNoDigest': 'source has no digest yet',
+  'edge.delete': 'Delete edge',
+  'toast.pushed': 'Pushed to "{to}"',
+  'toast.notLive': 'Target conversation is not active — open it once, then push again',
+  'toast.pushFailed': 'Push failed: ',
+  'push.header': '[Update from "{from}" · {time}]',
+  'lang.hint': 'Interface language: {current} · click to switch to {next}',
+  'lang.auto': 'Auto',
+  'lang.zh': '中文',
+  'lang.en': 'English',
+  'menu.syncGroup': 'Sync new sessions of this workspace',
+  'menu.removeGroup': 'Remove group (with its cards)',
+}
+
+/** The order the header button cycles through. */
+export const LOCALE_CYCLE: readonly LocalePref[] = ['auto', 'zh', 'en']
+
+let preference: LocalePref = 'auto'
+const localeListeners = new Set<() => void>()
+
+function documentLocale(): Locale {
+  if (typeof document === 'undefined') return 'en'
+  return (document.documentElement.lang ?? '').toLowerCase().startsWith('zh') ? 'zh' : 'en'
+}
+
+/** What the stored setting says; 'auto' when the user never picked one. */
+export function localePref(): LocalePref {
+  return preference
+}
+
+/** The language actually rendered right now. */
+export function activeLocale(): Locale {
+  return preference === 'auto' ? documentLocale() : preference
+}
+
+/**
+ * Apply a preference. Notifying only on a real change matters: canvas-store
+ * calls this on EVERY state change (card drags included), and a notification
+ * remounts the whole overlay.
+ */
+export function setLocalePref(next: LocalePref): void {
+  if (next === preference) return
+  preference = next
+  for (const listener of localeListeners) listener()
+}
+
+export function subscribeLocale(listener: () => void): () => void {
+  localeListeners.add(listener)
+  return () => { localeListeners.delete(listener) }
+}
+
+/**
+ * Translate, optionally interpolating {name} placeholders. Single-pass
+ * regex interpolation is the ONLY sanctioned way to fill templates:
+ * chained String.replace at call sites both expands $-patterns lurking in
+ * real values (conversation titles) and re-scans earlier insertions (a
+ * title containing a literal "{time}" would swallow the next parameter).
+ */
+export function t(key: string, params?: Record<string, string>): string {
+  const dict = activeLocale() === 'zh' ? zh : en
+  const template = dict[key] ?? en[key] ?? key
+  if (params === undefined) return template
+  return template.replace(/\{(\w+)\}/g, (match, name: string) => params[name] ?? match)
+}
