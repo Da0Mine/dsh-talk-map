@@ -181,6 +181,8 @@
   /** `main` entries by key — the map is one now, like the recycle bin's page. */
   const panels = {}
   let selectedPanel = null
+  /** The fake shell's sidebar: the map folds it away while it is open. */
+  let sidebarCollapsed = false
   const ctx = {
     sessions: {
       // ctx.sessions.list is itself the list surface (getSnapshot/subscribe).
@@ -214,6 +216,11 @@
           throw new Error(`selectPanel: no main entry registered for ${panelId}`)
         }
         selectedPanel = panelId
+        sync()
+      },
+      toggleSidebar() {
+        sidebarCollapsed = !sidebarCollapsed
+        log('layout.toggleSidebar', { collapsed: sidebarCollapsed })
         sync()
       },
     },
@@ -250,18 +257,36 @@
 
   function sync() {
     const MapPanel = panels['talk-map']
+    const Toggle = registered['sidebar.footer.action']?.component
     if (root === null) {
       root = ReactDOM.createRoot(document.getElementById('host'))
     }
-    if (selectedPanel === 'talk-map' && MapPanel !== undefined) {
-      root.render(React.createElement(MapPanel, props))
-      return
-    }
-    // Standing in for the conversation column the shell would show.
-    root.render(React.createElement('div', {
-      'data-harness-placeholder': 'conversation',
-      style: { padding: 24, fontSize: 13, color: '#8b90a0' },
-    }, '会话（占位）'))
+    const h = React.createElement
+    // A miniature shell: sidebar column (with this plugin's footer action, which
+    // is how the map learns whether the sidebar is already a rail) + main column.
+    root.render(h('div', { style: { display: 'flex', height: '100vh', minHeight: 0 } },
+      h('div', {
+        'data-harness-sidebar': sidebarCollapsed ? 'rail' : 'wide',
+        style: {
+          flex: 'none',
+          width: sidebarCollapsed ? 56 : 220,
+          borderRight: '1px solid #33363d',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+          padding: 8,
+          boxSizing: 'border-box',
+          background: '#1f2126',
+        },
+      }, Toggle === undefined ? null : h(Toggle, { wide: !sidebarCollapsed })),
+      h('div', { style: { flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column' } },
+        selectedPanel === 'talk-map' && MapPanel !== undefined
+          ? h(MapPanel, props)
+          : h('div', {
+              'data-harness-placeholder': 'conversation',
+              style: { padding: 24, fontSize: 13, color: '#8b90a0' },
+            }, '会话（占位）')),
+    ))
   }
 
   window.__harness = {
@@ -288,6 +313,12 @@
     state: () => payload,
     getRoot: () => root,
     panelState: () => ({ selectedPanel }),
+    /** What the fake shell's sidebar looks like right now. */
+    sidebarState: () => ({
+      collapsed: sidebarCollapsed,
+      width: document.querySelector('[data-harness-sidebar]')?.getBoundingClientRect().width ?? 0,
+      toggles: logEntries.filter(entry => entry.kind === 'layout.toggleSidebar').length,
+    }),
     /** Pretend this conversation just sent a message: bump its stamp + re-render. */
     touch(sessionId) {
       if (sessionRows[sessionId] === undefined) throw new Error(`unknown session ${sessionId}`)

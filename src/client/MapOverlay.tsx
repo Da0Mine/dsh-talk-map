@@ -15,7 +15,7 @@ import type { RootSlotStandardProps } from './dsh.ts'
 import { canvas } from './canvas-store.ts'
 import { DEFAULT_HOTKEY, hotkeyFromEvent, hotkeyLabel } from './hotkey.ts'
 import { activeLocale, LOCALE_CYCLE, subscribeLocale, t } from './i18n.ts'
-import { closeMapPanel, mapUi } from './map-state.ts'
+import { closeMapPanel, hideSidebarForMap, mapUi, restoreSidebarAfterMap } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
 
@@ -94,32 +94,65 @@ function CloseIcon(): React.JSX.Element {
   )
 }
 
+function ExpandIcon(): React.JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M9 3H3v6M15 3h6v6M9 21H3v-6M15 21h6v-6" />
+    </svg>
+  )
+}
+
+function CompressIcon(): React.JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 9h6V3M21 9h-6V3M3 15h6v6M21 15h-6v6" />
+    </svg>
+  )
+}
+
 export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   // Subscribing here re-renders the whole panel on a language switch;
   // MapCanvas re-keys its own memos so the React-Flow nodes follow.
   useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
+  const fullscreen = useSyncExternalStore(mapUi.subscribe, () => mapUi.get().fullscreen)
 
   // The shell selected this panel: publish that so the sidebar button, the
-  // hotkey and the draft card's "send then leave" all agree on the state.
+  // hotkey and the draft card's "send then leave" all agree on the state — and
+  // give the map the width it needs by folding the sidebar away for as long as
+  // the panel is up (unmount puts it back, which also covers "opened a session
+  // from a card").
   useEffect(() => {
     mapUi.setOpen(true)
-    return () => { mapUi.setOpen(false) }
+    hideSidebarForMap()
+    return () => {
+      mapUi.setOpen(false)
+      restoreSidebarAfterMap()
+    }
   }, [])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
-      // An inner surface (draft card, spawn preview, hotkey capture) claims Esc.
+      // An inner surface (draft card, spawn preview, drawer, hotkey capture)
+      // claims Esc for itself.
       if (mapUi.escapeClaimed()) return
       event.stopPropagation()
+      // Fullscreen first, then the map itself: one Esc step at a time.
+      if (mapUi.get().fullscreen) {
+        mapUi.setFullscreen(false)
+        return
+      }
       closeMapPanel()
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
     return () => { window.removeEventListener('keydown', onKeyDown, { capture: true }) }
   }, [])
 
+  const classNames = [styles['panel']]
+  if (fullscreen) classNames.push(styles['panelFullscreen'] ?? '')
+
   return (
-    <div className={styles['panel']} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
+    <div className={classNames.filter(Boolean).join(' ')} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
       <div className={styles['header']}>
         <button
           type="button"
@@ -132,6 +165,16 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
           <span>{t('map.back')}</span>
         </button>
         <span className={styles['headerSpace']} />
+        <button
+          type="button"
+          className={`${styles['closeButton']} ${styles['fullscreenButton']}`}
+          title={fullscreen ? t('map.exitFullscreen') : t('map.fullscreen')}
+          aria-label={fullscreen ? t('map.exitFullscreen') : t('map.fullscreen')}
+          aria-pressed={fullscreen}
+          onClick={() => { mapUi.toggleFullscreen() }}
+        >
+          {fullscreen ? <CompressIcon /> : <ExpandIcon />}
+        </button>
         <LanguageButton />
         <HotkeyButton />
         <button

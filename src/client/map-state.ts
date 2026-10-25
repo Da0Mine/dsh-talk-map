@@ -7,12 +7,14 @@ import type { ConnectionService, LayoutService, SessionsService, UiWorkspaceServ
 
 export interface MapUiState {
   readonly open: boolean
+  /** The panel covers the whole frame (rail and top bar included). */
+  readonly fullscreen: boolean
 }
 
 type Listener = () => void
 
 const listeners = new Set<Listener>()
-let state: MapUiState = { open: false }
+let state: MapUiState = { open: false, fullscreen: false }
 
 function emit(): void {
   for (const listener of listeners) listener()
@@ -38,8 +40,17 @@ export const mapUi = {
    */
   setOpen(open: boolean): void {
     if (state.open === open) return
-    state = { ...state, open }
+    // Leaving the map always drops fullscreen with it.
+    state = { open, fullscreen: open ? state.fullscreen : false }
     emit()
+  },
+  setFullscreen(fullscreen: boolean): void {
+    if (state.fullscreen === fullscreen) return
+    state = { ...state, fullscreen }
+    emit()
+  },
+  toggleFullscreen(): void {
+    mapUi.setFullscreen(!state.fullscreen)
   },
   toggle(): void {
     if (state.open) closeMapPanel()
@@ -179,6 +190,51 @@ export function closeMapPanel(): void {
   } catch (error) {
     console.error('[dsh-talk-map] selectPanel(null) failed:', error)
     mapUi.setOpen(false)
+  }
+}
+
+/**
+ * Sidebar coordination. `ctx.layout` only exposes `toggleSidebar()`, with no way
+ * to read the current state — so the sidebar's own footer action (this plugin's
+ * button) reports whether it renders wide content, and the map only toggles when
+ * it actually has to. The restore is remembered, so opening a session from the
+ * map puts the sidebar back exactly the way the user had it.
+ */
+let sidebarWide: boolean | undefined
+let sidebarHiddenByMap = false
+
+/** The sidebar footer action reports its own owner prop (wide = expanded). */
+export function reportSidebarWide(wide: boolean): void {
+  sidebarWide = wide
+}
+
+/** Collapse the sidebar while the map owns the centre column. */
+export function hideSidebarForMap(): void {
+  if (sidebarHiddenByMap) return
+  // Unknown state (button not mounted yet) or already a rail: leave it alone.
+  if (sidebarWide !== true) return
+  const current = getServices()
+  const layout = current === undefined ? undefined : resolveLayout(current)
+  if (layout === undefined) return
+  try {
+    layout.toggleSidebar()
+    sidebarHiddenByMap = true
+  } catch (error) {
+    console.error('[dsh-talk-map] collapsing the sidebar failed:', error)
+  }
+}
+
+/** Put the sidebar back when the map goes away (closed, or a session opened). */
+export function restoreSidebarAfterMap(): void {
+  if (!sidebarHiddenByMap) return
+  sidebarHiddenByMap = false
+  const current = getServices()
+  const layout = current === undefined ? undefined : resolveLayout(current)
+  if (layout === undefined) return
+  try {
+    layout.toggleSidebar()
+  } catch (error) {
+    console.error('[dsh-talk-map] restoring the sidebar failed:', error)
   }
 }
 

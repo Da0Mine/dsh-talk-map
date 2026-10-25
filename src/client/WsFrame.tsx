@@ -32,6 +32,8 @@ export interface WsFrameData extends Record<string, unknown> {
 export type WsFrameNodeType = Node<WsFrameData, 'wsFrame'>
 
 const EDGE = 10
+/** Size of the diagonal corner handle; the edge strips stop short of it. */
+const CORNER = 26
 
 export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Element {
   const { data, selected } = props
@@ -66,23 +68,25 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
       <div className={styles['wsFrameEdge']} style={{ bottom: 0, left: 0, right: 0, height: EDGE }} />
       <div className={styles['wsFrameEdge']} style={{ top: 0, bottom: 0, left: 0, width: EDGE }} />
       <div className={styles['wsFrameEdge']} style={{ top: 0, bottom: 0, right: 0, width: EDGE }} />
-      {/* resize handles: the folder's own edges, like a desktop folder */}
+      {/* resize handles: the folder's own edges, like a desktop folder.
+        * The last CORNER px of each strip belongs to the corner handle, so the
+        * diagonal gesture can never be swallowed by a single-axis edge. */}
       <div
         className={`${styles['wsFrameResize']} ${styles['wsFrameResizeE']}`}
-        style={{ top: EDGE, bottom: EDGE, right: -3, width: 12 }}
+        style={{ top: EDGE, bottom: CORNER + 2, right: -3, width: 12 }}
         onPointerDown={start('e')}
         title="拖拽改变宽度"
       />
       <div
         className={`${styles['wsFrameResize']} ${styles['wsFrameResizeS']}`}
-        style={{ left: EDGE, right: EDGE, bottom: -3, height: 12 }}
+        style={{ left: EDGE, right: CORNER + 2, bottom: -3, height: 12 }}
         onPointerDown={start('s')}
         title="拖拽改变高度"
       />
       <div
         className={`${styles['wsFrameResize']} ${styles['wsFrameResizeCorner']}`}
         onPointerDown={start('se')}
-        title="拖拽改变大小"
+        title="拖拽同时改变宽高"
       />
     </div>
   )

@@ -69,11 +69,22 @@
   color: var(--dsw-alias-label-primary);
 }
 
+/* Fullscreen: the panel escapes the centre column and covers the frame (the
+ * sidebar rail included). `fixed` keeps the React Flow instance alive, so the
+ * viewport and the selection survive the toggle. */
+.panelFullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+}
+
 .header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: calc(8px + var(--dsh-frame-overlay-top, var(--dsh-frame-top-clearance, 0px))) 14px 8px;
+  /* No frame-overlay inset here: this is a panel inside the column, not a layer
+   * under the floating title bar — that offset only left a dead band on top. */
+  padding: 10px 14px;
   border-bottom: 1px solid var(--dsw-alias-border-l1);
   background: var(--dsw-alias-bg-layer-1);
   flex: none;
@@ -164,6 +175,16 @@
 .closeButton:hover {
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
+}
+
+/* Fullscreen toggle: same pill, its own hook for probes and for v2 tweaks. */
+.fullscreenButton {
+  color: var(--dsw-alias-label-primary);
+}
+
+.fullscreenButton[aria-pressed="true"] {
+  border-color: var(--dsw-alias-brand-primary);
+  color: var(--dsw-alias-brand-primary);
 }
 
 .zoomResetLabel {
@@ -683,10 +704,11 @@
 }
 
 .wsFrameResizeCorner {
-  right: -2px;
-  bottom: -2px;
-  width: 18px;
-  height: 18px;
+  right: -3px;
+  bottom: -3px;
+  width: 26px;
+  height: 26px;
+  z-index: 3;
   cursor: nwse-resize;
   border-right: 3px solid var(--dsw-alias-border-l3);
   border-bottom: 3px solid var(--dsw-alias-border-l3);

@@ -118,6 +118,50 @@ try {
   check('按钮放大了（≥34px 高）', (header.back?.h ?? 0) >= 34 && (header.close?.h ?? 0) >= 34, `back ${header.back?.h}px / close ${header.close?.h}px`)
   check('标题文字已删除', header.title === false)
 
+  // The panel used to inherit the frame-overlay top inset, which left a dead
+  // band above the header. The header must sit at the top of the panel now.
+  const topGap = await page.evaluate(() => {
+    const panel = document.querySelector('[class*="tm_panel"]')
+    const head = document.querySelector('[class*="tm_header"]')
+    if (panel === null || head === null) return null
+    return Math.round(head.getBoundingClientRect().top - panel.getBoundingClientRect().top)
+  })
+  check('顶部没有多余空白（表头贴着面板顶）', topGap !== null && topGap <= 6, `差值 ${topGap}px`)
+
+  // ---- 1b. sidebar folds away with the map, comes back on exit ----------
+  const sidebarOpen = await page.evaluate(() => window.__harness.sidebarState())
+  check('打开地图时侧栏自动收起', sidebarOpen.collapsed === true && sidebarOpen.width < 80, JSON.stringify(sidebarOpen))
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(400)
+  const sidebarBack = await page.evaluate(() => window.__harness.sidebarState())
+  check('返回对话时侧栏自动展开', sidebarBack.collapsed === false && sidebarBack.width > 150, JSON.stringify(sidebarBack))
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
+  await page.waitForTimeout(500)
+  check('再次打开地图仍会收起侧栏', (await page.evaluate(() => window.__harness.sidebarState())).collapsed === true)
+
+  // ---- 1c. fullscreen --------------------------------------------------
+  const beforeFullscreen = await page.evaluate(() => {
+    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
+    return { w: Math.round(r.width), h: Math.round(r.height) }
+  })
+  await page.click('[class*="tm_fullscreenButton"]')
+  await page.waitForTimeout(500)
+  const fullscreen = await page.evaluate(() => {
+    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
+    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), vw: window.innerWidth, vh: window.innerHeight }
+  })
+  check('全屏铺满整个窗口', fullscreen.x === 0 && fullscreen.y === 0 && Math.abs(fullscreen.w - fullscreen.vw) <= 1 && Math.abs(fullscreen.h - fullscreen.vh) <= 1,
+    `${beforeFullscreen.w}x${beforeFullscreen.h} → ${fullscreen.w}x${fullscreen.h}（窗口 ${fullscreen.vw}x${fullscreen.vh}）`)
+  await page.screenshot({ path: path.join(shots, 'probe-fullscreen.png') })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(500)
+  const afterFullscreen = await page.evaluate(() => {
+    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
+    return { w: Math.round(r.width), stillOpen: window.__harness.panelState().selectedPanel === 'talk-map' }
+  })
+  check('Esc 退出全屏但不关地图', afterFullscreen.stillOpen === true && Math.abs(afterFullscreen.w - beforeFullscreen.w) <= 1,
+    `${fullscreen.w}px → ${afterFullscreen.w}px`)
+
   // ---- 2. grid: no overlap, reading order ------------------------------
   const grid = await page.evaluate(() => {
     const cards = []
@@ -267,6 +311,40 @@ try {
     return cards.filter(entry => Math.abs(entry.r.y - minTop) < 2).length
   })
   check('拉宽后一行装下更多卡片', grown >= 3, `一行 ${grown} 张（拉宽前可见 ${shownBefore} 张）`)
+
+  // Corner handle must change BOTH dimensions in one gesture. Measured on the
+  // isolated lab folder: the daily one now overlaps MedKit, and an overlapping
+  // folder's border strip legitimately sits on top of a neighbour's corner.
+  const cornerBefore = await page.evaluate(() => window.__harness.nodeBoxes().frames['ws-lab'])
+  const corner = await page.evaluate(() => {
+    const frame = document.querySelector('[data-talkmap-workspace="ws-lab"]')
+    const el = frame.querySelector('[class*="wsFrameResizeCorner"]')
+    const r = el.getBoundingClientRect()
+    const x = r.x + r.width / 2, y = r.y + r.height / 2
+    const hit = document.elementFromPoint(x, y)
+    const owner = hit === null ? null : hit.closest('[data-talkmap-workspace]')?.getAttribute('data-talkmap-workspace')
+    return {
+      x, y,
+      hit: hit === null ? 'nothing' : String(hit.className),
+      owner,
+      rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
+    }
+  })
+  check('对角把手在指针下可命中', corner.hit.includes('wsFrameResizeCorner'),
+    `${corner.hit} @ ${Math.round(corner.x)},${Math.round(corner.y)}（属于 ${corner.owner}）${JSON.stringify(corner.rect)}`)
+  await page.mouse.move(corner.x, corner.y)
+  await page.waitForTimeout(80)
+  await page.mouse.down()
+  for (let i = 1; i <= 8; i++) {
+    await page.mouse.move(corner.x + i * 12, corner.y + i * 16)
+    await page.waitForTimeout(16)
+  }
+  await page.mouse.up()
+  await page.waitForTimeout(700)
+  const cornerAfter = await page.evaluate(() => window.__harness.nodeBoxes().frames['ws-lab'])
+  check('对角把手同时改宽高',
+    cornerAfter.w > cornerBefore.w + 10 && cornerAfter.h > cornerBefore.h + 10,
+    `${cornerBefore.w}x${cornerBefore.h} → ${cornerAfter.w}x${cornerAfter.h}`)
 
   const firstCard = await page.evaluate(() => {
     const state = window.__harness.state()
