@@ -67,6 +67,10 @@ export interface WorkspaceListState {
   readonly items: readonly WorkspaceView[]
   readonly recentWorkspaceId: string | undefined
   readonly baselinesReady?: boolean
+  /** Sessions the sidebar shows as pinned (the same pin the map's menu flips). */
+  readonly pinnedSessionIds?: readonly string[]
+  /** Sessions currently in the archive. */
+  readonly archivedSessionIds?: readonly string[]
 }
 
 /** Standard props every root-scope slot component receives. */
@@ -149,7 +153,16 @@ export interface UiWorkspaceService {
    */
   startSession?(workspaceId?: string, options?: { prompt?: string; agentPreset?: string }): void
   /** Create-or-reuse a blank session in a workspace; resolves its id. */
-  connectWorkspace?(workspaceId: string): Promise<string>
+  connectWorkspace?(workspaceId: string, options?: { agentPreset?: string }): Promise<string>
+  /**
+   * Pin/unpin — the SAME pin the sidebar's session menu flips, so the map and
+   * the sidebar agree in both directions (state comes back through
+   * `workspaces.list.pinnedSessionIds`).
+   */
+  pinSession?(sessionId: string): Promise<unknown>
+  unpinSession?(sessionId: string): Promise<unknown>
+  /** Archive a session (the shipped "归档"), optionally stopping its work. */
+  archiveSession?(sessionId: string, options?: { stopActivity?: boolean }): Promise<void>
 }
 
 /** ctx.workspaces (subset): connectWorkspace reuses-or-creates the blank session. */

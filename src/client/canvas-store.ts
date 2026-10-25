@@ -40,6 +40,29 @@ let flushTimer: ReturnType<typeof setTimeout> | undefined
 let cameraTimer: ReturnType<typeof setTimeout> | undefined
 let frameTimer: ReturnType<typeof setTimeout> | undefined
 
+/**
+ * Monotonic counter of local board edits. refresh() reads the server copy
+ * wholesale, so a fetch that started before a local add (auto-sync, import,
+ * drop) would silently undo it — the guard drops that stale answer instead.
+ */
+let editSeq = 0
+
+function bumpEdits(): void {
+  editSeq += 1
+}
+
+/**
+ * Card writes whose POST has not answered yet. refresh() reads the server copy
+ * wholesale, so applying an answer while one of these is in flight can undo a
+ * card that already exists locally (auto-sync, import, drop).
+ */
+let cardWritesInFlight = 0
+
+function trackCardWrite(promise: Promise<unknown>): void {
+  cardWritesInFlight += 1
+  void promise.finally(() => { cardWritesInFlight -= 1 })
+}
+
 /** Undo/redo: whole-board snapshots (camera excluded on restore). Rapid
  * operation streams (a drag emits dozens of moves) collapse into one entry. */
 interface BoardSnapshot {
@@ -56,6 +79,9 @@ function takeSnapshot(): BoardSnapshot {
 }
 
 function pushUndo(): void {
+  // Every mutator funnels through here, so this is where a local edit is
+  // recorded as "the board moved on" (see refresh()'s stale-answer guard).
+  bumpEdits()
   const now = Date.now()
   if (now - lastUndoPush < 400 && undoStack.length > 0) return
   lastUndoPush = now
@@ -133,11 +159,14 @@ async function flushCards(): Promise<void> {
   }
   dirtyCards.clear()
   if (Object.keys(payload).length === 0) return
+  cardWritesInFlight += 1
   try {
     await talkMapApi.upsertCards(payload)
   } catch (error) {
     console.error('[dsh-talk-map] card flush failed:', error)
     for (const id of Object.keys(payload)) dirtyCards.add(id)
+  } finally {
+    cardWritesInFlight -= 1
   }
 }
 
@@ -247,9 +276,9 @@ export const canvas = {
   addCards(entries: Record<string, Card>): void {
     pushUndo()
     setState({ cards: { ...state.cards, ...entries } })
-    void talkMapApi.upsertCards(entries).catch((error) => {
+    trackCardWrite(talkMapApi.upsertCards(entries).catch((error) => {
       console.error('[dsh-talk-map] card upsert failed:', error)
-    })
+    }))
   },
 
   /** Add edges: local state first, then persisted (no SSE round-trip needed). */
@@ -279,9 +308,12 @@ export const canvas = {
    * closed or the server restarted). Skipped while local writes — card
    * positions or a global patch — are still in flight. */
   refresh(): void {
-    if (state.phase !== 'ready' || dirtyCards.size > 0 || globalWritesInFlight > 0) return
+    if (state.phase !== 'ready' || dirtyCards.size > 0 || globalWritesInFlight > 0 || cardWritesInFlight > 0) return
+    const seqAtStart = editSeq
     talkMapApi.getState().then((payload) => {
       if (state.phase !== 'ready' || dirtyCards.size > 0 || globalWritesInFlight > 0) return
+      // A local edit landed while this fetch was in flight: the answer is stale.
+      if (seqAtStart !== editSeq) return
       setState({
         cards: payload.cards,
         edges: payload.edges,
@@ -322,30 +354,9 @@ export const canvas = {
     } else {
       setState({ cards })
     }
-    void talkMapApi.deleteCards([id]).catch((error) => {
+    trackCardWrite(talkMapApi.deleteCards([id]).catch((error) => {
       console.error('[dsh-talk-map] card delete failed:', error)
-    })
-  },
-
-  /** Recolor cards (undefined clears); persists immediately. */
-  setCardsColor(ids: readonly string[], colorTag: string | undefined): void {
-    const payload: Record<string, Card> = {}
-    const cards = { ...state.cards }
-    for (const id of ids) {
-      const card = cards[id]
-      if (card === undefined) continue
-      const next = { ...card }
-      if (colorTag === undefined) delete next.colorTag
-      else next.colorTag = colorTag
-      cards[id] = next
-      payload[id] = next
-    }
-    if (Object.keys(payload).length === 0) return
-    pushUndo()
-    setState({ cards })
-    void talkMapApi.upsertCards(payload).catch((error) => {
-      console.error('[dsh-talk-map] card color save failed:', error)
-    })
+    }))
   },
 
   /** Adopt a card into another workspace's frame (map-level membership). */
@@ -378,16 +389,6 @@ export const canvas = {
       if (current === null) return
       void persistGlobal(current, 'frame')
     }, 600)
-  },
-
-  /** Recolor a workspace frame (undefined clears); persists immediately. */
-  setWorkspaceColor(workspaceId: string, colorTag: string | undefined): void {
-    if (state.global === null) return
-    pushUndo()
-    const wsColors = { ...state.global.wsColors }
-    if (colorTag === undefined) delete wsColors[workspaceId]
-    else wsColors[workspaceId] = colorTag
-    canvas.patchGlobalNow({ wsColors })
   },
 
   /** Immediate global patch (layout-version stamp etc.) — no debounce. */

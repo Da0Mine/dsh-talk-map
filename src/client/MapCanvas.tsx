@@ -22,19 +22,18 @@ import '@xyflow/react/dist/style.css'
 import type { RootSlotStandardProps, SessionListState, SessionStatusFact, WorkspaceListState } from './dsh.ts'
 import type { Card, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
-import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
-import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi } from './map-state.ts'
+import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
+import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
-import { DraftCardNode, type DraftCardNodeType } from './DraftCard.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
 import { WsFrameNode, type ResizeAxis, type WsFrameNodeType } from './WsFrame.tsx'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
 import {
-  CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y,
+  CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y, MIN_FRAME_HEIGHT, MIN_FRAME_WIDTH,
   capacityFor, frameRect, layoutFor, readingOrder, slotPoint, visibleCount, type PlacedCard,
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
@@ -45,7 +44,6 @@ import styles from './talk-map.module.css'
 const nodeTypes = {
   sessionCard: SessionCardNode,
   wsFrame: WsFrameNode,
-  draftCard: DraftCardNode,
   stackCell: StackNode,
 }
 
@@ -54,7 +52,7 @@ const COLS = 3
 /** v4: frames became user-sized containers with slot layout inside. */
 const LAYOUT_VERSION = 4
 
-type TalkMapNode = SessionCardNodeType | WsFrameNodeType | DraftCardNodeType | StackNodeType
+type TalkMapNode = SessionCardNodeType | WsFrameNodeType | StackNodeType
 
 /** Stable empty projection for a runtime without the ui-session status hook. */
 const EMPTY_SESSION_STATUS: ReadonlyMap<string, SessionStatusFact> = new Map()
@@ -103,13 +101,6 @@ function fitRect(members: Card[]): FrameGeometry {
 }
 
 
-interface DraftState {
-  x: number
-  y: number
-  workspaceId?: string
-  groupId?: string
-}
-
 interface MenuContext {
   left: number
   top: number
@@ -148,10 +139,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [toast, setToast] = useState<string | null>(null)
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [pendingSpawn, setPendingSpawn] = useState<PendingSpawn | null>(null)
-  const [draft, setDraft] = useState<DraftState | null>(null)
   const [menu, setMenu] = useState<MenuContext | null>(null)
   /** Folder whose stack cell was clicked: the drawer lists all of its cards. */
   const [drawer, setDrawer] = useState<{ groupId: string } | null>(null)
+  /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
+  const [batchMode, setBatchMode] = useState(false)
+  /** The cards picked in batch mode. */
+  const [batchPicks, setBatchPicks] = useState<ReadonlySet<string>>(new Set())
+  const [batchBusy, setBatchBusy] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
   // Slot layout bookkeeping: the card under the pointer renders at its raw
   // drag position (everything else is snapped), and a frame being moved or
@@ -177,6 +172,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     [workspaces],
   )
   const workspacesReady = workspaces.baselinesReady !== false
+  /** The sidebar's own pin set — the map mirrors it, it does not own it. */
+  const pinnedSessions = useMemo(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces])
+  /** Sessions that already own a card (import/auto-sync skip these). */
+  const boardSessionIds = useMemo(
+    () => new Set(Object.values(canvasState.cards).map(card => card.sessionId)),
+    [canvasState.cards],
+  )
 
   const wsFrames = canvasState.global?.wsFrames ?? {}
   const layoutVersion = canvasState.global?.layoutVersion ?? 1
@@ -262,7 +264,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           return card === undefined ? undefined : { cardId, x: card.x, y: card.y }
         })
         .filter((entry): entry is PlacedCard => entry !== undefined)
-      const ordered = readingOrder(members)
+      const reading = readingOrder(members)
+      // Pinned sessions lead their folder — same pin the sidebar flips, so a
+      // pin made there shows up here and vice versa. A stable sort keeps the
+      // reading order inside each group.
+      const ordered = pinnedSessions.size === 0
+        ? reading
+        : [...reading].sort((a, b) => {
+          const pinA = pinnedSessions.has(visibleCards[a]?.sessionId ?? '') ? 0 : 1
+          const pinB = pinnedSessions.has(visibleCards[b]?.sessionId ?? '') ? 0 : 1
+          return pinA - pinB
+        })
       const capacity = capacityFor(rect)
       const visibleSlots = visibleCount(capacity, ordered.length)
       out[groupId] = {
@@ -273,7 +285,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     }
     return out
-  }, [frameRects, membersByGroup, visibleCards])
+  }, [frameRects, membersByGroup, visibleCards, pinnedSessions])
 
   // Slot positions for every card that lives in a folder. Positions are derived
   // from the order, never stored-and-trusted: that is what makes a resize
@@ -345,13 +357,65 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         if (before === undefined || stamp <= before) continue
         if (candidate === undefined || stamp > candidate.stamp) candidate = { cardId, stamp }
       }
-      if (candidate === undefined || layout.ordered[0] === candidate.cardId) continue
-      const next = [candidate.cardId, ...layout.ordered.filter(id => id !== candidate.cardId)]
+      if (candidate === undefined) continue
+      const isPinned = (cardId: string): boolean => pinnedSessions.has(visibleCards[cardId]?.sessionId ?? '')
+      if (layout.ordered[0] === candidate.cardId || isPinned(candidate.cardId)) continue
+      // Land right after the pinned block: activity never unseats a pin.
+      const rest = layout.ordered.filter(id => id !== candidate.cardId)
+      const firstUnpinned = rest.findIndex(id => !isPinned(id))
+      const insertAt = firstUnpinned === -1 ? rest.length : firstUnpinned
+      const next = [...rest.slice(0, insertAt), candidate.cardId, ...rest.slice(insertAt)]
       Object.assign(promoted, layoutFor(layout.rect, next))
     }
     for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp)
     if (Object.keys(promoted).length > 0) canvas.moveCards(promoted)
-  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame])
+  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame, pinnedSessions])
+
+  // Auto-sync: every imported folder pulls in the sessions of its workspace that
+  // have no card yet, once per open. The map stopped asking the user to press
+  // "同步" — a workspace you brought onto the map should just stay complete.
+  const autoSyncedRef = useRef(false)
+  useEffect(() => {
+    if (canvasState.phase !== 'ready' || !workspacesReady || autoSyncedRef.current) return
+    autoSyncedRef.current = true
+    const remembered = canvasState.global?.layoutMemory ?? {}
+    const added: Record<string, Card> = {}
+    for (const [groupId] of Object.entries(wsFrames)) {
+      const rect = frameRects[groupId]
+      if (rect === undefined) continue
+      const existing = (membersByGroup.get(groupId) ?? [])
+        .map(cardId => canvasState.cards[cardId])
+        .filter((card): card is Card => card !== undefined)
+      const missing = placeableSessionIds(sessions)
+        .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
+        .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
+      if (missing.length === 0) continue
+      // Queue them after the current cards so the reading order appends.
+      let next = existing.length
+      const baseY = existing.length === 0
+        ? rect.y + FRAME_PAD + FRAME_LABEL_H
+        : Math.max(...existing.map(card => card.y)) + CARD_H + GAP_Y
+      const cols = Math.max(1, Math.floor((rect.width - FRAME_PAD * 2 + GAP_X) / (CARD_W + GAP_X)))
+      for (const sessionId of missing) {
+        const entry = remembered[sessionId]
+        const position = entry !== undefined
+          ? { x: entry.x, y: entry.y }
+          : {
+              x: rect.x + FRAME_PAD + (next % cols) * (CARD_W + GAP_X),
+              y: baseY + Math.floor(next / cols) * (CARD_H + GAP_Y),
+            }
+        next += 1
+        added[newCardId()] = {
+          boardId: INBOX_BOARD_ID,
+          sessionId,
+          x: position.x,
+          y: position.y,
+          createdAt: Date.now(),
+        }
+      }
+    }
+    if (Object.keys(added).length > 0) canvas.addCards(added)
+  }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds])
 
   // While a connection drag is live, Esc belongs to it. React Flow (this
   // @xyflow version) has NO Escape handling of its own and exposes no
@@ -463,6 +527,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
   })
 
+  /** Batch mode is its own layer: Esc leaves it before it can close the map. */
+  useEffect(() => {
+    if (!batchMode) return
+    const release = mapUi.claimEscape('batch-mode')
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      event.stopPropagation()
+      setBatchMode(false)
+      setBatchPicks(new Set())
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true })
+    return () => {
+      window.removeEventListener('keydown', onKeyDown, { capture: true })
+      release()
+    }
+  }, [batchMode])
+
   /**
    * Resize a folder. Screen-space pointer deltas become flow-space growth, the
    * members reflow live into the new width (that is the whole point of a
@@ -473,16 +554,22 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (start === undefined) return
     const origin = screenToFlowPosition({ x: event.clientX, y: event.clientY })
     const count = (membersByGroup.get(groupId) ?? []).length
+    // Which sides this handle moves. West/north grow leftward/upward, so the
+    // origin moves with the size and the opposite edge stays put.
+    const movesWest = axis === 'w' || axis === 'nw' || axis === 'sw'
+    const movesNorth = axis === 'n' || axis === 'ne' || axis === 'nw'
+    const movesEast = axis === 'e' || axis === 'ne' || axis === 'se'
+    const movesSouth = axis === 's' || axis === 'se' || axis === 'sw'
     let next: FrameGeometry = { ...start }
     const onMove = (moveEvent: PointerEvent): void => {
       const now = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY })
       const dx = now.x - origin.x
       const dy = now.y - origin.y
       next = {
-        x: start.x,
-        y: start.y,
-        width: axis === 's' ? start.width : start.width + dx,
-        height: axis === 'e' ? start.height : start.height + dy,
+        x: movesWest ? start.x + dx : start.x,
+        y: movesNorth ? start.y + dy : start.y,
+        width: movesWest ? start.width - dx : movesEast ? start.width + dx : start.width,
+        height: movesNorth ? start.height - dy : movesSouth ? start.height + dy : start.height,
       }
       setLiveFrame({ groupId, rect: next })
     }
@@ -491,7 +578,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
       setLiveFrame(null)
-      canvas.setWsFrameRect(groupId, frameRect(next))
+      // Clamp to the one-column / one-row floor without teleporting the frame:
+      // anchored on the edge the user is NOT dragging.
+      const clamped: FrameGeometry = { ...next }
+      if (clamped.width < MIN_FRAME_WIDTH) {
+        if (movesWest) clamped.x = start.x + start.width - MIN_FRAME_WIDTH
+        clamped.width = MIN_FRAME_WIDTH
+      }
+      if (clamped.height < MIN_FRAME_HEIGHT) {
+        if (movesNorth) clamped.y = start.y + start.height - MIN_FRAME_HEIGHT
+        clamped.height = MIN_FRAME_HEIGHT
+      }
+      canvas.setWsFrameRect(groupId, frameRect(clamped))
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
@@ -514,7 +612,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   const liveNodes = useMemo<TalkMapNode[]>(() => {
-    const wsColors = canvasState.global?.wsColors ?? {}
     const frameNodes: TalkMapNode[] = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? []
       return {
@@ -527,7 +624,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           count: members.length,
           width: rect.width,
           height: rect.height,
-          ...(wsColors[groupId] !== undefined ? { colorTag: wsColors[groupId] } : {}),
           onResizeStart: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => {
             beginResize(groupId, axis, event)
           },
@@ -567,7 +663,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
           glow: glowOf(card.sessionId),
-          ...(card.colorTag !== undefined ? { colorTag: card.colorTag } : {}),
         }
         return {
           id: cardId,
@@ -575,33 +670,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           // The dragged card follows the pointer; every other card sits on its
           // slot (and glides there — the CSS transition owns the animation).
           position: dragging || slot === undefined ? { x: card.x, y: card.y } : { x: slot.x, y: slot.y },
-          selected: liveSelectedIds.has(cardId),
+          // Batch mode shows the pick as the card's ring; otherwise it is the
+          // canvas selection.
+          selected: batchMode ? batchPicks.has(cardId) : liveSelectedIds.has(cardId),
+          ...(batchMode ? { data: { ...data, onPick: () => { toggleBatchPick(cardId) } } } : { data }),
           // Cards folded into the stack cell stay in the model (their edges and
           // selection survive) but must not paint over the grid.
           hidden: foldedSet.has(cardId),
           className: dragging ? 'tmDragging' : '',
-          data,
         }
       })
-    const draftNodes: TalkMapNode[] = draft === null
-      ? []
-      : [{
-          id: 'draft',
-          type: 'draftCard' as const,
-          position: { x: draft.x, y: draft.y },
-          selectable: false,
-          zIndex: 10,
-          data: {
-            workspaceOptions: workspaces.items.map(item => ({
-              id: item.workspaceId,
-              title: item.title,
-              path: item.path,
-            })),
-            ...(draft.workspaceId !== undefined ? { defaultWorkspaceId: draft.workspaceId } : {}),
-            ...(draft.groupId !== undefined ? { groupId: draft.groupId } : {}),
-            onClose: () => { setDraft(null) },
-          },
-        }]
     // Overflow cells: one per folder that cannot show all of its cards, sitting
     // in the last visible slot with a count of what it swallowed.
     const stackNodes: TalkMapNode[] = Object.entries(foldedCards).map(([groupId, folded]) => {
@@ -632,8 +710,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         },
       }
     })
-    return [...frameNodes, ...cardNodes, ...stackNodes, ...draftNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale])
+    return [...frameNodes, ...cardNodes, ...stackNodes]
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -721,14 +799,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const removedCardIds = changes
       .filter((change): change is Extract<NodeChange<TalkMapNode>, { type: 'remove' }> => change.type === 'remove')
       .map(change => change.id)
-      .filter(id => !id.startsWith('frame-') && id !== 'draft')
+      .filter(id => !id.startsWith('frame-') && !id.startsWith('stack-'))
     for (const change of changes) {
       if (change.type === 'position' && change.position !== undefined) {
-        if (change.id === 'draft') {
-          setDraft(previous => previous === null
-            ? previous
-            : { ...previous, x: change.position?.x ?? previous.x, y: change.position?.y ?? previous.y })
-        } else if (change.id.startsWith('frame-')) {
+        if (change.id.startsWith('frame-')) {
           // Moving a folder: the members are not translated card by card any
           // more — their slots are derived from the folder's rect, so a live
           // rect moves (and animates) the whole group in one pass.
@@ -771,7 +845,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         // removal takes its member cards with it — same as the context menu.
         if (change.id.startsWith('frame-')) {
           removeGroup(change.id.slice('frame-'.length))
-        } else if (change.id !== 'draft') {
+        } else if (!change.id.startsWith('stack-')) {
           canvas.removeCard(change.id)
         }
         setSelectedIds((previous) => {
@@ -1006,6 +1080,69 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return items
   }
 
+  /** Flip the shipped pin for one card (mirrors the sidebar's 置顶). */
+  const togglePin = (cardId: string): void => {
+    const card = visibleCards[cardId]
+    if (card === undefined) return
+    const next = !pinnedSessions.has(card.sessionId)
+    void setPinned(card.sessionId, next).then(() => {
+      showToast(next ? t('toast.pinned') : t('toast.unpinned'))
+    }).catch((error: unknown) => {
+      showToast(`${t('toast.pinFailed')}${String(error)}`)
+    })
+  }
+
+  /**
+   * Archive or delete a set of cards, then take them off the map. Delete goes
+   * through dsh-recycle-bin's Host route, so it lands in the bin and stays
+   * restorable.
+   */
+  const runActions = async (kind: 'archive' | 'delete', cardIds: readonly string[]): Promise<void> => {
+    if (cardIds.length === 0) return
+    const sessionIds = cardIds
+      .map(cardId => visibleCards[cardId]?.sessionId)
+      .filter((sessionId): sessionId is string => sessionId !== undefined)
+    if (sessionIds.length === 0) return
+    setBatchBusy(true)
+    try {
+      if (kind === 'archive') await archiveSessions(sessionIds)
+      else await trashSessions(sessionIds)
+      for (const cardId of cardIds) canvas.removeCard(cardId)
+      showToast(t(kind === 'archive' ? 'toast.archived' : 'toast.deleted', { n: String(sessionIds.length) }))
+    } catch (error) {
+      showToast(`${t(kind === 'archive' ? 'toast.archiveFailed' : 'toast.deleteFailed')}${String(error)}`)
+    } finally {
+      setBatchBusy(false)
+    }
+  }
+
+  /** Cards picked in batch mode (a plain click on a card toggles it). */
+  const selectedCardIds = useMemo(
+    () => [...batchPicks].filter(id => visibleCards[id] !== undefined),
+    [batchPicks, visibleCards],
+  )
+
+  /** Toggle one card's batch membership. */
+  const toggleBatchPick = (cardId: string): void => {
+    setBatchPicks((previous) => {
+      const next = new Set(previous)
+      if (next.has(cardId)) next.delete(cardId)
+      else next.add(cardId)
+      return next
+    })
+  }
+
+  /** Batch bar action: run, then leave batch mode. */
+  const runBatch = async (kind: 'archive' | 'delete'): Promise<void> => {
+    if (batchBusy || !batchMode) return
+    const cardIds = selectedCardIds
+    if (cardIds.length === 0) return
+    setBatchMode(false)
+    setBatchPicks(new Set())
+    await runActions(kind, cardIds)
+  }
+
+
   /**
    * Which folder is under a flow-space point (rendered rects, not the stored
    * ones). Two folders can overlap on a free board, so the SMALLEST one wins:
@@ -1022,29 +1159,25 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /**
-   * Open the in-place composer. Inside a folder the new conversation belongs to
-   * that workspace and is created with that workspace preselected; on empty
-   * canvas the composer falls back to its own workspace picker.
+   * Start a conversation: hand the workspace to the SHELL's own new-conversation
+   * screen and leave the map. No in-place composer any more — the shipped screen
+   * already owns the workspace picker, the whole agent-preset list (标准/创造/…)
+   * and the send path, so the map cannot drift out of sync with it.
    */
-  const openDraftAt = (flowX: number, flowY: number, forcedGroupId?: string): void => {
-    const x = snap(flowX - CARD_W / 2)
-    const y = snap(flowY - 40)
-    const groupId = forcedGroupId ?? groupAtPoint(flowX, flowY)
-    const isWorkspace = groupId !== undefined && (wsTitles.has(groupId) || frameRects[groupId] !== undefined)
-    setDraft({
-      x,
-      y,
-      ...(isWorkspace ? { workspaceId: groupId } : {}),
-      ...(groupId !== undefined ? { groupId } : {}),
-    })
+  const startSessionIn = (workspaceId?: string): void => {
+    const ui = uiWorkspaceService()
+    if (ui === undefined || typeof ui.startSession !== 'function') {
+      showToast(t('toast.needUiWorkspace'))
+      return
+    }
+    closeMapPanel()
+    ui.startSession(workspaceId)
   }
 
-  // ---- import actions -------------------------------------------------
+  /** Does this flow point sit inside a folder (and which)? */
+  const folderAt = (flowX: number, flowY: number): string | undefined => groupAtPoint(flowX, flowY)
 
-  const boardSessionIds = useMemo(
-    () => new Set(Object.values(canvasState.cards).map(card => card.sessionId)),
-    [canvasState.cards],
-  )
+  // ---- import actions -------------------------------------------------
 
   const importWorkspace = (workspaceId: string, atX: number, atY: number): void => {
     const memberSessions = placeableSessionIds(sessions)
@@ -1064,7 +1197,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         sessionId,
         x: entry.x,
         y: entry.y,
-        ...(entry.colorTag !== undefined ? { colorTag: entry.colorTag } : {}),
         createdAt: Date.now(),
       }
       added[newCardId()] = card
@@ -1128,7 +1260,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         sessionId,
         x: position.x,
         y: position.y,
-        ...(entry?.colorTag !== undefined ? { colorTag: entry.colorTag } : {}),
         createdAt: Date.now(),
       }
     }
@@ -1252,7 +1383,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         // and that point is what decides the workspace.
         label: underTitle === undefined ? t('menu.newChat') : t('menu.newChatIn', { ws: underTitle }),
         onPick: () => {
-          openDraftAt(menu.flowX, menu.flowY, under)
+          startSessionIn(under)
           close()
         },
       })
@@ -1269,12 +1400,49 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     } else if (menu.kind === 'card' && menu.targetId !== undefined) {
       const cardId = menu.targetId
       const card = canvasState.cards[cardId]
+      const isPinned = card !== undefined && pinnedSessions.has(card.sessionId)
       items.push({
         key: 'open',
         label: t('menu.open'),
         onPick: () => {
           close()
           if (card !== undefined) openSession(card.sessionId)
+        },
+      })
+      // The shipped pin: flipping it here flips it in the sidebar too, and the
+      // folder layout keeps pinned cards in front.
+      items.push({
+        key: 'pin',
+        label: isPinned ? t('menu.unpin') : t('menu.pin'),
+        onPick: () => {
+          close()
+          togglePin(cardId)
+        },
+      })
+      items.push({
+        key: 'archive',
+        label: t('menu.archive'),
+        onPick: () => {
+          close()
+          void runActions('archive', [cardId])
+        },
+      })
+      items.push({
+        key: 'delete-session',
+        label: t('menu.deleteSession'),
+        onPick: () => {
+          close()
+          void runActions('delete', [cardId])
+        },
+      })
+      items.push({
+        key: 'batch',
+        label: t('menu.batch'),
+        onPick: () => {
+          close()
+          // Batch mode: the picked card is the first member of the batch.
+          setBatchMode(true)
+          setBatchPicks(new Set([cardId]))
         },
       })
       items.push({
@@ -1341,18 +1509,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         key: 'new-chat',
         label: t('menu.newChat'),
         onPick: () => {
-          openDraftAt(menu.flowX, menu.flowY, groupId)
+          startSessionIn(groupId)
           close()
         },
       })
-      items.push({
-        key: 'sync',
-        label: t('menu.syncGroup'),
-        onPick: () => {
-          syncGroup(groupId)
-          close()
-        },
-      })
+      // Sync is automatic now (once per open), so the manual row is gone.
       items.push({
         key: 'remove-group',
         label: t('menu.removeGroup'),
@@ -1371,7 +1532,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       items,
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, locale])
+  }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, pinnedSessions, locale])
 
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID)
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0
@@ -1384,22 +1545,20 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const target = event.target as HTMLElement
         // React Flow renders nodes INSIDE the pane, so the pane check below is
         // true for a card as well. A card owns its own double-click (open the
-        // conversation) — never drop a draft card on top of one.
+        // conversation).
         const nodeElement = target.closest('.react-flow__node')
         if (nodeElement !== null) {
           const nodeId = nodeElement.getAttribute('data-id') ?? ''
           // A double-click anywhere on a FOLDER (its label, its border, or the
           // transparent body that lets the event through to the pane) starts a
-          // conversation in that workspace, at the point you clicked.
-          if (nodeId.startsWith('frame-')) {
-            const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
-            openDraftAt(position.x, position.y, nodeId.slice('frame-'.length))
-          }
+          // conversation in that workspace.
+          if (nodeId.startsWith('frame-')) startSessionIn(nodeId.slice('frame-'.length))
           return
         }
         if (target.closest('.react-flow__pane') === null) return
+        // Empty canvas: the folder under the pointer decides (if any).
         const position = screenToFlowPosition({ x: event.clientX, y: event.clientY })
-        openDraftAt(position.x, position.y)
+        startSessionIn(folderAt(position.x, position.y))
       }}
       onContextMenu={(event) => { event.preventDefault() }}
       onClick={() => { if (menu !== null) setMenu(null) }}
@@ -1461,8 +1620,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         snapToGrid
         snapGrid={[GRID, GRID]}
         zoomOnDoubleClick={false}
-        panOnDrag={panMode ? true : [1, 2]}
-        selectionOnDrag={!panMode}
+        // Batch mode turns the pane into a selection surface: drag a box to
+        // pick many cards, Shift-click to add one.
+        panOnDrag={batchMode ? false : (panMode ? true : [1, 2])}
+        selectionOnDrag={batchMode ? true : !panMode}
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={['Backspace', 'Delete']}
         minZoom={0.1}
@@ -1491,15 +1652,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           </ControlButton>
         </Controls>
       </ReactFlow>
-      {liveSelectedIds.size > 0
+      {batchMode
         ? (
-            <ColorToolbar
-              selectedIds={liveSelectedIds}
-              visibleCards={visibleCards}
+            <BatchBar
+              count={selectedCardIds.length}
+              busy={batchBusy}
+              onArchive={() => { void runBatch('archive') }}
+              onDelete={() => { void runBatch('delete') }}
+              onCancel={() => { setBatchMode(false); setBatchPicks(new Set()) }}
             />
           )
         : null}
-      {hasContent || draft !== null ? null : <div className={styles['emptyHint']}>{t('map.empty')}</div>}
+      {hasContent ? null : <div className={styles['emptyHint']}>{t('map.empty')}</div>}
       {menuState !== null
         ? <ContextMenu key={menu?.view ?? 'root'} menu={menuState} onClose={() => { setMenu(null) }} />
         : null}
@@ -1525,40 +1689,41 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   )
 }
 
-function ColorToolbar(props: {
-  selectedIds: ReadonlySet<string>
-  visibleCards: Readonly<Record<string, Card>>
+/** The batch-mode bar: how many cards are picked, and what to do with them. */
+function BatchBar(props: {
+  count: number
+  busy: boolean
+  onArchive: () => void
+  onDelete: () => void
+  onCancel: () => void
 }): React.JSX.Element {
-  const selectedCardIds = [...props.selectedIds].filter(id => props.visibleCards[id] !== undefined)
-  const selectedFrameWs = [...props.selectedIds]
-    .filter(id => id.startsWith('frame-'))
-    .map(id => id.slice('frame-'.length))
-  const applyColor = (colorTag: string | undefined): void => {
-    if (selectedCardIds.length > 0) canvas.setCardsColor(selectedCardIds, colorTag)
-    for (const workspaceId of selectedFrameWs) canvas.setWorkspaceColor(workspaceId, colorTag)
-  }
   return (
-    <div className={styles['colorToolbar']} role="toolbar" aria-label={t('color.toolbar')}>
-      <span className={styles['colorToolbarLabel']}>{t('color.toolbar')}</span>
-      {COLOR_TAGS.map(tag => (
-        <button
-          key={tag.id}
-          type="button"
-          className={styles['colorSwatch']}
-          style={{ background: tag.swatch }}
-          title={tag.id}
-          aria-label={tag.id}
-          onClick={() => { applyColor(tag.id) }}
-        />
-      ))}
+    <div className={styles['batchBar']} role="toolbar" aria-label={t('batch.title')}>
+      <span className={styles['batchCount']}>{t('batch.count', { n: String(props.count) })}</span>
+      <span className={styles['batchSpace']} />
       <button
         type="button"
-        className={`${styles['colorSwatch']} ${styles['colorSwatchClear']}`}
-        title={t('color.clear')}
-        aria-label={t('color.clear')}
-        onClick={() => { applyColor(undefined) }}
+        className={styles['batchAction']}
+        disabled={props.busy || props.count === 0}
+        onClick={props.onArchive}
       >
-        ×
+        {t('batch.archive')}
+      </button>
+      <button
+        type="button"
+        className={`${styles['batchAction']} ${styles['batchDanger']}`}
+        disabled={props.busy || props.count === 0}
+        onClick={props.onDelete}
+      >
+        {t('batch.delete')}
+      </button>
+      <button
+        type="button"
+        className={styles['batchAction']}
+        disabled={props.busy}
+        onClick={props.onCancel}
+      >
+        {t('batch.cancel')}
       </button>
     </div>
   )

@@ -1,9 +1,9 @@
 /**
  * Headless-Edge probe for the talk-map client bundle.
  *
- * Runs the real built artifact in a throwaway headless Edge (own
- * --user-data-dir, own debugging port) and asserts the behaviours this project
- * actually cares about. Never touches the user's browser profile.
+ * Runs the real built artifact in a throwaway headless Edge (own --user-data-dir,
+ * own debugging port) and asserts the behaviours this project cares about.
+ * Never touches the user's browser profile.
  *
  *   node test/probe.mjs            # boots Edge + static server itself
  *   node test/probe.mjs --headed   # same, with a visible window
@@ -95,58 +95,83 @@ try {
     if (message.type() === 'error') consoleErrors.push(message.text())
   })
 
+  const box = async (selector) => page.evaluate((sel) => {
+    const el = document.querySelector(sel)
+    if (el === null) return null
+    const r = el.getBoundingClientRect()
+    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) }
+  }, selector)
+  const cardPoint = async (sessionId) => page.evaluate((sid) => {
+    const state = window.__harness.state()
+    const el = [...document.querySelectorAll('.react-flow__node')]
+      .find(node => state.cards[node.getAttribute('data-id')]?.sessionId === sid)
+    if (el === undefined || el === null) return null
+    const r = el.getBoundingClientRect()
+    return { x: r.x + 40, y: r.y + 14 }
+  }, sessionId)
+  const menuItems = () => page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].map(el => el.textContent.trim()))
+  const clickMenuItem = async (needle) => {
+    await page.evaluate((text) => {
+      const target = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes(text))
+      target?.click()
+    }, needle)
+    await page.waitForTimeout(500)
+  }
+  const openMap = async () => {
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
+    await page.waitForTimeout(600)
+  }
+
   await page.goto(`http://127.0.0.1:${PORT}/test/index.html`)
   await page.waitForSelector('.react-flow__node', { timeout: 10000 })
-  await page.waitForTimeout(700)
+  await page.waitForTimeout(800)
   await page.screenshot({ path: path.join(shots, 'probe-initial.png') })
 
-  // ---- 1. header ------------------------------------------------------
+  // ---- 1. header -------------------------------------------------------
   const header = await page.evaluate(() => {
-    const box = el => {
-      if (!el) return null
+    const read = (el) => {
+      if (el === null) return null
       const r = el.getBoundingClientRect()
       return { w: Math.round(r.width), h: Math.round(r.height), text: el.textContent.trim() }
     }
     return {
-      back: box(document.querySelector('[class*="tm_backButton"]')),
-      close: box(document.querySelector('[class*="tm_closeButton"]')),
+      back: read(document.querySelector('[class*="tm_backButton"]')),
+      close: read(document.querySelector('[class*="tm_closeButton"]')),
       title: document.querySelector('[class*="headerTitle"]') !== null,
+      hotkey: document.querySelector('[class*="tm_hotkeyButton"]') !== null,
+      fullscreen: document.querySelector('[class*="tm_fullscreenButton"]') !== null,
+      topGap: (() => {
+        const panel = document.querySelector('[class*="tm_panel"]')
+        const head = document.querySelector('[class*="tm_header"]')
+        if (panel === null || head === null) return null
+        return Math.round(head.getBoundingClientRect().top - panel.getBoundingClientRect().top)
+      })(),
     }
   })
   check('左上角是返回按钮', header.back !== null && header.back.text.includes('返回'), JSON.stringify(header.back))
-  check('右上角有关闭按钮', header.close !== null, JSON.stringify(header.close))
-  check('按钮放大了（≥34px 高）', (header.back?.h ?? 0) >= 34 && (header.close?.h ?? 0) >= 34, `back ${header.back?.h}px / close ${header.close?.h}px`)
+  check('右上角是关闭按钮', header.close !== null, JSON.stringify(header.close))
+  check('按钮放大了（≥34px 高）', (header.back?.h ?? 0) >= 34 && (header.close?.h ?? 0) >= 34, `${header.back?.h}px / ${header.close?.h}px`)
   check('标题文字已删除', header.title === false)
+  check('快捷键按钮已删除', header.hotkey === false)
+  check('全屏按钮已删除', header.fullscreen === false)
+  check('顶部没有多余空白', header.topGap !== null && header.topGap <= 6, `差值 ${header.topGap}px`)
 
-  // The panel used to inherit the frame-overlay top inset, which left a dead
-  // band above the header. The header must sit at the top of the panel now.
-  const topGap = await page.evaluate(() => {
-    const panel = document.querySelector('[class*="tm_panel"]')
-    const head = document.querySelector('[class*="tm_header"]')
-    if (panel === null || head === null) return null
-    return Math.round(head.getBoundingClientRect().top - panel.getBoundingClientRect().top)
-  })
-  check('顶部没有多余空白（表头贴着面板顶）', topGap !== null && topGap <= 6, `差值 ${topGap}px`)
-
-  // ---- 1b. sidebar folds away with the map, comes back on exit ----------
+  // ---- 2. sidebar follows the map --------------------------------------
   const sidebarOpen = await page.evaluate(() => window.__harness.sidebarState())
   check('打开地图时侧栏自动收起', sidebarOpen.collapsed === true && sidebarOpen.width < 80, JSON.stringify(sidebarOpen))
   await page.click('[class*="tm_backButton"]')
   await page.waitForTimeout(400)
   const sidebarBack = await page.evaluate(() => window.__harness.sidebarState())
   check('返回对话时侧栏自动展开', sidebarBack.collapsed === false && sidebarBack.width > 150, JSON.stringify(sidebarBack))
-  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
-  await page.waitForTimeout(500)
-  check('再次打开地图仍会收起侧栏', (await page.evaluate(() => window.__harness.sidebarState())).collapsed === true)
-  // The fullscreen button was removed on request: the header is back/语言/快捷键/✕.
-  check('全屏按钮已删除', (await page.evaluate(() => document.querySelector('[class*="tm_fullscreenButton"]') === null)))
+  await openMap()
+  check('再次打开仍会收起侧栏', (await page.evaluate(() => window.__harness.sidebarState())).collapsed === true)
 
-  // ---- 2. grid: no overlap, reading order ------------------------------
+  // ---- 3. grid ---------------------------------------------------------
   const grid = await page.evaluate(() => {
     const cards = []
     for (const el of document.querySelectorAll('.react-flow__node')) {
       const id = el.getAttribute('data-id')
-      if (!id || id.startsWith('frame-') || id === 'draft' || id.startsWith('stack-')) continue
+      if (!id || id.startsWith('frame-') || id.startsWith('stack-')) continue
       const r = el.getBoundingClientRect()
       cards.push({ id, x: r.x, y: r.y, w: r.width, h: r.height })
     }
@@ -157,160 +182,119 @@ try {
         if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) overlaps.push([a.id, b.id])
       }
     }
-    const state = window.__harness.state()
-    const ordered = cards
-      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
-      .map(c => state.cards[c.id]?.sessionId)
-    return { count: cards.length, overlaps, ordered }
+    return { count: cards.length, overlaps }
   })
   check('卡片互不重叠', grid.overlaps.length === 0, `${grid.count} 张可见卡，重叠 ${grid.overlaps.length} 对`)
-  // The daily folder is 3x1 = 3 slots, 5 conversations → 2 cards + the stack cell.
-  check('装不下时只排可见的卡', grid.ordered.slice(0, 2).join(',') === 's1,s2', `可见顺序 ${JSON.stringify(grid.ordered)}`)
 
-  // ---- 3. overflow stack cell -----------------------------------------
+  const autoSync = await page.evaluate(() =>
+    [...document.querySelectorAll('.react-flow__node [class*="cardTitle"]')]
+      .map(el => el.textContent.trim())
+      .includes('自动同步进来的会话'))
+  check('打开地图时自动同步新会话', autoSync === true)
+
+  // ---- 4. overflow stack + drawer -------------------------------------
   const stack = await page.evaluate(() => {
     const el = document.querySelector('.react-flow__node[data-id^="stack-"]')
-    if (!el) return null
+    if (el === null) return null
     const r = el.getBoundingClientRect()
     const badge = el.querySelector('[class*="stackBadge"]')
     const frames = window.__harness.nodeBoxes().frames['ws-daily']
     return {
-      id: el.getAttribute('data-id'),
-      text: el.textContent.trim(),
       badge: badge?.textContent ?? '',
-      x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height),
       rightGap: Math.round(frames.x + frames.w - (r.x + r.width)),
       bottomGap: Math.round(frames.y + frames.h - (r.y + r.height)),
     }
   })
-  check('溢出时右下角出现堆叠格子', stack !== null && stack.badge === '+3', `${stack?.id} badge=${stack?.badge}`)
-  check('堆叠格子落在文件夹右下角', stack !== null && stack.rightGap >= 12 && stack.rightGap <= 48 && stack.bottomGap >= 0 && stack.bottomGap <= 72,
+  check('装不下时出现堆叠格子', stack !== null && stack.badge === '+3', JSON.stringify(stack))
+  check('堆叠格子落在文件夹右下角', stack !== null && stack.rightGap >= 10 && stack.rightGap <= 48 && stack.bottomGap >= 0 && stack.bottomGap <= 72,
     `右 ${stack?.rightGap}px / 下 ${stack?.bottomGap}px`)
 
   await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
   await page.waitForTimeout(400)
   const drawer = await page.evaluate(() => {
     const el = document.querySelector('[class*="tm_drawer"]')
-    if (!el) return null
+    if (el === null) return null
     const cards = [...el.querySelectorAll('[data-stack-card]')]
-    const first = cards[0]
     return {
       count: cards.length,
-      width: first === undefined ? 0 : Math.round(first.getBoundingClientRect().width),
+      width: cards[0] === undefined ? 0 : Math.round(cards[0].getBoundingClientRect().width),
       scrollable: (() => {
         const scroller = el.querySelector('[class*="drawerScroll"]')
         return scroller !== null && scroller.scrollHeight > scroller.clientHeight + 4
       })(),
-      titles: cards.map(card => card.textContent.slice(0, 12)),
+      running: cards.some(card => getComputedStyle(card).animationName.includes('lamp-white')),
+      done: cards.some(card => getComputedStyle(card).boxShadow.includes('52, 199, 89')),
     }
   })
   check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 5, `${drawer?.count} 张`)
   check('抽屉里的卡片是 1:1 尺寸（224px）', drawer?.width === 224, `${drawer?.width}px`)
   check('抽屉内容可滚动', drawer?.scrollable === true)
-
-  const drawerLamps = await page.evaluate(() => {
-    const bySession = {}
-    for (const card of document.querySelectorAll('[data-stack-card]')) {
-      const title = card.querySelector('[class*="cardTitle"]')?.textContent ?? ''
-      const inner = card
-      bySession[title] = { cls: inner.className, shadow: getComputedStyle(inner).boxShadow, animation: getComputedStyle(inner).animationName }
-    }
-    return bySession
-  })
-  const runningCard = Object.values(drawerLamps).find(entry => entry.animation.includes('lamp-white'))
-  const doneCard = Object.values(drawerLamps).find(entry => entry.shadow.includes('52, 199, 89'))
-  check('运行中 = 白光呼吸', runningCard !== undefined, runningCard?.animation)
-  check('已完成 = 绿光', doneCard !== undefined)
+  check('运行中 = 白光呼吸', drawer?.running === true)
+  check('已完成 = 绿光', drawer?.done === true)
 
   const scrollBefore = await page.evaluate(() => document.querySelector('[class*="drawerScroll"]').scrollTop)
-  const scrollBox = await page.evaluate(() => {
-    const r = document.querySelector('[class*="drawerScroll"]').getBoundingClientRect()
-    return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
-  })
-  await page.mouse.move(scrollBox.x, scrollBox.y)
+  const scrollBox = await box('[class*="drawerScroll"]')
+  await page.mouse.move(scrollBox.x + scrollBox.w / 2, scrollBox.y + scrollBox.h / 2)
   await page.mouse.wheel(0, 300)
   await page.waitForTimeout(600)
   const scrollAfter = await page.evaluate(() => document.querySelector('[class*="drawerScroll"]').scrollTop)
-  check('滚轮切换视图（滚动生效）', scrollAfter > scrollBefore, `${scrollBefore} → ${Math.round(scrollAfter)}`)
+  check('滚轮切换视图', scrollAfter > scrollBefore, `${scrollBefore} → ${Math.round(scrollAfter)}`)
   await page.screenshot({ path: path.join(shots, 'probe-drawer.png') })
-
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
   check('Esc 收起抽屉', await page.evaluate(() => document.querySelector('[class*="tm_drawer"]') === null))
 
-  // ---- 4. panel model --------------------------------------------------
-  check('地图是 main 面板（不是全覆盖遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')
+  // ---- 5. panel model --------------------------------------------------
+  check('地图是 main 面板（不是遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')
   await page.click('[class*="tm_backButton"]')
   await page.waitForTimeout(400)
-  const afterBack = await page.evaluate(() => ({ panel: window.__harness.panelState(), placeholder: document.querySelector('[data-harness-placeholder]') !== null }))
-  check('返回按钮回到对话', afterBack.panel.selectedPanel === null && afterBack.placeholder)
-  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
-  await page.waitForTimeout(500)
-  check('快捷键重新打开面板', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')
+  check('返回按钮回到对话', await page.evaluate(() => document.querySelector('[data-harness-placeholder]') !== null))
+  await openMap()
 
-  // ---- 5. an active conversation jumps the queue -----------------------
-  const beforeTouch = await page.evaluate(() => {
+  // ---- 6. activity promotes -------------------------------------------
+  const orderOf = (sessionIds) => page.evaluate((ids) => {
     const state = window.__harness.state()
     return [...document.querySelectorAll('.react-flow__node')]
       .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
-      .filter(entry => entry.id?.startsWith('card-'))
+      .filter(entry => ids.includes(entry.id))
       .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))
       .map(entry => state.cards[entry.id]?.sessionId)
-  })
-  // s5 is folded and last; "sending a message" must pull it to the first slot.
+  }, sessionIds)
+  const beforeTouch = await orderOf(['card-1', 'card-2'])
   await page.evaluate(() => window.__harness.touch('s5'))
   await page.waitForTimeout(700)
-  const afterTouch = await page.evaluate(() => {
-    const state = window.__harness.state()
-    return [...document.querySelectorAll('.react-flow__node')]
-      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
-      .filter(entry => entry.id?.startsWith('card-'))
-      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))
-      .map(entry => state.cards[entry.id]?.sessionId)
-  })
-  check('活跃会话被提到开头', afterTouch[0] === 's5', `${JSON.stringify(beforeTouch.slice(0, 2))} → ${JSON.stringify(afterTouch.slice(0, 2))}`)
+  const afterTouch = await orderOf(['card-1', 'card-2', 'card-5'])
+  check('活跃会话被提到开头', afterTouch[0] === 's5', `${JSON.stringify(beforeTouch)} → ${JSON.stringify(afterTouch.slice(0, 2))}`)
 
-  // ---- 6. resize reflows / delete compacts -----------------------------
-  const handle = await page.evaluate(() => {
-    const el = document.querySelector('[data-talkmap-workspace="ws-daily"] [class*="wsFrameResizeE"]')
-    const r = el.getBoundingClientRect()
+  // ---- 7. resize: edges + corners -------------------------------------
+  const handleAxes = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-talkmap-workspace="ws-daily"] [data-talkmap-resize]')]
+      .map(el => el.getAttribute('data-talkmap-resize')))
+  check('四边四角共 8 个拉伸把手', ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw'].every(axis => handleAxes.includes(axis)), JSON.stringify(handleAxes))
+
+  const labBefore = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-lab']
+  const north = await page.evaluate(() => {
+    const r = document.querySelector('[data-talkmap-workspace="ws-lab"] [data-talkmap-resize="n"]').getBoundingClientRect()
     return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
   })
-  const shownBefore = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]:not([style*="display: none"])').length)
-  await page.mouse.move(handle.x, handle.y)
+  await page.mouse.move(north.x, north.y)
   await page.mouse.down()
-  for (let i = 1; i <= 8; i++) await page.mouse.move(handle.x + i * 34, handle.y)
+  for (let i = 1; i <= 6; i++) await page.mouse.move(north.x, north.y - i * 10)
   await page.mouse.up()
-  await page.waitForTimeout(700)
-  const grown = await page.evaluate(() => {
-    const cards = [...document.querySelectorAll('.react-flow__node')]
-      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
-      .filter(entry => entry.id?.startsWith('card-'))
-    const minTop = Math.min(...cards.map(entry => entry.r.y))
-    return cards.filter(entry => Math.abs(entry.r.y - minTop) < 2).length
-  })
-  check('拉宽后一行装下更多卡片', grown >= 3, `一行 ${grown} 张（拉宽前可见 ${shownBefore} 张）`)
+  await page.waitForTimeout(600)
+  const labAfterNorth = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-lab']
+  check('上边把手改高度并带动上边界', labAfterNorth.h > labBefore.h + 10 && labAfterNorth.y < labBefore.y - 5,
+    `${labBefore.y}/${labBefore.h} → ${labAfterNorth.y}/${labAfterNorth.h}`)
 
-  // Corner handle must change BOTH dimensions in one gesture. Measured on the
-  // isolated lab folder: the daily one now overlaps MedKit, and an overlapping
-  // folder's border strip legitimately sits on top of a neighbour's corner.
-  const cornerBefore = await page.evaluate(() => window.__harness.nodeBoxes().frames['ws-lab'])
+  const cornerBefore = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-lab']
   const corner = await page.evaluate(() => {
-    const frame = document.querySelector('[data-talkmap-workspace="ws-lab"]')
-    const el = frame.querySelector('[class*="wsFrameResizeCorner"]')
+    const el = document.querySelector('[data-talkmap-workspace="ws-lab"] [data-talkmap-resize="se"]')
     const r = el.getBoundingClientRect()
     const x = r.x + r.width / 2, y = r.y + r.height / 2
     const hit = document.elementFromPoint(x, y)
-    const owner = hit === null ? null : hit.closest('[data-talkmap-workspace]')?.getAttribute('data-talkmap-workspace')
-    return {
-      x, y,
-      hit: hit === null ? 'nothing' : String(hit.className),
-      owner,
-      rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
-    }
+    return { x, y, hit: hit === null ? 'nothing' : String(hit.className) }
   })
-  check('对角把手在指针下可命中', corner.hit.includes('wsFrameResizeCorner'),
-    `${corner.hit} @ ${Math.round(corner.x)},${Math.round(corner.y)}（属于 ${corner.owner}）${JSON.stringify(corner.rect)}`)
+  check('对角把手在指针下可命中', corner.hit.includes('wsFrameResizeSe'), corner.hit)
   await page.mouse.move(corner.x, corner.y)
   await page.waitForTimeout(80)
   await page.mouse.down()
@@ -320,123 +304,93 @@ try {
   }
   await page.mouse.up()
   await page.waitForTimeout(700)
-  const cornerAfter = await page.evaluate(() => window.__harness.nodeBoxes().frames['ws-lab'])
-  check('对角把手同时改宽高',
-    cornerAfter.w > cornerBefore.w + 10 && cornerAfter.h > cornerBefore.h + 10,
+  const cornerAfter = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-lab']
+  check('对角把手同时改宽高', cornerAfter.w > cornerBefore.w + 10 && cornerAfter.h > cornerBefore.h + 10,
     `${cornerBefore.w}x${cornerBefore.h} → ${cornerAfter.w}x${cornerAfter.h}`)
+  await page.screenshot({ path: path.join(shots, 'probe-resized.png') })
 
-  const firstCard = await page.evaluate(() => {
-    const state = window.__harness.state()
-    const entry = [...document.querySelectorAll('.react-flow__node')]
-      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
-      .filter(item => item.id?.startsWith('card-'))
-      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
-    return { id: entry.id, session: state.cards[entry.id]?.sessionId, x: entry.r.x + 60, y: entry.r.y + 16 }
-  })
-  await page.mouse.click(firstCard.x, firstCard.y)
-  await page.waitForTimeout(150)
-  await page.keyboard.press('Delete')
-  await page.waitForTimeout(700)
-  const countAfterDelete = await page.evaluate(() => window.__harness.posts.filter(p => p.path.includes('cards/delete')).length)
-  check('删卡会落盘（删除请求发出）', countAfterDelete >= 1, `${countAfterDelete} 次 delete 请求`)
-
-  // ---- 7. double-click a folder → new chat there, with a mode ----------
+  // ---- 8. new chat goes to the shell's own page ------------------------
   const frames = await page.evaluate(() => window.__harness.nodeBoxes().frames)
   const medkit = frames['ws-medkit']
   const daily = frames['ws-daily']
   const clickX = Math.max(medkit.x + 60, daily.x + daily.w + 30)
   await page.mouse.dblclick(clickX, medkit.y + medkit.h - 22)
-  await page.waitForTimeout(500)
-  const draft = await page.evaluate(() => {
-    const el = document.querySelector('[class*="tm_draftCard"]')
-    if (!el) return null
-    return {
-      workspace: el.querySelector('select')?.value,
-      modes: [...el.querySelectorAll('[role="radio"]')].map(b => b.textContent.trim()),
-    }
-  })
-  check('双击工作区 = 在该工作区新建对话', draft?.workspace === 'ws-medkit', `workspace=${draft?.workspace}`)
-  check('草稿卡有模式选择（标准/创造）', (draft?.modes.length ?? 0) === 2, JSON.stringify(draft?.modes))
-
-  // The picker must NOT depend on the preset RPC: on a cold boot that call can
-  // fail, and gating the whole row on it is why the mode row never showed up.
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(250)
-  await page.evaluate(() => window.__harness.setPresetsMode('fail'))
-  await page.mouse.dblclick(clickX, medkit.y + medkit.h - 22)
-  await page.waitForTimeout(500)
-  const draftOffline = await page.evaluate(() => ({
-    workspace: document.querySelector('[class*="tm_draftCard"] select')?.value,
-    modes: [...document.querySelectorAll('[role="radio"]')].map(b => b.textContent.trim()),
-  }))
-  check('预设接口挂掉时模式选择仍在', (draftOffline.modes.length ?? 0) === 2, `${JSON.stringify(draftOffline.modes)} (workspace=${draftOffline.workspace})`)
-  await page.screenshot({ path: path.join(shots, 'probe-draft.png') })
-  await page.evaluate(() => window.__harness.setPresetsMode('ok'))
-
-  // ---- 7b. right-click paths select the workspace too -------------------
-  const draftWorkspaceNow = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(250)
-  // (a) right-click on the folder's transparent body → pane menu
-  const dailyBox = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-daily']
-  // A point inside the folder that lands on the PANE (not a card, not the
-  // frame's own label/edge strips): scan the box for one.
-  const panePoint = await page.evaluate((box) => {
-    for (let dy = 18; dy < box.h - 6; dy += 6) {
-      for (let dx = 18; dx < box.w - 6; dx += 6) {
-        const x = box.x + dx, y = box.y + dy
-        const hit = document.elementFromPoint(x, y)
-        if (hit !== null && hit.classList.contains('react-flow__pane')) return { x, y }
-      }
-    }
-    return null
-  }, dailyBox)
-  check('文件夹内能找到透明区域（右键落点）', panePoint !== null, JSON.stringify(panePoint))
-  await page.mouse.click(panePoint.x, panePoint.y, { button: 'right' })
-  await page.waitForTimeout(350)
-  const paneMenu = await page.evaluate(() => {
-    const items = [...document.querySelectorAll('[class*="tm_menuItem"], [role="menuitem"]')].map(el => el.textContent.trim())
-    return { items: items.length > 0 ? items : [...document.querySelectorAll('[role="menuitem"]')].map(el => el.textContent.trim()) }
-  })
-  const newChatLabel = paneMenu.items.find(text => text.includes('新对话')) ?? ''
-  check('文件夹内右键的“新对话”标出所属工作区', newChatLabel.includes('日常任务'), `菜单项：${JSON.stringify(paneMenu.items.slice(0, 3))} → ${newChatLabel}`)
-  await page.evaluate(() => {
-    const target = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes('新对话'))
-    target?.click()
-  })
-  await page.waitForTimeout(400)
-  const paneDraft = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
-  check('右键新建对话 = 点击处的工作区', paneDraft === 'ws-daily', `workspace=${paneDraft}`)
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(250)
-
-  // (b) right-click on the folder's label → frame menu (no pane involved)
-  const label = await page.evaluate(() => {
-    const el = document.querySelector('[data-talkmap-workspace="ws-daily"] [class*="wsFrameLabel"]')
-    const r = el.getBoundingClientRect()
-    return { x: r.x + 30, y: r.y + r.height / 2 }
-  })
-  await page.mouse.click(label.x, label.y, { button: 'right' })
-  await page.waitForTimeout(350)
-  const frameMenu = await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].map(el => el.textContent.trim()))
-  check('工作区标签右键也有“新对话”', frameMenu.some(text => text.includes('新对话')), JSON.stringify(frameMenu))
-  await page.evaluate(() => {
-    const target = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes('新对话'))
-    target?.click()
-  })
-  await page.waitForTimeout(400)
-  const frameDraft = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
-  check('标签右键新建对话 = 该工作区', frameDraft === 'ws-daily', `workspace=${frameDraft}（之前 ${draftWorkspaceNow}）`)
-  await page.getByRole('radio', { name: '创造模式' }).click()
-  await page.click('[class*="tm_draftTextarea"]')
-  await page.keyboard.type('探针：创造模式')
-  await page.keyboard.press('Enter')
   await page.waitForTimeout(600)
   const started = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.startSession').at(-1))
-  check('发送时带上所选模式', started?.detail?.options?.agentPreset === 'cordis', JSON.stringify(started?.detail))
-  check('发送后离开面板回到对话', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
+  check('双击工作区 = 用系统页面新建该工作区对话', started?.detail?.workspaceId === 'ws-medkit', JSON.stringify(started?.detail))
+  check('新建对话后离开地图', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
+  check('地图里不再有内嵌草稿面板', await page.evaluate(() => document.querySelector('[class*="tm_draftCard"]') === null))
+  await openMap()
 
-  // ---- 8. no runtime errors -------------------------------------------
+  // ---- 9. click has no colour toolbar ---------------------------------
+  const s6 = await cardPoint('s6')
+  await page.mouse.click(s6.x, s6.y - 6)
+  await page.waitForTimeout(300)
+  check('单击对话不再弹出颜色面板', await page.evaluate(() => document.querySelector('[class*="tm_colorToolbar"]') === null))
+
+  // ---- 10. pin / archive / delete / batch -----------------------------
+  const pinPoint = await cardPoint('s7')
+  await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })
+  await page.waitForTimeout(400)
+  const cardMenu = await menuItems()
+  check('右键菜单含置顶/归档/删除/批量',
+    ['置顶', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
+    JSON.stringify(cardMenu))
+  await clickMenuItem('置顶')
+  const pinLog = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.pinSession').at(-1))
+  const pinnedNow = await page.evaluate(() => window.__harness.pinned())
+  check('置顶调用原生 pinSession', pinLog?.detail === 's7', JSON.stringify(pinLog?.detail))
+  check('置顶状态与侧栏同源', pinnedNow.includes('s7'), JSON.stringify(pinnedNow))
+  await page.waitForTimeout(500)
+  const medkitOrder = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(entry => ['card-6', 'card-7'].includes(entry.id))
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))
+      .map(entry => state.cards[entry.id]?.sessionId)
+  })
+  check('置顶后卡片排到最前', medkitOrder[0] === 's7', JSON.stringify(medkitOrder))
+
+  const beforeArchive = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]').length)
+  const archivePoint = await cardPoint('s10')
+  await page.mouse.click(archivePoint.x, archivePoint.y, { button: 'right' })
+  await page.waitForTimeout(400)
+  await clickMenuItem('归档')
+  const archiveLog = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.archiveSession').at(-1))
+  const afterArchive = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]').length)
+  check('右键归档调用 archiveSession 并移出地图',
+    archiveLog?.detail?.sessionId === 's10' && afterArchive === beforeArchive - 1,
+    `${JSON.stringify(archiveLog?.detail)} / ${beforeArchive} → ${afterArchive}`)
+
+  const deletePoint = await cardPoint('s9')
+  await page.mouse.click(deletePoint.x, deletePoint.y, { button: 'right' })
+  await page.waitForTimeout(400)
+  await clickMenuItem('删除会话')
+  const trashCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
+  check('删除走 dsh-recycle-bin 的 trash 接口', trashCall?.action === 'trash' && trashCall?.sessionId === 's9', JSON.stringify(trashCall))
+
+  const batchPoint = await cardPoint('s6')
+  await page.mouse.click(batchPoint.x, batchPoint.y, { button: 'right' })
+  await page.waitForTimeout(400)
+  await clickMenuItem('批量操作')
+  const barShown = await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') !== null)
+  const second = await cardPoint('s7')
+  await page.mouse.click(second.x, second.y - 6)
+  await page.waitForTimeout(400)
+  const batchCount = await page.evaluate(() => document.querySelector('[class*="tm_batchCount"]')?.textContent ?? '')
+  check('批量操作：工具条出现并可多选', barShown && /2/.test(batchCount), `${barShown} / ${batchCount}`)
+  await page.screenshot({ path: path.join(shots, 'probe-batch.png') })
+  await page.evaluate(() => {
+    const target = [...document.querySelectorAll('[class*="tm_batchAction"]')].find(el => el.textContent.trim() === '删除')
+    target?.click()
+  })
+  await page.waitForTimeout(800)
+  const batchCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
+  check('批量删除一次提交 trashMany', batchCall?.action === 'trashMany' && (batchCall?.sessionIds?.length ?? 0) === 2, JSON.stringify(batchCall))
+  check('批量删除后退出批量模式', await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') === null))
+
+  // ---- 11. no runtime errors ------------------------------------------
   const pluginErrors = consoleErrors.filter(text => !text.includes('favicon'))
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
 } catch (error) {

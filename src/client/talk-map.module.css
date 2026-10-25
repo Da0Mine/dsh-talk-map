@@ -108,24 +108,6 @@
   flex: 1;
 }
 
-.hotkeyButton {
-  flex: none;
-  height: 34px;
-  padding: 0 14px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.hotkeyButton:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
-}
-
 /* Same pill as the hotkey button; min-width keeps the header from jumping
    as the label cycles 自动 / 中文 / English. */
 .langButton {
@@ -167,7 +149,6 @@
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-primary);
 }
-
 
 .zoomResetLabel {
   font-size: 9px;
@@ -666,209 +647,14 @@
 
 /* Resize handles: the folder's own edges, like a desktop folder. The east and
  * south strips sit on the border, the corner keeps the classic diagonal. */
-.wsFrameResize {
-  position: absolute;
-  z-index: 2;
-  pointer-events: auto;
-  opacity: 0.55;
-}
-
-.wsFrameResizeE {
-  cursor: ew-resize;
-  border-right: 3px solid var(--dsw-alias-border-l3);
-  border-radius: 0 14px 14px 0;
-}
-
-.wsFrameResizeS {
-  cursor: ns-resize;
-  border-bottom: 3px solid var(--dsw-alias-border-l3);
-  border-radius: 0 0 14px 14px;
-}
-
-.wsFrameResizeCorner {
-  right: -3px;
-  bottom: -3px;
-  width: 26px;
-  height: 26px;
-  z-index: 3;
-  cursor: nwse-resize;
-  border-right: 3px solid var(--dsw-alias-border-l3);
-  border-bottom: 3px solid var(--dsw-alias-border-l3);
-  border-bottom-right-radius: 14px;
-}
-
-.wsFrameResize:hover {
-  border-color: var(--dsw-alias-brand-primary);
-  opacity: 1;
-}
 
 .wsFrameCount {
   font-weight: 400;
   color: var(--dsw-alias-label-tertiary);
 }
 
-.draftCard {
-  width: 360px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border: 1.5px solid var(--dsw-alias-brand-primary);
-  border-radius: 12px;
-  background: var(--dsw-alias-bg-layer-1);
-  box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2);
-  font-size: 13px;
-}
-
-.draftHeading {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--dsw-alias-label-primary);
-}
-
-.draftRow {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.draftLabel {
-  flex: none;
-  width: 52px;
-  font-size: 12px;
-  color: var(--dsw-alias-label-tertiary);
-}
-
 /* Mode picker (标准模式 / 创造模式) — the same choice the shell's own new-task
  * composer offers, kept as two chips so it reads at a glance. */
-.modeSwitch {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  gap: 6px;
-}
-
-.modeChip {
-  flex: 1;
-  padding: 5px 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--dsw-alias-label-secondary);
-  font-size: 12px;
-  cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
-}
-
-.modeChip:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-primary);
-}
-
-.modeChipActive {
-  border-color: var(--dsw-alias-brand-primary);
-  background: var(--dsw-alias-interactive-bg-active);
-  color: var(--dsw-alias-label-primary);
-  font-weight: 600;
-}
-
-.draftSelect {
-  flex: 1;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 5px 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 7px;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-}
-
-.draftGrow {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.draftInput {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 5px 8px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 7px;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-size: 12px;
-  font-family: inherit;
-}
-
-.draftPathPreview {
-  font-size: 11px;
-  color: var(--dsw-alias-label-tertiary);
-  word-break: break-all;
-}
-
-.draftTextarea {
-  width: 100%;
-  box-sizing: border-box;
-  resize: vertical;
-  min-height: 88px;
-  padding: 9px;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-base);
-  color: var(--dsw-alias-label-primary);
-  font-size: 13px;
-  line-height: 1.5;
-  font-family: inherit;
-}
-
-.colorToolbar {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 7;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border: 1px solid var(--dsw-alias-border-l1);
-  border-radius: 10px;
-  background: var(--dsw-alias-bg-layer-1);
-  box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1);
-}
-
-.colorToolbarLabel {
-  font-size: 12px;
-  color: var(--dsw-alias-label-tertiary);
-  margin-right: 2px;
-}
-
-.colorSwatch {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 11px;
-  line-height: 1;
-  color: var(--dsw-alias-label-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.colorSwatch:hover {
-  transform: scale(1.15);
-}
-
-.colorSwatchClear {
-  background: transparent;
-}
 
 .menu {
   position: absolute;
@@ -1168,4 +954,129 @@
 
 .drawerCard:hover {
   border-color: var(--dsw-alias-brand-primary);
+}
+
+/* ---- eight resize handles (4 edges + 4 corners) ------------------------- */
+.wsFrameResize {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  opacity: 0.5;
+}
+
+.wsFrameResize:hover {
+  opacity: 1;
+  border-color: var(--dsw-alias-brand-primary);
+}
+
+.wsFrameResizeN {
+  cursor: ns-resize;
+  border-top: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 14px 14px 0 0;
+}
+
+.wsFrameResizeS {
+  cursor: ns-resize;
+  border-bottom: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 0 0 14px 14px;
+}
+
+.wsFrameResizeW {
+  cursor: ew-resize;
+  border-left: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 14px 0 0 14px;
+}
+
+.wsFrameResizeE {
+  cursor: ew-resize;
+  border-right: 3px solid var(--dsw-alias-border-l3);
+  border-radius: 0 14px 14px 0;
+}
+
+.wsFrameResizeNw,
+.wsFrameResizeNe,
+.wsFrameResizeSw,
+.wsFrameResizeSe {
+  width: 26px;
+  height: 26px;
+  z-index: 3;
+}
+
+.wsFrameResizeNw {
+  cursor: nwse-resize;
+  border-left: 3px solid var(--dsw-alias-border-l3);
+  border-top: 3px solid var(--dsw-alias-border-l3);
+  border-top-left-radius: 14px;
+}
+
+.wsFrameResizeNe {
+  cursor: nesw-resize;
+  border-right: 3px solid var(--dsw-alias-border-l3);
+  border-top: 3px solid var(--dsw-alias-border-l3);
+  border-top-right-radius: 14px;
+}
+
+.wsFrameResizeSw {
+  cursor: nesw-resize;
+  border-left: 3px solid var(--dsw-alias-border-l3);
+  border-bottom: 3px solid var(--dsw-alias-border-l3);
+  border-bottom-left-radius: 14px;
+}
+
+.wsFrameResizeSe {
+  cursor: nwse-resize;
+  border-right: 3px solid var(--dsw-alias-border-l3);
+  border-bottom: 3px solid var(--dsw-alias-border-l3);
+  border-bottom-right-radius: 14px;
+}
+
+/* ---- batch bar ---------------------------------------------------------- */
+.batchBar {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2);
+}
+
+.batchCount {
+  font-size: 12px;
+  color: var(--dsw-alias-label-secondary);
+  white-space: nowrap;
+}
+
+.batchSpace {
+  width: 6px;
+}
+
+.batchAction {
+  padding: 5px 14px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--dsw-alias-label-primary);
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.batchAction:hover:not(:disabled) {
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.batchAction:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.batchDanger {
+  color: var(--dsw-alias-state-error-primary);
 }

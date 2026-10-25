@@ -46,12 +46,12 @@ var require_use_sync_external_store_shim_production = __commonJS({
       return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
-    var useState8 = React.useState;
-    var useEffect9 = React.useEffect;
+    var useState6 = React.useState;
+    var useEffect8 = React.useEffect;
     var useLayoutEffect2 = React.useLayoutEffect;
     var useDebugValue2 = React.useDebugValue;
     function useSyncExternalStore$2(subscribe2, getSnapshot2) {
-      var value = getSnapshot2(), _useState = useState8({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
+      var value = getSnapshot2(), _useState = useState6({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
       useLayoutEffect2(
         function() {
           inst.value = value;
@@ -60,7 +60,7 @@ var require_use_sync_external_store_shim_production = __commonJS({
         },
         [subscribe2, value, getSnapshot2]
       );
-      useEffect9(
+      useEffect8(
         function() {
           checkIfSnapshotChanged(inst) && forceUpdate({ inst });
           return subscribe2(function() {
@@ -113,12 +113,12 @@ var require_with_selector_production = __commonJS({
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
     var useSyncExternalStore5 = shim.useSyncExternalStore;
-    var useRef6 = React.useRef;
-    var useEffect9 = React.useEffect;
+    var useRef5 = React.useRef;
+    var useEffect8 = React.useEffect;
     var useMemo3 = React.useMemo;
     var useDebugValue2 = React.useDebugValue;
     exports.useSyncExternalStoreWithSelector = function(subscribe2, getSnapshot2, getServerSnapshot, selector, isEqual) {
-      var instRef = useRef6(null);
+      var instRef = useRef5(null);
       if (null === instRef.current) {
         var inst = { hasValue: false, value: null };
         instRef.current = inst;
@@ -158,7 +158,7 @@ var require_with_selector_production = __commonJS({
         [getSnapshot2, getServerSnapshot, selector, isEqual]
       );
       var value = useSyncExternalStore5(subscribe2, instRef[0], instRef[1]);
-      useEffect9(
+      useEffect8(
         function() {
           inst.hasValue = true;
           inst.value = value;
@@ -315,29 +315,8 @@ var zh = {
   "inject.findings": "关键结论：",
   "inject.next": "下一步：",
   "frame.ungrouped": "未分组",
-  "draft.heading": "新对话",
-  "draft.workspace": "工作区",
-  "draft.model": "模型",
-  "draft.preset": "模式",
-  "draft.mode": "模式",
-  "draft.modeStandard": "标准模式",
-  "draft.modeCreative": "创造模式",
-  "draft.modeStandardHint": "日常任务：终端与图片工具，标准工具面",
-  "draft.modeCreativeHint": "创造模式：写插件、定制界面与预设",
-  "draft.default": "默认",
-  "draft.placeholder": "想聊什么？回车发送并进入对话，Shift+回车换行",
-  "draft.send": "发送",
-  "draft.sending": "发送中……",
-  "draft.newWorkspace": "＋ 新建工作区",
-  "draft.wsName": "名称",
-  "draft.wsNamePlaceholder": "新工作区文件夹名",
-  "draft.defaultSuffix": "（默认）",
-  "color.toolbar": "颜色",
-  "color.clear": "清除颜色",
   "card.waiting": "等你回复",
   "card.done": "待查看",
-  "draft.apiUnavailable": "界面服务还在初始化，稍等一下再发送",
-  "draft.newWorkspaceUnsupported": "地图里还不能新建工作区，请先在侧栏建好再回来选",
   "spawn.apiUnavailable": "界面服务还在初始化，稍等一下再试",
   "frame.unknown": "分组",
   "frame.hiddenTitle": "还有卡片被折叠在框外，放大分组框可见",
@@ -352,10 +331,26 @@ var zh = {
   "menu.createAndImport": "创建并导入",
   "menu.working": "处理中……",
   "map.zoom100": "恢复 100% 缩放",
-  "hotkey.title": "地图切换快捷键 · 点击后按新组合键修改",
-  "hotkey.capturing": "按下新组合键…",
   "menu.newChat": "新对话",
   "menu.newChatIn": "新对话（{ws}）",
+  "menu.pin": "置顶会话",
+  "menu.unpin": "取消置顶",
+  "menu.archive": "归档会话",
+  "menu.deleteSession": "删除会话（回收站）",
+  "menu.batch": "批量操作…",
+  "batch.title": "批量操作",
+  "batch.count": "已选 {n} 个对话",
+  "batch.archive": "归档",
+  "batch.delete": "删除",
+  "batch.cancel": "取消",
+  "toast.pinned": "已置顶",
+  "toast.unpinned": "已取消置顶",
+  "toast.pinFailed": "置顶失败：",
+  "toast.archived": "已归档 {n} 个会话",
+  "toast.deleted": "已把 {n} 个会话移入回收站",
+  "toast.archiveFailed": "归档失败：",
+  "toast.deleteFailed": "删除失败：",
+  "toast.needUiWorkspace": "界面服务还没就绪，稍等一下再试",
   "menu.importWs": "导入工作区",
   "menu.importSession": "导入对话",
   "menu.moveGroup": "移动到分组（仅地图）",
@@ -418,29 +413,8 @@ var en = {
   "inject.findings": "Key findings:",
   "inject.next": "Next step: ",
   "frame.ungrouped": "Ungrouped",
-  "draft.heading": "New conversation",
-  "draft.workspace": "Workspace",
-  "draft.model": "Model",
-  "draft.preset": "Preset",
-  "draft.mode": "Mode",
-  "draft.modeStandard": "Standard",
-  "draft.modeCreative": "Creative",
-  "draft.modeStandardHint": "Everyday tasks: terminal and image tools",
-  "draft.modeCreativeHint": "Creative mode: write plugins, customise UI and presets",
-  "draft.default": "Default",
-  "draft.placeholder": "What is this about? Enter sends and opens the chat; Shift+Enter for a newline",
-  "draft.send": "Send",
-  "draft.sending": "Sending…",
-  "draft.newWorkspace": "＋ New workspace",
-  "draft.wsName": "Name",
-  "draft.wsNamePlaceholder": "New workspace folder name",
-  "draft.defaultSuffix": " (default)",
-  "color.toolbar": "Color",
-  "color.clear": "Clear color",
   "card.waiting": "needs you",
   "card.done": "unread",
-  "draft.apiUnavailable": "The UI services are still starting up — try again in a moment",
-  "draft.newWorkspaceUnsupported": "Creating a workspace from the map is not supported yet — create it in the sidebar first",
   "spawn.apiUnavailable": "The UI services are still starting up — try again in a moment",
   "frame.unknown": "Group",
   "frame.hiddenTitle": "Some cards are folded outside the frame — enlarge it to see them",
@@ -455,10 +429,26 @@ var en = {
   "menu.createAndImport": "Create & import",
   "menu.working": "Working…",
   "map.zoom100": "Reset zoom to 100%",
-  "hotkey.title": "Map toggle hotkey · click, then press a new combo",
-  "hotkey.capturing": "Press a combo…",
   "menu.newChat": "New conversation",
   "menu.newChatIn": "New conversation ({ws})",
+  "menu.pin": "Pin conversation",
+  "menu.unpin": "Unpin",
+  "menu.archive": "Archive conversation",
+  "menu.deleteSession": "Delete conversation (recycle bin)",
+  "menu.batch": "Batch actions…",
+  "batch.title": "Batch actions",
+  "batch.count": "{n} selected",
+  "batch.archive": "Archive",
+  "batch.delete": "Delete",
+  "batch.cancel": "Cancel",
+  "toast.pinned": "Pinned",
+  "toast.unpinned": "Unpinned",
+  "toast.pinFailed": "Pin failed: ",
+  "toast.archived": "Archived {n} conversation(s)",
+  "toast.deleted": "Moved {n} conversation(s) into the recycle bin",
+  "toast.archiveFailed": "Archive failed: ",
+  "toast.deleteFailed": "Delete failed: ",
+  "toast.needUiWorkspace": "The UI services are still starting up — try again in a moment",
   "menu.importWs": "Import workspace",
   "menu.importSession": "Import conversation",
   "menu.moveGroup": "Move to group (map only)",
@@ -524,6 +514,17 @@ var dirtyCards = /* @__PURE__ */ new Set();
 var flushTimer;
 var cameraTimer;
 var frameTimer;
+var editSeq = 0;
+function bumpEdits() {
+  editSeq += 1;
+}
+var cardWritesInFlight = 0;
+function trackCardWrite(promise) {
+  cardWritesInFlight += 1;
+  void promise.finally(() => {
+    cardWritesInFlight -= 1;
+  });
+}
 var undoStack = [];
 var redoStack = [];
 var lastUndoPush = 0;
@@ -531,6 +532,7 @@ function takeSnapshot() {
   return { cards: state.cards, edges: state.edges, global: state.global };
 }
 function pushUndo() {
+  bumpEdits();
   const now2 = Date.now();
   if (now2 - lastUndoPush < 400 && undoStack.length > 0) return;
   lastUndoPush = now2;
@@ -591,11 +593,14 @@ async function flushCards() {
   }
   dirtyCards.clear();
   if (Object.keys(payload).length === 0) return;
+  cardWritesInFlight += 1;
   try {
     await talkMapApi.upsertCards(payload);
   } catch (error) {
     console.error("[dsh-talk-map] card flush failed:", error);
     for (const id2 of Object.keys(payload)) dirtyCards.add(id2);
+  } finally {
+    cardWritesInFlight -= 1;
   }
 }
 var canvas = {
@@ -694,9 +699,9 @@ var canvas = {
   addCards(entries) {
     pushUndo();
     setState({ cards: { ...state.cards, ...entries } });
-    void talkMapApi.upsertCards(entries).catch((error) => {
+    trackCardWrite(talkMapApi.upsertCards(entries).catch((error) => {
       console.error("[dsh-talk-map] card upsert failed:", error);
-    });
+    }));
   },
   /** Add edges: local state first, then persisted (no SSE round-trip needed). */
   addEdges(entries) {
@@ -721,9 +726,11 @@ var canvas = {
    * closed or the server restarted). Skipped while local writes — card
    * positions or a global patch — are still in flight. */
   refresh() {
-    if (state.phase !== "ready" || dirtyCards.size > 0 || globalWritesInFlight > 0) return;
+    if (state.phase !== "ready" || dirtyCards.size > 0 || globalWritesInFlight > 0 || cardWritesInFlight > 0) return;
+    const seqAtStart = editSeq;
     talkMapApi.getState().then((payload) => {
       if (state.phase !== "ready" || dirtyCards.size > 0 || globalWritesInFlight > 0) return;
+      if (seqAtStart !== editSeq) return;
       setState({
         cards: payload.cards,
         edges: payload.edges,
@@ -761,29 +768,9 @@ var canvas = {
     } else {
       setState({ cards });
     }
-    void talkMapApi.deleteCards([id2]).catch((error) => {
+    trackCardWrite(talkMapApi.deleteCards([id2]).catch((error) => {
       console.error("[dsh-talk-map] card delete failed:", error);
-    });
-  },
-  /** Recolor cards (undefined clears); persists immediately. */
-  setCardsColor(ids, colorTag) {
-    const payload = {};
-    const cards = { ...state.cards };
-    for (const id2 of ids) {
-      const card = cards[id2];
-      if (card === void 0) continue;
-      const next = { ...card };
-      if (colorTag === void 0) delete next.colorTag;
-      else next.colorTag = colorTag;
-      cards[id2] = next;
-      payload[id2] = next;
-    }
-    if (Object.keys(payload).length === 0) return;
-    pushUndo();
-    setState({ cards });
-    void talkMapApi.upsertCards(payload).catch((error) => {
-      console.error("[dsh-talk-map] card color save failed:", error);
-    });
+    }));
   },
   /** Adopt a card into another workspace's frame (map-level membership). */
   setCardWorkspaceOverride(id2, wsOverride) {
@@ -814,15 +801,6 @@ var canvas = {
       if (current === null) return;
       void persistGlobal(current, "frame");
     }, 600);
-  },
-  /** Recolor a workspace frame (undefined clears); persists immediately. */
-  setWorkspaceColor(workspaceId, colorTag) {
-    if (state.global === null) return;
-    pushUndo();
-    const wsColors = { ...state.global.wsColors };
-    if (colorTag === void 0) delete wsColors[workspaceId];
-    else wsColors[workspaceId] = colorTag;
-    canvas.patchGlobalNow({ wsColors });
   },
   /** Immediate global patch (layout-version stamp etc.) — no debounce. */
   patchGlobalNow(patch) {
@@ -891,22 +869,6 @@ function hotkeyMatches(event, value) {
   const hotkey = parseHotkey(value);
   return event.altKey === hotkey.alt && event.ctrlKey === hotkey.ctrl && event.metaKey === hotkey.meta && event.shiftKey === hotkey.shift && event.code === hotkey.code;
 }
-function hotkeyFromEvent(event) {
-  if (/^(Alt|Control|Meta|Shift)/.test(event.code) || event.code === "") return null;
-  if (!event.altKey && !event.ctrlKey && !event.metaKey) return null;
-  const parts = [];
-  if (event.ctrlKey) parts.push("ctrl");
-  if (event.altKey) parts.push("alt");
-  if (event.shiftKey) parts.push("shift");
-  if (event.metaKey) parts.push("meta");
-  parts.push(event.code);
-  return parts.join("+");
-}
-function hotkeyLabel(value) {
-  const hotkey = parseHotkey(value);
-  const key = hotkey.code.startsWith("Key") ? hotkey.code.slice(3) : hotkey.code.startsWith("Digit") ? hotkey.code.slice(5) : hotkey.code;
-  return `${hotkey.ctrl ? "⌃" : ""}${hotkey.alt ? "⌥" : ""}${hotkey.shift ? "⇧" : ""}${hotkey.meta ? "⌘" : ""}${key}`;
-}
 
 // src/client/map-state.ts
 var listeners2 = /* @__PURE__ */ new Set();
@@ -966,38 +928,6 @@ function resolveUiWorkspace(current) {
   } catch {
     return void 0;
   }
-}
-function servicesDiag() {
-  const s = getServices();
-  const out = [`svc=${s === void 0 ? "none" : "ok"}`];
-  try {
-    out.push(`conn=${typeof s?.connection}`);
-  } catch {
-    out.push("conn=?");
-  }
-  try {
-    out.push(`connApi=${typeof s?.connection?.api}`);
-  } catch {
-    out.push("connApi=?");
-  }
-  try {
-    out.push(`ctxGet=${typeof s?.ctx?.get}`);
-  } catch {
-    out.push("ctxGet=?");
-  }
-  try {
-    const live = s?.ctx?.get?.("connection");
-    out.push(`liveConn=${typeof live}`, `liveConnApi=${typeof live?.api}`);
-  } catch {
-    out.push("liveConn=?");
-  }
-  try {
-    const ui = s?.ctx?.get?.("uiWorkspace");
-    out.push(`liveUi=${typeof ui}`, `uiStart=${typeof ui?.startSession}`);
-  } catch {
-    out.push("liveUi=?");
-  }
-  return out.join(" ");
 }
 function uiWorkspaceService() {
   const current = getServices();
@@ -1116,10 +1046,10 @@ function forkSessionInUi(sessionId) {
 }
 
 // src/client/MapOverlay.tsx
-var import_react12 = require("react");
+var import_react11 = require("react");
 
 // src/client/MapCanvas.tsx
-var import_react10 = require("react");
+var import_react9 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
 var import_jsx_runtime = require("react/jsx-runtime");
@@ -10195,29 +10125,6 @@ if (typeof document !== "undefined") {
   }
 }
 
-// src/client/colors.ts
-var hue = (id2, r, g, b) => ({
-  id: id2,
-  swatch: `rgb(${r} ${g} ${b} / 0.55)`,
-  fill: `rgb(${r} ${g} ${b} / 0.08)`,
-  border: `rgb(${r} ${g} ${b} / 0.45)`,
-  faint: `rgb(${r} ${g} ${b} / 0.05)`
-});
-var COLOR_TAGS = [
-  hue("rose", 225, 29, 72),
-  hue("amber", 217, 119, 6),
-  hue("lime", 101, 163, 13),
-  hue("teal", 13, 148, 136),
-  hue("sky", 2, 132, 199),
-  hue("violet", 124, 58, 237),
-  hue("stone", 120, 113, 108)
-];
-var byId = new Map(COLOR_TAGS.map((tag) => [tag.id, tag]));
-function colorOf(tagId) {
-  if (tagId === void 0) return void 0;
-  return byId.get(tagId);
-}
-
 // src/client/digest-text.ts
 function digestBody(digest) {
   const parts = [];
@@ -10246,6 +10153,52 @@ function buildPushText(title, digest) {
   const time = `${String(now2.getHours()).padStart(2, "0")}:${String(now2.getMinutes()).padStart(2, "0")}`;
   const header = t("push.header", { from: title, time });
   return [header, ...digestBody(digest)].join("\n");
+}
+
+// src/client/session-actions.ts
+var RECYCLE_BIN_ROUTE = "dsh-session-recycle-bin/api";
+async function postRecycleBin(body) {
+  const path = new URL(RECYCLE_BIN_ROUTE, document.baseURI).pathname;
+  const response = await fetch(path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store"
+  });
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`回收站接口返回 HTTP ${response.status}`);
+  }
+  if (payload.ok !== true) throw new Error(payload.message ?? `回收站拒绝了请求（HTTP ${response.status}）`);
+  return payload;
+}
+async function trashSessions(sessionIds) {
+  const ids = [...sessionIds];
+  if (ids.length === 0) return 0;
+  const reply = ids.length === 1 ? await postRecycleBin({ action: "trash", sessionId: ids[0] }) : await postRecycleBin({ action: "trashMany", sessionIds: ids });
+  return reply.trashedCount ?? ids.length;
+}
+async function archiveSessions(sessionIds) {
+  const ui = uiWorkspaceService();
+  if (ui === void 0 || typeof ui.archiveSession !== "function") {
+    throw new Error("这个构建没有暴露归档接口");
+  }
+  let done = 0;
+  for (const sessionId of sessionIds) {
+    await ui.archiveSession(sessionId, { stopActivity: true });
+    done += 1;
+  }
+  return done;
+}
+async function setPinned(sessionId, pinned) {
+  const ui = uiWorkspaceService();
+  const call = pinned ? ui?.pinSession : ui?.unpinSession;
+  if (ui === void 0 || typeof call !== "function") {
+    throw new Error("这个构建没有暴露置顶接口");
+  }
+  await call.call(ui, sessionId);
 }
 
 // src/client/session-alerts.ts
@@ -10323,7 +10276,7 @@ var import_react3 = require("react");
 
 // dsh-css: dsh-css:src/client/talk-map.module.css
 var __tagId2 = "dsh-talk-map/talk-map.module.css";
-var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_hotkeyButton { flex: none; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_hotkeyButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-white 2.4s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.42), 0 0 16px 2px rgba(52, 199, 89, 0.30), 0 0 46px 14px rgba(52, 199, 89, 0.16); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-white { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.40), 0 0 14px 1px rgba(255, 255, 255, 0.26), 0 0 34px 8px rgba(255, 255, 255, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.80), 0 0 24px 5px rgba(255, 255, 255, 0.46), 0 0 62px 20px rgba(255, 255, 255, 0.24); } } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.55; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeCorner { right: -3px; bottom: -3px; width: 26px; height: 26px; z-index: 3; cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_wsFrameResize:hover { border-color: var(--dsw-alias-brand-primary); opacity: 1; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_draftCard { width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1.5px solid var(--dsw-alias-brand-primary); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); font-size: 13px; } .tm_draftHeading { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_draftRow { display: flex; align-items: center; gap: 8px; } .tm_draftLabel { flex: none; width: 52px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_modeSwitch { display: flex; flex: 1; min-width: 0; gap: 6px; } .tm_modeChip { flex: 1; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; transition: background 120ms ease, border-color 120ms ease, color 120ms ease; } .tm_modeChip:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_modeChipActive { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-label-primary); font-weight: 600; } .tm_draftSelect { flex: 1; min-width: 0; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; } .tm_draftGrow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .tm_draftInput { width: 100%; box-sizing: border-box; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_draftPathPreview { font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_draftTextarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 88px; padding: 9px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 7; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 2px 10px var(--dsw-alias-bg-mask-1); } .tm_colorToolbarLabel { font-size: 12px; color: var(--dsw-alias-label-tertiary); margin-right: 2px; } .tm_colorSwatch { width: 18px; height: 18px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; color: var(--dsw-alias-label-secondary); display: flex; align-items: center; justify-content: center; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { background: transparent; } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: 11px; font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(640px, 92%); max-height: 76%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 16px; line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px; } .tm_drawerCard { flex: none; width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); }";
+var __css2 = ".tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 14px; font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_headerSpace { flex: 1; } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: 9px; font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: 13px; } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dsw-alias-state-success-primary); animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: 11px; color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: 12px; } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardBadgeRunning { display: inline-flex; align-items: center; gap: 5px; padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardSummary { font-size: 12px; line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: 10px; color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { animation: tm_talkmap-lamp-white 2.4s ease-in-out infinite; } .tm_cardLampDone { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.42), 0 0 16px 2px rgba(52, 199, 89, 0.30), 0 0 46px 14px rgba(52, 199, 89, 0.16); } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-white { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.40), 0 0 14px 1px rgba(255, 255, 255, 0.26), 0 0 34px 8px rgba(255, 255, 255, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.80), 0 0 24px 5px rgba(255, 255, 255, 0.46), 0 0 62px 20px rgba(255, 255, 255, 0.24); } } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: 13px; line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 12px; cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 13px; line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: 12px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: 13px; cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 13px; cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: 12px; font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_menu { position: absolute; z-index: 9; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: 12px; font-family: inherit; } .tm_menuHint { font-size: 11px; color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: 11px; color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: block; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 13px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 13px; color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: 12px; color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: 13px; font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: 11px; font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(640px, 92%); max-height: 76%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: 12px; color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: 11px; color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: 16px; line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 14px; } .tm_drawerCard { flex: none; width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.5; } .tm_wsFrameResize:hover { opacity: 1; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResizeN { cursor: ns-resize; border-top: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 14px 0 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeW { cursor: ew-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 0 0 14px; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeNw, .tm_wsFrameResizeNe, .tm_wsFrameResizeSw, .tm_wsFrameResizeSe { width: 26px; height: 26px; z-index: 3; } .tm_wsFrameResizeNw { cursor: nwse-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-left-radius: 14px; } .tm_wsFrameResizeNe { cursor: nesw-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-right-radius: 14px; } .tm_wsFrameResizeSw { cursor: nesw-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-left-radius: 14px; } .tm_wsFrameResizeSe { cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_batchBar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2); } .tm_batchCount { font-size: 12px; color: var(--dsw-alias-label-secondary); white-space: nowrap; } .tm_batchSpace { width: 6px; } .tm_batchAction { padding: 5px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-primary); font-size: 12px; cursor: pointer; white-space: nowrap; } .tm_batchAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_batchAction:disabled { opacity: 0.5; cursor: default; } .tm_batchDanger { color: var(--dsw-alias-state-error-primary); }";
 if (typeof document !== "undefined") {
   const __selector = "style[data-plugin-css=" + JSON.stringify(__tagId2) + "]";
   if (document.querySelector(__selector) === null) {
@@ -10334,7 +10287,7 @@ if (typeof document !== "undefined") {
     document.head.appendChild(__tag);
   }
 }
-var talk_map_default = { "backButton": "tm_backButton", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "draftCard": "tm_draftCard", "draftGrow": "tm_draftGrow", "draftHeading": "tm_draftHeading", "draftInput": "tm_draftInput", "draftLabel": "tm_draftLabel", "draftPathPreview": "tm_draftPathPreview", "draftRow": "tm_draftRow", "draftSelect": "tm_draftSelect", "draftTextarea": "tm_draftTextarea", "drawer": "tm_drawer", "drawerBackdrop": "tm_drawerBackdrop", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerScroll": "tm_drawerScroll", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "hotkeyButton": "tm_hotkeyButton", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "modeChip": "tm_modeChip", "modeChipActive": "tm_modeChipActive", "modeSwitch": "tm_modeSwitch", "panel": "tm_panel", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeCorner": "tm_wsFrameResizeCorner", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
+var talk_map_default = { "backButton": "tm_backButton", "batchAction": "tm_batchAction", "batchBar": "tm_batchBar", "batchCount": "tm_batchCount", "batchDanger": "tm_batchDanger", "batchSpace": "tm_batchSpace", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeRunning": "tm_cardBadgeRunning", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "drawer": "tm_drawer", "drawerBackdrop": "tm_drawerBackdrop", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerScroll": "tm_drawerScroll", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "emptyHint": "tm_emptyHint", "header": "tm_header", "headerSpace": "tm_headerSpace", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuItem": "tm_menuItem", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "panel": "tm_panel", "runningDot": "tm_runningDot", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeN": "tm_wsFrameResizeN", "wsFrameResizeNe": "tm_wsFrameResizeNe", "wsFrameResizeNw": "tm_wsFrameResizeNw", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameResizeSe": "tm_wsFrameResizeSe", "wsFrameResizeSw": "tm_wsFrameResizeSw", "wsFrameResizeW": "tm_wsFrameResizeW", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
 
 // src/client/ContextMenu.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
@@ -10463,245 +10416,9 @@ function ContextMenu(props) {
   );
 }
 
-// src/client/DraftCard.tsx
+// src/client/SessionCard.tsx
 var import_react4 = require("react");
 var import_jsx_runtime3 = require("react/jsx-runtime");
-var NEW_WORKSPACE = "__new__";
-var MODE_STANDARD = "standard";
-var MODE_CREATIVE = "cordis";
-var MODE_IDS = [MODE_STANDARD, MODE_CREATIVE];
-function newWorkspaceParent(options) {
-  const sample = options[0]?.path;
-  if (sample === void 0) return "~";
-  const cut = sample.lastIndexOf("/");
-  return cut > 0 ? sample.slice(0, cut) : sample;
-}
-function DraftCardNode(props) {
-  const { data } = props;
-  const [workspaceId, setWorkspaceId] = (0, import_react4.useState)(data.defaultWorkspaceId ?? data.workspaceOptions[0]?.id ?? NEW_WORKSPACE);
-  const [newWsName, setNewWsName] = (0, import_react4.useState)("");
-  const [modelKey, setModelKey] = (0, import_react4.useState)("");
-  const [mode, setMode] = (0, import_react4.useState)(MODE_STANDARD);
-  const [presetId, setPresetId] = (0, import_react4.useState)("");
-  const [text, setText] = (0, import_react4.useState)("");
-  const [groups, setGroups] = (0, import_react4.useState)([]);
-  const [presets, setPresets] = (0, import_react4.useState)([]);
-  const [defaultModelLabel, setDefaultModelLabel] = (0, import_react4.useState)("");
-  const [defaultPresetLabel, setDefaultPresetLabel] = (0, import_react4.useState)("");
-  const [busy, setBusy] = (0, import_react4.useState)(false);
-  const [error, setError] = (0, import_react4.useState)(void 0);
-  const textareaRef = (0, import_react4.useRef)(null);
-  (0, import_react4.useEffect)(() => {
-    textareaRef.current?.focus();
-    const release = mapUi.claimEscape("draft-card");
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        data.onClose();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-      release();
-    };
-  }, []);
-  (0, import_react4.useEffect)(() => {
-    const api = connectionApi();
-    api?.llm.models({}).then((response) => {
-      if (response.result.ok) setGroups(response.result.value.groups ?? []);
-    }).catch(() => void 0);
-    api?.agentPresets.list({}).then((response) => {
-      if (response.result.ok) {
-        const list = response.result.value.presets;
-        setPresets(list);
-        if (list.some((preset) => preset.id === "standard")) {
-          setPresetId((previous) => previous === "" ? "standard" : previous);
-        }
-      }
-    }).catch(() => void 0);
-    talkMapApi.getDefaults().then((defaults) => {
-      if (defaults.model !== null) setDefaultModelLabel(defaults.model.model);
-      if (defaults.preset !== null) setDefaultPresetLabel(defaults.preset);
-    }).catch(() => void 0);
-  }, []);
-  const creatingWorkspace = workspaceId === NEW_WORKSPACE;
-  const wsParent = newWorkspaceParent(data.workspaceOptions);
-  const newWsPath = `${wsParent}/${newWsName.trim()}`;
-  const availableModes = MODE_IDS.filter((id2) => presets.length === 0 || presets.some((preset) => preset.id === id2));
-  const selectedPreset = availableModes.includes(mode) ? mode : presetId;
-  const sendDisabled = busy || text.trim() === "" || creatingWorkspace && newWsName.trim() === "";
-  const send = async () => {
-    const services2 = getServices();
-    if (services2 === void 0 || sendDisabled) return;
-    setBusy(true);
-    setError(void 0);
-    try {
-      const ui = uiWorkspaceService();
-      if (ui === void 0 || typeof ui.startSession !== "function") {
-        throw new Error(`${t("draft.apiUnavailable")} [${servicesDiag()}]`);
-      }
-      if (creatingWorkspace) throw new Error(t("draft.newWorkspaceUnsupported"));
-      ui.startSession(workspaceId, {
-        prompt: text,
-        ...selectedPreset !== "" ? { agentPreset: selectedPreset } : {}
-      });
-      data.onClose();
-      closeMapPanel();
-    } catch (sendError) {
-      setError(String(sendError));
-      setBusy(false);
-    }
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-    "div",
-    {
-      className: talk_map_default["draftCard"],
-      role: "dialog",
-      "aria-label": t("draft.heading"),
-      onPointerDownCapture: (event) => {
-        const target = event.target;
-        if (target.closest("select, textarea, input, button") !== null) event.stopPropagation();
-      },
-      onMouseDownCapture: (event) => {
-        const target = event.target;
-        if (target.closest("select, textarea, input, button") !== null) event.stopPropagation();
-      },
-      children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["draftHeading"], children: t("draft.heading") }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftRow"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { className: talk_map_default["draftLabel"], children: t("draft.workspace") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-            "select",
-            {
-              className: `${talk_map_default["draftSelect"]} nodrag`,
-              value: workspaceId,
-              onChange: (event) => {
-                setWorkspaceId(event.target.value);
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: NEW_WORKSPACE, children: t("draft.newWorkspace") }),
-                data.workspaceOptions.map((option) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: option.id, children: option.title }, option.id))
-              ]
-            }
-          )
-        ] }),
-        creatingWorkspace ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftRow"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { className: talk_map_default["draftLabel"], children: t("draft.wsName") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftGrow"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-              "input",
-              {
-                className: `${talk_map_default["draftInput"]} nodrag`,
-                value: newWsName,
-                placeholder: t("draft.wsNamePlaceholder"),
-                onChange: (event) => {
-                  setNewWsName(event.target.value);
-                }
-              }
-            ),
-            newWsName.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["draftPathPreview"], children: newWsPath }) : null
-          ] })
-        ] }) : null,
-        availableModes.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftRow"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { className: talk_map_default["draftLabel"], children: t("draft.mode") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["modeSwitch"], role: "radiogroup", "aria-label": t("draft.mode"), children: availableModes.map((id2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-            "button",
-            {
-              type: "button",
-              role: "radio",
-              "aria-checked": mode === id2,
-              className: `${talk_map_default["modeChip"]}${mode === id2 ? ` ${talk_map_default["modeChipActive"]}` : ""} nodrag`,
-              title: id2 === MODE_CREATIVE ? t("draft.modeCreativeHint") : t("draft.modeStandardHint"),
-              onClick: () => {
-                setMode(id2);
-              },
-              children: id2 === MODE_CREATIVE ? t("draft.modeCreative") : t("draft.modeStandard")
-            },
-            id2
-          )) })
-        ] }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftRow"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { className: talk_map_default["draftLabel"], children: t("draft.model") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-            "select",
-            {
-              className: `${talk_map_default["draftSelect"]} nodrag`,
-              value: modelKey,
-              onChange: (event) => {
-                setModelKey(event.target.value);
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "", children: defaultModelLabel !== "" ? `${defaultModelLabel}${t("draft.defaultSuffix")}` : t("draft.default") }),
-                groups.map((group) => group.models.map((model) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("option", { value: `${group.id}::${model.id}`, children: [
-                  group.name,
-                  " · ",
-                  model.name
-                ] }, `${group.id}::${model.id}`)))
-              ]
-            }
-          )
-        ] }),
-        presets.length > 0 && availableModes.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["draftRow"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("label", { className: talk_map_default["draftLabel"], children: t("draft.preset") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-            "select",
-            {
-              className: `${talk_map_default["draftSelect"]} nodrag`,
-              value: presetId,
-              onChange: (event) => {
-                setPresetId(event.target.value);
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: "", children: defaultPresetLabel !== "" ? `${defaultPresetLabel}${t("draft.defaultSuffix")}` : t("draft.default") }),
-                presets.map((preset) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("option", { value: preset.id, children: preset.name ?? preset.id }, preset.id))
-              ]
-            }
-          )
-        ] }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-          "textarea",
-          {
-            ref: textareaRef,
-            className: `${talk_map_default["draftTextarea"]} nodrag nowheel`,
-            placeholder: t("draft.placeholder"),
-            value: text,
-            rows: 4,
-            onChange: (event) => {
-              setText(event.target.value);
-            },
-            onKeyDown: (event) => {
-              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault();
-                void send();
-              }
-            }
-          }
-        ),
-        error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { type: "button", className: `${talk_map_default["spawnBtnGhost"]} nodrag`, onClick: data.onClose, disabled: busy, children: t("spawn.cancel") }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-            "button",
-            {
-              type: "button",
-              className: `${talk_map_default["spawnBtnPrimary"]} nodrag`,
-              onClick: () => {
-                void send();
-              },
-              disabled: sendDisabled,
-              children: busy ? t("draft.sending") : t("draft.send")
-            }
-          )
-        ] })
-      ]
-    }
-  );
-}
-
-// src/client/SessionCard.tsx
-var import_react5 = require("react");
-var import_jsx_runtime4 = require("react/jsx-runtime");
 var LAMP_CLASS = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -10721,7 +10438,7 @@ function relativeTime(timestamp) {
 }
 function SessionCardNode(props) {
   const { data, selected: selected2 } = props;
-  const [refreshing, setRefreshing] = (0, import_react5.useState)(false);
+  const [refreshing, setRefreshing] = (0, import_react4.useState)(false);
   const classNames = [talk_map_default["card"]];
   if (data.ghost) classNames.push(talk_map_default["cardGhost"]);
   if (selected2 === true) classNames.push(talk_map_default["cardSelected"]);
@@ -10737,18 +10454,22 @@ function SessionCardNode(props) {
       setRefreshing(false);
     }
   };
-  const color2 = colorOf(data.colorTag);
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
     "div",
     {
       className: classNames.filter(Boolean).join(" "),
-      style: color2 !== void 0 ? { borderColor: color2.border, backgroundImage: `linear-gradient(${color2.fill}, ${color2.fill})` } : {},
+      onClick: (event) => {
+        if (data.onPick === void 0) return;
+        event.stopPropagation();
+        data.onPick();
+      },
+      style: data.onPick !== void 0 ? { cursor: "pointer" } : void 0,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title }),
-          data.ghost ? null : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title }),
+          data.ghost ? null : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
             "button",
             {
               type: "button",
@@ -10763,7 +10484,7 @@ function SessionCardNode(props) {
             }
           )
         ] }),
-        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
           "button",
           {
             type: "button",
@@ -10773,41 +10494,41 @@ function SessionCardNode(props) {
             },
             children: t("card.remove")
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-          data.summary !== void 0 && data.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["cardSummary"], children: data.summary }) : null,
-          data.nextStep !== void 0 && data.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["cardNext"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardNextText"], children: data.nextStep }),
-            data.stale === true ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardStale"], title: t("card.stale"), children: "⟳" }) : null
+        ) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
+          data.summary !== void 0 && data.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["cardSummary"], children: data.summary }) : null,
+          data.nextStep !== void 0 && data.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["cardNext"], children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardNextText"], children: data.nextStep }),
+            data.stale === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardStale"], title: t("card.stale"), children: "⟳" }) : null
           ] }) : null
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
-          data.waiting === true ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["cardBadgeWaiting"], children: t("card.waiting") }) : data.running ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: talk_map_default["cardBadgeRunning"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["runningDot"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
+          data.waiting === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardBadgeWaiting"], children: t("card.waiting") }) : data.running ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: talk_map_default["cardBadgeRunning"], children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["runningDot"] }),
             t("card.running")
-          ] }) : data.done === true ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(
+          ] }) : data.done === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
             "span",
             {
               className: talk_map_default["cardBadgeDone"],
               style: { display: "inline-flex", alignItems: "center", gap: 5, fontWeight: 600 },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["runningDot"], style: { animation: "none", background: "currentColor" } }),
+                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["runningDot"], style: { animation: "none", background: "currentColor" } }),
                 t("card.done")
               ]
             }
           ) : null
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
       ]
     }
   );
 }
 
 // src/client/SpawnPreview.tsx
-var import_react7 = require("react");
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_react6 = require("react");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 function unwrap(response, what) {
   const { result } = response;
   if (result.ok) return result.value;
@@ -10816,12 +10537,12 @@ function unwrap(response, what) {
 function SpawnPreview(props) {
   const { pending } = props;
   const digest = canvas.get().digests[pending.parent.sessionId];
-  const [mode, setMode] = (0, import_react7.useState)("digest");
-  const [text, setText] = (0, import_react7.useState)(() => buildInjectionText(pending.parent.title, digest));
-  const [firstMessage, setFirstMessage] = (0, import_react7.useState)("");
-  const [busy, setBusy] = (0, import_react7.useState)(false);
-  const [error, setError] = (0, import_react7.useState)(void 0);
-  (0, import_react7.useEffect)(() => {
+  const [mode, setMode] = (0, import_react6.useState)("digest");
+  const [text, setText] = (0, import_react6.useState)(() => buildInjectionText(pending.parent.title, digest));
+  const [firstMessage, setFirstMessage] = (0, import_react6.useState)("");
+  const [busy, setBusy] = (0, import_react6.useState)(false);
+  const [error, setError] = (0, import_react6.useState)(void 0);
+  (0, import_react6.useEffect)(() => {
     const release = mapUi.claimEscape("spawn-preview");
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -10909,15 +10630,15 @@ function SpawnPreview(props) {
     { id: "digest", label: t("spawn.mode.digest") },
     { id: "full", label: t("spawn.mode.full") }
   ];
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
       t("spawn.from"),
       "「",
       pending.parent.title,
       "」"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "button",
       {
         type: "button",
@@ -10929,9 +10650,9 @@ function SpawnPreview(props) {
       },
       entry.id
     )) }),
-    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -10942,9 +10663,9 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -10962,10 +10683,10 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
-    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
+    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "button",
         {
           type: "button",
@@ -10975,7 +10696,7 @@ function SpawnPreview(props) {
           children: t("spawn.cancel")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
         "button",
         {
           type: "button",
@@ -10992,70 +10713,55 @@ function SpawnPreview(props) {
 }
 
 // src/client/WsFrame.tsx
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var EDGE = 10;
 var CORNER = 26;
+var EDGE_HANDLES = [
+  { axis: "n", className: "wsFrameResizeN", title: "拖拽改变高度（上边）", style: { top: -3, left: CORNER + 2, right: CORNER + 2, height: 12 } },
+  { axis: "s", className: "wsFrameResizeS", title: "拖拽改变高度（下边）", style: { bottom: -3, left: CORNER + 2, right: CORNER + 2, height: 12 } },
+  { axis: "w", className: "wsFrameResizeW", title: "拖拽改变宽度（左边）", style: { left: -3, top: CORNER + 2, bottom: CORNER + 2, width: 12 } },
+  { axis: "e", className: "wsFrameResizeE", title: "拖拽改变宽度（右边）", style: { right: -3, top: CORNER + 2, bottom: CORNER + 2, width: 12 } }
+];
+var CORNER_HANDLES = [
+  { axis: "nw", className: "wsFrameResizeNw", title: "拖拽同时改变宽高（左上）", style: { left: -3, top: -3 } },
+  { axis: "ne", className: "wsFrameResizeNe", title: "拖拽同时改变宽高（右上）", style: { right: -3, top: -3 } },
+  { axis: "sw", className: "wsFrameResizeSw", title: "拖拽同时改变宽高（左下）", style: { left: -3, bottom: -3 } },
+  { axis: "se", className: "wsFrameResizeSe", title: "拖拽同时改变宽高（右下）", style: { right: -3, bottom: -3 } }
+];
 function WsFrameNode(props) {
   const { data, selected: selected2 } = props;
-  const color2 = colorOf(data.colorTag);
   const start2 = (axis) => (event) => {
     event.preventDefault();
     event.stopPropagation();
     data.onResizeStart?.(axis, event);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(
     "div",
     {
       className: `${talk_map_default["wsFrame"]}${selected2 === true ? ` ${talk_map_default["wsFrameSelected"]}` : ""}`,
-      style: {
-        width: data.width,
-        height: data.height,
-        ...color2 !== void 0 ? { borderColor: color2.border, background: color2.faint } : {}
-      },
+      style: { width: data.width, height: data.height },
       "data-talkmap-frame": "",
       "data-talkmap-workspace": data.workspaceId,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["wsFrameLabel"], children: [
+          data.title,
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
+        [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
           "div",
           {
-            className: talk_map_default["wsFrameLabel"],
-            style: color2 !== void 0 ? { borderColor: color2.border, backgroundImage: `linear-gradient(${color2.fill}, ${color2.fill})` } : {},
-            children: [
-              data.title,
-              /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
-            ]
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          "div",
-          {
-            className: `${talk_map_default["wsFrameResize"]} ${talk_map_default["wsFrameResizeE"]}`,
-            style: { top: EDGE, bottom: CORNER + 2, right: -3, width: 12 },
-            onPointerDown: start2("e"),
-            title: "拖拽改变宽度"
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          "div",
-          {
-            className: `${talk_map_default["wsFrameResize"]} ${talk_map_default["wsFrameResizeS"]}`,
-            style: { left: EDGE, right: CORNER + 2, bottom: -3, height: 12 },
-            onPointerDown: start2("s"),
-            title: "拖拽改变高度"
-          }
-        ),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
-          "div",
-          {
-            className: `${talk_map_default["wsFrameResize"]} ${talk_map_default["wsFrameResizeCorner"]}`,
-            onPointerDown: start2("se"),
-            title: "拖拽同时改变宽高"
-          }
-        )
+            className: `${talk_map_default["wsFrameResize"]} ${talk_map_default[handle.className] ?? ""}`,
+            style: handle.style,
+            onPointerDown: start2(handle.axis),
+            title: handle.title,
+            "data-talkmap-resize": handle.axis
+          },
+          handle.axis
+        ))
       ]
     }
   );
@@ -11115,8 +10821,8 @@ function readingOrder(cards) {
 }
 
 // src/client/StackDrawer.tsx
-var import_react8 = require("react");
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_react7 = require("react");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 var LAMP_CLASS2 = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -11124,8 +10830,8 @@ var LAMP_CLASS2 = {
   waiting: "cardLampWaiting"
 };
 function StackDrawer(props) {
-  const scrollerRef = (0, import_react8.useRef)(null);
-  (0, import_react8.useEffect)(() => {
+  const scrollerRef = (0, import_react7.useRef)(null);
+  (0, import_react7.useEffect)(() => {
     const release = mapUi.claimEscape("stack-drawer");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
@@ -11138,7 +10844,7 @@ function StackDrawer(props) {
       release();
     };
   }, []);
-  (0, import_react8.useEffect)(() => {
+  (0, import_react7.useEffect)(() => {
     const scroller = scrollerRef.current;
     if (scroller === null) return;
     const onWheel = (event) => {
@@ -11152,20 +10858,20 @@ function StackDrawer(props) {
       scroller.removeEventListener("wheel", onWheel);
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
     "div",
     {
       className: talk_map_default["drawerBackdrop"],
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) props.onClose();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["drawer"], role: "dialog", "aria-label": props.workspaceTitle, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["drawer"], role: "dialog", "aria-label": props.workspaceTitle, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
             "button",
             {
               type: "button",
@@ -11177,10 +10883,10 @@ function StackDrawer(props) {
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["drawerScroll"], ref: scrollerRef, children: props.items.map((item) => {
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["drawerScroll"], ref: scrollerRef, children: props.items.map((item) => {
           const classNames = [talk_map_default["card"], talk_map_default["drawerCard"]];
           if (item.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS2[item.glow]] ?? "");
-          return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+          return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
             "button",
             {
               type: "button",
@@ -11190,15 +10896,15 @@ function StackDrawer(props) {
                 props.onOpenCard(item.cardId);
               },
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title }) }),
-                item.summary !== void 0 && item.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["cardSummary"], children: item.summary }) : null,
-                item.nextStep !== void 0 && item.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["cardNext"], children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardNextText"], children: item.nextStep })
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title }) }),
+                item.summary !== void 0 && item.summary !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["cardSummary"], children: item.summary }) : null,
+                item.nextStep !== void 0 && item.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["cardNext"], children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardNextText"], children: item.nextStep })
                 ] }) : null,
-                /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
-                  item.running === true ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["cardBadgeRunning"], children: t("card.running") }) : null
+                /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
+                  item.running === true ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardBadgeRunning"], children: t("card.running") }) : null
                 ] })
               ]
             },
@@ -11211,13 +10917,13 @@ function StackDrawer(props) {
 }
 
 // src/client/StackNode.tsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime7 = require("react/jsx-runtime");
 function StackNode(props) {
   const { data } = props;
   const open = () => {
     data.onOpen();
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       className: talk_map_default["stackCell"],
@@ -11235,11 +10941,11 @@ function StackNode(props) {
         open();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["stackFace"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["stackBadge"], children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["stackFace"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: talk_map_default["stackBadge"], children: [
             "+",
             data.count
           ] })
@@ -11250,7 +10956,7 @@ function StackNode(props) {
 }
 
 // src/client/use-dark.ts
-var import_react9 = require("react");
+var import_react8 = require("react");
 var DARK_ATTRIBUTE = "data-ds-dark-theme";
 function subscribe(listener) {
   if (typeof document === "undefined") return () => {
@@ -11266,15 +10972,14 @@ function getSnapshot() {
   return document.body.hasAttribute(DARK_ATTRIBUTE);
 }
 function useDsDarkTheme() {
-  return (0, import_react9.useSyncExternalStore)(subscribe, getSnapshot);
+  return (0, import_react8.useSyncExternalStore)(subscribe, getSnapshot);
 }
 
 // src/client/MapCanvas.tsx
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_jsx_runtime8 = require("react/jsx-runtime");
 var nodeTypes = {
   sessionCard: SessionCardNode,
   wsFrame: WsFrameNode,
-  draftCard: DraftCardNode,
   stackCell: StackNode
 };
 var GRID = 16;
@@ -11319,38 +11024,45 @@ function fitRect(members) {
 }
 function CanvasInner(props) {
   const dark = useDsDarkTheme();
-  const canvasState = (0, import_react10.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  const canvasState = (0, import_react9.useSyncExternalStore)(canvas.subscribe, canvas.get);
   const sessions = props.useSessions((state3) => state3);
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
-  const alertById = (0, import_react10.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const alertById = (0, import_react9.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
   const { screenToFlowPosition, zoomTo } = useReactFlow();
-  const [panMode, setPanMode] = (0, import_react10.useState)(true);
-  const [selectedIds, setSelectedIds] = (0, import_react10.useState)(/* @__PURE__ */ new Set());
-  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react10.useState)(/* @__PURE__ */ new Set());
-  const [connecting, setConnecting] = (0, import_react10.useState)(false);
-  const connectCancelledRef = (0, import_react10.useRef)(false);
-  const [toast, setToast] = (0, import_react10.useState)(null);
-  const toastTimer = (0, import_react10.useRef)(void 0);
-  const [pendingSpawn, setPendingSpawn] = (0, import_react10.useState)(null);
-  const [draft, setDraft] = (0, import_react10.useState)(null);
-  const [menu, setMenu] = (0, import_react10.useState)(null);
-  const [drawer, setDrawer] = (0, import_react10.useState)(null);
-  const wrapperRef = (0, import_react10.useRef)(null);
-  const [draggingCardId, setDraggingCardId] = (0, import_react10.useState)(null);
-  const [liveFrame, setLiveFrame] = (0, import_react10.useState)(null);
-  const [isSelecting, setIsSelecting] = (0, import_react10.useState)(false);
-  const frozenRef = (0, import_react10.useRef)(null);
-  const locale = (0, import_react10.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const sessionWs = (0, import_react10.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
-  const wsTitles = (0, import_react10.useMemo)(
+  const [panMode, setPanMode] = (0, import_react9.useState)(true);
+  const [selectedIds, setSelectedIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
+  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
+  const [connecting, setConnecting] = (0, import_react9.useState)(false);
+  const connectCancelledRef = (0, import_react9.useRef)(false);
+  const [toast, setToast] = (0, import_react9.useState)(null);
+  const toastTimer = (0, import_react9.useRef)(void 0);
+  const [pendingSpawn, setPendingSpawn] = (0, import_react9.useState)(null);
+  const [menu, setMenu] = (0, import_react9.useState)(null);
+  const [drawer, setDrawer] = (0, import_react9.useState)(null);
+  const [batchMode, setBatchMode] = (0, import_react9.useState)(false);
+  const [batchPicks, setBatchPicks] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
+  const [batchBusy, setBatchBusy] = (0, import_react9.useState)(false);
+  const wrapperRef = (0, import_react9.useRef)(null);
+  const [draggingCardId, setDraggingCardId] = (0, import_react9.useState)(null);
+  const [liveFrame, setLiveFrame] = (0, import_react9.useState)(null);
+  const [isSelecting, setIsSelecting] = (0, import_react9.useState)(false);
+  const frozenRef = (0, import_react9.useRef)(null);
+  const locale = (0, import_react9.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const sessionWs = (0, import_react9.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
+  const wsTitles = (0, import_react9.useMemo)(
     () => new Map(workspaces.items.map((item) => [item.workspaceId, item.title])),
     [workspaces]
   );
   const workspacesReady = workspaces.baselinesReady !== false;
+  const pinnedSessions = (0, import_react9.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
+  const boardSessionIds = (0, import_react9.useMemo)(
+    () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
+    [canvasState.cards]
+  );
   const wsFrames = canvasState.global?.wsFrames ?? {};
   const layoutVersion = canvasState.global?.layoutVersion ?? 1;
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     if (canvasState.phase !== "ready" || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return;
     const byGroup = /* @__PURE__ */ new Map();
     for (const card of Object.values(canvasState.cards)) {
@@ -11369,7 +11081,7 @@ function CanvasInner(props) {
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext });
   }, [canvasState.phase, layoutVersion, workspacesReady, canvasState.cards, canvasState.global, sessionWs]);
-  const visibleCards = (0, import_react10.useMemo)(() => {
+  const visibleCards = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
@@ -11377,7 +11089,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
-  const membersByGroup = (0, import_react10.useMemo)(() => {
+  const membersByGroup = (0, import_react9.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       const groupId = sessionWs.get(card.sessionId);
@@ -11386,7 +11098,7 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards, sessionWs]);
-  const frameRects = (0, import_react10.useMemo)(() => {
+  const frameRects = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const [groupId, stored] of Object.entries(wsFrames)) {
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored;
@@ -11394,14 +11106,19 @@ function CanvasInner(props) {
     }
     return out;
   }, [wsFrames, liveFrame]);
-  const folderLayouts = (0, import_react10.useMemo)(() => {
+  const folderLayouts = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
         const card = visibleCards[cardId];
         return card === void 0 ? void 0 : { cardId, x: card.x, y: card.y };
       }).filter((entry) => entry !== void 0);
-      const ordered = readingOrder(members);
+      const reading = readingOrder(members);
+      const ordered = pinnedSessions.size === 0 ? reading : [...reading].sort((a, b) => {
+        const pinA = pinnedSessions.has(visibleCards[a]?.sessionId ?? "") ? 0 : 1;
+        const pinB = pinnedSessions.has(visibleCards[b]?.sessionId ?? "") ? 0 : 1;
+        return pinA - pinB;
+      });
       const capacity = capacityFor(rect);
       const visibleSlots = visibleCount(capacity, ordered.length);
       out[groupId] = {
@@ -11412,22 +11129,22 @@ function CanvasInner(props) {
       };
     }
     return out;
-  }, [frameRects, membersByGroup, visibleCards]);
-  const cardLayout = (0, import_react10.useMemo)(() => {
+  }, [frameRects, membersByGroup, visibleCards, pinnedSessions]);
+  const cardLayout = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const layout of Object.values(folderLayouts)) {
       Object.assign(out, layoutFor(layout.rect, layout.ordered));
     }
     return out;
   }, [folderLayouts]);
-  const foldedCards = (0, import_react10.useMemo)(() => {
+  const foldedCards = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const [groupId, layout] of Object.entries(folderLayouts)) {
       if (layout.folded.length > 0) out[groupId] = layout.folded;
     }
     return out;
   }, [folderLayouts]);
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const stale = {};
@@ -11438,9 +11155,9 @@ function CanvasInner(props) {
     }
     if (Object.keys(stale).length > 0) canvas.moveCards(stale);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
-  const foldedSet = (0, import_react10.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
-  const activityRef = (0, import_react10.useRef)(/* @__PURE__ */ new Map());
-  (0, import_react10.useEffect)(() => {
+  const foldedSet = (0, import_react9.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
+  const activityRef = (0, import_react9.useRef)(/* @__PURE__ */ new Map());
+  (0, import_react9.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const seen = activityRef.current;
@@ -11463,14 +11180,52 @@ function CanvasInner(props) {
         if (before === void 0 || stamp <= before) continue;
         if (candidate === void 0 || stamp > candidate.stamp) candidate = { cardId, stamp };
       }
-      if (candidate === void 0 || layout.ordered[0] === candidate.cardId) continue;
-      const next = [candidate.cardId, ...layout.ordered.filter((id2) => id2 !== candidate.cardId)];
+      if (candidate === void 0) continue;
+      const isPinned = (cardId) => pinnedSessions.has(visibleCards[cardId]?.sessionId ?? "");
+      if (layout.ordered[0] === candidate.cardId || isPinned(candidate.cardId)) continue;
+      const rest = layout.ordered.filter((id2) => id2 !== candidate.cardId);
+      const firstUnpinned = rest.findIndex((id2) => !isPinned(id2));
+      const insertAt = firstUnpinned === -1 ? rest.length : firstUnpinned;
+      const next = [...rest.slice(0, insertAt), candidate.cardId, ...rest.slice(insertAt)];
       Object.assign(promoted, layoutFor(layout.rect, next));
     }
     for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
     if (Object.keys(promoted).length > 0) canvas.moveCards(promoted);
-  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame]);
-  (0, import_react10.useEffect)(() => {
+  }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame, pinnedSessions]);
+  const autoSyncedRef = (0, import_react9.useRef)(false);
+  (0, import_react9.useEffect)(() => {
+    if (canvasState.phase !== "ready" || !workspacesReady || autoSyncedRef.current) return;
+    autoSyncedRef.current = true;
+    const remembered = canvasState.global?.layoutMemory ?? {};
+    const added = {};
+    for (const [groupId] of Object.entries(wsFrames)) {
+      const rect = frameRects[groupId];
+      if (rect === void 0) continue;
+      const existing = (membersByGroup.get(groupId) ?? []).map((cardId) => canvasState.cards[cardId]).filter((card) => card !== void 0);
+      const missing = placeableSessionIds(sessions).filter((id2) => sessionWs.get(id2) === groupId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
+      if (missing.length === 0) continue;
+      let next = existing.length;
+      const baseY = existing.length === 0 ? rect.y + FRAME_PAD + FRAME_LABEL_H : Math.max(...existing.map((card) => card.y)) + CARD_H + GAP_Y;
+      const cols = Math.max(1, Math.floor((rect.width - FRAME_PAD * 2 + GAP_X) / (CARD_W + GAP_X)));
+      for (const sessionId of missing) {
+        const entry = remembered[sessionId];
+        const position = entry !== void 0 ? { x: entry.x, y: entry.y } : {
+          x: rect.x + FRAME_PAD + next % cols * (CARD_W + GAP_X),
+          y: baseY + Math.floor(next / cols) * (CARD_H + GAP_Y)
+        };
+        next += 1;
+        added[newCardId()] = {
+          boardId: INBOX_BOARD_ID,
+          sessionId,
+          x: position.x,
+          y: position.y,
+          createdAt: Date.now()
+        };
+      }
+    }
+    if (Object.keys(added).length > 0) canvas.addCards(added);
+  }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds]);
+  (0, import_react9.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
     const onKeyDown = (event) => {
@@ -11491,7 +11246,7 @@ function CanvasInner(props) {
       release();
     };
   }, [connecting]);
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     const onKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.code !== "KeyZ") return;
       const target = event.target;
@@ -11506,7 +11261,7 @@ function CanvasInner(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  const liveSelectedIds = (0, import_react10.useMemo)(() => {
+  const liveSelectedIds = (0, import_react9.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedIds) {
       if (id2.startsWith("frame-")) {
@@ -11517,7 +11272,7 @@ function CanvasInner(props) {
     }
     return next;
   }, [selectedIds, visibleCards, wsFrames]);
-  const liveSelectedEdgeIds = (0, import_react10.useMemo)(() => {
+  const liveSelectedEdgeIds = (0, import_react9.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedEdgeIds) {
       if (canvasState.edges[id2] !== void 0) next.add(id2);
@@ -11525,7 +11280,7 @@ function CanvasInner(props) {
     return next;
   }, [selectedEdgeIds, canvasState.edges]);
   const hasSelection = liveSelectedIds.size > 0 || liveSelectedEdgeIds.size > 0;
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     if (!hasSelection) return;
     const release = mapUi.claimEscape("selection");
     const onKeyDown = (event) => {
@@ -11554,21 +11309,40 @@ function CanvasInner(props) {
       release();
     };
   });
+  (0, import_react9.useEffect)(() => {
+    if (!batchMode) return;
+    const release = mapUi.claimEscape("batch-mode");
+    const onKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation();
+      setBatchMode(false);
+      setBatchPicks(/* @__PURE__ */ new Set());
+    };
+    window.addEventListener("keydown", onKeyDown, { capture: true });
+    return () => {
+      window.removeEventListener("keydown", onKeyDown, { capture: true });
+      release();
+    };
+  }, [batchMode]);
   const beginResize = (groupId, axis, event) => {
     const start2 = frameRects[groupId] ?? wsFrames[groupId];
     if (start2 === void 0) return;
     const origin = screenToFlowPosition({ x: event.clientX, y: event.clientY });
     const count = (membersByGroup.get(groupId) ?? []).length;
+    const movesWest = axis === "w" || axis === "nw" || axis === "sw";
+    const movesNorth = axis === "n" || axis === "ne" || axis === "nw";
+    const movesEast = axis === "e" || axis === "ne" || axis === "se";
+    const movesSouth = axis === "s" || axis === "se" || axis === "sw";
     let next = { ...start2 };
     const onMove = (moveEvent) => {
       const now2 = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY });
       const dx = now2.x - origin.x;
       const dy = now2.y - origin.y;
       next = {
-        x: start2.x,
-        y: start2.y,
-        width: axis === "s" ? start2.width : start2.width + dx,
-        height: axis === "e" ? start2.height : start2.height + dy
+        x: movesWest ? start2.x + dx : start2.x,
+        y: movesNorth ? start2.y + dy : start2.y,
+        width: movesWest ? start2.width - dx : movesEast ? start2.width + dx : start2.width,
+        height: movesNorth ? start2.height - dy : movesSouth ? start2.height + dy : start2.height
       };
       setLiveFrame({ groupId, rect: next });
     };
@@ -11577,7 +11351,16 @@ function CanvasInner(props) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
       setLiveFrame(null);
-      canvas.setWsFrameRect(groupId, frameRect(next));
+      const clamped = { ...next };
+      if (clamped.width < MIN_FRAME_WIDTH) {
+        if (movesWest) clamped.x = start2.x + start2.width - MIN_FRAME_WIDTH;
+        clamped.width = MIN_FRAME_WIDTH;
+      }
+      if (clamped.height < MIN_FRAME_HEIGHT) {
+        if (movesNorth) clamped.y = start2.y + start2.height - MIN_FRAME_HEIGHT;
+        clamped.height = MIN_FRAME_HEIGHT;
+      }
+      canvas.setWsFrameRect(groupId, frameRect(clamped));
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -11592,8 +11375,7 @@ function CanvasInner(props) {
     if (status?.completionUnread === true) return "done";
     return void 0;
   };
-  const liveNodes = (0, import_react10.useMemo)(() => {
-    const wsColors = canvasState.global?.wsColors ?? {};
+  const liveNodes = (0, import_react9.useMemo)(() => {
     const frameNodes = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? [];
       return {
@@ -11606,7 +11388,6 @@ function CanvasInner(props) {
           count: members.length,
           width: rect.width,
           height: rect.height,
-          ...wsColors[groupId] !== void 0 ? { colorTag: wsColors[groupId] } : {},
           onResizeStart: (axis, event) => {
             beginResize(groupId, axis, event);
           }
@@ -11643,8 +11424,7 @@ function CanvasInner(props) {
         summary: digest?.summary,
         waiting: status !== void 0 ? status.pendingInteraction !== void 0 : summary?.pendingInteraction !== void 0,
         done: status?.completionUnread === true,
-        glow: glowOf(card.sessionId),
-        ...card.colorTag !== void 0 ? { colorTag: card.colorTag } : {}
+        glow: glowOf(card.sessionId)
       };
       return {
         id: cardId,
@@ -11652,33 +11432,18 @@ function CanvasInner(props) {
         // The dragged card follows the pointer; every other card sits on its
         // slot (and glides there — the CSS transition owns the animation).
         position: dragging || slot === void 0 ? { x: card.x, y: card.y } : { x: slot.x, y: slot.y },
-        selected: liveSelectedIds.has(cardId),
+        // Batch mode shows the pick as the card's ring; otherwise it is the
+        // canvas selection.
+        selected: batchMode ? batchPicks.has(cardId) : liveSelectedIds.has(cardId),
+        ...batchMode ? { data: { ...data, onPick: () => {
+          toggleBatchPick(cardId);
+        } } } : { data },
         // Cards folded into the stack cell stay in the model (their edges and
         // selection survive) but must not paint over the grid.
         hidden: foldedSet.has(cardId),
-        className: dragging ? "tmDragging" : "",
-        data
+        className: dragging ? "tmDragging" : ""
       };
     });
-    const draftNodes = draft === null ? [] : [{
-      id: "draft",
-      type: "draftCard",
-      position: { x: draft.x, y: draft.y },
-      selectable: false,
-      zIndex: 10,
-      data: {
-        workspaceOptions: workspaces.items.map((item) => ({
-          id: item.workspaceId,
-          title: item.title,
-          path: item.path
-        })),
-        ...draft.workspaceId !== void 0 ? { defaultWorkspaceId: draft.workspaceId } : {},
-        ...draft.groupId !== void 0 ? { groupId: draft.groupId } : {},
-        onClose: () => {
-          setDraft(null);
-        }
-      }
-    }];
     const stackNodes = Object.entries(foldedCards).map(([groupId, folded]) => {
       const layout = folderLayouts[groupId];
       const rect = layout?.rect ?? frameRects[groupId];
@@ -11705,16 +11470,16 @@ function CanvasInner(props) {
         }
       };
     });
-    return [...frameNodes, ...cardNodes, ...stackNodes, ...draftNodes];
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, draft, workspaces.items, locale]);
-  const sessionIdToCardId = (0, import_react10.useMemo)(() => {
+    return [...frameNodes, ...cardNodes, ...stackNodes];
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, batchMode, batchPicks, locale]);
+  const sessionIdToCardId = (0, import_react9.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
     }
     return index2;
   }, [visibleCards]);
-  const liveEdges = (0, import_react10.useMemo)(() => {
+  const liveEdges = (0, import_react9.useMemo)(() => {
     const out = [];
     const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
     const explicitPairs = /* @__PURE__ */ new Set();
@@ -11774,12 +11539,10 @@ function CanvasInner(props) {
     setIsSelecting(false);
   };
   const onNodesChange = (changes) => {
-    const removedCardIds = changes.filter((change) => change.type === "remove").map((change) => change.id).filter((id2) => !id2.startsWith("frame-") && id2 !== "draft");
+    const removedCardIds = changes.filter((change) => change.type === "remove").map((change) => change.id).filter((id2) => !id2.startsWith("frame-") && !id2.startsWith("stack-"));
     for (const change of changes) {
       if (change.type === "position" && change.position !== void 0) {
-        if (change.id === "draft") {
-          setDraft((previous) => previous === null ? previous : { ...previous, x: change.position?.x ?? previous.x, y: change.position?.y ?? previous.y });
-        } else if (change.id.startsWith("frame-")) {
+        if (change.id.startsWith("frame-")) {
           const groupId = change.id.slice("frame-".length);
           const base = frameRects[groupId] ?? wsFrames[groupId];
           if (base === void 0) continue;
@@ -11811,7 +11574,7 @@ function CanvasInner(props) {
       } else if (change.type === "remove") {
         if (change.id.startsWith("frame-")) {
           removeGroup(change.id.slice("frame-".length));
-        } else if (change.id !== "draft") {
+        } else if (!change.id.startsWith("stack-")) {
           canvas.removeCard(change.id);
         }
         setSelectedIds((previous) => {
@@ -11861,8 +11624,8 @@ function CanvasInner(props) {
     }
     if (removedIds.length > 0) canvas.removeEdges(removedIds);
   };
-  const mountedRef = (0, import_react10.useRef)(true);
-  (0, import_react10.useEffect)(() => {
+  const mountedRef = (0, import_react9.useRef)(true);
+  (0, import_react9.useEffect)(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -11988,6 +11751,52 @@ function CanvasInner(props) {
     }
     return items;
   };
+  const togglePin = (cardId) => {
+    const card = visibleCards[cardId];
+    if (card === void 0) return;
+    const next = !pinnedSessions.has(card.sessionId);
+    void setPinned(card.sessionId, next).then(() => {
+      showToast(next ? t("toast.pinned") : t("toast.unpinned"));
+    }).catch((error) => {
+      showToast(`${t("toast.pinFailed")}${String(error)}`);
+    });
+  };
+  const runActions = async (kind, cardIds) => {
+    if (cardIds.length === 0) return;
+    const sessionIds = cardIds.map((cardId) => visibleCards[cardId]?.sessionId).filter((sessionId) => sessionId !== void 0);
+    if (sessionIds.length === 0) return;
+    setBatchBusy(true);
+    try {
+      if (kind === "archive") await archiveSessions(sessionIds);
+      else await trashSessions(sessionIds);
+      for (const cardId of cardIds) canvas.removeCard(cardId);
+      showToast(t(kind === "archive" ? "toast.archived" : "toast.deleted", { n: String(sessionIds.length) }));
+    } catch (error) {
+      showToast(`${t(kind === "archive" ? "toast.archiveFailed" : "toast.deleteFailed")}${String(error)}`);
+    } finally {
+      setBatchBusy(false);
+    }
+  };
+  const selectedCardIds = (0, import_react9.useMemo)(
+    () => [...batchPicks].filter((id2) => visibleCards[id2] !== void 0),
+    [batchPicks, visibleCards]
+  );
+  const toggleBatchPick = (cardId) => {
+    setBatchPicks((previous) => {
+      const next = new Set(previous);
+      if (next.has(cardId)) next.delete(cardId);
+      else next.add(cardId);
+      return next;
+    });
+  };
+  const runBatch = async (kind) => {
+    if (batchBusy || !batchMode) return;
+    const cardIds = selectedCardIds;
+    if (cardIds.length === 0) return;
+    setBatchMode(false);
+    setBatchPicks(/* @__PURE__ */ new Set());
+    await runActions(kind, cardIds);
+  };
   const groupAtPoint = (x, y) => {
     let best;
     for (const [groupId, rect] of Object.entries(frameRects)) {
@@ -11997,22 +11806,16 @@ function CanvasInner(props) {
     }
     return best?.groupId;
   };
-  const openDraftAt = (flowX, flowY, forcedGroupId) => {
-    const x = snap(flowX - CARD_W / 2);
-    const y = snap(flowY - 40);
-    const groupId = forcedGroupId ?? groupAtPoint(flowX, flowY);
-    const isWorkspace = groupId !== void 0 && (wsTitles.has(groupId) || frameRects[groupId] !== void 0);
-    setDraft({
-      x,
-      y,
-      ...isWorkspace ? { workspaceId: groupId } : {},
-      ...groupId !== void 0 ? { groupId } : {}
-    });
+  const startSessionIn = (workspaceId) => {
+    const ui = uiWorkspaceService();
+    if (ui === void 0 || typeof ui.startSession !== "function") {
+      showToast(t("toast.needUiWorkspace"));
+      return;
+    }
+    closeMapPanel();
+    ui.startSession(workspaceId);
   };
-  const boardSessionIds = (0, import_react10.useMemo)(
-    () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
-    [canvasState.cards]
-  );
+  const folderAt = (flowX, flowY) => groupAtPoint(flowX, flowY);
   const importWorkspace = (workspaceId, atX, atY) => {
     const memberSessions = placeableSessionIds(sessions).filter((id2) => sessionWs.get(id2) === workspaceId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
     const memory = canvasState.global?.layoutMemory ?? {};
@@ -12028,7 +11831,6 @@ function CanvasInner(props) {
         sessionId,
         x: entry.x,
         y: entry.y,
-        ...entry.colorTag !== void 0 ? { colorTag: entry.colorTag } : {},
         createdAt: Date.now()
       };
       added[newCardId()] = card;
@@ -12080,7 +11882,6 @@ function CanvasInner(props) {
         sessionId,
         x: position.x,
         y: position.y,
-        ...entry?.colorTag !== void 0 ? { colorTag: entry.colorTag } : {},
         createdAt: Date.now()
       };
     }
@@ -12109,7 +11910,7 @@ function CanvasInner(props) {
       view: "root"
     });
   };
-  const menuState = (0, import_react10.useMemo)(() => {
+  const menuState = (0, import_react9.useMemo)(() => {
     if (menu === null) return null;
     const close = () => {
       setMenu(null);
@@ -12193,7 +11994,7 @@ function CanvasInner(props) {
         // and that point is what decides the workspace.
         label: underTitle === void 0 ? t("menu.newChat") : t("menu.newChatIn", { ws: underTitle }),
         onPick: () => {
-          openDraftAt(menu.flowX, menu.flowY, under);
+          startSessionIn(under);
           close();
         }
       });
@@ -12214,12 +12015,46 @@ function CanvasInner(props) {
     } else if (menu.kind === "card" && menu.targetId !== void 0) {
       const cardId = menu.targetId;
       const card = canvasState.cards[cardId];
+      const isPinned = card !== void 0 && pinnedSessions.has(card.sessionId);
       items.push({
         key: "open",
         label: t("menu.open"),
         onPick: () => {
           close();
           if (card !== void 0) openSession(card.sessionId);
+        }
+      });
+      items.push({
+        key: "pin",
+        label: isPinned ? t("menu.unpin") : t("menu.pin"),
+        onPick: () => {
+          close();
+          togglePin(cardId);
+        }
+      });
+      items.push({
+        key: "archive",
+        label: t("menu.archive"),
+        onPick: () => {
+          close();
+          void runActions("archive", [cardId]);
+        }
+      });
+      items.push({
+        key: "delete-session",
+        label: t("menu.deleteSession"),
+        onPick: () => {
+          close();
+          void runActions("delete", [cardId]);
+        }
+      });
+      items.push({
+        key: "batch",
+        label: t("menu.batch"),
+        onPick: () => {
+          close();
+          setBatchMode(true);
+          setBatchPicks(/* @__PURE__ */ new Set([cardId]));
         }
       });
       items.push({
@@ -12276,15 +12111,7 @@ function CanvasInner(props) {
         key: "new-chat",
         label: t("menu.newChat"),
         onPick: () => {
-          openDraftAt(menu.flowX, menu.flowY, groupId);
-          close();
-        }
-      });
-      items.push({
-        key: "sync",
-        label: t("menu.syncGroup"),
-        onPick: () => {
-          syncGroup(groupId);
+          startSessionIn(groupId);
           close();
         }
       });
@@ -12305,10 +12132,10 @@ function CanvasInner(props) {
       ...searchable ? { searchable } : {},
       items
     };
-  }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, locale]);
+  }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, pinnedSessions, locale]);
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID);
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
     "div",
     {
       ref: wrapperRef,
@@ -12318,15 +12145,12 @@ function CanvasInner(props) {
         const nodeElement = target.closest(".react-flow__node");
         if (nodeElement !== null) {
           const nodeId = nodeElement.getAttribute("data-id") ?? "";
-          if (nodeId.startsWith("frame-")) {
-            const position2 = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-            openDraftAt(position2.x, position2.y, nodeId.slice("frame-".length));
-          }
+          if (nodeId.startsWith("frame-")) startSessionIn(nodeId.slice("frame-".length));
           return;
         }
         if (target.closest(".react-flow__pane") === null) return;
         const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
-        openDraftAt(position.x, position.y);
+        startSessionIn(folderAt(position.x, position.y));
       },
       onContextMenu: (event) => {
         event.preventDefault();
@@ -12335,7 +12159,7 @@ function CanvasInner(props) {
         if (menu !== null) setMenu(null);
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
           index,
           {
             nodes,
@@ -12393,20 +12217,20 @@ function CanvasInner(props) {
             snapToGrid: true,
             snapGrid: [GRID, GRID],
             zoomOnDoubleClick: false,
-            panOnDrag: panMode ? true : [1, 2],
-            selectionOnDrag: !panMode,
+            panOnDrag: batchMode ? false : panMode ? true : [1, 2],
+            selectionOnDrag: batchMode ? true : !panMode,
             selectionMode: SelectionMode.Partial,
             deleteKeyCode: ["Backspace", "Delete"],
             minZoom: 0.1,
             proOptions: { hideAttribution: true },
             ...savedCamera !== void 0 ? { defaultViewport: savedCamera } : { fitView: hasContent },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(Controls, { showInteractive: false, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(Controls, { showInteractive: false, children: [
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
                   void zoomTo(1, { duration: 200 });
-                }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }),
-                /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+                }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }),
+                /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
                   ControlButton,
                   {
                     title: panMode ? "拖拽平移中（点一下切成框选）" : "框选模式（点一下切成拖拽平移）",
@@ -12414,28 +12238,38 @@ function CanvasInner(props) {
                     onClick: () => {
                       setPanMode((v) => !v);
                     },
-                    children: panMode ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" }) }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, strokeDasharray: "3 3" }) })
+                    children: panMode ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" }) }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("rect", { x: 3, y: 3, width: 18, height: 18, rx: 2, strokeDasharray: "3 3" }) })
                   }
                 )
               ] })
             ]
           }
         ),
-        liveSelectedIds.size > 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
-          ColorToolbar,
+        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          BatchBar,
           {
-            selectedIds: liveSelectedIds,
-            visibleCards
+            count: selectedCardIds.length,
+            busy: batchBusy,
+            onArchive: () => {
+              void runBatch("archive");
+            },
+            onDelete: () => {
+              void runBatch("delete");
+            },
+            onCancel: () => {
+              setBatchMode(false);
+              setBatchPicks(/* @__PURE__ */ new Set());
+            }
           }
         ) : null,
-        hasContent || draft !== null ? null : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ContextMenu, { menu: menuState, onClose: () => {
+        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
+        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,
-        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
+        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
           setPendingSpawn(null);
         } }) : null,
-        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           StackDrawer,
           {
             workspaceTitle: wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
@@ -12450,62 +12284,60 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
+        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
       ]
     }
   );
 }
-function ColorToolbar(props) {
-  const selectedCardIds = [...props.selectedIds].filter((id2) => props.visibleCards[id2] !== void 0);
-  const selectedFrameWs = [...props.selectedIds].filter((id2) => id2.startsWith("frame-")).map((id2) => id2.slice("frame-".length));
-  const applyColor = (colorTag) => {
-    if (selectedCardIds.length > 0) canvas.setCardsColor(selectedCardIds, colorTag);
-    for (const workspaceId of selectedFrameWs) canvas.setWorkspaceColor(workspaceId, colorTag);
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
-    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+function BatchBar(props) {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["batchSpace"] }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       "button",
       {
         type: "button",
-        className: talk_map_default["colorSwatch"],
-        style: { background: tag.swatch },
-        title: tag.id,
-        "aria-label": tag.id,
-        onClick: () => {
-          applyColor(tag.id);
-        }
-      },
-      tag.id
-    )),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        className: talk_map_default["batchAction"],
+        disabled: props.busy || props.count === 0,
+        onClick: props.onArchive,
+        children: t("batch.archive")
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       "button",
       {
         type: "button",
-        className: `${talk_map_default["colorSwatch"]} ${talk_map_default["colorSwatchClear"]}`,
-        title: t("color.clear"),
-        "aria-label": t("color.clear"),
-        onClick: () => {
-          applyColor(void 0);
-        },
-        children: "×"
+        className: `${talk_map_default["batchAction"]} ${talk_map_default["batchDanger"]}`,
+        disabled: props.busy || props.count === 0,
+        onClick: props.onDelete,
+        children: t("batch.delete")
+      }
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      "button",
+      {
+        type: "button",
+        className: talk_map_default["batchAction"],
+        disabled: props.busy,
+        onClick: props.onCancel,
+        children: t("batch.cancel")
       }
     )
   ] });
 }
 function MapCanvas(props) {
-  const canvasState = (0, import_react10.useSyncExternalStore)(canvas.subscribe, canvas.get);
-  (0, import_react10.useEffect)(() => {
+  const canvasState = (0, import_react9.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  (0, import_react9.useEffect)(() => {
     canvas.ensureLoaded();
     canvas.refresh();
     return canvas.connect();
   }, []);
   if (canvasState.phase === "error") {
-    return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
       t("map.loadError"),
       " ",
       canvasState.error,
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
         "button",
         {
           type: "button",
@@ -12520,56 +12352,18 @@ function MapCanvas(props) {
     ] }) });
   }
   if (canvasState.phase !== "ready") {
-    return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(CanvasInner, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(CanvasInner, { ...props }) });
 }
 
 // src/client/MapOverlay.tsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
-function HotkeyButton() {
-  const hotkey = (0, import_react12.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.hotkey ?? DEFAULT_HOTKEY);
-  const [capturing, setCapturing] = (0, import_react12.useState)(false);
-  (0, import_react12.useEffect)(() => {
-    if (!capturing) return;
-    const release = mapUi.claimEscape("hotkey-capture");
-    const onKeyDown = (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      if (event.key === "Escape") {
-        setCapturing(false);
-        return;
-      }
-      const captured = hotkeyFromEvent(event);
-      if (captured !== null) {
-        canvas.patchGlobalNow({ hotkey: captured });
-        setCapturing(false);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown, { capture: true });
-    return () => {
-      window.removeEventListener("keydown", onKeyDown, { capture: true });
-      release();
-    };
-  }, [capturing]);
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-    "button",
-    {
-      type: "button",
-      className: talk_map_default["hotkeyButton"],
-      title: t("hotkey.title"),
-      onClick: () => {
-        setCapturing(true);
-      },
-      children: capturing ? t("hotkey.capturing") : hotkeyLabel(hotkey)
-    }
-  );
-}
+var import_jsx_runtime9 = require("react/jsx-runtime");
 function LanguageButton() {
-  const pref = (0, import_react12.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.locale ?? "auto");
+  const pref = (0, import_react11.useSyncExternalStore)(canvas.subscribe, () => canvas.get().global?.locale ?? "auto");
   const index2 = LOCALE_CYCLE.indexOf(pref);
   const next = LOCALE_CYCLE[(index2 + 1) % LOCALE_CYCLE.length] ?? "auto";
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
     "button",
     {
       type: "button",
@@ -12583,14 +12377,14 @@ function LanguageButton() {
   );
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
 function CloseIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
-  (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  (0, import_react11.useEffect)(() => {
     mapUi.setOpen(true);
     hideSidebarForMap();
     return () => {
@@ -12598,7 +12392,7 @@ function MapOverlay(props) {
       restoreSidebarAfterMap();
     };
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       if (mapUi.escapeClaimed()) return;
@@ -12610,9 +12404,9 @@ function MapOverlay(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["panel"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["header"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["panel"], lang: activeLocale(), role: "dialog", "aria-label": t("map.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["header"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
         "button",
         {
           type: "button",
@@ -12621,15 +12415,14 @@ function MapOverlay(props) {
           "aria-label": t("map.back"),
           onClick: closeMapPanel,
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(BackIcon, {}),
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: t("map.back") })
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(BackIcon, {}),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: t("map.back") })
           ]
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["headerSpace"] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(LanguageButton, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(HotkeyButton, {}),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["headerSpace"] }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(LanguageButton, {}),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
         "button",
         {
           type: "button",
@@ -12637,34 +12430,34 @@ function MapOverlay(props) {
           title: t("map.close"),
           "aria-label": t("map.close"),
           onClick: closeMapPanel,
-          children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(CloseIcon, {})
+          children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(CloseIcon, {})
         }
       )
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(MapCanvas, { ...props })
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(MapCanvas, { ...props })
   ] });
 }
 
 // src/client/MapToggleButton.tsx
-var import_react13 = require("react");
-var import_jsx_runtime11 = require("react/jsx-runtime");
+var import_react12 = require("react");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function MapIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M9 4v14" }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { d: "M15 6v14" })
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M9 4v14" }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { d: "M15 6v14" })
   ] });
 }
 function MapToggleButton(props) {
-  const open = (0, import_react13.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  const locale = (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const open = (0, import_react12.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
+  const locale = (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const wide = props.wide;
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     reportSidebarWide(wide);
   }, [wide]);
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
     "button",
     {
       type: "button",
@@ -12677,8 +12470,8 @@ function MapToggleButton(props) {
         mapUi.toggle();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(MapIcon, {}),
-        wide ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(MapIcon, {}),
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
       ]
     }
   );

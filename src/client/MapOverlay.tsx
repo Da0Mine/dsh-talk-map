@@ -9,54 +9,14 @@
  * selected, so mount/unmount is the real open/closed state and the sidebar
  * button mirrors it.
  */
-import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useEffect, useSyncExternalStore } from 'react'
 import type { LocalePref } from '../shared/model.ts'
 import type { RootSlotStandardProps } from './dsh.ts'
 import { canvas } from './canvas-store.ts'
-import { DEFAULT_HOTKEY, hotkeyFromEvent, hotkeyLabel } from './hotkey.ts'
 import { activeLocale, LOCALE_CYCLE, subscribeLocale, t } from './i18n.ts'
 import { closeMapPanel, hideSidebarForMap, mapUi, restoreSidebarAfterMap } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
-
-function HotkeyButton(): React.JSX.Element {
-  const hotkey = useSyncExternalStore(canvas.subscribe, () => canvas.get().global?.hotkey ?? DEFAULT_HOTKEY)
-  const [capturing, setCapturing] = useState(false)
-
-  useEffect(() => {
-    if (!capturing) return
-    const release = mapUi.claimEscape('hotkey-capture')
-    const onKeyDown = (event: KeyboardEvent): void => {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.key === 'Escape') {
-        setCapturing(false)
-        return
-      }
-      const captured = hotkeyFromEvent(event)
-      if (captured !== null) {
-        canvas.patchGlobalNow({ hotkey: captured })
-        setCapturing(false)
-      }
-    }
-    window.addEventListener('keydown', onKeyDown, { capture: true })
-    return () => {
-      window.removeEventListener('keydown', onKeyDown, { capture: true })
-      release()
-    }
-  }, [capturing])
-
-  return (
-    <button
-      type="button"
-      className={styles['hotkeyButton']}
-      title={t('hotkey.title')}
-      onClick={() => { setCapturing(true) }}
-    >
-      {capturing ? t('hotkey.capturing') : hotkeyLabel(hotkey)}
-    </button>
-  )
-}
 
 /**
  * Interface language: cycles auto → 中文 → English. 'auto' follows dsh's
@@ -100,10 +60,9 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
 
   // The shell selected this panel: publish that so the sidebar button, the
-  // hotkey and the draft card's "send then leave" all agree on the state — and
-  // give the map the width it needs by folding the sidebar away for as long as
-  // the panel is up (unmount puts it back, which also covers "opened a session
-  // from a card").
+  // hotkey and the context menu all agree on the state — and give the map the
+  // width it needs by folding the sidebar away for as long as the panel is up
+  // (unmount puts it back, which also covers "opened a session from a card").
   useEffect(() => {
     mapUi.setOpen(true)
     hideSidebarForMap()
@@ -116,7 +75,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
-      // An inner surface (draft card, spawn preview, drawer, hotkey capture)
+      // An inner surface (spawn preview, drawer, batch bar, hotkey capture)
       // claims Esc for itself.
       if (mapUi.escapeClaimed()) return
       event.stopPropagation()
@@ -141,7 +100,6 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
         </button>
         <span className={styles['headerSpace']} />
         <LanguageButton />
-        <HotkeyButton />
         <button
           type="button"
           className={styles['closeButton']}

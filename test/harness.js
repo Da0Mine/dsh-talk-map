@@ -50,16 +50,18 @@
     { workspaceId: 'ws-daily', title: '日常任务', path: 'D:/Projects/daily', sessionIds: ['s1', 's2', 's3', 's4', 's5'] },
     { workspaceId: 'ws-medkit', title: 'Open MedKit', path: 'D:/Projects/medkit', sessionIds: ['s6', 's7', 's8'] },
     { workspaceId: 'ws-lab', title: '实验场', path: 'D:/Projects/lab', sessionIds: ['s9'] },
+    // Imported folder whose session has no card yet: the auto-sync on open must add it.
+    { workspaceId: 'ws-sync', title: '自动同步', path: 'D:/Projects/sync', sessionIds: ['s10'] },
   ]
   const titles = {
     s1: '对话地图插件改版', s2: '桌面自动化脚本清理', s3: 'DSH 会话日志解析',
     s4: 'Matter.js 物理参数换算', s5: '云盘同步目录整理',
     s6: '医学影像标注流程', s7: '标注工具离线化', s8: '数据集切分脚本',
-    s9: '代理端口探测',
+    s9: '代理端口探测', s10: '自动同步进来的会话',
   }
   // Distinct recency stamps: the folder must lay these out newest-first, so the
   // probe can assert the slot order against this table.
-  const minutesAgo = { s1: 2, s2: 15, s3: 90, s4: 240, s5: 40, s6: 5, s7: 60, s8: 30, s9: 8 }
+  const minutesAgo = { s1: 2, s2: 15, s3: 90, s4: 240, s5: 40, s6: 5, s7: 60, s8: 30, s9: 8, s10: 300 }
   for (const ws of workspaceList) {
     for (const id of ws.sessionIds) {
       sessionRows[id] = session(id, titles[id], { updatedAt: T0 - minutesAgo[id] * MIN })
@@ -69,10 +71,20 @@
   sessionRows.s3.completed = true
   sessionRows.s8.blank = true // a blank session must not render a card
 
-  // `let` so touch() can hand the tree a NEW object — the client's memos compare
-  // identity, so mutating in place would look like "nothing changed".
+  // `let` so touch()/pin()/archive() can hand the tree a NEW object — the
+  // client's memos compare identity, so mutating in place would look like
+  // "nothing changed".
   let sessionsState = { ids: Object.keys(sessionRows), byId: sessionRows }
-  const workspacesState = { items: workspaceList, baselinesReady: true }  // ui-session's projection: s1 still running (white lamp), s3 finished while
+  let pinnedSessionIds = []
+  let archivedSessionIds = []
+  const buildWorkspaces = () => ({
+    items: workspaceList,
+    baselinesReady: true,
+    pinnedSessionIds,
+    archivedSessionIds,
+  })
+  let workspacesState = buildWorkspaces()
+  // ui-session's projection: s1 still running (white lamp), s3 finished while
   // unwatched (green lamp) — the two states the probe asserts on.
   const statusById = new Map([
     ['s1', { running: true }],
@@ -89,6 +101,7 @@
     'ws-daily': { cols: 3, rows: 1 },
     'ws-medkit': { cols: 2, rows: 1 },
     'ws-lab': { cols: 1, rows: 1 },
+    'ws-sync': { cols: 1, rows: 1 },
   }
 
   function frame(id) {
@@ -97,17 +110,25 @@
     const shape = FRAME_SHAPE[id]
     return {
       x: id === 'ws-medkit' ? 960 : 0,
-      y: id === 'ws-lab' ? 640 : 0,
+      y: id === 'ws-lab' ? 640 : id === 'ws-sync' ? 1000 : 0,
       width: shape.cols * (CARD_W + GAP_X) - GAP_X + PAD * 2,
       height: shape.rows * (CARD_H + GAP_Y) - GAP_Y + PAD * 2 + LABEL,
     }
   }
 
-  const frames = { 'ws-daily': frame('ws-daily'), 'ws-medkit': frame('ws-medkit'), 'ws-lab': frame('ws-lab') }
+  const frames = {
+    'ws-daily': frame('ws-daily'),
+    'ws-medkit': frame('ws-medkit'),
+    'ws-lab': frame('ws-lab'),
+    'ws-sync': frame('ws-sync'),
+  }
 
   const cards = {}
   let counter = 0
   for (const ws of workspaceList) {
+    // ws-sync is the auto-sync fixture: its frame is on the map with NO card, so
+    // opening the map has to pull the session in by itself.
+    if (ws.workspaceId === 'ws-sync') continue
     const rect = frames[ws.workspaceId]
     const cols = Math.max(1, Math.floor((rect.width - PAD * 2 + GAP_X) / (CARD_W + GAP_X)))
     ws.sessionIds.forEach((sessionId, index) => {
@@ -150,6 +171,8 @@
 
   // ---- fetch / EventSource mocks ---------------------------------------
   const posts = []
+  /** Every POST the map makes to dsh-recycle-bin's route. */
+  const recycleCalls = []
   function json(body, status) {
     return Promise.resolve(new Response(JSON.stringify(body), {
       status: status || 200,
@@ -158,10 +181,28 @@
   }
   window.fetch = function (url, init) {
     const path = String(url)
+    if (path.indexOf('dsh-session-recycle-bin/api') >= 0) {
+      let body = null
+      try { body = JSON.parse(init?.body ?? 'null') } catch { body = null }
+      recycleCalls.push(body)
+      const count = Array.isArray(body?.sessionIds) ? body.sessionIds.length : 1
+      return json({ ok: true, trashedCount: count, archivedCount: count, failedCount: 0 })
+    }
     if (init && init.method === 'POST') {
       let body = null
       try { body = JSON.parse(init.body) } catch { body = init.body }
       posts.push({ path, body })
+      // Behave like the real host: persist card writes into the served state, so
+      // a later /talk-map/state read reflects them (the client refreshes on open).
+      if (path.includes('/talk-map/cards/upsert') && body !== null) {
+        Object.assign(payload.cards, body.cards ?? {})
+      }
+      if (path.includes('/talk-map/cards/delete') && body !== null) {
+        for (const id of body.ids ?? []) delete payload.cards[id]
+      }
+      if (path.includes('/talk-map/global') && body !== null && body.global !== undefined) {
+        payload.global = body.global
+      }
       return json({ ok: true })
     }
     if (path.indexOf('/talk-map/state') >= 0) return json(payload)
@@ -211,6 +252,28 @@
       openSession: (id) => log('ui.openSession', id),
       startSession: (workspaceId, options) => log('ui.startSession', { workspaceId, options }),
       forkSession: () => Promise.resolve('s-fork'),
+      // The shipped pin: flipping it must come back through workspaces.list.
+      pinSession: (sessionId) => {
+        log('ui.pinSession', sessionId)
+        if (!pinnedSessionIds.includes(sessionId)) pinnedSessionIds = [...pinnedSessionIds, sessionId]
+        workspacesState = buildWorkspaces()
+        sync()
+        return Promise.resolve({ ok: true })
+      },
+      unpinSession: (sessionId) => {
+        log('ui.unpinSession', sessionId)
+        pinnedSessionIds = pinnedSessionIds.filter(id => id !== sessionId)
+        workspacesState = buildWorkspaces()
+        sync()
+        return Promise.resolve({ ok: true })
+      },
+      archiveSession: (sessionId, options) => {
+        log('ui.archiveSession', { sessionId, options })
+        archivedSessionIds = [...archivedSessionIds, sessionId]
+        workspacesState = buildWorkspaces()
+        sync()
+        return Promise.resolve()
+      },
     },
     // Panel navigation: the map registers a `main` entry and selects it here,
     // exactly like the recycle bin / Plugins page do in the real shell.
@@ -317,6 +380,9 @@
     state: () => payload,
     getRoot: () => root,
     panelState: () => ({ selectedPanel }),
+    /** Every dsh-recycle-bin POST the map made (delete path). */
+    recycleCalls: () => recycleCalls.slice(),
+    pinned: () => pinnedSessionIds.slice(),
     /** What the fake shell's sidebar looks like right now. */
     sidebarState: () => ({
       collapsed: sidebarCollapsed,

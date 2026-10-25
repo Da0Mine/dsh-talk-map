@@ -8,7 +8,6 @@ import { useState } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
 import { talkMapApi } from './api.ts'
 import { canvas } from './canvas-store.ts'
-import { colorOf } from './colors.ts'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
 
@@ -31,7 +30,6 @@ export interface SessionCardData extends Record<string, unknown> {
   updatedAt?: number
   nextStep?: string
   stale?: boolean
-  colorTag?: string
   /** Digest summary, shown as the card body (2-line clamp). */
   summary?: string
   /** Session is blocked on the user (approval / question). */
@@ -40,6 +38,11 @@ export interface SessionCardData extends Record<string, unknown> {
   done?: boolean
   /** The lamp behind the card (running / done / error / waiting). */
   glow?: CardGlow
+  /**
+   * Batch mode: a click on the card body picks it instead of doing nothing.
+   * Absent in normal mode, where React Flow owns what a click means.
+   */
+  onPick?: () => void
 }
 
 export type SessionCardNodeType = Node<SessionCardData, 'sessionCard'>
@@ -77,14 +80,16 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
     }
   }
 
-  const color = colorOf(data.colorTag)
-
   return (
     <div
       className={classNames.filter(Boolean).join(' ')}
-      style={color !== undefined
-        ? { borderColor: color.border, backgroundImage: `linear-gradient(${color.fill}, ${color.fill})` }
-        : {}}
+      onClick={(event) => {
+        if (data.onPick === undefined) return
+        // Batch picking must not double as a canvas/React-Flow selection.
+        event.stopPropagation()
+        data.onPick()
+      }}
+      style={data.onPick !== undefined ? { cursor: 'pointer' } : undefined}
     >
       {/* Four connection points, one per side. All type "source" — the
         * canvas runs ConnectionMode.Loose, so each also accepts incoming
