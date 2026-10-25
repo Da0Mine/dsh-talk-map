@@ -370,6 +370,7 @@ try {
     modes: [...document.querySelectorAll('[role="radio"]')].map(b => b.textContent.trim()),
   }))
   check('预设接口挂掉时模式选择仍在', (draftOffline.modes.length ?? 0) === 2, `${JSON.stringify(draftOffline.modes)} (workspace=${draftOffline.workspace})`)
+  await page.screenshot({ path: path.join(shots, 'probe-draft.png') })
   await page.evaluate(() => window.__harness.setPresetsMode('ok'))
 
   // ---- 7b. right-click paths select the workspace too -------------------
