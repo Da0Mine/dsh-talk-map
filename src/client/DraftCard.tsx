@@ -117,10 +117,12 @@ export function DraftCardNode(props: NodeProps<DraftCardNodeType>): React.JSX.El
   const creatingWorkspace = workspaceId === NEW_WORKSPACE
   const wsParent = newWorkspaceParent(data.workspaceOptions)
   const newWsPath = `${wsParent}/${newWsName.trim()}`
-  // Only offer the modes this deployment actually exposes (a lean composition
-  // may ship neither preset); the generic dropdown stays as the fallback.
-  const availableModes = MODE_IDS.filter(id => presets.some(preset => preset.id === id))
-  const selectedPreset = availableModes.length > 0 ? mode : presetId
+  // Both built-ins are offered unconditionally. The preset RPC is advisory —
+  // it can be empty on a cold boot, or fail outright — and gating the whole
+  // picker on it meant the mode row simply never appeared. Only disable a mode
+  // when the list DID load and provably lacks it.
+  const availableModes = MODE_IDS.filter(id => presets.length === 0 || presets.some(preset => preset.id === id))
+  const selectedPreset = availableModes.includes(mode) ? mode : presetId
   const sendDisabled = busy || text.trim() === '' || (creatingWorkspace && newWsName.trim() === '')
 
   const send = async (): Promise<void> => {

@@ -7,14 +7,12 @@ import type { ConnectionService, LayoutService, SessionsService, UiWorkspaceServ
 
 export interface MapUiState {
   readonly open: boolean
-  /** The panel covers the whole frame (rail and top bar included). */
-  readonly fullscreen: boolean
 }
 
 type Listener = () => void
 
 const listeners = new Set<Listener>()
-let state: MapUiState = { open: false, fullscreen: false }
+let state: MapUiState = { open: false }
 
 function emit(): void {
   for (const listener of listeners) listener()
@@ -40,17 +38,8 @@ export const mapUi = {
    */
   setOpen(open: boolean): void {
     if (state.open === open) return
-    // Leaving the map always drops fullscreen with it.
-    state = { open, fullscreen: open ? state.fullscreen : false }
+    state = { open }
     emit()
-  },
-  setFullscreen(fullscreen: boolean): void {
-    if (state.fullscreen === fullscreen) return
-    state = { ...state, fullscreen }
-    emit()
-  },
-  toggleFullscreen(): void {
-    mapUi.setFullscreen(!state.fullscreen)
   },
   toggle(): void {
     if (state.open) closeMapPanel()

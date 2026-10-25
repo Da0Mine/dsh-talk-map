@@ -138,29 +138,8 @@ try {
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
   await page.waitForTimeout(500)
   check('再次打开地图仍会收起侧栏', (await page.evaluate(() => window.__harness.sidebarState())).collapsed === true)
-
-  // ---- 1c. fullscreen --------------------------------------------------
-  const beforeFullscreen = await page.evaluate(() => {
-    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
-    return { w: Math.round(r.width), h: Math.round(r.height) }
-  })
-  await page.click('[class*="tm_fullscreenButton"]')
-  await page.waitForTimeout(500)
-  const fullscreen = await page.evaluate(() => {
-    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
-    return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height), vw: window.innerWidth, vh: window.innerHeight }
-  })
-  check('全屏铺满整个窗口', fullscreen.x === 0 && fullscreen.y === 0 && Math.abs(fullscreen.w - fullscreen.vw) <= 1 && Math.abs(fullscreen.h - fullscreen.vh) <= 1,
-    `${beforeFullscreen.w}x${beforeFullscreen.h} → ${fullscreen.w}x${fullscreen.h}（窗口 ${fullscreen.vw}x${fullscreen.vh}）`)
-  await page.screenshot({ path: path.join(shots, 'probe-fullscreen.png') })
-  await page.keyboard.press('Escape')
-  await page.waitForTimeout(500)
-  const afterFullscreen = await page.evaluate(() => {
-    const r = document.querySelector('[class*="tm_panel"]').getBoundingClientRect()
-    return { w: Math.round(r.width), stillOpen: window.__harness.panelState().selectedPanel === 'talk-map' }
-  })
-  check('Esc 退出全屏但不关地图', afterFullscreen.stillOpen === true && Math.abs(afterFullscreen.w - beforeFullscreen.w) <= 1,
-    `${fullscreen.w}px → ${afterFullscreen.w}px`)
+  // The fullscreen button was removed on request: the header is back/语言/快捷键/✕.
+  check('全屏按钮已删除', (await page.evaluate(() => document.querySelector('[class*="tm_fullscreenButton"]') === null)))
 
   // ---- 2. grid: no overlap, reading order ------------------------------
   const grid = await page.evaluate(() => {
@@ -378,10 +357,76 @@ try {
   })
   check('双击工作区 = 在该工作区新建对话', draft?.workspace === 'ws-medkit', `workspace=${draft?.workspace}`)
   check('草稿卡有模式选择（标准/创造）', (draft?.modes.length ?? 0) === 2, JSON.stringify(draft?.modes))
-  await page.evaluate(() => {
-    const chip = [...document.querySelectorAll('[role="radio"]')].find(b => b.textContent.includes('创造'))
-    chip?.click()
+
+  // The picker must NOT depend on the preset RPC: on a cold boot that call can
+  // fail, and gating the whole row on it is why the mode row never showed up.
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(250)
+  await page.evaluate(() => window.__harness.setPresetsMode('fail'))
+  await page.mouse.dblclick(clickX, medkit.y + medkit.h - 22)
+  await page.waitForTimeout(500)
+  const draftOffline = await page.evaluate(() => ({
+    workspace: document.querySelector('[class*="tm_draftCard"] select')?.value,
+    modes: [...document.querySelectorAll('[role="radio"]')].map(b => b.textContent.trim()),
+  }))
+  check('预设接口挂掉时模式选择仍在', (draftOffline.modes.length ?? 0) === 2, `${JSON.stringify(draftOffline.modes)} (workspace=${draftOffline.workspace})`)
+  await page.evaluate(() => window.__harness.setPresetsMode('ok'))
+
+  // ---- 7b. right-click paths select the workspace too -------------------
+  const draftWorkspaceNow = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(250)
+  // (a) right-click on the folder's transparent body → pane menu
+  const dailyBox = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-daily']
+  // A point inside the folder that lands on the PANE (not a card, not the
+  // frame's own label/edge strips): scan the box for one.
+  const panePoint = await page.evaluate((box) => {
+    for (let dy = 18; dy < box.h - 6; dy += 6) {
+      for (let dx = 18; dx < box.w - 6; dx += 6) {
+        const x = box.x + dx, y = box.y + dy
+        const hit = document.elementFromPoint(x, y)
+        if (hit !== null && hit.classList.contains('react-flow__pane')) return { x, y }
+      }
+    }
+    return null
+  }, dailyBox)
+  check('文件夹内能找到透明区域（右键落点）', panePoint !== null, JSON.stringify(panePoint))
+  await page.mouse.click(panePoint.x, panePoint.y, { button: 'right' })
+  await page.waitForTimeout(350)
+  const paneMenu = await page.evaluate(() => {
+    const items = [...document.querySelectorAll('[class*="tm_menuItem"], [role="menuitem"]')].map(el => el.textContent.trim())
+    return { items: items.length > 0 ? items : [...document.querySelectorAll('[role="menuitem"]')].map(el => el.textContent.trim()) }
   })
+  const newChatLabel = paneMenu.items.find(text => text.includes('新对话')) ?? ''
+  check('文件夹内右键的“新对话”标出所属工作区', newChatLabel.includes('日常任务'), `菜单项：${JSON.stringify(paneMenu.items.slice(0, 3))} → ${newChatLabel}`)
+  await page.evaluate(() => {
+    const target = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes('新对话'))
+    target?.click()
+  })
+  await page.waitForTimeout(400)
+  const paneDraft = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
+  check('右键新建对话 = 点击处的工作区', paneDraft === 'ws-daily', `workspace=${paneDraft}`)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(250)
+
+  // (b) right-click on the folder's label → frame menu (no pane involved)
+  const label = await page.evaluate(() => {
+    const el = document.querySelector('[data-talkmap-workspace="ws-daily"] [class*="wsFrameLabel"]')
+    const r = el.getBoundingClientRect()
+    return { x: r.x + 30, y: r.y + r.height / 2 }
+  })
+  await page.mouse.click(label.x, label.y, { button: 'right' })
+  await page.waitForTimeout(350)
+  const frameMenu = await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].map(el => el.textContent.trim()))
+  check('工作区标签右键也有“新对话”', frameMenu.some(text => text.includes('新对话')), JSON.stringify(frameMenu))
+  await page.evaluate(() => {
+    const target = [...document.querySelectorAll('[role="menuitem"]')].find(el => el.textContent.includes('新对话'))
+    target?.click()
+  })
+  await page.waitForTimeout(400)
+  const frameDraft = await page.evaluate(() => document.querySelector('[class*="tm_draftCard"] select')?.value)
+  check('标签右键新建对话 = 该工作区', frameDraft === 'ws-daily', `workspace=${frameDraft}（之前 ${draftWorkspaceNow}）`)
+  await page.getByRole('radio', { name: '创造模式' }).click()
   await page.click('[class*="tm_draftTextarea"]')
   await page.keyboard.type('探针：创造模式')
   await page.keyboard.press('Enter')

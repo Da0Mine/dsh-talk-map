@@ -1244,11 +1244,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         })
       }
     } else if (menu.kind === 'pane') {
+      const under = groupAtPoint(menu.flowX, menu.flowY)
+      const underTitle = under === undefined ? undefined : wsTitles.get(under)
       items.push({
         key: 'draft',
-        label: t('menu.newChat'),
+        // Say which workspace it will land in: the menu is opened at a point,
+        // and that point is what decides the workspace.
+        label: underTitle === undefined ? t('menu.newChat') : t('menu.newChatIn', { ws: underTitle }),
         onPick: () => {
-          openDraftAt(menu.flowX, menu.flowY)
+          openDraftAt(menu.flowX, menu.flowY, under)
           close()
         },
       })
@@ -1330,6 +1334,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     } else if (menu.kind === 'frame' && menu.targetId !== undefined) {
       const groupId = menu.targetId
+      title = wsTitles.get(groupId) ?? t('frame.unknown')
+      // Same deal as the double-click: a new chat started from a folder belongs
+      // to that folder's workspace.
+      items.push({
+        key: 'new-chat',
+        label: t('menu.newChat'),
+        onPick: () => {
+          openDraftAt(menu.flowX, menu.flowY, groupId)
+          close()
+        },
+      })
       items.push({
         key: 'sync',
         label: t('menu.syncGroup'),

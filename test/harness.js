@@ -183,6 +183,8 @@
   let selectedPanel = null
   /** The fake shell's sidebar: the map folds it away while it is open. */
   let sidebarCollapsed = false
+  /** Lets the probe simulate a preset RPC that answers nothing (real failure). */
+  let presetsFail = false
   const ctx = {
     sessions: {
       // ctx.sessions.list is itself the list surface (getSnapshot/subscribe).
@@ -198,9 +200,11 @@
       llm: { models: () => Promise.resolve({ result: { ok: true, value: { groups: [
         { id: 'deepseek', name: 'DeepSeek', models: [{ id: 'deepseek-v4-pro', name: 'V4 Pro' }] },
       ] } } }) },
-      agentPresets: { list: () => Promise.resolve({ result: { ok: true, value: { presets: [
-        { id: 'standard', name: '标准模式' }, { id: 'cordis', name: '创造模式' },
-      ] } } }) },
+      agentPresets: { list: () => presetsFail
+        ? Promise.reject(new Error('preset rpc unavailable'))
+        : Promise.resolve({ result: { ok: true, value: { presets: [
+          { id: 'standard', name: '标准模式' }, { id: 'cordis', name: '创造模式' },
+        ] } } }) },
       workspace: { create: () => Promise.resolve({ result: { ok: true, value: { workspace: { workspaceId: 'ws-new' } } } }) },
     } },
     uiWorkspace: {
@@ -325,6 +329,10 @@
       sessionRows[sessionId] = { ...sessionRows[sessionId], updatedAt: Date.now() }
       sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
       sync()
+    },
+    /** 'fail' = the preset RPC rejects (a cold boot / unavailable build). */
+    setPresetsMode(mode) {
+      presetsFail = mode === 'fail'
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }

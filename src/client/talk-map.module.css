@@ -69,15 +69,6 @@
   color: var(--dsw-alias-label-primary);
 }
 
-/* Fullscreen: the panel escapes the centre column and covers the frame (the
- * sidebar rail included). `fixed` keeps the React Flow instance alive, so the
- * viewport and the selection survive the toggle. */
-.panelFullscreen {
-  position: fixed;
-  inset: 0;
-  z-index: 900;
-}
-
 .header {
   display: flex;
   align-items: center;
@@ -177,15 +168,6 @@
   color: var(--dsw-alias-label-primary);
 }
 
-/* Fullscreen toggle: same pill, its own hook for probes and for v2 tweaks. */
-.fullscreenButton {
-  color: var(--dsw-alias-label-primary);
-}
-
-.fullscreenButton[aria-pressed="true"] {
-  border-color: var(--dsw-alias-brand-primary);
-  color: var(--dsw-alias-brand-primary);
-}
 
 .zoomResetLabel {
   font-size: 9px;
