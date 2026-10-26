@@ -641,12 +641,12 @@ var canvas = {
   ensureLoaded() {
     if (state.phase === "loading" || state.phase === "ready") return;
     setState({ phase: "loading", error: void 0 });
-    const timer3 = setTimeout(() => {
+    const timer4 = setTimeout(() => {
       if (state.phase !== "loading") return;
       setState({ phase: "error", error: "timeout" });
     }, 12e3);
     talkMapApi.getState().then((payload) => {
-      clearTimeout(timer3);
+      clearTimeout(timer4);
       setState({
         phase: "ready",
         cards: payload.cards,
@@ -655,7 +655,7 @@ var canvas = {
         global: payload.global
       });
     }).catch((error) => {
-      clearTimeout(timer3);
+      clearTimeout(timer4);
       setState({ phase: "error", error: String(error) });
     });
   },
@@ -10661,6 +10661,59 @@ function cleanPreviewText(text) {
   return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/<\/?[a-z][\w-]*(?:\s[^>]*)?>/gi, " ").replace(/\s+/g, " ").trim();
 }
 
+// src/client/preview-cache.ts
+var STORAGE_KEY2 = "dsh.talk-map.previews.v1";
+var MAX_ENTRIES = 300;
+var cache2 = null;
+var timer3;
+function loadPreviewCache() {
+  if (cache2 !== null) return cache2;
+  if (typeof localStorage === "undefined") {
+    cache2 = {};
+    return cache2;
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY2);
+    const parsed = raw === null ? null : JSON.parse(raw);
+    cache2 = parsed !== null && typeof parsed === "object" ? parsed : {};
+  } catch {
+    cache2 = {};
+  }
+  return cache2;
+}
+function readPreviewTexts() {
+  const out = {};
+  for (const [sessionId, entry] of Object.entries(loadPreviewCache())) {
+    if (typeof entry?.text === "string" && entry.text !== "") out[sessionId] = entry.text;
+  }
+  return out;
+}
+function persist3() {
+  if (typeof localStorage === "undefined" || cache2 === null) return;
+  try {
+    localStorage.setItem(STORAGE_KEY2, JSON.stringify(cache2));
+  } catch {
+    cache2 = {};
+  }
+}
+function scheduleSave() {
+  if (timer3 !== void 0) clearTimeout(timer3);
+  timer3 = setTimeout(() => {
+    timer3 = void 0;
+    persist3();
+  }, 400);
+}
+function putPreview(sessionId, text, stamp) {
+  const store = loadPreviewCache();
+  store[sessionId] = { text, stamp };
+  const keys = Object.keys(store);
+  if (keys.length > MAX_ENTRIES) {
+    const ordered = keys.map((key) => ({ key, stamp: store[key]?.stamp ?? 0 })).sort((a, b) => a.stamp - b.stamp);
+    for (const entry of ordered.slice(0, keys.length - MAX_ENTRIES)) delete store[entry.key];
+  }
+  scheduleSave();
+}
+
 // src/client/ContextMenu.tsx
 var import_react3 = require("react");
 
@@ -11492,15 +11545,17 @@ function CanvasInner(props) {
   const draftSessions = (0, import_react8.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
   (0, import_react8.useEffect)(() => {
     draftWatch.refresh();
-    const timer3 = setInterval(() => {
+    const timer4 = setInterval(() => {
       draftWatch.refresh();
     }, 1500);
     return () => {
-      clearInterval(timer3);
+      clearInterval(timer4);
     };
   }, []);
-  const [previews, setPreviews] = (0, import_react8.useState)({});
-  const previewStamp = (0, import_react8.useRef)(/* @__PURE__ */ new Map());
+  const [previews, setPreviews] = (0, import_react8.useState)(readPreviewTexts);
+  const previewStamp = (0, import_react8.useRef)(
+    new Map(Object.entries(loadPreviewCache()).map(([sessionId, entry]) => [sessionId, entry.stamp]))
+  );
   const { screenToFlowPosition, zoomTo } = useReactFlow();
   const [panMode, setPanMode] = (0, import_react8.useState)(true);
   const [selectedIds, setSelectedIds] = (0, import_react8.useState)(/* @__PURE__ */ new Set());
@@ -11582,16 +11637,19 @@ function CanvasInner(props) {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
           const value = cleanPreviewText(text).slice(0, 240);
-          if (value !== "") cleaned[sessionId] = value;
+          if (value === "") continue;
+          cleaned[sessionId] = value;
+          const stamp = stamps.find(([id2]) => id2 === sessionId)?.[1] ?? 0;
+          putPreview(sessionId, value, stamp);
         }
         setPreviews((previous) => ({ ...previous, ...cleaned }));
       }).catch(() => void 0);
     };
     previewTick.current = tick;
     tick();
-    const timer3 = setInterval(tick, 1500);
+    const timer4 = setInterval(tick, 1500);
     return () => {
-      clearInterval(timer3);
+      clearInterval(timer4);
     };
   }, []);
   (0, import_react8.useEffect)(() => {

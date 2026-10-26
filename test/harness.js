@@ -87,6 +87,8 @@
   // ui-session's projection: s1 still running (white lamp), s3 finished while
   // unwatched (green lamp), s2 blocked on the user (amber lamp).
   let churnTimer
+  /** Artificial latency for the card-body route (proves the local cache path). */
+  let previewDelayMs = Number(new URLSearchParams(location.search).get('slowPreviews') ?? 0) || 0
   let statusById = new Map([
     ['s1', { running: true }],
     ['s3', { completionUnread: true }],
@@ -231,7 +233,10 @@
         for (const sessionId of body?.sessionIds ?? []) {
           texts[sessionId] = userMessages[sessionId] ?? '你最后说的那句话'
         }
-        return json({ texts })
+        if (previewDelayMs <= 0) return json({ texts })
+        return new Promise((resolve) => {
+          setTimeout(() => { resolve(new Response(JSON.stringify({ texts }), { status: 200, headers: { 'content-type': 'application/json' } })) }, previewDelayMs)
+        })
       }
       return json({ ok: true })
     }
@@ -471,6 +476,10 @@
         sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
         sync()
       }, 150)
+    },
+    /** Make the card-body route slow, to prove the local cache paints first. */
+    slowPreviews(ms) {
+      previewDelayMs = ms
     },
     /** Raise the Host's api-session/error for one session (the red lamp). */
     raiseError(sessionId) {

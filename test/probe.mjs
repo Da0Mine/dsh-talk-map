@@ -312,6 +312,34 @@ try {
   await page.evaluate(() => window.__harness.churn(false))
   check('列表高频刷新时正文仍然取到', bodyUnderChurn === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(bodyUnderChurn))
   check('正文在打开地图后 1.5s 内出现', bodyLatency < 1500, `${bodyLatency}ms（poll 等待 ${waited}ms）`)
+  // Cache first: with the route slowed to 2s, a reopen must still paint the body
+  // immediately (it comes from localStorage, not the network).
+  // A reload resets the module (cold memory) but keeps localStorage: that is a
+  // real app restart for the cache's purposes.
+  // The query string slows the body route BEFORE the page boots, so the very
+  // first fetch (which the boot already triggers) is the slow one.
+  // Cache first: the route is slowed to 2s from boot, so anything visible at
+  // ~500ms can only have come from localStorage.
+  await page.goto(page.url().split('?')[0] + '?slowPreviews=2000')
+  await page.waitForTimeout(500)
+  const cachedStart = Date.now()
+  const cachedBody = await page.evaluate(() => {
+    const card = document.querySelector('[data-talkmap-session="s1"]')
+    return card === null ? null : (card.querySelector('[class*="cardSummary"]')?.textContent ?? null)
+  })
+  const cachedLatency = Date.now() - cachedStart
+  // …and the background refresh still lands, for when the cache is cold.
+  await page.waitForTimeout(2200)
+  const refreshedBody = await page.evaluate(() => {
+    const card = document.querySelector('[data-talkmap-session="s1"]')
+    return card === null ? null : (card.querySelector('[class*="cardSummary"]')?.textContent ?? null)
+  })
+  check('正文来自本地缓存：接口慢到 2s 也立刻显示',
+    cachedBody === '把卡片改成网格槽位，含退让与补位动画',
+    JSON.stringify(cachedBody) + ' / ' + String(cachedLatency) + 'ms')
+  check('缓存之外的后台刷新仍然生效',
+    refreshedBody === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(refreshedBody))
+
   check('卡片上不再有「下一步」那一行',
     await page.evaluate(() => document.querySelectorAll('[class*="cardNext"]').length === 0))
 

@@ -30,6 +30,7 @@ import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
 import { cleanPreviewText } from './preview-text.ts'
+import { loadPreviewCache, putPreview, readPreviewTexts } from './preview-cache.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
@@ -166,8 +167,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // Card bodies: the user's last message, fetched from the Host's session
   // surface (the LLM digest is no longer shown). One batched request per change
   // of "which sessions advanced", debounced so a burst of updates costs one.
-  const [previews, setPreviews] = useState<Record<string, string>>({})
-  const previewStamp = useRef<Map<string, number>>(new Map())
+  // First paint comes from the cache; the network only tops it up.
+  const [previews, setPreviews] = useState<Record<string, string>>(readPreviewTexts)
+  const previewStamp = useRef<Map<string, number>>(
+    new Map(Object.entries(loadPreviewCache()).map(([sessionId, entry]) => [sessionId, entry.stamp])),
+  )
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [panMode, setPanMode] = useState(true)
@@ -291,7 +295,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           const cleaned: Record<string, string> = {}
           for (const [sessionId, text] of Object.entries(texts)) {
             const value = cleanPreviewText(text).slice(0, 240)
-            if (value !== '') cleaned[sessionId] = value
+            if (value === '') continue
+            cleaned[sessionId] = value
+            const stamp = stamps.find(([id]) => id === sessionId)?.[1] ?? 0
+            // Written through to the cache, so the next open paints instantly.
+            putPreview(sessionId, value, stamp)
           }
           setPreviews(previous => ({ ...previous, ...cleaned }))
         })
