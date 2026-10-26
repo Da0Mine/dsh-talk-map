@@ -99,6 +99,16 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   （原生 non-passive 监听 + `scrollBy` + `scroll-snap`），点卡片进对话，Esc / 点背景 / ✕ 收起；
 - 折叠的卡只是 `hidden` 节点：连线、选中、位置都还在，把文件夹拉大就自动回到网格。
 
+### 2b2. 「待发送」灰标
+
+对话的输入框里还有没发出去的文字时，卡片（和抽屉里的同一张）右下角多一枚**灰色**胶囊
+「待发送」，和状态胶囊并存。
+
+数据来源：宿主把每个会话的草稿持久化在 `localStorage["dsh.conversation.<sessionId>"]`
+（`{ draft: string | { text, references }, view }`），没有对应的 client service 或投影，
+所以 `src/client/draft-watch.ts` 直接读同一份存储；同一文档内的写入不会触发 `storage`
+事件，于是面板开着时每 1.5 秒重读一次（内容没变不 publish）。清空/发出后灰标自动消失。
+
 ### 2c. 灯：运行中"流光"，其余"呼吸"
 
 `talk-map.module.css`：

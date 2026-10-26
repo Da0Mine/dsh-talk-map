@@ -71,6 +71,8 @@ export interface SessionCardData extends Record<string, unknown> {
    * Absent in normal mode, where React Flow owns what a click means.
    */
   onPick?: () => void
+  /** The composer holds unsent text for this conversation ("待发送"). */
+  pendingDraft?: boolean
 }
 
 export type SessionCardNodeType = Node<SessionCardData, 'sessionCard'>
@@ -187,6 +189,17 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
           )}
       <div className={styles['cardFooter']}>
         <span className={styles['cardTime']}>{relativeTime(data.updatedAt)}</span>
+        {data.pendingDraft === true
+          ? (
+              <span
+                className={`${styles['cardChip']} ${styles['cardChipDraft']}`}
+                title={t('card.draftHint')}
+                data-talkmap-draft="1"
+              >
+                {t('card.draft')}
+              </span>
+            )
+          : null}
         {statusChip(data.glow, data.running === true)}
       </div>      <Handle id="r" type="source" position={Position.Right} className={styles['cardHandle'] ?? ''} />
       <Handle id="b" type="source" position={Position.Bottom} className={styles['cardHandle'] ?? ''} />

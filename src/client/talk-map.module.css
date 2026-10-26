@@ -322,6 +322,14 @@
   border-color: rgba(242, 78, 78, 0.45);
 }
 
+/* Unsent composer text: deliberately neutral grey — a note, not a state the
+ * user has to react to. */
+.cardChipDraft {
+  color: var(--dsw-alias-label-secondary);
+  background: rgba(125, 130, 141, 0.18);
+  border-color: rgba(125, 130, 141, 0.42);
+}
+
 .cardSummary {
   font-size: 12px;
   line-height: 1.45;

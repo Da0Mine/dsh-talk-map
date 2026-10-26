@@ -40,6 +40,8 @@ export interface StackEntry {
   updatedAt?: number
   running?: boolean
   glow?: CardGlow
+  /** Unsent text sits in this conversation's composer. */
+  pendingDraft?: boolean
 }
 
 export interface StackDrawerProps {
@@ -133,6 +135,17 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   : null}
                 <div className={styles['cardFooter']}>
                   <span className={styles['cardTime']}>{relativeTime(item.updatedAt)}</span>
+                  {item.pendingDraft === true
+                    ? (
+                        <span
+                          className={`${styles['cardChip']} ${styles['cardChipDraft']}`}
+                          title={t('card.draftHint')}
+                          data-talkmap-draft="1"
+                        >
+                          {t('card.draft')}
+                        </span>
+                      )
+                    : null}
                   {item.glow === undefined
                     ? null
                     : (

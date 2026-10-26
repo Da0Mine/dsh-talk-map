@@ -28,6 +28,7 @@ import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, uiWo
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
+import { draftWatch } from './draft-watch.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
@@ -142,6 +143,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   useEffect(() => {
     sessionActivity.observe(statusById, sessions.byId)
   }, [statusById, sessions])
+  // Sessions whose composer holds unsent text — read from the shell's own
+  // conversation store in localStorage (there is no service for it).
+  const draftSessions = useSyncExternalStore(draftWatch.subscribe, draftWatch.getSnapshot)
+  useEffect(() => {
+    draftWatch.refresh()
+    // Same-document storage writes fire no event, so while the panel is up we
+    // just re-read the store; refresh() publishes only on a real change.
+    const timer = setInterval(() => { draftWatch.refresh() }, 1500)
+    return () => { clearInterval(timer) }
+  }, [])
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [panMode, setPanMode] = useState(true)
@@ -689,6 +700,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
           glow: glowOf(card.sessionId),
+          ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
         }
         return {
           id: cardId,
@@ -737,7 +749,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, draftSessions, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1104,6 +1116,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
         ...(glow !== undefined ? { glow } : {}),
+        ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
       })
     }
     return items

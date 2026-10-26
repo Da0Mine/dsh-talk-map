@@ -221,6 +221,32 @@ try {
   check('异常终止 → 文字「异常终止」红色',
     afterError.s2?.text === '异常终止' && /242, 78, 78/.test(afterError.s2?.color ?? ''), JSON.stringify(afterError.s2))
 
+  // ---- 3d. unsent composer text → grey "待发送" badge -------------------
+  // The shell persists per-session drafts in localStorage; the map reads the same
+  // store (see draft-watch.ts) and polls it while the panel is open.
+  const draftSession = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  await page.evaluate((id) => {
+    localStorage.setItem('dsh.conversation.' + id, JSON.stringify({ draft: '还没发出去的一句话', view: null }))
+  }, draftSession)
+  await page.waitForTimeout(2200)
+  const draftBadge = await page.evaluate((id) => {
+    const badge = document.querySelector('[data-talkmap-session="' + id + '"] [data-talkmap-draft]')
+    return badge === null ? null : { text: badge.textContent.trim(), color: getComputedStyle(badge).color }
+  }, draftSession)
+  check('输入框有未发送文字 → 卡片带灰标「待发送」',
+    draftBadge?.text === '待发送', `${JSON.stringify(draftBadge)} for ${draftSession}`)
+  await page.evaluate((id) => { localStorage.removeItem('dsh.conversation.' + id) }, draftSession)
+  await page.waitForTimeout(2200)
+  check('发出去/清空后灰标消失',
+    await page.evaluate(() => document.querySelector('[data-talkmap-draft]') === null))
+
   // ---- 3c. a brand-new conversation takes the head of its folder -------
   await page.evaluate(() => window.__harness.addSession('ws-daily', 's11', '刚刚新建的对话'))
   await page.click('[class*="tm_backButton"]')
