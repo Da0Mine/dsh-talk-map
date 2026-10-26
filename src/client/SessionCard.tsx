@@ -150,8 +150,10 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
         {data.pinned === true
           ? (
               <span className={styles['cardPin']} title={t('card.pinned')} aria-label={t('card.pinned')} data-talkmap-pin="1">
+                {/* Upright pushpin: round head, tapered body, needle down. */}
                 <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-                  <path fill="currentColor" d="M9.6 1.2a1 1 0 0 1 1.4 0l3.8 3.8a1 1 0 0 1-.3 1.6l-2 .8-3.4 3.4.3 2.3a1 1 0 0 1-1.7.9L4.6 11 1 14.6 1.4 15 5 11.4l-.9-.9-3.1-3.1a1 1 0 0 1 .9-1.7l2.3.3L8.2 2.5l.8-2a1 1 0 0 1 .6-.3z" />
+                  <path fill="currentColor" d="M8 1a3.2 3.2 0 0 0-3.2 3.2c0 1.3.7 2.3 1.6 3l-.5 3.6a.85.85 0 0 0 .85.95h2.5a.85.85 0 0 0 .85-.95l-.5-3.6c.9-.7 1.6-1.7 1.6-3A3.2 3.2 0 0 0 8 1Z" />
+                  <path fill="currentColor" d="M7.3 11.9h1.4v2.5a.7.7 0 0 1-1.4 0Z" />
                 </svg>
               </span>
             )
