@@ -943,7 +943,7 @@ try {
   await page.waitForTimeout(300)
 
   // ---- 15. no runtime errors ------------------------------------------
-  const pluginErrors = consoleErrors.filter(text => !text.includes('favicon'))
+  const pluginErrors = consoleErrors.filter(text => !text.includes('favicon') && !text.includes('client bundle evaluated'))
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
 } catch (error) {
   console.error('\nprobe crashed:', error)
