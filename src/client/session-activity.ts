@@ -129,6 +129,17 @@ export const sessionActivity = {
       publish()
     }
   },
+  /**
+   * "Mark as unread" from the context menu: the exact state the map computes when
+   * a run finishes unwatched, and cleared the same way (open the conversation).
+   */
+  markFinished(sessionId: string): void {
+    hydrated.delete(sessionId)
+    if (finished.has(sessionId)) return
+    finished.add(sessionId)
+    persist()
+    publish()
+  },
   /** The user is looking at it now: stop advertising it as unread/interrupted. */
   acknowledge(sessionId: string): void {
     hydrated.delete(sessionId)

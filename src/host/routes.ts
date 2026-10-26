@@ -46,6 +46,27 @@ function textOfBlocks(content: unknown): string {
     .trim()
 }
 
+/**
+ * What the human actually typed.
+ *
+ * A "user message" as the model sees it also carries per-turn envelopes the
+ * runtime appends: the sampling remark, `<system-reminder>` blocks (skill catalog
+ * changes), the runtime-memory snapshot, and the "Current runtime context"
+ * footer. Showing those on a card is noise, so they are stripped here; a message
+ * that is nothing BUT envelope becomes empty and the caller walks back in time.
+ */
+function stripEnvelopes(text: string): string {
+  let out = text
+  out = out.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, ' ')
+  out = out.replace(/<available_skills>[\s\S]*?<\/available_skills>/gi, ' ')
+  out = out.replace(/<runtime-memory-file[^>]*>[\s\S]*?<\/runtime-memory-file>/gi, ' ')
+  out = out.replace(/^\[?Time sampled while preparing[^\n]*$/gim, ' ')
+  out = out.replace(/^\s*MNEMON RUNTIME MEMORY SNAPSHOT[\s\S]*$/i, ' ')
+  out = out.replace(/^\s*MNEMON VIEW TOOLS[\s\S]*$/im, ' ')
+  out = out.replace(/^\s*Current runtime context\.[\s\S]*$/im, ' ')
+  return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+}
+
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body)
   response.writeHead(status, {
@@ -326,8 +347,10 @@ export function mountTalkMapRoutes(
                   if (event.type !== 'user/message') continue
                   // Tool results ride in as role "user"; they are not messages.
                   if (event.data?.source?.kind === 'tool') continue
-                  const joined = textOfBlocks(event.data?.content)
-                  if (joined !== '') text = joined
+                  const cleaned = stripEnvelopes(textOfBlocks(event.data?.content))
+                  // Envelope-only turns (a sampling remark, a memory refresh) are
+                  // skipped — the card keeps the last thing a human wrote.
+                  if (cleaned !== '') text = cleaned
                 }
                 if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text
               } catch {

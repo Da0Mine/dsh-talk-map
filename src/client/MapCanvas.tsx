@@ -24,7 +24,7 @@ import type { Card, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
-import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
+import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
@@ -738,6 +738,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           glow: glowOf(card.sessionId),
           ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
           ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
+          ...(currentSessionId() === card.sessionId ? { current: true } : {}),
         }
         return {
           id: cardId,
@@ -1495,14 +1496,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const cardId = menu.targetId
       const card = canvasState.cards[cardId]
       const isPinned = card !== undefined && pinnedSessions.has(card.sessionId)
-      items.push({
-        key: 'open',
-        label: t('menu.open'),
-        onPick: () => {
-          close()
-          if (card !== undefined) openSession(card.sessionId)
-        },
-      })
+      // "打开对话" lives on the card itself (single click) and "从地图移除" is
+      // covered by 删除/归档 — neither needs a menu entry.
       // The shipped pin: flipping it here flips it in the sidebar too, and the
       // folder layout keeps pinned cards in front.
       items.push({
@@ -1511,6 +1506,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         onPick: () => {
           close()
           togglePin(cardId)
+        },
+      })
+      // Mark it unread by hand: exactly the "finished, nobody looked" state the
+      // map computes on its own, cleared the same way (open the conversation).
+      items.push({
+        key: 'unread',
+        label: t('menu.markUnread'),
+        onPick: () => {
+          close()
+          if (card !== undefined) sessionActivity.markFinished(card.sessionId)
         },
       })
       items.push({
@@ -1537,16 +1542,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           // Batch mode: the picked card is the first member of the batch.
           setBatchMode(true)
           setBatchPicks(new Set([cardId]))
-        },
-      })
-      // The digest refresh entry went with the summary: the card body is now the
-      // user's own last message, which no one needs to "regenerate".
-      items.push({
-        key: 'remove',
-        label: t('menu.removeCard'),
-        onPick: () => {
-          canvas.removeCard(cardId)
-          close()
         },
       })
     } else if (menu.kind === 'edge' && menu.targetId !== undefined

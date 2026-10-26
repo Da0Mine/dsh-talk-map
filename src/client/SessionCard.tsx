@@ -73,6 +73,8 @@ export interface SessionCardData extends Record<string, unknown> {
   pendingDraft?: boolean
   /** The last run was cut off (the app closed while it was running). */
   interrupted?: boolean
+  /** This is the conversation the map was opened from. */
+  current?: boolean
 }
 
 export type SessionCardNodeType = Node<SessionCardData, 'sessionCard'>
@@ -98,7 +100,8 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
   if (data.glow !== undefined) classNames.push(styles[LAMP_CLASS[data.glow]] ?? '')
   // A card with nothing to report recedes; hovering brings it back. Any status
   // (lamp, unsent text, interrupted run) keeps it at full strength.
-  const quiet = data.glow === undefined && data.pendingDraft !== true && data.interrupted !== true
+  if (data.current === true) classNames.push(styles['cardCurrent'] ?? '')
+  const quiet = data.current !== true && data.glow === undefined && data.pendingDraft !== true && data.interrupted !== true
   if (quiet) classNames.push(styles['cardQuiet'] ?? '')
 
   return (

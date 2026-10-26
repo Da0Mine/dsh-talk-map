@@ -139,6 +139,10 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 - 数据来源：宿主侧的 `POST /talk-map/last-user`（`{sessionIds}` → `{texts}`），直接读会话
   表面里的 `user/message`（跳过 `source.kind === 'tool'` 的工具结果，最后一条胜出），
   不花钱、不等模型；
+- **先剥掉每轮注入的信封**：模型看到的"用户消息"里还挂着 `Time sampled …`、
+  `<system-reminder>`（技能目录变更）、`MNEMON RUNTIME MEMORY SNAPSHOT`、
+  `<runtime-memory-file>`、`Current runtime context.…` 这些尾巴——`stripEnvelopes()`
+  把它们去掉；整条只有信封的轮次会变成空串，于是往前找上一条真人写的话；
 - 客户端按"哪些会话的 `updatedAt` 变了"批量取一次，800ms 防抖，面板开着时才请求；
 - 摘要管线本身还在宿主里跑（`nextStep`/「下一步」那条还靠它），只是不再上卡片。
 
@@ -206,6 +210,22 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 改的是 `wsColors[workspaceId]`，只渲染在**边框 + 标题栏**上——**文件夹内部的填充区域
 不跟着变色**（内部始终保持画布底色，颜色不会洗到卡片上）。选别的对象或按 Esc 取消选中，
 工具条随之消失。
+
+### 3f. 当前对话的卡片有轮廓
+
+打开地图时，**你原来所在的那个对话**的卡片加一圈蓝色 `outline`（`outline-offset: 2px`，
+不碰 `box-shadow`，所以和任何灯/粒子都不打架），并且不参与"无状态压暗"。
+
+会话 id 来自宿主持久化的 `localStorage["dsh.sessions.current"]`（`openMapPanel()` 在
+切面板**之前**先记一份，`currentSessionId()` 每次渲染再实时读一次兜底——面板选中后这个键可能被改写）。
+
+### 3g. 右键：标为未读
+
+卡片右键多一项「标为未读」，效果和"跑完没人看"完全一样（绿光 + 待查看胶囊），
+数据走 `sessionActivity.markFinished()`，同样落盘、同样在点开对话时清除。
+
+同时**删掉了**右键菜单里的「打开对话」（左键单击已经能开）和「从地图移除」
+（删除会话/归档已覆盖）。
 
 ### 3e. 标题栏盖过顶边把手
 

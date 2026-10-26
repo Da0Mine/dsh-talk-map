@@ -468,6 +468,39 @@ try {
   check('返回按钮回到对话', await page.evaluate(() => document.querySelector('[data-harness-placeholder]') !== null))
   await openMap()
 
+  // ---- 5b. the tab you came from stays marked --------------------------
+  // The shell persists the open conversation under `dsh.sessions.current`; the
+  // map reads it the moment it takes over the centre column.
+  // Pick a card that is on the grid right now (folded ones are not in the DOM).
+  const markedSession = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined && item.r.width > 10)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(300)
+  await page.evaluate((sessionId) => {
+    localStorage.setItem('dsh.sessions.current', JSON.stringify({ sessionId }))
+  }, markedSession)
+  await openMap()
+  await page.waitForTimeout(600)
+  const currentCard = await page.evaluate(() => {
+    const marked = [...document.querySelectorAll('[data-talkmap-session]')]
+      .filter(node => node.className.includes('tm_cardCurrent'))
+      .map(node => node.getAttribute('data-talkmap-session'))
+    return marked
+  })
+  check('打开地图前所在的那个对话被标成当前',
+    currentCard.includes(markedSession), `${JSON.stringify(currentCard)} vs ${markedSession}`)
+  check('当前卡片不压暗', await page.evaluate(() => {
+    const node = [...document.querySelectorAll('[data-talkmap-session]')]
+      .find(item => item.className.includes('tm_cardCurrent'))
+    return node !== undefined && Number(getComputedStyle(node).opacity) === 1
+  }))
+
   // ---- 6. activity promotes -------------------------------------------
   const orderOf = (sessionIds) => page.evaluate((ids) => {
     const state = window.__harness.state()
@@ -631,8 +664,11 @@ try {
   await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })
   await page.waitForTimeout(400)
   const cardMenu = await menuItems()
-  check('右键菜单含置顶/归档/删除/批量',
-    ['置顶', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
+  check('右键菜单含置顶/标为未读/归档/删除/批量',
+    ['置顶', '标为未读', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
+    JSON.stringify(cardMenu))
+  check('右键菜单不再有「打开对话」「从地图移除」',
+    !cardMenu.some(text => text.includes('打开对话') || text.includes('从地图移除')),
     JSON.stringify(cardMenu))
   await clickMenuItem('置顶')
   const pinLog = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.pinSession').at(-1))
@@ -697,6 +733,29 @@ try {
   const batchCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
   check('批量删除一次提交 trashMany', batchCall?.action === 'trashMany' && (batchCall?.sessionIds?.length ?? 0) === 2, JSON.stringify(batchCall))
   check('批量删除后退出批量模式', await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') === null))
+
+  // ---- 11b. 标为未读 ---------------------------------------------------
+  const unreadPoint = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined && item.r.width > 10)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined
+      ? null
+      : { sessionId: state.cards[entry.id].sessionId, x: entry.r.x + 40, y: entry.r.y + 12 }
+  })
+  await page.mouse.click(unreadPoint.x, unreadPoint.y, { button: 'right' })
+  await page.waitForTimeout(350)
+  await clickMenuItem('标为未读')
+  await page.waitForTimeout(600)
+  const markedUnread = await page.evaluate((sessionId) => {
+    const chip = document.querySelector('[data-talkmap-session="' + sessionId + '"] [data-talkmap-chip]')
+    return chip === null ? null : { kind: chip.getAttribute('data-talkmap-chip'), text: chip.textContent.trim() }
+  }, unreadPoint.sessionId)
+  check('右键「标为未读」→ 卡片变成待查看（绿）',
+    markedUnread?.kind === 'done' && markedUnread.text === '待查看',
+    `${JSON.stringify(markedUnread)} for ${unreadPoint.sessionId}`)
 
   // ---- 12. single click opens the conversation ------------------------
   // Click whatever card is currently first on the board — by this point the

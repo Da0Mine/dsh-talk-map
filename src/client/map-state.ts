@@ -151,7 +151,45 @@ function resolveLayout(current: MapServices): LayoutService | undefined {
  * The shell keeps the current Session as the *previous* view, so a session that
  * finishes while the map is up still counts as unread and can glow.
  */
+/**
+ * The session the user was looking at, captured the moment the map takes over the
+ * centre column. The shell persists it under `dsh.sessions.current`, but it may
+ * be rewritten once a panel is selected, so read it BEFORE selecting the panel.
+ */
+let lastCurrentSessionId: string | undefined
+
+function readCurrentSessionId(): string | undefined {
+  if (typeof localStorage === 'undefined') return undefined
+  try {
+    const raw = localStorage.getItem('dsh.sessions.current')
+    if (raw === null || raw === '') return undefined
+    const trimmed = raw.trim()
+    if (trimmed.startsWith('{')) {
+      const parsed = JSON.parse(trimmed) as { sessionId?: unknown; id?: unknown }
+      const value = parsed.sessionId ?? parsed.id
+      return typeof value === 'string' && value !== '' ? value : undefined
+    }
+    const bare = trimmed.replace(/^"|"$/g, '')
+    return bare === '' || bare === 'null' ? undefined : bare
+  } catch {
+    return undefined
+  }
+}
+
+/** The card that should render as "the tab you came from" (may be undefined). */
+export function currentSessionId(): string | undefined {
+  // Live read first: the shell keeps this current. The captured value is only a
+  // fallback for the moment when selecting a panel clears it.
+  const live = readCurrentSessionId()
+  if (live !== undefined) {
+    lastCurrentSessionId = live
+    return live
+  }
+  return lastCurrentSessionId
+}
+
 export function openMapPanel(): void {
+  lastCurrentSessionId = readCurrentSessionId()
   const current = getServices()
   const layout = current === undefined ? undefined : resolveLayout(current)
   if (layout === undefined) {

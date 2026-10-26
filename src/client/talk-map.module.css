@@ -420,6 +420,13 @@
   }
 }
 
+/* The conversation the map was opened from: an outline, so it composes with
+ * whatever lamp (box-shadow) the card already has. */
+.cardCurrent {
+  outline: 1.5px solid rgba(107, 146, 255, 0.9);
+  outline-offset: 2px;
+}
+
 /* Nothing to report? The card recedes until you point at it. */
 .cardQuiet {
   opacity: 0.62;
