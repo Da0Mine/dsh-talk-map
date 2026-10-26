@@ -56,50 +56,14 @@ function textOfBlocks(content: unknown): string {
  * no human text and is skipped whole; everything else keeps its body with only
  * the trailing envelope blocks removed.
  */
-const ENVELOPE_MARKERS: readonly RegExp[] = [
-  /^\[?time sampled while preparing/i,
-  /^current runtime context\./i,
-  /^<system-reminder>/i,
-  /^<available_skills>/i,
-  /^<runtime-memory-file/i,
-  /^mnemon runtime memory snapshot/i,
-  /^browser time zone for this request/i,
-  // Shapes found by scanning every stored session (2026-10-26):
-  /^\[[a-z][^\]]{0,200}\]/i,          // [MNEMON] …, [model changed: …], [dsh-mnemon: …]
-  /^this is an automatically generated checkpoint/i,
-  /^the approval policy changed/i,
-  /^\(empty message\)/i,
-  /^elapsed since the preceding/i,
-  // Subagent checkpoints are machine-authored prompts, not something a person typed.
-  /^\[dsh-mnemon:/i,
-]
-
-function isEnvelopeOnly(text: string): boolean {
-  const firstLine = text.split('\n').map(line => line.trim()).find(line => line !== '') ?? ''
-  return ENVELOPE_MARKERS.some(marker => marker.test(firstLine))
+/** Only messages the human sent; the runtime tags its own injections. */
+export interface MessageSource {
+  readonly kind?: string
 }
 
-function stripEnvelopes(text: string): string {
-  let out = text
-  out = out.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, ' ')
-  out = out.replace(/<available_skills>[\s\S]*?<\/available_skills>/gi, ' ')
-  out = out.replace(/<runtime-memory-file[^>]*>[\s\S]*?<\/runtime-memory-file>/gi, ' ')
-  out = out.replace(/^\[?Time sampled while preparing[^\n]*$/gim, ' ')
-  out = out.replace(/^Elapsed since the preceding[^\n]*$/gim, ' ')
-  out = out.replace(/^Browser time zone for this request[^\n]*$/gim, ' ')
-  out = out.replace(/^\s*MNEMON RUNTIME MEMORY SNAPSHOT[\s\S]*$/im, ' ')
-  out = out.replace(/^\s*MNEMON VIEW TOOLS[\s\S]*$/im, ' ')
-  out = out.replace(/^\s*Current runtime context\.[\s\S]*$/im, ' ')
-  out = out.replace(/^\s*Current working directory:[^\n]*$/gim, ' ')
-  out = out.replace(/^\s*Current DSH file policy:[^\n]*$/gim, ' ')
-  out = out.replace(/^\s*Approval prompts are disabled[^\n]*$/gim, ' ')
-  out = out.replace(/^\s*Current DeepSeek Harness[^\n]*$/gim, ' ')
-  out = out.replace(/^\[[a-z][^\]]{0,200}\]/i, ' ')
-  out = out.replace(/^This is an automatically generated checkpoint[\s\S]*$/im, ' ')
-  out = out.replace(/^The approval policy changed[\s\S]*$/im, ' ')
-  out = out.replace(/^\[model changed:[\s\S]*$/im, ' ')
-  out = out.replace(/^\s*The available skill catalog changed[\s\S]*$/im, ' ')
-  return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+function isHumanMessage(source: MessageSource | undefined): boolean {
+  const kind = source?.kind
+  return kind === undefined || kind === 'user'
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -379,16 +343,14 @@ export function mountTalkMapRoutes(
                 const surface = await query.readSurface(sessionId)
                 let text = ''
                 for (const raw of surface.events) {
-                  const event = raw as { type?: string; data?: { source?: { kind?: string }; content?: unknown } }
+                  const event = raw as { type?: string; data?: { source?: MessageSource; content?: unknown } }
                   if (event.type !== 'user/message') continue
-                  // Tool results ride in as role "user"; they are not messages.
-                  if (event.data?.source?.kind === 'tool') continue
+                  // Only what the human sent: the runtime tags everything it
+                  // injects with its own `source.kind` (runtime-context,
+                  // time-context, dsh-mnemon, skill-catalog, …).
+                  if (!isHumanMessage(event.data?.source)) continue
                   const body = textOfBlocks(event.data?.content)
-                  // Envelope-only turns (their own sampling remark, a runtime
-                  // context block) carry no human text: skip and keep looking.
-                  if (isEnvelopeOnly(body)) continue
-                  const cleaned = stripEnvelopes(body)
-                  if (cleaned !== '') text = cleaned
+                  if (body !== '') text = body
                 }
                 if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text
               } catch {

@@ -10620,55 +10620,9 @@ var draftWatch = {
 };
 
 // src/client/preview-text.ts
-var LEADING_MARKERS = [
-  /^\[?time sampled while preparing/i,
-  /^current runtime context\./i,
-  /^<system-reminder>/i,
-  /^<available_skills>/i,
-  /^<runtime-memory-file/i,
-  /^mnemon runtime memory snapshot/i,
-  /^browser time zone for this request/i,
-  // Shapes found by scanning every stored session (2026-10-26):
-  /^\[[a-z][^\]]{0,200}\]/i,
-  // [MNEMON] …, [model changed: …], [dsh-mnemon: …]
-  /^this is an automatically generated checkpoint/i,
-  /^the approval policy changed/i,
-  /^\(empty message\)/i,
-  /^elapsed since the preceding/i,
-  // Subagent checkpoints are machine-authored prompts, not something a person typed.
-  /^\[dsh-mnemon:/i
-];
-var PATTERNS = [
-  [/<system-reminder>[\s\S]*?<\/system-reminder>/gi, " "],
-  [/<available_skills>[\s\S]*?<\/available_skills>/gi, " "],
-  [/<runtime-memory-file[^>]*>[\s\S]*?<\/runtime-memory-file>/gi, " "],
-  [/^\[?Time sampled while preparing[^\n]*$/gim, " "],
-  [/^Elapsed since the preceding[^\n]*$/gim, " "],
-  [/^Browser time zone for this request[^\n]*$/gim, " "],
-  [/^\s*MNEMON RUNTIME MEMORY SNAPSHOT[\s\S]*$/im, " "],
-  [/^\s*MNEMON VIEW TOOLS[\s\S]*$/im, " "],
-  [/^\s*Current runtime context\.[\s\S]*$/im, " "],
-  [/^\s*Current working directory:[^\n]*$/gim, " "],
-  [/^\s*Current DSH file policy:[^\n]*$/gim, " "],
-  [/^\s*Approval prompts are disabled[^\n]*$/gim, " "],
-  [/^\s*Current DeepSeek Harness implementation checkout:[^\n]*$/gim, " "],
-  [/^\s*Current DeepSeek Harness Web GUI URL:[^\n]*$/gim, " "],
-  [/^\[[a-z][^\]]{0,200}\]/i, " "],
-  [/^This is an automatically generated checkpoint[\s\S]*$/im, " "],
-  [/^The approval policy changed[\s\S]*$/im, " "],
-  [/^\[model changed:[\s\S]*$/im, " "],
-  [/^\s*The available skill catalog changed[\s\S]*$/im, " "]
-];
-function isEnvelopeOnly(text) {
-  const firstLine = text.split("\n").map((line) => line.trim()).find((line) => line !== "") ?? "";
-  return LEADING_MARKERS.some((marker) => marker.test(firstLine));
-}
 function cleanPreviewText(text) {
   if (text === void 0) return "";
-  if (isEnvelopeOnly(text)) return "";
-  let out = text;
-  for (const [pattern, replacement] of PATTERNS) out = out.replace(pattern, replacement);
-  return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/<\/?[a-z][\w-]*(?:\s[^>]*)?>/gi, " ").replace(/\s+/g, " ").trim();
+  return text.replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/[ \t]+/g, " ").trim();
 }
 
 // src/client/preview-cache.ts

@@ -6,7 +6,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import zlib from 'node:zlib'
-import { cleanPreviewText, isEnvelopeOnly } from '../src/client/preview-text.ts'
+import { cleanPreviewText, isHumanMessage } from '../src/client/preview-text.ts'
 
 const root = process.argv[2]
 const MAGIC = [0x28, 0xb5, 0x2f, 0xfd]
@@ -34,13 +34,15 @@ for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
   const file = path.join(root, dir.name, 'session.v4.jsonl.zstd')
   if (!fs.existsSync(file)) continue
   const messages = []
+  let origin
   for (const line of readFrames(file).split('\n')) {
     if (line.trim() === '') continue
     let record
     try { record = JSON.parse(line) } catch { continue }
+    if (record?.type === 'session') { origin = record.origin; continue }
     if (record?.type !== 'user/message') continue
     const message = record.data ?? {}
-    if ((message.source?.kind ?? 'user') === 'tool') continue
+    if (!isHumanMessage(message.source)) continue
     const body = (Array.isArray(message.content) ? message.content : [])
       .filter(block => block?.type === 'text' && typeof block.text === 'string')
       .map(block => block.text).join('\n').trim()
@@ -48,10 +50,10 @@ for (const dir of fs.readdirSync(root, { withFileTypes: true })) {
   }
   let preview = ''
   for (const body of messages) {
-    if (isEnvelopeOnly(body)) continue
     const cleaned = cleanPreviewText(body)
     if (cleaned !== '') preview = cleaned
   }
+  if (origin === 'subagent') continue   // delegated prompts are machine-authored
   total += 1
   if (preview !== '' && samples < 8) { samples += 1; console.log('OK     ', dir.name.slice(0, 12), JSON.stringify(preview.slice(0, 60))) }
   if (preview !== '' && SUSPECT.test(preview)) {

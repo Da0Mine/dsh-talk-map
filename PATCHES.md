@@ -139,30 +139,16 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 - 数据来源：宿主侧的 `POST /talk-map/last-user`（`{sessionIds}` → `{texts}`），直接读会话
   表面里的 `user/message`（跳过 `source.kind === 'tool'` 的工具结果，最后一条胜出），
   不花钱、不等模型；
-- **先剥掉每轮注入的信封**：真实日志里宿主把这些信封当成**独立的用户消息**追加在真人消息
-  后面（`Time sampled while preparing…` 一条、`Current runtime context.…` 一条），所以规则是：
-  **以信封开头的整条消息直接跳过**（`isEnvelopeOnly`；真人消息以别的内容开头，不会误杀），
-  其余消息只剥尾部的信封块；整条只剩信封的轮次变空，于是往前找上一条真人写的话；
-- 已收录的信封标记（按真实会话全量扫描整理，169 个会话普查后残留 0）：
-  `Time sampled while preparing` / `Elapsed since the preceding` /
-  `Browser time zone for this request` / `Current runtime context.` /
-  `Current working directory:` / `MNEMON RUNTIME MEMORY SNAPSHOT` /
-  `[MNEMON] Search Documents…` / `[model changed: …]` / `[dsh-mnemon: …]` /
-  `<system-reminder>` / `<available_skills>` / `<runtime-memory-file>` /
-  `This is an automatically generated checkpoint` / `The approval policy changed` /
-  `(empty message)`，外加通用规则 `^[ASCII标签]`（方括号英文标签基本只有宿主会用）；
-- **缓存的必须是"原文"**：`preview-cache` 存原始消息（截 600 字），渲染前才清洗——
-  这样改一次规则，旧缓存也跟着变干净；洗不出东西的旧条目会被当成"没缓存"，从而重新拉取；
-- 离线审计脚本 `scripts/_.audit-previews.mjs`：遍历全部会话，打印每张卡会显示的正文，
-  并标出"看起来还像信封"的；改规则先跑它，不要只盯一个例子；
-- **客户端还有第二道**（`src/client/preview-text.ts`，同一套规则）：宿主半没重启也能干净。
-  踩过的坑：`MNEMON RUNTIME MEMORY SNAPSHOT` 那条正则少写了 `m` 标志，`^` 只锚在串首，
-  快照照样漏出来——现在客户端 / src 宿主 / 打包产物三处都是 `/im`；
-- 离线验证脚本 `scripts/_.verify-preview.mjs`：直接读真实 `session.v4.jsonl.zstd`（多 zstd 帧
-  自己拆），跑"信封跳过 + 清洗"并打印最终卡片正文——改规则先跑它，别靠猜；
-- **卡片只显示这一句话**：原来下面那行「下一步」（`nextStep`）已删除，卡片上不再有任何
-  摘要/计划类文案；
-- 客户端：卡片一出现就**立刻踢一次**请求，之后每 1.5s 轮询补齐。**不要用 debounce**——
+- **判据只有一条：`source.kind === 'user'`。真实日志里宿主给每条用户消息都标了来源：
+  `time-context`（Time sampled…）、`runtime-context`（Current runtime context…）、
+  `dsh-mnemon`（MNEMON 快照 / [MNEMON] Search Documents…）、`skill-catalog`（system-reminder）、
+  `model-selection`（[model changed: …]）、`dsh-rewind`（(empty message)）、
+  `compact-checkpoint`（automatically generated checkpoint…）、`user-approval`（审批策略变更）、
+  `tool-jobs`（background job …）、`tool`（工具结果）——**只有 `user` 是人写的**。
+  所以不再靠正则猜文本：新版本宿主再造什么类型，都自动被排除；
+- 离线普查脚本 `scripts/_.audit-previews.mjs`：遍历全部会话（跳过 `origin: subagent` 的子代理会话），
+  打印每张卡会显示的正文；当前结果 **19 个人类会话 0 条可疑**；
+- 缓存存**原文**、渲染前才清洗，规则一变旧缓存也跟着变；- 客户端：卡片一出现就**立刻踢一次**请求，之后每 1.5s 轮询补齐。**不要用 debounce**——
   真实应用每秒都在刷新会话列表，每次刷新都会重置定时器，请求永远发不出去（这条踩过一次：
   测试台补了"列表高频刷新"的判别用例，旧代码返回 `null`、新代码通过）；
 - 宿主：每个会话读一次 surface 约 250ms，**改成并发**（`Promise.all`），21 张卡从 ~5s 降到

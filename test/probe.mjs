@@ -122,7 +122,18 @@ try {
     await page.waitForTimeout(600)
   }
 
-  await page.goto(`http://127.0.0.1:${PORT}/test/index.html`)
+  // The plugin persists lamp state and previews in localStorage; a previous run's
+  // leftovers would poison this one, so start from a clean slate.
+  // One-shot: later navigations in this run (reload / cache test) must keep what
+  // the run has stored.
+  await page.addInitScript(() => {
+    if (sessionStorage.getItem('probe-fresh') === '1') return
+    sessionStorage.setItem('probe-fresh', '1')
+    for (const key of Object.keys(localStorage)) {
+      if (key.startsWith('dsh.talk-map.')) localStorage.removeItem(key)
+    }
+  })
+  await page.goto(`http://127.0.0.1:${PORT}/test/index.html?run=${Date.now()}`)
   await page.waitForSelector('.react-flow__node', { timeout: 10000 })
   await page.waitForTimeout(800)
   await page.screenshot({ path: path.join(shots, 'probe-initial.png') })
@@ -254,14 +265,29 @@ try {
     const quiet = nodes.find(node => node.className.includes('tm_cardQuiet'))
     if (quiet === undefined) return null
     const r = quiet.getBoundingClientRect()
+    // Hover only lands if the pointer can actually reach the card (another node,
+    // a frame strip or a drawer can sit on top), so probe a few points.
+    const inside = (x, y) => {
+      const hit = document.elementFromPoint(x, y)
+      return hit !== null && (hit === quiet || quiet.contains(hit))
+    }
+    let point = null
+    for (const fy of [0.5, 0.35, 0.65, 0.2, 0.8]) {
+      for (const fx of [0.5, 0.3, 0.7]) {
+        const x = Math.round(r.x + r.width * fx)
+        const y = Math.round(r.y + r.height * fy)
+        if (inside(x, y)) { point = { x, y }; break }
+      }
+      if (point !== null) break
+    }
     return {
       dimmed: Number(getComputedStyle(quiet).opacity),
-      point: { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) },
+      point,
     }
   })
   check('没有任何状态的卡片被压暗', quietCard !== null && quietCard.dimmed < 0.75,
     JSON.stringify(quietCard))
-  if (quietCard !== null) {
+  if (quietCard?.point != null) {
     await page.mouse.move(quietCard.point.x, quietCard.point.y)
     await page.waitForTimeout(300)
     const hovered = await page.evaluate(() => {
