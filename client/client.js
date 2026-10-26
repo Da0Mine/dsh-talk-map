@@ -2,6 +2,11 @@ window.__ModuleLoader__.load({ id: "dsh-talk-map", factory: (require) => {
 	var module = { exports: {} };
 	var exports = module.exports;
 	"use strict";
+	// A single plugin must never be able to kill the whole boot: the shell treats
+	// "an entry did not activate" as fatal and exits. If this bundle fails to
+	// evaluate (e.g. a reload re-imports it while the previous graph is alive),
+	// degrade to an inert module and leave a trace instead of throwing.
+	try {
 var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -13170,6 +13175,10 @@ function apply(ctx) {
     console.error("[dsh-talk-map] client apply failed:", error);
   }
 }
+	} catch (error) {
+		console.error('[dsh-talk-map] client bundle failed to evaluate (inert this boot):', error);
+		return { name: "dsh-talk-map", apply() {} };
+	}
 	return module.exports;
 }
 });

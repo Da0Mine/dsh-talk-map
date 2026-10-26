@@ -127,13 +127,18 @@ try {
   // One-shot: later navigations in this run (reload / cache test) must keep what
   // the run has stored.
   await page.addInitScript(() => {
-    if (sessionStorage.getItem('probe-fresh') === '1') return
-    sessionStorage.setItem('probe-fresh', '1')
+    // Per-run marker: this browser tab is reused between runs, so a fixed flag
+    // would skip the reset on every run after the first.
+    const run = new URLSearchParams(location.search).get('run') ?? '0'
+    if (sessionStorage.getItem('probe-run') === run) return
+    sessionStorage.setItem('probe-run', run)
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith('dsh.talk-map.')) localStorage.removeItem(key)
     }
   })
   await page.goto(`http://127.0.0.1:${PORT}/test/index.html?run=${Date.now()}`)
+  // A backgrounded tab does not update :hover or run compositor animations.
+  await page.bringToFront()
   await page.waitForSelector('.react-flow__node', { timeout: 10000 })
   await page.waitForTimeout(800)
   await page.screenshot({ path: path.join(shots, 'probe-initial.png') })
@@ -346,7 +351,8 @@ try {
   // first fetch (which the boot already triggers) is the slow one.
   // Cache first: the route is slowed to 2s from boot, so anything visible at
   // ~500ms can only have come from localStorage.
-  await page.goto(page.url().split('?')[0] + '?slowPreviews=2000')
+  // Keep the run marker: it is what stops the init script from wiping the cache.
+  await page.goto(page.url() + (page.url().includes('?') ? '&' : '?') + 'slowPreviews=2000')
   await page.waitForTimeout(500)
   const cachedStart = Date.now()
   const cachedBody = await page.evaluate(() => {

@@ -33,6 +33,20 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 （`scripts/_.host-sessionquery.mjs` 是当时插 inject 的一次性脚本，带幂等判断）。
 `src/host/routes.ts`、`src/index.ts` 已按同一份逻辑同步，将来能重建宿主时以 src 为准。
 
+### 崩溃兜底：一个插件不许拖死整个 boot
+
+宿主对"有插件没激活"的判定是**致命**的：装完插件会触发一次整页重载，重载里
+`dsh-talk-map: import failed` 会让它直接退出（`~/.dsh` 外层的
+`logs/crash-*-web-boot.log` 里只有一句汇总，拿不到具体异常）。
+
+冷启动能过、重载过不了——所以 bundle 的**求值阶段**必须绝对安全：
+
+- 打包器在 factory 外面套了 `try/catch`：任何求值异常都降级成**惰性模块**
+  （`{ name, apply() {} }`）并 `console.error` 出原因，绝不向外抛；
+- 新增 `test/bundle-smoke.mjs`：在**同一个 realm 里连续求值两次**（模拟重载），
+  断言两次都不抛、两次都注册了同一个 id——这条是"模块作用域可重入"的守门人；
+- 注意：这只是**把致命变可恢复**，根因（为什么重载时这一个 entry 建不出 fiber）还没定位，
+  需要那次重载的 renderer 控制台原始异常才能修。
 **改完必须重启 DSH**：client bundle 在宿主启动时汇总下发，F5 拿不到新文件。
 
 ## 离线测试台（`test/`）

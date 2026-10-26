@@ -36,8 +36,20 @@ const SCOPE = 'tm_' // CSS class / keyframes prefix (stable across builds)
 const BANNER = `window.__ModuleLoader__.load({ id: ${JSON.stringify(PLUGIN_ID)}, factory: (require) => {
 \tvar module = { exports: {} };
 \tvar exports = module.exports;
-\t"use strict";`
-const FOOTER = `\treturn module.exports;\n}\n});\n`
+\t"use strict";
+\t// A single plugin must never be able to kill the whole boot: the shell treats
+\t// "an entry did not activate" as fatal and exits. If this bundle fails to
+\t// evaluate (e.g. a reload re-imports it while the previous graph is alive),
+\t// degrade to an inert module and leave a trace instead of throwing.
+\ttry {`
+const FOOTER = `\t} catch (error) {
+\t\tconsole.error('[dsh-talk-map] client bundle failed to evaluate (inert this boot):', error);
+\t\treturn { name: ${JSON.stringify(PLUGIN_ID)}, apply() {} };
+\t}
+\treturn module.exports;
+}
+});
+`
 
 /**
  * CSS-modules scoping, done here instead of lightningcss so the build has no
