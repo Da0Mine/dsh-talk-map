@@ -33,6 +33,26 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 （`scripts/_.host-sessionquery.mjs` 是当时插 inject 的一次性脚本，带幂等判断）。
 `src/host/routes.ts`、`src/index.ts` 已按同一份逻辑同步，将来能重建宿主时以 src 为准。
 
+### 硬规矩：运行中的宿主不能看到 client.js 变化
+
+2026-10-26 三次崩溃全部同一个出口，最后一次拿到了实证：
+
+`
+dsh-app://app/plugins/??dsh-talk-map/client.js&rev=...:10
+[dsh-talk-map] client bundle evaluated 2026-10-26T15:20:25.257Z   ← 求值成功
+→ 23:22 重载: dsh-talk-map: import failed → web boot 判定失败 → 退出
+`
+
+- **bundle 本身没问题**（求值成功，语法校验也通过）；
+- 问题是**我在宿主运行期间重建了 `client/client.js`**：只要这个文件变了，下一次重载就加载不进来，而宿主把"有插件没激活"当致命错误直接退出；
+- 装插件/启用插件只是**触发那次重载**，真正的前提是"文件被换过"。
+
+从流程上根治：
+
+- `node scripts/build-client.mjs` → 只写 `client/client.dev.js`（测试台 `test/index.html` 加载它），**绝不碰** `client/client.js`；
+- `node scripts/build-client.mjs --publish` → 才原子替换 `client/client.js`；
+- 规则：**publish 之后必须重启宿主**，且重启前不要再 publish 第二次。
+- `.gitignore` 忽略 dev 产物。
 ### 崩溃兜底：一个插件不许拖死整个 boot
 
 宿主对"有插件没激活"的判定是**致命**的：装完插件会触发一次整页重载，重载里

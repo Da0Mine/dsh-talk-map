@@ -30,7 +30,7 @@
   <script src="../node_modules/react/umd/react.production.min.js"></script>
   <script src="../node_modules/react-dom/umd/react-dom.production.min.js"></script>
   <script src="harness.js"></script>
-  <script src="../client/client.js"></script>
+  <!-- dev build: the live app loads client/client.js, which must not change while it runs --><script src="../client/client.dev.js"></script>
   <script>__harness.boot()</script>
 </body>
 </html>

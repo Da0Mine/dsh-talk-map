@@ -173,7 +173,24 @@ const cssPlugin = {
 }
 
 const check = process.argv.includes('--check')
-const outfile = check ? path.join(ROOT, 'client', '.client.check.js') : path.join(ROOT, OUT)
+/** Ship the bundle into `client/client.js` (what the running app loads). */
+const publish = process.argv.includes('--publish')
+/**
+ * Dev builds never touch `client/client.js`.
+ *
+ * The shell cannot hot-load a changed client bundle: any reload after this file
+ * changes fails that entry and the shell treats it as fatal (`web boot: … did not
+ * activate`) and exits. Verified 2026-10-26 — a rebuild at 23:20 was followed by
+ * that exact crash at 23:22, and the bundle itself evaluated fine.
+ *
+ * So: build to `client.dev.js` for the harness, and only publish (atomically)
+ * right before the user restarts.
+ */
+const outfile = check
+  ? path.join(ROOT, 'client', '.client.check.js')
+  : publish
+    ? path.join(ROOT, OUT)
+    : path.join(ROOT, 'client', 'client.dev.js')
 
 const result = await esbuild.build({
   absWorkingDir: ROOT,
