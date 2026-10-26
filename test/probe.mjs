@@ -82,6 +82,7 @@ async function waitForCdp(timeoutMs = 15000) {
 
 let browser
 let failures = 0
+const consoleErrors = []
 try {
   const version = await waitForCdp()
   console.log(`Edge ${version.Browser} via CDP :${CDP}\n`)
@@ -89,7 +90,6 @@ try {
   browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP}`)
   const context = browser.contexts()[0] ?? await browser.newContext()
   const page = context.pages()[0] ?? await context.newPage()
-  const consoleErrors = []
   page.on('pageerror', error => consoleErrors.push(String(error)))
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
@@ -240,13 +240,54 @@ try {
     const badge = document.querySelector('[data-talkmap-session="' + id + '"] [data-talkmap-draft]')
     return badge === null ? null : { text: badge.textContent.trim(), color: getComputedStyle(badge).color }
   }, draftSession)
-  check('输入框有未发送文字 → 卡片带灰标「待发送」',
-    draftBadge?.text === '待发送', `${JSON.stringify(draftBadge)} for ${draftSession}`)
+  check('输入框有未发送文字 → 卡片带黄标「待发送」',
+    draftBadge?.text === '待发送' && /255, 197, 61/.test(draftBadge?.color ?? ''),
+    `${JSON.stringify(draftBadge)} for ${draftSession}`)
   await page.evaluate((id) => { localStorage.removeItem('dsh.conversation.' + id) }, draftSession)
   await page.waitForTimeout(2200)
-  check('发出去/清空后灰标消失',
+  check('发出去/清空后黄标消失',
     await page.evaluate(() => document.querySelector('[data-talkmap-draft]') === null))
 
+  // ---- 3e. quiet cards / particles / card body -------------------------
+  const quietCard = await page.evaluate(() => {
+    const nodes = [...document.querySelectorAll('.react-flow__node [data-talkmap-session]')]
+    const quiet = nodes.find(node => node.className.includes('tm_cardQuiet'))
+    if (quiet === undefined) return null
+    const r = quiet.getBoundingClientRect()
+    return {
+      dimmed: Number(getComputedStyle(quiet).opacity),
+      point: { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) },
+    }
+  })
+  check('没有任何状态的卡片被压暗', quietCard !== null && quietCard.dimmed < 0.75,
+    JSON.stringify(quietCard))
+  if (quietCard !== null) {
+    await page.mouse.move(quietCard.point.x, quietCard.point.y)
+    await page.waitForTimeout(300)
+    const hovered = await page.evaluate(() => {
+      const node = [...document.querySelectorAll('.react-flow__node [data-talkmap-session]')]
+        .find(item => item.className.includes('tm_cardQuiet'))
+      return node === undefined ? null : Number(getComputedStyle(node).opacity)
+    })
+    check('悬浮时恢复原样', hovered === 1, String(hovered))
+    await page.mouse.move(5, 5)
+    await page.waitForTimeout(200)
+  }
+
+  const runningFx = await page.evaluate(() => {
+    const card = document.querySelector('[data-talkmap-session="s1"]')
+    if (card === null) return null
+    const particles = card.querySelectorAll('[class*="cardParticles"] i')
+    return {
+      count: particles.length,
+      animation: particles.length === 0 ? null : getComputedStyle(particles[0]).animationName,
+      body: card.querySelector('[class*="cardSummary"]')?.textContent?.trim() ?? null,
+    }
+  })
+  check('运行中卡片有白色粒子汇入', (runningFx?.count ?? 0) >= 6 && (runningFx?.animation ?? '').includes('particle'),
+    JSON.stringify({ count: runningFx?.count, animation: runningFx?.animation }))
+  check('卡片正文 = 用户最后发的那句话（不是摘要）',
+    runningFx?.body === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(runningFx?.body))
   // ---- 3c. a brand-new conversation takes the head of its folder -------
   await page.evaluate(() => window.__harness.addSession('ws-daily', 's11', '刚刚新建的对话'))
   await page.click('[class*="tm_backButton"]')
@@ -316,7 +357,7 @@ try {
   check('运行中不呼吸（没有 pulse 动画）', !(drawer?.runningCard?.animation ?? '').includes('lamp'), drawer?.runningCard?.animation)
   check('运行中是微弱白光（不是大范围光晕）', (() => {
     const alphas = [...(drawer?.runningCard?.shadow ?? '').matchAll(/rgba\(255, 255, 255, ([\d.]+)\)/g)].map(match => Number(match[1]))
-    return alphas.length > 0 && Math.max(...alphas) <= 0.25
+    return alphas.length > 0 && Math.max(...alphas) <= 0.45
   })(), (drawer?.runningCard?.shadow ?? '').slice(0, 90))
 
   const ringMotion = await page.evaluate(async () => {    const cards = [...document.querySelectorAll('[data-stack-card]')]
@@ -718,6 +759,7 @@ try {
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
 } catch (error) {
   console.error('\nprobe crashed:', error)
+  if (consoleErrors.length > 0) console.error('page errors:', consoleErrors.slice(0, 5).join('\n---\n'))
   failures += 1
 } finally {
   try { await browser?.close() } catch { /* already gone */ }

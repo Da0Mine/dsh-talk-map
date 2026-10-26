@@ -161,6 +161,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const timer = setInterval(() => { draftWatch.refresh() }, 1500)
     return () => { clearInterval(timer) }
   }, [])
+
+  // Card bodies: the user's last message, fetched from the Host's session
+  // surface (the LLM digest is no longer shown). One batched request per change
+  // of "which sessions advanced", debounced so a burst of updates costs one.
+  const [previews, setPreviews] = useState<Record<string, string>>({})
+  const previewStamp = useRef<Map<string, number>>(new Map())
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [panMode, setPanMode] = useState(true)
@@ -255,6 +261,28 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
     return out
   }, [canvasState.cards, sessions])
+
+  // Card bodies: the user's last message, read off the Host's session surface
+  // (the LLM digest is no longer displayed). One batched request per change of
+  // "which sessions advanced", debounced so a burst of updates costs one.
+  useEffect(() => {
+    const pending: string[] = []
+    for (const card of Object.values(visibleCards)) {
+      const stamp = sessions.byId[card.sessionId]?.updatedAt ?? 0
+      if (previewStamp.current.get(card.sessionId) === stamp) continue
+      pending.push(card.sessionId)
+    }
+    if (pending.length === 0) return
+    const timer = setTimeout(() => {
+      for (const sessionId of pending) {
+        previewStamp.current.set(sessionId, sessions.byId[sessionId]?.updatedAt ?? 0)
+      }
+      void talkMapApi.lastUserMessages(pending)
+        .then(({ texts }) => { setPreviews(previous => ({ ...previous, ...texts })) })
+        .catch(() => undefined)
+    }, 800)
+    return () => { clearTimeout(timer) }
+  }, [visibleCards, sessions])
 
   // Membership mirrors the sidebar truth: a card belongs to its session's
   // real workspace (dsh binds that to the session's cwd; sessions cannot
@@ -704,7 +732,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           ghost: summary === undefined,
           updatedAt: summary?.updatedAt,
           nextStep: digest?.nextStep ?? digest?.todoNext,
-          summary: digest?.summary,
+          ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
           glow: glowOf(card.sessionId),
@@ -1120,7 +1148,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         cardId,
         sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
-        ...(digest?.summary !== undefined ? { summary: digest.summary } : {}),
+        ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
         ...(nextStep !== undefined ? { nextStep } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -1511,14 +1539,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           setBatchPicks(new Set([cardId]))
         },
       })
-      items.push({
-        key: 'digest',
-        label: t('card.refresh'),
-        onPick: () => {
-          close()
-          if (card !== undefined) void talkMapApi.refreshDigest(card.sessionId).catch(() => undefined)
-        },
-      })
+      // The digest refresh entry went with the summary: the card body is now the
+      // user's own last message, which no one needs to "regenerate".
       items.push({
         key: 'remove',
         label: t('menu.removeCard'),

@@ -23,6 +23,8 @@ import { cardSchema, edgeSchema, globalSchema, DOMAIN_NAME, type TalkMapStore } 
 export interface TalkMapRuntime {
   digest?: DigestPipeline
   spawner?: Spawner
+  /** Read a session's surface — powers the card body (user's last message). */
+  sessionQuery?: { readSurface(sessionId: string): Promise<{ events: readonly unknown[]; capturedThroughSeq: number | null }> }
   /** Deployment default model route (from ctx.agentDefaultModel). */
   modelDefault?: () => { provider: string; model: string; reasoningEffort?: string }
   /** Deployment default agent preset id (from ctx.agentPresets). */
@@ -30,6 +32,19 @@ export interface TalkMapRuntime {
 }
 
 const MAX_BODY_BYTES = 1024 * 1024
+
+/** Concatenate the text blocks of a message payload (tool results have none). */
+function textOfBlocks(content: unknown): string {
+  if (!Array.isArray(content)) return ''
+  return content
+    .filter((block): block is { type: 'text'; text: string } =>
+      typeof block === 'object' && block !== null
+      && (block as { type?: unknown }).type === 'text'
+      && typeof (block as { text?: unknown }).text === 'string')
+    .map(block => block.text)
+    .join('\n')
+    .trim()
+}
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   const payload = JSON.stringify(body)
@@ -289,6 +304,38 @@ export function mountTalkMapRoutes(
           }
           await mkdir(target, { recursive: true })
           sendJson(response, 200, { ok: true, path: target })
+          return
+        }
+
+        // Card bodies: the last thing the USER said in each session, read off the
+        // session surface. Batched — the map asks once per change, not per card.
+        if (route === 'POST /talk-map/last-user') {
+          const body = await readJsonBody(request)
+          const ids = Array.isArray((body as { sessionIds?: unknown }).sessionIds)
+            ? ((body as { sessionIds: unknown[] }).sessionIds.filter(id => typeof id === 'string') as string[]).slice(0, 200)
+            : []
+          const texts: Record<string, string> = {}
+          const query = runtime.sessionQuery
+          if (query !== undefined) {
+            for (const sessionId of ids) {
+              try {
+                const surface = await query.readSurface(sessionId)
+                let text = ''
+                for (const raw of surface.events) {
+                  const event = raw as { type?: string; data?: { source?: { kind?: string }; content?: unknown } }
+                  if (event.type !== 'user/message') continue
+                  // Tool results ride in as role "user"; they are not messages.
+                  if (event.data?.source?.kind === 'tool') continue
+                  const joined = textOfBlocks(event.data?.content)
+                  if (joined !== '') text = joined
+                }
+                if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text
+              } catch {
+                // A session without a readable surface simply has no preview.
+              }
+            }
+          }
+          sendJson(response, 200, { texts })
           return
         }
 

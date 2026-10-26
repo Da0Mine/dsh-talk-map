@@ -74,6 +74,13 @@ export const talkMapApi = {
   refreshDigest(sessionId: string): Promise<{ sessionId: string; digest: Digest }> {
     return postJson('/talk-map/digest/refresh', { sessionId })
   },
+  /**
+   * The last message the USER sent, per session — what the card body shows now
+   * that the LLM summary is gone. Read straight off the Host's session surface.
+   */
+  lastUserMessages(sessionIds: readonly string[]): Promise<{ texts: Record<string, string> }> {
+    return postJson('/talk-map/last-user', { sessionIds })
+  },
   ensureDir(path: string): Promise<{ ok: true; path: string }> {
     return postJson('/talk-map/fs/ensure-dir', { path })
   },

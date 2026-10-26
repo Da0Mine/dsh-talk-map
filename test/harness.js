@@ -152,6 +152,12 @@
     s6: { atSeq: 5, summary: '标注流程拆成标注、复核两段。', keyFindings: [], nextStep: '补离线包说明', generatedAt: T0 - 200 * MIN },
   }
 
+  /** Last thing the user said per session — the card body since the summary went. */
+  const userMessages = {
+    s1: '把卡片改成网格槽位，含退让与补位动画',
+    s2: '清理一下临时截图和旧脚本',
+  }
+
   const globalState = {
     version: 1,
     activeBoard: 'inbox',
@@ -204,11 +210,27 @@
       if (path.includes('/talk-map/global') && body !== null && body.global !== undefined) {
         payload.global = body.global
       }
+      // The card body is the user's last message now, not an LLM digest.
+      if (path.indexOf('/talk-map/last-user') >= 0) {
+        const texts = {}
+        for (const sessionId of body?.sessionIds ?? []) {
+          texts[sessionId] = userMessages[sessionId] ?? '你最后说的那句话'
+        }
+        return json({ texts })
+      }
       return json({ ok: true })
     }
     if (path.indexOf('/talk-map/state') >= 0) return json(payload)
     if (path.indexOf('/talk-map/defaults') >= 0) {
       return json({ model: { provider: 'deepseek', model: 'deepseek-v4-pro' }, preset: 'standard' })
+    }
+    // The card body is the user's last message now, not an LLM digest.
+    if (path.indexOf('/talk-map/last-user') >= 0) {
+      const texts = {}
+      for (const sessionId of body?.sessionIds ?? []) {
+        texts[sessionId] = userMessages[sessionId] ?? '你最后说的那句话'
+      }
+      return json({ texts })
     }
     return json({})
   }

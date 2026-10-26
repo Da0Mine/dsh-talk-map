@@ -325,9 +325,9 @@
 /* Unsent composer text: deliberately neutral grey — a note, not a state the
  * user has to react to. */
 .cardChipDraft {
-  color: var(--dsw-alias-label-secondary);
-  background: rgba(125, 130, 141, 0.18);
-  border-color: rgba(125, 130, 141, 0.42);
+  color: rgb(255, 197, 61);
+  background: rgba(255, 197, 61, 0.18);
+  border-color: rgba(255, 197, 61, 0.5);
 }
 
 /* A run cut off by closing the app: muted amber, no lamp — it is history, not
@@ -374,8 +374,60 @@
  */
 .cardLampRunning {
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-    0 0 12px 1px rgba(255, 255, 255, 0.10);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 0 16px 2px rgba(255, 255, 255, 0.2),
+    0 0 40px 9px rgba(255, 255, 255, 0.1);
+}
+
+/* White specks converging on the card: absolute dots on a fixed "orbit" that
+ * travel inward and fade out, staggered by angle and delay. Pure CSS. */
+.cardParticles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.cardParticles i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px 0 0 -2px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.7);
+  opacity: 0;
+  animation: talkmap-particle-in 2.2s linear infinite;
+  animation-delay: var(--tm-particle-delay, 0s);
+}
+
+@keyframes talkmap-particle-in {
+  0% {
+    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(150px) scale(0.35);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.55;
+  }
+  100% {
+    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(6px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* Nothing to report? The card recedes until you point at it. */
+.cardQuiet {
+  opacity: 0.62;
+  transition: opacity 140ms ease;
+}
+
+.cardQuiet:hover {
+  opacity: 1;
 }
 
 /* The travelling highlight: a conic gradient masked down to a 2px ring. The

@@ -10,7 +10,7 @@
  * Failure policy: a broken external plugin must not take the host down —
  * open/mount failures are logged and the affected layer stays inert.
  */
-import type { DigestHostServices, SpawnHostServices, TalkMapHostServices } from './host/dsh-host.ts'
+import type { DigestHostServices, SessionQueryService, SpawnHostServices, TalkMapHostServices } from './host/dsh-host.ts'
 import { DigestPipeline } from './host/digest/pipeline.ts'
 import { mountTalkMapRoutes, type TalkMapRuntime } from './host/routes.ts'
 import { Spawner } from './host/spawn.ts'
@@ -96,6 +96,17 @@ export function apply(ctx: OuterContext): void {
       runtime.modelDefault = () => services.agentDefaultModel.currentSelection()
       return () => { delete runtime.modelDefault }
     }, 'dsh-talk-map: model default')
+  })
+  // Card bodies read the user's last message straight off the session surface —
+  // no LLM involved, so it is a separate injection from the digest pipeline.
+  ctx.inject(['sessionQuery'], (injected: unknown) => {
+    const services = injected as { sessionQuery: SessionQueryService; effect(cb: () => () => void, label?: string): void }
+    services.effect(() => {
+      runtime.sessionQuery = services.sessionQuery
+      return () => {
+        if (runtime.sessionQuery === services.sessionQuery) delete runtime.sessionQuery
+      }
+    }, 'dsh-talk-map: session query')
   })
   ctx.inject(['agentPresets'], (injected: unknown) => {
     const services = injected as { agentPresets: { defaultId: string }; effect(cb: () => () => void, label?: string): void }

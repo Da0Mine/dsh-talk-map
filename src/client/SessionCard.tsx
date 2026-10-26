@@ -4,9 +4,7 @@
  * running state. A card whose session no longer exists renders as a ghost
  * (grey, removable) — the host never auto-deletes placements.
  */
-import { useState } from 'react'
 import { Handle, Position, type NodeProps, type Node } from '@xyflow/react'
-import { talkMapApi } from './api.ts'
 import { canvas } from './canvas-store.ts'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
@@ -58,8 +56,8 @@ export interface SessionCardData extends Record<string, unknown> {
   updatedAt?: number
   nextStep?: string
   stale?: boolean
-  /** Digest summary, shown as the card body (2-line clamp). */
-  summary?: string
+  /** The user's latest message — the card body (2-line clamp). */
+  preview?: string
   /** Session is blocked on the user (approval / question). */
   waiting?: boolean
   /** Finished while unwatched and not yet opened. */
@@ -94,23 +92,14 @@ export function relativeTime(timestamp: number | undefined): string {
 
 export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JSX.Element {
   const { data, selected } = props
-  const [refreshing, setRefreshing] = useState(false)
   const classNames = [styles['card']]
   if (data.ghost) classNames.push(styles['cardGhost'])
   if (selected === true) classNames.push(styles['cardSelected'])
   if (data.glow !== undefined) classNames.push(styles[LAMP_CLASS[data.glow]] ?? '')
-
-  const refreshDigest = async (): Promise<void> => {
-    if (refreshing) return
-    setRefreshing(true)
-    try {
-      await talkMapApi.refreshDigest(data.sessionId)
-    } catch (error) {
-      console.error('[dsh-talk-map] digest refresh failed:', error)
-    } finally {
-      setRefreshing(false)
-    }
-  }
+  // A card with nothing to report recedes; hovering brings it back. Any status
+  // (lamp, unsent text, interrupted run) keeps it at full strength.
+  const quiet = data.glow === undefined && data.pendingDraft !== true && data.interrupted !== true
+  if (quiet) classNames.push(styles['cardQuiet'] ?? '')
 
   return (
     <div
@@ -124,6 +113,23 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
       style={data.onPick !== undefined ? { cursor: 'pointer' } : undefined}
       data-talkmap-session={data.sessionId}
     >
+      {/* A running conversation pulls white specks in from every side: the card
+        * is doing work, and the movement says so without a pulse. */}
+      {data.glow === 'running'
+        ? (
+            <span className={styles['cardParticles']} aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5, 6, 7].map(index => (
+                <i
+                  key={index}
+                  style={{
+                    '--tm-particle-angle': `${index * 45}deg`,
+                    '--tm-particle-delay': `${(index % 4) * 0.55}s`,
+                  } as React.CSSProperties}
+                />
+              ))}
+            </span>
+          )
+        : null}
       {/* Four connection points, one per side. All type "source" — the
         * canvas runs ConnectionMode.Loose, so each also accepts incoming
         * edges. Hidden until the card is hovered or a drag is in flight
@@ -146,22 +152,6 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
         : null}
       <div className={styles['cardTop']}>
         <span className={styles['cardTitle']}>{data.ghost ? t('card.ghostTitle') : data.title}</span>
-        {data.ghost
-          ? null
-          : (
-              <button
-                type="button"
-                className={`${styles['cardRefresh']} nodrag${refreshing ? ` ${styles['cardRefreshBusy']}` : ''}`}
-                title={t('card.refresh')}
-                aria-label={t('card.refresh')}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  void refreshDigest()
-                }}
-              >
-                ⟳
-              </button>
-            )}
       </div>
       {data.ghost
         ? (
@@ -175,8 +165,9 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
           )
         : (
             <>
-              {data.summary !== undefined && data.summary !== ''
-                ? <div className={styles['cardSummary']}>{data.summary}</div>
+              {/* The body is what YOU last said — not an LLM digest. */}
+              {data.preview !== undefined && data.preview !== ''
+                ? <div className={styles['cardSummary']}>{data.preview}</div>
                 : null}
               {data.nextStep !== undefined && data.nextStep !== ''
                 ? (

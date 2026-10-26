@@ -99,9 +99,9 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   （原生 non-passive 监听 + `scrollBy` + `scroll-snap`），点卡片进对话，Esc / 点背景 / ✕ 收起；
 - 折叠的卡只是 `hidden` 节点：连线、选中、位置都还在，把文件夹拉大就自动回到网格。
 
-### 2b2. 「待发送」灰标
+### 2b2. 「待发送」黄标
 
-对话的输入框里还有没发出去的文字时，卡片（和抽屉里的同一张）右下角多一枚**灰色**胶囊
+对话的输入框里还有没发出去的文字时，卡片（和抽屉里的同一张）右下角多一枚**黄色**胶囊
 「待发送」，和状态胶囊并存。
 
 数据来源：宿主把每个会话的草稿持久化在 `localStorage["dsh.conversation.<sessionId>"]`
@@ -127,12 +127,31 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   （这正是"从对话打开地图"那种情况不被误清的原因）。
 - 写入是 250ms 防抖 + `beforeunload` 强制 flush；超过 14 天的旧标记在读取时丢弃。
 
+### 2b4. 卡片正文 = 用户最后发的那句话
+
+原来的正文是宿主用 LLM 生成的摘要。现在**不再显示摘要**，改成**你最后一次发进去的那句话**
+（最多 240 字），「重新生成摘要」的按钮和右键菜单项也一起去掉了。
+
+- 数据来源：宿主侧的 `POST /talk-map/last-user`（`{sessionIds}` → `{texts}`），直接读会话
+  表面里的 `user/message`（跳过 `source.kind === 'tool'` 的工具结果，最后一条胜出），
+  不花钱、不等模型；
+- 客户端按"哪些会话的 `updatedAt` 变了"批量取一次，800ms 防抖，面板开着时才请求；
+- 摘要管线本身还在宿主里跑（`nextStep`/「下一步」那条还靠它），只是不再上卡片。
+
+### 2b5. 压暗 / 粒子
+
+- **没有任何状态的卡片**（无灯、无待发送、无已中断）整体压暗到 `opacity: .62`，鼠标悬浮
+  140ms 内回到 1；
+- **运行中**：白光调亮（内描边 .34 / 16px .2 / 40px .1）；卡片四周 8 颗白色小点沿
+  8 个角度向卡片中心汇入（`@keyframes talkmap-particle-in`，2.2s 线性循环，
+  角度与延迟由 `--tm-particle-angle` / `--tm-particle-delay` 给），纯 CSS。
+
 ### 2c. 灯：运行中"流光"，其余"呼吸"
 
 `talk-map.module.css`：
 
-- **running**：卡片本身只是**微弱恒定白光**（`rgba(255,255,255,.22)` 内描边 + `.1` 的 12px 光晕，
-  **没有呼吸动画**）；真正的信号是卡片外沿一圈 **2px 光环**，用 `conic-gradient` +
+- **running**：卡片本体是**恒定白光**（内描边 + 光晕，**没有呼吸动画**）；真正的信号是卡片
+  外沿一圈 **2px 光环**，用 `conic-gradient` +
   `mask-composite: exclude` 抠成环，然后**只让渐变的起始角转动**
   （`@property --tm-ring-angle` + `@keyframes talkmap-ring-sweep`）——所以是"光在环上跑"，
   不是"框在自转"。这个坑踩过一次：最初给 `::after` 加 `transform: rotate()`，转的是圆角矩形本身。

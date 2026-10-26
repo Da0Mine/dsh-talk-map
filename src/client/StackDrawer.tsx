@@ -35,7 +35,8 @@ export interface StackEntry {
   cardId: string
   sessionId: string
   title: string
-  summary?: string
+  /** The user's latest message (card body). */
+  preview?: string
   nextStep?: string
   updatedAt?: number
   running?: boolean
@@ -124,8 +125,8 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 <div className={styles['cardTop']}>
                   <span className={styles['cardTitle']}>{item.title}</span>
                 </div>
-                {item.summary !== undefined && item.summary !== ''
-                  ? <div className={styles['cardSummary']}>{item.summary}</div>
+                {item.preview !== undefined && item.preview !== ''
+                  ? <div className={styles['cardSummary']}>{item.preview}</div>
                   : null}
                 {item.nextStep !== undefined && item.nextStep !== ''
                   ? (
