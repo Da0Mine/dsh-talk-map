@@ -74,7 +74,9 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
       style={{
         width: data.width,
         height: data.height,
-        ...(color !== undefined ? { borderColor: color.border, background: color.faint } : {}),
+        // Border (+ label) only: the folder's inside keeps the board background,
+        // so the colour never washes over the cards.
+        ...(color !== undefined ? { borderColor: color.border } : {}),
       }}
       data-talkmap-frame=""
       data-talkmap-workspace={data.workspaceId}

@@ -260,19 +260,68 @@ try {
     if (el === null) return null
     const cards = [...el.querySelectorAll('[data-stack-card]')]
     const tops = new Set(cards.map(card => card.offsetTop))
+    // Running = steady faint halo + a spinning ring (::after); the other lamps
+    // are breathing shadows.
+    const withRing = cards
+      .map(card => ({
+        ring: getComputedStyle(card, '::after').animationName,
+        animation: getComputedStyle(card).animationName,
+        shadow: getComputedStyle(card).boxShadow,
+      }))
+      .find(entry => entry.ring.includes('ring-sweep')) ?? null
     return {
       count: cards.length,
       width: cards[0] === undefined ? 0 : Math.round(cards[0].getBoundingClientRect().width),
       rows: tops.size,
-      running: cards.some(card => getComputedStyle(card).animationName.includes('lamp-white')),
-      done: cards.some(card => getComputedStyle(card).boxShadow.includes('52, 199, 89')),
+      runningRing: withRing !== null,
+      runningCard: withRing,
+      doneBreath: cards.some(card => getComputedStyle(card).animationName.includes('lamp-green')),
     }
   })
   check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 6, `${drawer?.count} 张`)
   check('抽屉里的卡片是 1:1 尺寸（224px）', drawer?.width === 224, `${drawer?.width}px`)
   check('抽屉里至少两行（卡片排满整行再换行）', (drawer?.rows ?? 0) >= 2, `rows=${drawer?.rows}`)
-  check('运行中 = 白光呼吸', drawer?.running === true)
-  check('已完成 = 绿光', drawer?.done === true)
+  check('运行中 = 环绕卡片的加载光环', drawer?.runningRing === true)
+  check('已完成 = 绿光呼吸', drawer?.doneBreath === true)
+  check('运行中不呼吸（没有 pulse 动画）', !(drawer?.runningCard?.animation ?? '').includes('lamp'), drawer?.runningCard?.animation)
+  check('运行中是微弱白光（不是大范围光晕）', (() => {
+    const alphas = [...(drawer?.runningCard?.shadow ?? '').matchAll(/rgba\(255, 255, 255, ([\d.]+)\)/g)].map(match => Number(match[1]))
+    return alphas.length > 0 && Math.max(...alphas) <= 0.25
+  })(), (drawer?.runningCard?.shadow ?? '').slice(0, 90))
+
+  const ringMotion = await page.evaluate(async () => {
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    const card = cards.find(node => getComputedStyle(node, '::after').animationName.includes('ring-sweep'))
+    if (card === undefined) return null
+    const angle1 = getComputedStyle(card, '::after').getPropertyValue('--tm-ring-angle').trim()
+    await new Promise(resolve => setTimeout(resolve, 400))
+    const after = getComputedStyle(card, '::after')
+    return {
+      angle1,
+      angle2: after.getPropertyValue('--tm-ring-angle').trim(),
+      transform: after.transform,
+    }
+  })
+  check('光环是流光（渐变角在动，环本身不转）',
+    ringMotion !== null && ringMotion.transform === 'none' && ringMotion.angle1 !== ringMotion.angle2,
+    JSON.stringify(ringMotion))
+  // Close-up of the running card, for eyeballing the sweep. Padded, because the
+  // ring is drawn 2px OUTSIDE the card box (element screenshots clip to the box).
+  const runningBox = await page.evaluate(() => {
+    const card = [...document.querySelectorAll('[data-stack-card]')]
+      .find(node => getComputedStyle(node, '::after').animationName.includes('ring-sweep'))
+    if (card === undefined) return null
+    const r = card.getBoundingClientRect()
+    const style = getComputedStyle(card, '::after')
+    return {
+      clip: { x: r.x - 12, y: r.y - 12, width: r.width + 24, height: r.height + 24 },
+      bg: style.backgroundImage.slice(0, 60),
+      composite: style.maskComposite,
+    }
+  })
+  if (runningBox !== null) {
+    await page.screenshot({ path: path.join(shots, 'probe-ring.png'), clip: runningBox.clip })
+  }
 
   const drawerGrid = await page.evaluate(() => {
     const panel = document.querySelector('[class*="tm_drawer"]:not([class*="Backdrop"])')
@@ -417,11 +466,16 @@ try {
       saved: lastGlobal?.body?.global?.wsColors?.['ws-medkit'] ?? null,
       labelBorder: label === null ? null : getComputedStyle(label).borderTopColor,
       frameBorder: frame === null ? null : getComputedStyle(frame).borderTopColor,
+      // The folder's inside must NOT be tinted.
+      frameBackground: frame === null ? null : getComputedStyle(frame).backgroundColor,
     }
   })
   check('颜色写入 wsColors 并落到标题栏/边框',
     colorState.saved === 'blue' && (colorState.labelBorder ?? '').includes('62, 99, 221') && (colorState.frameBorder ?? '').includes('62, 99, 221'),
     JSON.stringify(colorState))
+  check('工作区内部不填充颜色',
+    colorState.frameBackground === 'rgba(0, 0, 0, 0)' || colorState.frameBackground === 'transparent',
+    colorState.frameBackground)
   // Clear it again so the rest of the run starts from a neutral frame.
   await page.evaluate(() => {
     const clear = document.querySelector('[class*="tm_colorSwatchClear"]')

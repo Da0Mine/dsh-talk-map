@@ -99,18 +99,24 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   （原生 non-passive 监听 + `scrollBy` + `scroll-snap`），点卡片进对话，Esc / 点背景 / ✕ 收起；
 - 折叠的卡只是 `hidden` 节点：连线、选中、位置都还在，把文件夹拉大就自动回到网格。
 
-### 2c. 灯：运行中白光、完成绿光
+### 2c. 灯：运行中"流光"，其余"呼吸"
 
-`talk-map.module.css`：`cardLampRunning` → 白色呼吸（`talkmap-lamp-white`，2.4s），
-`cardLampDone` → 稳定绿光（rgb 52,199,89）。error 红、waiting 琥珀不变。
+`talk-map.module.css`：
+
+- **running**：卡片本身只是**微弱恒定白光**（`rgba(255,255,255,.22)` 内描边 + `.1` 的 12px 光晕，
+  **没有呼吸动画**）；真正的信号是卡片外沿一圈 **2px 光环**，用 `conic-gradient` +
+  `mask-composite: exclude` 抠成环，然后**只让渐变的起始角转动**
+  （`@property --tm-ring-angle` + `@keyframes talkmap-ring-sweep`）——所以是"光在环上跑"，
+  不是"框在自转"。这个坑踩过一次：最初给 `::after` 加 `transform: rotate()`，转的是圆角矩形本身。
+- **waiting / error / done**：都是**呼吸灯**（琥珀 3.4s / 红 1.9s / 绿 2.8s）。
 
 **状态文字跟灯同步**：卡片右下角的胶囊由 `glow` 决定文字与颜色，不再各自为政：
 
 | lamp | 文字 | 颜色 |
 |---|---|---|
-| running（白呼吸） | 正在运行 | 白 `#fff` |
+| running（微弱白光 + 流光环） | 正在运行 | 白 `#fff` |
 | waiting（琥珀呼吸） | 等你回复 | 琥珀 `rgb(245,178,46)` |
-| done（绿光） | 待查看 | 绿 `rgb(52,199,89)` |
+| done（绿呼吸） | 待查看 | 绿 `rgb(52,199,89)` |
 | error（红呼吸） | 异常终止 | 红 `rgb(242,78,78)` |
 
 抽屉里的卡片复用同一套（`LAMP_CHIP` 由 `SessionCard.tsx` 导出）。
@@ -146,8 +152,9 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 ### 3d. 只有工作区能上色
 
 卡片不再有颜色；**工作区**有：左键点标题栏或边框选中后，画布左上角弹出颜色工具条，
-改的是 `wsColors[workspaceId]`，渲染在**边框 + 标题栏**上（`WsFrame.tsx`）。
-选别的对象或按 Esc 取消选中，工具条随之消失。
+改的是 `wsColors[workspaceId]`，只渲染在**边框 + 标题栏**上——**文件夹内部的填充区域
+不跟着变色**（内部始终保持画布底色，颜色不会洗到卡片上）。选别的对象或按 Esc 取消选中，
+工具条随之消失。
 
 ### 3e. 标题栏盖过顶边把手
 

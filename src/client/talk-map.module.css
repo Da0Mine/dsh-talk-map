@@ -350,22 +350,58 @@
 }
 
 /* ---- the lamp ------------------------------------------------------------
- * Light spilling out from BEHIND the card, not a stroke on it: box-shadow
- * already paints outside the border box, so a wide blurred outer layer reads
- * as a source behind the card while the inset hairline keeps the edge defined.
- * running = white breathing · done = steady green · error = red · waiting = amber.
- * White is the "still working" light: it is neutral, and it is what the running
- * badge/dot already uses. Green stays the terminal "finished, unread" light.
+ * running  = a faint, STEADY white halo + a highlight travelling around the
+ *            card's border (a loading sweep, not a pulse — the card is busy,
+ *            not asking for attention)
+ * waiting  = amber breathing   · error = red breathing   · done = green breathing
+ * The breathing lights are the ones that want the user to look.
  */
 .cardLampRunning {
-  animation: talkmap-lamp-white 2.4s ease-in-out infinite;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 0 12px 1px rgba(255, 255, 255, 0.10);
+}
+
+/* The travelling highlight: a conic gradient masked down to a 2px ring. The
+ * RING stays put — only the gradient's start angle is animated (registered
+ * custom property), which is what makes it read as light flowing around the
+ * card instead of a box spinning. */
+@property --tm-ring-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.cardLampRunning::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  padding: 2px;
+  background: conic-gradient(
+    from var(--tm-ring-angle),
+    rgba(255, 255, 255, 0) 0deg,
+    rgba(255, 255, 255, 0) 190deg,
+    rgba(255, 255, 255, 0.18) 250deg,
+    rgba(255, 255, 255, 0.55) 292deg,
+    rgba(255, 255, 255, 1) 325deg,
+    rgba(255, 255, 255, 0.4) 352deg,
+    rgba(255, 255, 255, 0) 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: talkmap-ring-sweep 1.8s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes talkmap-ring-sweep {
+  to { --tm-ring-angle: 360deg; }
 }
 
 .cardLampDone {
-  box-shadow:
-    inset 0 0 0 1px rgba(52, 199, 89, 0.42),
-    0 0 16px 2px rgba(52, 199, 89, 0.30),
-    0 0 46px 14px rgba(52, 199, 89, 0.16);
+  animation: talkmap-lamp-green 2.8s ease-in-out infinite;
 }
 
 .cardLampError {
@@ -374,21 +410,6 @@
 
 .cardLampWaiting {
   animation: talkmap-lamp-amber 3.4s ease-in-out infinite;
-}
-
-@keyframes talkmap-lamp-white {
-  0%, 100% {
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.40),
-      0 0 14px 1px rgba(255, 255, 255, 0.26),
-      0 0 34px 8px rgba(255, 255, 255, 0.12);
-  }
-  50% {
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.80),
-      0 0 24px 5px rgba(255, 255, 255, 0.46),
-      0 0 62px 20px rgba(255, 255, 255, 0.24);
-  }
 }
 
 @keyframes talkmap-lamp-green {
