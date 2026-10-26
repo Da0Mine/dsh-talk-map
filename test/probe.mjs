@@ -377,6 +377,23 @@ try {
   const afterTouch = await orderOf(['card-1', 'card-2', 'card-5'])
   check('活跃会话被提到开头', afterTouch[0] === 's5', `${JSON.stringify(beforeTouch)} → ${JSON.stringify(afterTouch.slice(0, 2))}`)
 
+  // The case that matters in real use: the message arrives while the map is
+  // CLOSED (panel unmounted) — the promotion must survive the remount.
+  const firstCardSession = () => page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(400)
+  await page.evaluate(() => window.__harness.touch('s4'))
+  await openMap()
+  await page.waitForTimeout(600)
+  check('关着地图时发的消息，重新打开也会提前', (await firstCardSession()) === 's4', `first=${await firstCardSession()}`)
+
   // ---- 7. resize: edges + corners -------------------------------------
   const handleAxes = await page.evaluate(() =>
     [...document.querySelectorAll('[data-talkmap-workspace="ws-daily"] [data-talkmap-resize]')]

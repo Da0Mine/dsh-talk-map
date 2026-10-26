@@ -58,6 +58,13 @@ type TalkMapNode = SessionCardNodeType | WsFrameNodeType | StackNodeType
 /** Stable empty projection for a runtime without the ui-session status hook. */
 const EMPTY_SESSION_STATUS: ReadonlyMap<string, SessionStatusFact> = new Map()
 
+/**
+ * Last activity stamp the board has seen, per session. Module scope on purpose:
+ * closing the map unmounts the panel, and "you sent a message while the map was
+ * closed" is the case the promotion exists for — a component ref would forget it.
+ */
+const lastActivitySeen = new Map<string, number>()
+
 function snap(value: number): number {
   return Math.round(value / GRID) * GRID
 }
@@ -329,14 +336,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   // "An active conversation jumps the queue": when a session's stamp advances
   // (a message was just sent, or it started running), its card is promoted to
-  // the first slot of its folder — once. The watcher seeds itself from the
-  // current stamps, so opening the map never reshuffles anything, and a card
-  // that already sits in front costs nothing.
-  const activityRef = useRef<Map<string, number>>(new Map())
+  // the first slot of its folder — once.
+  //
+  // The memory lives at MODULE scope, not in a component ref: the map panel
+  // unmounts every time it closes, so a ref would re-seed on the next open and
+  // the promotion could never see "you sent a message while the map was closed"
+  // — which is exactly when it matters most.
   useEffect(() => {
     if (canvasState.phase !== 'ready') return
     if (draggingCardId !== null || liveFrame !== null) return
-    const seen = activityRef.current
+    const seen = lastActivitySeen
     const stamps = new Map<string, number>()
     for (const card of Object.values(visibleCards)) {
       stamps.set(card.sessionId, sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt)

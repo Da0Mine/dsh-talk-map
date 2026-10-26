@@ -11061,6 +11061,7 @@ var GRID = 16;
 var COLS = 3;
 var LAYOUT_VERSION = 4;
 var EMPTY_SESSION_STATUS = /* @__PURE__ */ new Map();
+var lastActivitySeen = /* @__PURE__ */ new Map();
 function snap(value) {
   return Math.round(value / GRID) * GRID;
 }
@@ -11231,11 +11232,10 @@ function CanvasInner(props) {
     if (Object.keys(stale).length > 0) canvas.moveCards(stale);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
   const foldedSet = (0, import_react9.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
-  const activityRef = (0, import_react9.useRef)(/* @__PURE__ */ new Map());
   (0, import_react9.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
-    const seen = activityRef.current;
+    const seen = lastActivitySeen;
     const stamps = /* @__PURE__ */ new Map();
     for (const card of Object.values(visibleCards)) {
       stamps.set(card.sessionId, sessions.byId[card.sessionId]?.updatedAt ?? card.createdAt);
