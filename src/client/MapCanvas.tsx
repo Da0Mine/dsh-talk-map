@@ -773,6 +773,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
           ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
           ...(currentSessionId() === card.sessionId ? { current: true } : {}),
+          ...(pinnedSessions.has(card.sessionId) ? { pinned: true } : {}),
         }
         return {
           id: cardId,
@@ -831,7 +832,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1198,6 +1199,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         ...(glow !== undefined ? { glow } : {}),
         ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
         ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
+        ...(pinnedSessions.has(card.sessionId) ? { pinned: true } : {}),
       })
     }
     return items

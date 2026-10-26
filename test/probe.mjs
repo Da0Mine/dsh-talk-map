@@ -814,6 +814,16 @@ try {
       .map(entry => state.cards[entry.id]?.sessionId)
   })
   check('置顶后卡片排到最前', medkitOrder[0] === 's7', JSON.stringify(medkitOrder))
+  const pinnedCard = await page.evaluate(() => {
+    const card = document.querySelector('[data-talkmap-session="s7"]')
+    if (card === null) return null
+    return {
+      pin: card.querySelector('[data-talkmap-pin]') !== null,
+      opacity: Number(getComputedStyle(card).opacity),
+    }
+  })
+  check('置顶卡片带置顶图标', pinnedCard?.pin === true, JSON.stringify(pinnedCard))
+  check('置顶卡片不压暗', pinnedCard?.opacity === 1, JSON.stringify(pinnedCard))
 
   const beforeArchive = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]').length)
   const archivePoint = await cardPoint('s10')

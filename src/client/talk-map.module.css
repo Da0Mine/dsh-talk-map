@@ -379,6 +379,16 @@
     0 0 40px 9px rgba(255, 255, 255, 0.1);
 }
 
+/* Pinned in the sidebar: a small mark before the title. The card keeps its full
+ * strength (a pinned card is a deliberate choice, not something to fade out). */
+.cardPin {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0.9;
+}
+
 /* The conversation you came from: corner brackets, not a full frame. */
 .cardReticle {
   position: absolute;

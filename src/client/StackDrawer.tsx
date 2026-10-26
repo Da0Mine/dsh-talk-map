@@ -45,6 +45,8 @@ export interface StackEntry {
   pendingDraft?: boolean
   /** Its last run was cut off by closing the app. */
   interrupted?: boolean
+  /** Pinned in the sidebar. */
+  pinned?: boolean
 }
 
 export interface StackDrawerProps {
@@ -123,6 +125,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 onClick={() => { props.onOpenCard(item.cardId) }}
               >
                 <div className={styles['cardTop']}>
+                  {item.pinned === true
+                    ? <span className={styles['cardPin']} title={t('card.pinned')} data-talkmap-pin="1">📌</span>
+                    : null}
                   <span className={styles['cardTitle']}>{item.title}</span>
                 </div>
                 {item.preview !== undefined && item.preview !== ''
