@@ -10628,6 +10628,12 @@ var LEADING_MARKERS = [
   /^<runtime-memory-file/i,
   /^mnemon runtime memory snapshot/i,
   /^browser time zone for this request/i,
+  // Shapes found by scanning every stored session (2026-10-26):
+  /^\[[a-z][^\]]{0,200}\]/i,
+  // [MNEMON] …, [model changed: …], [dsh-mnemon: …]
+  /^this is an automatically generated checkpoint/i,
+  /^the approval policy changed/i,
+  /^\(empty message\)/i,
   /^elapsed since the preceding/i,
   // Subagent checkpoints are machine-authored prompts, not something a person typed.
   /^\[dsh-mnemon:/i
@@ -10647,6 +10653,10 @@ var PATTERNS = [
   [/^\s*Approval prompts are disabled[^\n]*$/gim, " "],
   [/^\s*Current DeepSeek Harness implementation checkout:[^\n]*$/gim, " "],
   [/^\s*Current DeepSeek Harness Web GUI URL:[^\n]*$/gim, " "],
+  [/^\[[a-z][^\]]{0,200}\]/i, " "],
+  [/^This is an automatically generated checkpoint[\s\S]*$/im, " "],
+  [/^The approval policy changed[\s\S]*$/im, " "],
+  [/^\[model changed:[\s\S]*$/im, " "],
   [/^\s*The available skill catalog changed[\s\S]*$/im, " "]
 ];
 function isEnvelopeOnly(text) {
@@ -10663,6 +10673,7 @@ function cleanPreviewText(text) {
 
 // src/client/preview-cache.ts
 var STORAGE_KEY2 = "dsh.talk-map.previews.v1";
+var MAX_RAW = 600;
 var MAX_ENTRIES = 300;
 var cache2 = null;
 var timer3;
@@ -10684,7 +10695,9 @@ function loadPreviewCache() {
 function readPreviewTexts() {
   const out = {};
   for (const [sessionId, entry] of Object.entries(loadPreviewCache())) {
-    if (typeof entry?.text === "string" && entry.text !== "") out[sessionId] = entry.text;
+    if (typeof entry?.text !== "string" || entry.text === "") continue;
+    const cleaned = cleanPreviewText(entry.text).slice(0, 240);
+    if (cleaned !== "") out[sessionId] = cleaned;
   }
   return out;
 }
@@ -10705,7 +10718,7 @@ function scheduleSave() {
 }
 function putPreview(sessionId, text, stamp) {
   const store = loadPreviewCache();
-  store[sessionId] = { text, stamp };
+  store[sessionId] = { text: text.slice(0, MAX_RAW), stamp };
   const keys = Object.keys(store);
   if (keys.length > MAX_ENTRIES) {
     const ordered = keys.map((key) => ({ key, stamp: store[key]?.stamp ?? 0 })).sort((a, b) => a.stamp - b.stamp);
@@ -11554,7 +11567,9 @@ function CanvasInner(props) {
   }, []);
   const [previews, setPreviews] = (0, import_react8.useState)(readPreviewTexts);
   const previewStamp = (0, import_react8.useRef)(
-    new Map(Object.entries(loadPreviewCache()).map(([sessionId, entry]) => [sessionId, entry.stamp]))
+    // Only entries that still make a usable body count as cached: a rule fix that
+    // empties an old entry must trigger a refetch, not leave a blank card.
+    new Map(Object.entries(loadPreviewCache()).filter(([, entry]) => typeof entry?.text === "string" && cleanPreviewText(entry.text) !== "").map(([sessionId, entry]) => [sessionId, entry.stamp]))
   );
   const { screenToFlowPosition, zoomTo } = useReactFlow();
   const [panMode, setPanMode] = (0, import_react8.useState)(true);
@@ -11637,10 +11652,10 @@ function CanvasInner(props) {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
           const value = cleanPreviewText(text).slice(0, 240);
+          const stamp = stamps.find(([id2]) => id2 === sessionId)?.[1] ?? 0;
+          putPreview(sessionId, text, stamp);
           if (value === "") continue;
           cleaned[sessionId] = value;
-          const stamp = stamps.find(([id2]) => id2 === sessionId)?.[1] ?? 0;
-          putPreview(sessionId, value, stamp);
         }
         setPreviews((previous) => ({ ...previous, ...cleaned }));
       }).catch(() => void 0);

@@ -1,3 +1,5 @@
+import { cleanPreviewText } from './preview-text.ts'
+
 /**
  * Cached card bodies.
  *
@@ -8,6 +10,8 @@
  * immediately and only asks the Host for sessions whose stamp moved.
  */
 const STORAGE_KEY = 'dsh.talk-map.previews.v1'
+/** Raw text is capped before storing; the display cap is applied after cleaning. */
+const MAX_RAW = 600
 /** Enough for a few hundred conversations; each entry is one line of text. */
 const MAX_ENTRIES = 300
 
@@ -37,11 +41,19 @@ export function loadPreviewCache(): Store {
   return cache
 }
 
-/** Plain sessionId → text, for the first paint. */
+/**
+ * Plain sessionId → text, for the first paint.
+ *
+ * The cache stores the RAW message and cleans it on the way out: a rule fix then
+ * applies to entries written before it, instead of leaving old noise cached
+ * forever (the stamp only changes when the conversation does).
+ */
 export function readPreviewTexts(): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [sessionId, entry] of Object.entries(loadPreviewCache())) {
-    if (typeof entry?.text === 'string' && entry.text !== '') out[sessionId] = entry.text
+    if (typeof entry?.text !== 'string' || entry.text === '') continue
+    const cleaned = cleanPreviewText(entry.text).slice(0, 240)
+    if (cleaned !== '') out[sessionId] = cleaned
   }
   return out
 }
@@ -64,10 +76,10 @@ function scheduleSave(): void {
   }, 400)
 }
 
-/** Store one freshly fetched body (called with its stamp). */
+/** Store one freshly fetched body — RAW, cleaned at read time (see above). */
 export function putPreview(sessionId: string, text: string, stamp: number): void {
   const store = loadPreviewCache()
-  store[sessionId] = { text, stamp }
+  store[sessionId] = { text: text.slice(0, MAX_RAW), stamp }
   const keys = Object.keys(store)
   if (keys.length > MAX_ENTRIES) {
     // Oldest-first eviction: a Map would be nicer, but the record is what lands in JSON.

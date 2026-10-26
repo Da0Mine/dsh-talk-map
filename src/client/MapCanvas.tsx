@@ -170,7 +170,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // First paint comes from the cache; the network only tops it up.
   const [previews, setPreviews] = useState<Record<string, string>>(readPreviewTexts)
   const previewStamp = useRef<Map<string, number>>(
-    new Map(Object.entries(loadPreviewCache()).map(([sessionId, entry]) => [sessionId, entry.stamp])),
+    // Only entries that still make a usable body count as cached: a rule fix that
+    // empties an old entry must trigger a refetch, not leave a blank card.
+    new Map(Object.entries(loadPreviewCache())
+      .filter(([, entry]) => typeof entry?.text === 'string' && cleanPreviewText(entry.text) !== '')
+      .map(([sessionId, entry]) => [sessionId, entry.stamp])),
   )
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
@@ -295,11 +299,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           const cleaned: Record<string, string> = {}
           for (const [sessionId, text] of Object.entries(texts)) {
             const value = cleanPreviewText(text).slice(0, 240)
+            const stamp = stamps.find(([id]) => id === sessionId)?.[1] ?? 0
+            // The cache keeps the RAW text so a rule fix also cleans old entries.
+            putPreview(sessionId, text, stamp)
             if (value === '') continue
             cleaned[sessionId] = value
-            const stamp = stamps.find(([id]) => id === sessionId)?.[1] ?? 0
-            // Written through to the cache, so the next open paints instantly.
-            putPreview(sessionId, value, stamp)
           }
           setPreviews(previous => ({ ...previous, ...cleaned }))
         })

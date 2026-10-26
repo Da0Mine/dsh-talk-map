@@ -21,6 +21,11 @@ const LEADING_MARKERS: readonly RegExp[] = [
   /^<runtime-memory-file/i,
   /^mnemon runtime memory snapshot/i,
   /^browser time zone for this request/i,
+  // Shapes found by scanning every stored session (2026-10-26):
+  /^\[[a-z][^\]]{0,200}\]/i,          // [MNEMON] …, [model changed: …], [dsh-mnemon: …]
+  /^this is an automatically generated checkpoint/i,
+  /^the approval policy changed/i,
+  /^\(empty message\)/i,
   /^elapsed since the preceding/i,
   // Subagent checkpoints are machine-authored prompts, not something a person typed.
   /^\[dsh-mnemon:/i,
@@ -41,6 +46,10 @@ const PATTERNS: readonly [RegExp, string][] = [
   [/^\s*Approval prompts are disabled[^\n]*$/gim, ' '],
   [/^\s*Current DeepSeek Harness implementation checkout:[^\n]*$/gim, ' '],
   [/^\s*Current DeepSeek Harness Web GUI URL:[^\n]*$/gim, ' '],
+  [/^\[[a-z][^\]]{0,200}\]/i, ' '],
+  [/^This is an automatically generated checkpoint[\s\S]*$/im, ' '],
+  [/^The approval policy changed[\s\S]*$/im, ' '],
+  [/^\[model changed:[\s\S]*$/im, ' '],
   [/^\s*The available skill catalog changed[\s\S]*$/im, ' '],
 ]
 

@@ -64,6 +64,11 @@ const ENVELOPE_MARKERS: readonly RegExp[] = [
   /^<runtime-memory-file/i,
   /^mnemon runtime memory snapshot/i,
   /^browser time zone for this request/i,
+  // Shapes found by scanning every stored session (2026-10-26):
+  /^\[[a-z][^\]]{0,200}\]/i,          // [MNEMON] …, [model changed: …], [dsh-mnemon: …]
+  /^this is an automatically generated checkpoint/i,
+  /^the approval policy changed/i,
+  /^\(empty message\)/i,
   /^elapsed since the preceding/i,
   // Subagent checkpoints are machine-authored prompts, not something a person typed.
   /^\[dsh-mnemon:/i,
@@ -89,6 +94,10 @@ function stripEnvelopes(text: string): string {
   out = out.replace(/^\s*Current DSH file policy:[^\n]*$/gim, ' ')
   out = out.replace(/^\s*Approval prompts are disabled[^\n]*$/gim, ' ')
   out = out.replace(/^\s*Current DeepSeek Harness[^\n]*$/gim, ' ')
+  out = out.replace(/^\[[a-z][^\]]{0,200}\]/i, ' ')
+  out = out.replace(/^This is an automatically generated checkpoint[\s\S]*$/im, ' ')
+  out = out.replace(/^The approval policy changed[\s\S]*$/im, ' ')
+  out = out.replace(/^\[model changed:[\s\S]*$/im, ' ')
   out = out.replace(/^\s*The available skill catalog changed[\s\S]*$/im, ' ')
   return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
 }

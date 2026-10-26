@@ -143,10 +143,18 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   后面（`Time sampled while preparing…` 一条、`Current runtime context.…` 一条），所以规则是：
   **以信封开头的整条消息直接跳过**（`isEnvelopeOnly`；真人消息以别的内容开头，不会误杀），
   其余消息只剥尾部的信封块；整条只剩信封的轮次变空，于是往前找上一条真人写的话；
-- 已收录的信封标记：`Time sampled while preparing` / `Current runtime context.` /
+- 已收录的信封标记（按真实会话全量扫描整理，169 个会话普查后残留 0）：
+  `Time sampled while preparing` / `Elapsed since the preceding` /
+  `Browser time zone for this request` / `Current runtime context.` /
+  `Current working directory:` / `MNEMON RUNTIME MEMORY SNAPSHOT` /
+  `[MNEMON] Search Documents…` / `[model changed: …]` / `[dsh-mnemon: …]` /
   `<system-reminder>` / `<available_skills>` / `<runtime-memory-file>` /
-  `MNEMON RUNTIME MEMORY SNAPSHOT` / `Browser time zone for this request` /
-  `Elapsed since the preceding` / `[dsh-mnemon:`（子代理检查点提示词）；
+  `This is an automatically generated checkpoint` / `The approval policy changed` /
+  `(empty message)`，外加通用规则 `^[ASCII标签]`（方括号英文标签基本只有宿主会用）；
+- **缓存的必须是"原文"**：`preview-cache` 存原始消息（截 600 字），渲染前才清洗——
+  这样改一次规则，旧缓存也跟着变干净；洗不出东西的旧条目会被当成"没缓存"，从而重新拉取；
+- 离线审计脚本 `scripts/_.audit-previews.mjs`：遍历全部会话，打印每张卡会显示的正文，
+  并标出"看起来还像信封"的；改规则先跑它，不要只盯一个例子；
 - **客户端还有第二道**（`src/client/preview-text.ts`，同一套规则）：宿主半没重启也能干净。
   踩过的坑：`MNEMON RUNTIME MEMORY SNAPSHOT` 那条正则少写了 `m` 标志，`^` 只锚在串首，
   快照照样漏出来——现在客户端 / src 宿主 / 打包产物三处都是 `/im`；
