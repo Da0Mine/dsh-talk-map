@@ -27,6 +27,7 @@ import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionAlerts } from './session-alerts.ts'
+import { sessionActivity } from './session-activity.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
@@ -133,6 +134,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     ? props.useSessionStatus(status => status)
     : EMPTY_SESSION_STATUS
   const alertById = useSyncExternalStore(sessionAlerts.subscribe, sessionAlerts.getSnapshot)
+  // "Ran to completion while the map was up" — the map's own projection, because
+  // the shell keeps the session you came from as the main view (see the module).
+  const finishedById = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getSnapshot)
+  // Every status snapshot feeds the projection; a running → idle step is what it
+  // turns into a "done, unread" lamp.
+  useEffect(() => {
+    sessionActivity.observe(statusById, sessions.byId)
+  }, [statusById, sessions])
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [panMode, setPanMode] = useState(true)
@@ -620,7 +629,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (alertById.has(sessionId)) return 'error'
     if (status !== undefined && status.pendingInteraction !== undefined) return 'waiting'
     if (status?.running === true || summary?.running === true) return 'running'
-    if (status?.completionUnread === true) return 'done'
+    // Either the shell noticed it (the session was not on screen) or the map did
+    // (the session you came from stays "main view", so the shell stays quiet).
+    if (status?.completionUnread === true || finishedById.has(sessionId)) return 'done'
     return undefined
   }
 
@@ -726,7 +737,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1065,6 +1076,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   const openSession = (sessionId: string): void => {
+    // Looking at it counts as reading it: drop the map's own "finished, unread".
+    sessionActivity.acknowledge(sessionId)
     // Open first: if the runtime has no session opener, the map stays up (and
     // the reason lands in the console) instead of closing onto the old chat.
     if (openSessionInUi(sessionId)) closeMapPanel()
@@ -1084,6 +1097,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const nextStep = digest?.nextStep ?? digest?.todoNext
       items.push({
         cardId,
+        sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
         ...(digest?.summary !== undefined ? { summary: digest.summary } : {}),
         ...(nextStep !== undefined ? { nextStep } : {}),

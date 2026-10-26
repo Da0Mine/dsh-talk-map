@@ -118,6 +118,7 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
         data.onPick()
       }}
       style={data.onPick !== undefined ? { cursor: 'pointer' } : undefined}
+      data-talkmap-session={data.sessionId}
     >
       {/* Four connection points, one per side. All type "source" — the
         * canvas runs ConnectionMode.Loose, so each also accepts incoming

@@ -86,7 +86,7 @@
   let workspacesState = buildWorkspaces()
   // ui-session's projection: s1 still running (white lamp), s3 finished while
   // unwatched (green lamp), s2 blocked on the user (amber lamp).
-  const statusById = new Map([
+  let statusById = new Map([
     ['s1', { running: true }],
     ['s3', { completionUnread: true }],
     ['s2', { pendingInteraction: { kind: 'approval' } }],
@@ -421,6 +421,21 @@
     /** Raise the Host's api-session/error for one session (the red lamp). */
     raiseError(sessionId) {
       remoteListeners.get('api-session/error')?.(sessionId, 'boom')
+    },
+    /**
+     * Flip a session's running flag. Proves the map's OWN "finished while the map
+     * was up" tracking — this harness never sets completionUnread by itself.
+     */
+    setRunning(sessionId, running) {
+      const next = new Map(statusById)
+      const fact = { ...(next.get(sessionId) ?? {}) }
+      if (running) fact.running = true
+      else delete fact.running
+      next.set(sessionId, fact)
+      statusById = next
+      sessionRows[sessionId] = { ...sessionRows[sessionId], running, updatedAt: Date.now() }
+      sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+      sync()
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }

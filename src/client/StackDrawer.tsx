@@ -31,7 +31,9 @@ function rowStep(scroller: HTMLElement): number {
   return first.offsetHeight + 12
 }
 
-export interface StackEntry {  cardId: string
+export interface StackEntry {
+  cardId: string
+  sessionId: string
   title: string
   summary?: string
   nextStep?: string
@@ -111,6 +113,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 key={item.cardId}
                 type="button"
                 data-stack-card=""
+                data-talkmap-session={item.sessionId}
                 className={classNames.filter(Boolean).join(' ')}
                 onClick={() => { props.onOpenCard(item.cardId) }}
               >
@@ -133,7 +136,10 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   {item.glow === undefined
                     ? null
                     : (
-                        <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[item.glow].className]}`}>
+                        <span
+                          className={`${styles['cardChip']} ${styles[LAMP_CHIP[item.glow].className]}`}
+                          data-talkmap-chip={item.glow}
+                        >
                           {item.glow === 'running' ? <span className={styles['runningDot']} /> : null}
                           {t(LAMP_CHIP[item.glow].key)}
                         </span>

@@ -194,17 +194,19 @@ try {
 
   // ---- 3b. status chip text + colour follow the lamp -------------------
   const readChips = () => page.evaluate(() => {
-    const state = window.__harness.state()
     const out = {}
-    for (const node of document.querySelectorAll('.react-flow__node')) {
-      const sessionId = state.cards[node.getAttribute('data-id')]?.sessionId
-      const chip = node.querySelector('[data-talkmap-chip]')
-      if (sessionId === undefined || chip === null) continue
-      out[sessionId] = {
-        kind: chip.getAttribute('data-talkmap-chip'),
-        text: chip.textContent.trim(),
-        color: getComputedStyle(chip).color,
-      }
+    // Grid cards and drawer cards both carry the session id, so one scan covers
+    // whichever surface is on screen.
+    for (const root of document.querySelectorAll('[data-talkmap-session]')) {
+      const sessionId = root.getAttribute('data-talkmap-session')
+      const chip = root.querySelector('[data-talkmap-chip]')
+      out[sessionId] = chip === null
+        ? null
+        : {
+            kind: chip.getAttribute('data-talkmap-chip'),
+            text: chip.textContent.trim(),
+            color: getComputedStyle(chip).color,
+          }
     }
     return out
   })
@@ -276,6 +278,7 @@ try {
       runningRing: withRing !== null,
       runningCard: withRing,
       doneBreath: cards.some(card => getComputedStyle(card).animationName.includes('lamp-green')),
+      chipCount: el.querySelectorAll('[data-talkmap-chip]').length,
     }
   })
   check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 6, `${drawer?.count} 张`)
@@ -283,14 +286,14 @@ try {
   check('抽屉里至少两行（卡片排满整行再换行）', (drawer?.rows ?? 0) >= 2, `rows=${drawer?.rows}`)
   check('运行中 = 环绕卡片的加载光环', drawer?.runningRing === true)
   check('已完成 = 绿光呼吸', drawer?.doneBreath === true)
+  check('抽屉里的卡片也带状态胶囊', (drawer?.chipCount ?? 0) >= 3, `chips=${drawer?.chipCount}`)
   check('运行中不呼吸（没有 pulse 动画）', !(drawer?.runningCard?.animation ?? '').includes('lamp'), drawer?.runningCard?.animation)
   check('运行中是微弱白光（不是大范围光晕）', (() => {
     const alphas = [...(drawer?.runningCard?.shadow ?? '').matchAll(/rgba\(255, 255, 255, ([\d.]+)\)/g)].map(match => Number(match[1]))
     return alphas.length > 0 && Math.max(...alphas) <= 0.25
   })(), (drawer?.runningCard?.shadow ?? '').slice(0, 90))
 
-  const ringMotion = await page.evaluate(async () => {
-    const cards = [...document.querySelectorAll('[data-stack-card]')]
+  const ringMotion = await page.evaluate(async () => {    const cards = [...document.querySelectorAll('[data-stack-card]')]
     const card = cards.find(node => getComputedStyle(node, '::after').animationName.includes('ring-sweep'))
     if (card === undefined) return null
     const angle1 = getComputedStyle(card, '::after').getPropertyValue('--tm-ring-angle').trim()
@@ -354,6 +357,42 @@ try {
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
   check('Esc 收起抽屉', await page.evaluate(() => document.querySelector('[class*="tm_drawer"]:not([class*="Backdrop"])') === null))
+
+  // ---- 4b. finished while the map is up (the reported bug) --------------
+  // Uses a card that is on the GRID (deterministic DOM, no drawer involved).
+  // The harness never sets completionUnread by itself, so a green light here can
+  // only come from the map's own projection — the "opened the map from this
+  // conversation" case, where the shell stays quiet.
+  const chatId = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined && item.r.y > 0)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  check('找到一个网格上的会话用于测试', chatId !== null, String(chatId))
+  await page.evaluate((id) => window.__harness.setRunning(id, true), chatId)
+  await page.waitForTimeout(500)
+  const runningNow = (await readChips())[chatId]
+  check('地图里跑到一半 → 该卡显示正在运行', runningNow?.kind === 'running', JSON.stringify(runningNow))
+  await page.evaluate((id) => window.__harness.setRunning(id, false), chatId)
+  await page.waitForTimeout(600)
+  const finishedNow = (await readChips())[chatId]
+  check('跑完 → 自动变「待查看」绿灯（不靠宿主的 unread）',
+    finishedNow?.kind === 'done' && finishedNow.text === '待查看' && /52, 199, 89/.test(finishedNow.color ?? ''),
+    JSON.stringify(finishedNow))
+
+  // Opening it counts as reading it.
+  const chatPoint = await cardPoint(chatId)
+  if (chatPoint !== null) await page.mouse.click(chatPoint.x, chatPoint.y - 6)
+  await page.waitForTimeout(500)
+  const openedChat = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.openSession').at(-1))
+  check('点开该会话', openedChat?.detail === chatId, JSON.stringify(openedChat?.detail))
+  await openMap()
+  await page.waitForTimeout(600)
+  const afterAck = (await readChips())[chatId]
+  check('打开过后不再显示待查看', afterAck?.kind !== 'done', JSON.stringify(afterAck))
 
   // ---- 5. panel model --------------------------------------------------
   check('地图是 main 面板（不是遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')

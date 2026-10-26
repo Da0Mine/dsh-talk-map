@@ -548,18 +548,18 @@ function pushUndo() {
   if (undoStack.length > 50) undoStack.shift();
   redoStack.length = 0;
 }
-function restoreSnapshot(snapshot2) {
+function restoreSnapshot(snapshot3) {
   const previousCards = state.cards;
   const previousEdges = state.edges;
   const currentCamera = state.global?.cameraByBoard;
-  const global = snapshot2.global === null ? state.global : { ...snapshot2.global, cameraByBoard: currentCamera ?? snapshot2.global.cameraByBoard };
-  setState({ cards: snapshot2.cards, edges: snapshot2.edges, ...global !== null ? { global } : {} });
-  const goneCards = Object.keys(previousCards).filter((id2) => snapshot2.cards[id2] === void 0);
-  const goneEdges = Object.keys(previousEdges).filter((id2) => snapshot2.edges[id2] === void 0);
+  const global = snapshot3.global === null ? state.global : { ...snapshot3.global, cameraByBoard: currentCamera ?? snapshot3.global.cameraByBoard };
+  setState({ cards: snapshot3.cards, edges: snapshot3.edges, ...global !== null ? { global } : {} });
+  const goneCards = Object.keys(previousCards).filter((id2) => snapshot3.cards[id2] === void 0);
+  const goneEdges = Object.keys(previousEdges).filter((id2) => snapshot3.edges[id2] === void 0);
   void (async () => {
-    if (Object.keys(snapshot2.cards).length > 0) await talkMapApi.upsertCards({ ...snapshot2.cards });
+    if (Object.keys(snapshot3.cards).length > 0) await talkMapApi.upsertCards({ ...snapshot3.cards });
     if (goneCards.length > 0) await talkMapApi.deleteCards(goneCards);
-    if (Object.keys(snapshot2.edges).length > 0) await talkMapApi.upsertEdges({ ...snapshot2.edges });
+    if (Object.keys(snapshot3.edges).length > 0) await talkMapApi.upsertEdges({ ...snapshot3.edges });
     if (goneEdges.length > 0) await talkMapApi.deleteEdges(goneEdges);
     if (global !== null) await persistGlobal(global, "undo");
   })().catch((error) => {
@@ -843,16 +843,16 @@ var canvas = {
   },
   /** Cmd/Ctrl+Z — board operations only (conversations are not undoable). */
   undo() {
-    const snapshot2 = undoStack.pop();
-    if (snapshot2 === void 0) return;
+    const snapshot3 = undoStack.pop();
+    if (snapshot3 === void 0) return;
     redoStack.push(takeSnapshot());
-    restoreSnapshot(snapshot2);
+    restoreSnapshot(snapshot3);
   },
   redo() {
-    const snapshot2 = redoStack.pop();
-    if (snapshot2 === void 0) return;
+    const snapshot3 = redoStack.pop();
+    if (snapshot3 === void 0) return;
     undoStack.push(takeSnapshot());
-    restoreSnapshot(snapshot2);
+    restoreSnapshot(snapshot3);
   },
   savedCamera(boardId) {
     return state.global?.cameraByBoard[boardId];
@@ -2061,7 +2061,7 @@ function defaultTouchable() {
   return navigator.maxTouchPoints || "ontouchstart" in this;
 }
 function drag_default() {
-  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners4 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
+  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners5 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
   function drag(selection2) {
     selection2.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved, nonpassive).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -2124,7 +2124,7 @@ function drag_default() {
     }
   }
   function beforestart(that, container2, event, d, identifier, touch) {
-    var dispatch2 = listeners4.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
+    var dispatch2 = listeners5.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
     if ((s = subject.call(that, new DragEvent("beforestart", {
       sourceEvent: event,
       target: drag,
@@ -2183,8 +2183,8 @@ function drag_default() {
     return arguments.length ? (touchable = typeof _ === "function" ? _ : constant_default2(!!_), drag) : touchable;
   };
   drag.on = function() {
-    var value = listeners4.on.apply(listeners4, arguments);
-    return value === listeners4 ? drag : value;
+    var value = listeners5.on.apply(listeners5, arguments);
+    return value === listeners5 ? drag : value;
   };
   drag.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
@@ -3786,7 +3786,7 @@ function defaultConstrain(transform2, extent, translateExtent) {
   );
 }
 function zoom_default2() {
-  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners4 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
+  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners5 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
   function zoom(selection2) {
     selection2.property("__zoom", defaultTransform).on("wheel.zoom", wheeled, { passive: false }).on("mousedown.zoom", mousedowned).on("dblclick.zoom", dblclicked).filter(touchable).on("touchstart.zoom", touchstarted).on("touchmove.zoom", touchmoved).on("touchend.zoom touchcancel.zoom", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -3898,7 +3898,7 @@ function zoom_default2() {
     },
     emit: function(type) {
       var d = select_default2(this.that).datum();
-      listeners4.call(
+      listeners5.call(
         type,
         this.that,
         new ZoomEvent(type, {
@@ -3906,7 +3906,7 @@ function zoom_default2() {
           target: zoom,
           type,
           transform: this.that.__zoom,
-          dispatch: listeners4
+          dispatch: listeners5
         }),
         d
       );
@@ -4056,8 +4056,8 @@ function zoom_default2() {
     return arguments.length ? (interpolate = _, zoom) : interpolate;
   };
   zoom.on = function() {
-    var value = listeners4.on.apply(listeners4, arguments);
-    return value === listeners4 ? zoom : value;
+    var value = listeners5.on.apply(listeners5, arguments);
+    return value === listeners5 ? zoom : value;
   };
   zoom.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, zoom) : Math.sqrt(clickDistance2);
@@ -6762,20 +6762,20 @@ var import_with_selector = __toESM(require_with_selector(), 1);
 var import_meta = {};
 var createStoreImpl = (createState) => {
   let state3;
-  const listeners4 = /* @__PURE__ */ new Set();
+  const listeners5 = /* @__PURE__ */ new Set();
   const setState2 = (partial, replace) => {
     const nextState = typeof partial === "function" ? partial(state3) : partial;
     if (!Object.is(nextState, state3)) {
       const previousState = state3;
       state3 = (replace != null ? replace : typeof nextState !== "object" || nextState === null) ? nextState : Object.assign({}, state3, nextState);
-      listeners4.forEach((listener) => listener(state3, previousState));
+      listeners5.forEach((listener) => listener(state3, previousState));
     }
   };
   const getState = () => state3;
   const getInitialState2 = () => initialState;
   const subscribe2 = (listener) => {
-    listeners4.add(listener);
-    return () => listeners4.delete(listener);
+    listeners5.add(listener);
+    return () => listeners5.delete(listener);
   };
   const destroy = () => {
     if ((import_meta.env ? import_meta.env.MODE : void 0) !== "production") {
@@ -6783,7 +6783,7 @@ var createStoreImpl = (createState) => {
         "[DEPRECATED] The `destroy` method will be unsupported in a future version. Instead use unsubscribe function returned by subscribe. Everything will be garbage-collected if store is garbage-collected."
       );
     }
-    listeners4.clear();
+    listeners5.clear();
   };
   const api = { setState: setState2, getState, getInitialState: getInitialState2, subscribe: subscribe2, destroy };
   const initialState = state3 = createState(setState2, getState, api);
@@ -10304,6 +10304,65 @@ function attachAlertSource(remote, list) {
   };
 }
 
+// src/client/session-activity.ts
+var lastRunning = /* @__PURE__ */ new Map();
+var finished = /* @__PURE__ */ new Set();
+var snapshot2 = /* @__PURE__ */ new Set();
+var listeners4 = /* @__PURE__ */ new Set();
+function publish2() {
+  snapshot2 = new Set(finished);
+  for (const listener of listeners4) listener();
+}
+var sessionActivity = {
+  getSnapshot() {
+    return snapshot2;
+  },
+  subscribe(listener) {
+    listeners4.add(listener);
+    return () => {
+      listeners4.delete(listener);
+    };
+  },
+  isFinished(sessionId) {
+    return finished.has(sessionId);
+  },
+  /**
+   * Feed one observation of the live status map. Only a transition observed
+   * while the map is mounted counts, so a session that finished while the map
+   * was closed keeps whatever the shell decided for it.
+   */
+  observe(status, summaries) {
+    let changed = false;
+    const ids = /* @__PURE__ */ new Set([...status.keys(), ...Object.keys(summaries)]);
+    for (const sessionId of ids) {
+      const fact = status.get(sessionId);
+      const row = summaries[sessionId];
+      const running = fact?.running === true || row?.running === true;
+      const blocked = fact !== void 0 && fact.pendingInteraction !== void 0 || row?.pendingInteraction !== void 0;
+      const wasRunning = lastRunning.get(sessionId);
+      lastRunning.set(sessionId, running);
+      if (running || blocked) {
+        if (finished.delete(sessionId)) changed = true;
+        continue;
+      }
+      if (wasRunning === true && !finished.has(sessionId)) {
+        finished.add(sessionId);
+        changed = true;
+      }
+    }
+    if (changed) publish2();
+  },
+  /** The user is looking at it now: stop advertising it as unread. */
+  acknowledge(sessionId) {
+    if (finished.delete(sessionId)) publish2();
+  },
+  /** The session is gone (deleted / archived): drop both records. */
+  forget(sessionId) {
+    lastRunning.delete(sessionId);
+    if (finished.delete(sessionId)) publish2();
+  }
+};
+
 // src/client/ContextMenu.tsx
 var import_react3 = require("react");
 
@@ -10518,6 +10577,7 @@ function SessionCardNode(props) {
         data.onPick();
       },
       style: data.onPick !== void 0 ? { cursor: "pointer" } : void 0,
+      "data-talkmap-session": data.sessionId,
       children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
@@ -10963,6 +11023,7 @@ function StackDrawer(props) {
             {
               type: "button",
               "data-stack-card": "",
+              "data-talkmap-session": item.sessionId,
               className: classNames.filter(Boolean).join(" "),
               onClick: () => {
                 props.onOpenCard(item.cardId);
@@ -10976,10 +11037,17 @@ function StackDrawer(props) {
                 ] }) : null,
                 /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
                   /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
-                  item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`, children: [
-                    item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
-                    t(LAMP_CHIP[item.glow].key)
-                  ] })
+                  item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+                    "span",
+                    {
+                      className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`,
+                      "data-talkmap-chip": item.glow,
+                      children: [
+                        item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                        t(LAMP_CHIP[item.glow].key)
+                      ]
+                    }
+                  )
                 ] })
               ]
             },
@@ -11105,6 +11173,10 @@ function CanvasInner(props) {
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
   const alertById = (0, import_react9.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const finishedById = (0, import_react9.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
+  (0, import_react9.useEffect)(() => {
+    sessionActivity.observe(statusById, sessions.byId);
+  }, [statusById, sessions]);
   const { screenToFlowPosition, zoomTo } = useReactFlow();
   const [panMode, setPanMode] = (0, import_react9.useState)(true);
   const [selectedIds, setSelectedIds] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
@@ -11447,7 +11519,7 @@ function CanvasInner(props) {
     if (alertById.has(sessionId)) return "error";
     if (status !== void 0 && status.pendingInteraction !== void 0) return "waiting";
     if (status?.running === true || summary?.running === true) return "running";
-    if (status?.completionUnread === true) return "done";
+    if (status?.completionUnread === true || finishedById.has(sessionId)) return "done";
     return void 0;
   };
   const liveNodes = (0, import_react9.useMemo)(() => {
@@ -11548,7 +11620,7 @@ function CanvasInner(props) {
       };
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, liveSelectedIds, batchMode, batchPicks, locale]);
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, liveSelectedIds, batchMode, batchPicks, locale]);
   const sessionIdToCardId = (0, import_react9.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
@@ -11803,6 +11875,7 @@ function CanvasInner(props) {
     });
   };
   const openSession = (sessionId) => {
+    sessionActivity.acknowledge(sessionId);
     if (openSessionInUi(sessionId)) closeMapPanel();
   };
   const drawerItems = (groupId) => {
@@ -11818,6 +11891,7 @@ function CanvasInner(props) {
       const nextStep = digest?.nextStep ?? digest?.todoNext;
       items.push({
         cardId,
+        sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
         ...digest?.summary !== void 0 ? { summary: digest.summary } : {},
         ...nextStep !== void 0 ? { nextStep } : {},

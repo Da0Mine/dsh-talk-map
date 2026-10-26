@@ -174,6 +174,19 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 - 点在卡片上打开对话：先 `openSession`，再 `selectPanel(null)`；
 - 面板挂载/卸载就是真实开关状态，`mapUi.open` 只是它的镜像（侧栏按钮高亮用）。
 
+### 4c. "跑完了没人看"：地图自己的待读投影
+
+宿主只在会话**不在主视图**时才把它标成 unread。可"从某个对话里打开地图"时，那个会话
+仍是当前会话（宿主眼里你还在看它），于是它跑完之后不会变待读，卡片也就不亮。
+
+所以插件自己记一份（`src/client/session-activity.ts`）：
+
+- 地图开着时盯每个会话的 `running`，**running → 不在跑** 就算"刚跑完"，标成待读；
+- 这个标记只在**地图开着**的观察里产生；地图关着时的完成仍交给宿主自己的 unread；
+- 清除时机：它又跑起来 / 变成等你回复 / **你从地图里点开了它** / 会话被删；
+- 灯序不变（error > waiting > running > done），`done` = 宿主的 `completionUnread`
+  **或** 地图自己的 finished 集合。
+
 ### 4b. 侧栏跟着地图收放
 
 `ctx.layout` 只有 `toggleSidebar()`、没有读状态的口子，所以由侧栏底部这个插件自己的
