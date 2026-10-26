@@ -26,6 +26,7 @@ import path from 'node:path'
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
+import vm from 'node:vm'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ENTRY = 'src/client/index.ts'
@@ -197,9 +198,39 @@ for (const bad of ["require(\"react/react", 'process.env', 'D:\\', 'file://']) {
 }
 if (!text.includes(PLUGIN_ID)) problems.push('plugin id missing from bundle')
 
+// PARSE CHECK — the one that matters. Every plugin's client.js is served inside
+// one aggregate URL (`plugins/??a,b,c`), so a syntax error here does not just
+// break this plugin: it takes down every entry in that script, and the shell
+// treats "entries did not activate" as fatal and exits. A build must never be
+// able to put an unparseable file on disk (2026-10-26: it did, and crashed the
+// desktop app twice).
+try {
+  new vm.Script(text, { filename: 'client.js' })
+} catch (error) {
+  problems.push(`bundle does not parse: ${error?.message ?? error}`)
+}
+
 if (problems.length > 0) {
   console.error('build-client: ' + problems.join('; '))
+  // Never leave a broken artifact behind: remove the half-built file.
+  fs.rmSync(outfile, { force: true })
   process.exit(1)
+}
+
+// ATOMIC PUBLISH: build next to the target, then rename over it. A reload that
+// happens mid-build must see either the old bundle or the new one, never a
+// truncated file (renames inside one directory are atomic on NTFS).
+if (!check) {
+  const staged = `${outfile}.staged`
+  fs.copyFileSync(outfile, staged)
+  try {
+    new vm.Script(fs.readFileSync(staged, 'utf8'), { filename: 'client.js' })
+  } catch (error) {
+    fs.rmSync(staged, { force: true })
+    console.error('build-client: staged bundle does not parse: ' + (error?.message ?? error))
+    process.exit(1)
+  }
+  fs.renameSync(staged, outfile)
 }
 
 console.log(`build-client: ${path.relative(ROOT, outfile)} ${(bytes / 1024).toFixed(1)} kB`)
