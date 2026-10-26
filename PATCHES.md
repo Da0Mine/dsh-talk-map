@@ -121,14 +121,25 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 - **归档**：`uiWorkspace.archiveSession(id, { stopActivity: true })`，成功后卡片离开地图；
 - **删除会话**：POST `dsh-session-recycle-bin/api`（`{action:'trash'|'trashMany'}`）——
   和回收站插件自己的删除对话框走同一个 Host 路由，进同一个回收站、同样可还原；
-- **批量操作**：进入批量模式后单击卡片即勾选（再点取消），底部工具条给出「归档 / 删除 /
-  取消」，删除一次提交 `trashMany`。
+- **批量操作**：进入批量模式后**每张卡右上角出现勾选框**，单击卡片即勾选（再点取消），
+  勾中的框变实心打勾；底部工具条给出「归档 / 删除 / 取消」，删除一次提交 `trashMany`。
 
-### 3c. 颜色功能已删除
+### 3c. 单击卡片即跳转
 
-单击卡片会弹出的颜色工具条、`colors.ts`、store 里的 `setCardsColor/setWorkspaceColor`、
-卡片/分组的色带渲染、相关 i18n 与 CSS 全部移除。历史数据里的 `colorTag` 字段仍在
-（宿主 schema 不动），只是不再渲染。
+`onNodeClick` 里 sessionCard 直接 `openSession`（原先是双击）。批量模式下卡片的点击被
+`onPick` 接管（`stopPropagation`），所以勾选不会误跳转。因为单击不再用于"选中卡片"，
+删除/归档等动作走右键菜单。
+
+### 3d. 只有工作区能上色
+
+卡片不再有颜色；**工作区**有：左键点标题栏或边框选中后，画布左上角弹出颜色工具条，
+改的是 `wsColors[workspaceId]`，渲染在**边框 + 标题栏**上（`WsFrame.tsx`）。
+选别的对象或按 Esc 取消选中，工具条随之消失。
+
+### 3e. 标题栏盖过顶边把手
+
+`.wsFrameLabel` 给了 `z-index: 5`（把手 2~3）：标题栏和顶边把手重叠的那一小块，拖动
+永远是**移动整个工作区**，不会被顶边把手截走；要调高度用顶边左右两段或上方两角。
 
 ### 4. 地图从"全屏遮罩"改成"主面板窗口"（修 unread 不发光的 bug）
 

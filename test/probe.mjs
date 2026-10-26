@@ -310,11 +310,21 @@ try {
   await page.screenshot({ path: path.join(shots, 'probe-resized.png') })
 
   // ---- 8. new chat goes to the shell's own page ------------------------
-  const frames = await page.evaluate(() => window.__harness.nodeBoxes().frames)
-  const medkit = frames['ws-medkit']
-  const daily = frames['ws-daily']
-  const clickX = Math.max(medkit.x + 60, daily.x + daily.w + 30)
-  await page.mouse.dblclick(clickX, medkit.y + medkit.h - 22)
+  // Aim at the folder's transparent body: a card would open on the first click
+  // now that single-click navigation exists.
+  const medkit = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-medkit']
+  const panePoint = await page.evaluate((frameBox) => {
+    for (let dy = 20; dy < frameBox.h - 8; dy += 6) {
+      for (let dx = 20; dx < frameBox.w - 8; dx += 6) {
+        const x = frameBox.x + dx, y = frameBox.y + dy
+        const hit = document.elementFromPoint(x, y)
+        if (hit !== null && hit.classList.contains('react-flow__pane')) return { x, y }
+      }
+    }
+    return null
+  }, medkit)
+  check('文件夹内有可用于双击的透明区', panePoint !== null, JSON.stringify(panePoint))
+  await page.mouse.dblclick(panePoint.x, panePoint.y)
   await page.waitForTimeout(600)
   const started = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.startSession').at(-1))
   check('双击工作区 = 用系统页面新建该工作区对话', started?.detail?.workspaceId === 'ws-medkit', JSON.stringify(started?.detail))
@@ -322,13 +332,62 @@ try {
   check('地图里不再有内嵌草稿面板', await page.evaluate(() => document.querySelector('[class*="tm_draftCard"]') === null))
   await openMap()
 
-  // ---- 9. click has no colour toolbar ---------------------------------
-  const s6 = await cardPoint('s6')
-  await page.mouse.click(s6.x, s6.y - 6)
-  await page.waitForTimeout(300)
-  check('单击对话不再弹出颜色面板', await page.evaluate(() => document.querySelector('[class*="tm_colorToolbar"]') === null))
+  // ---- 9. workspace colour (frames only) -------------------------------
+  const labelPoint = await page.evaluate(() => {
+    const el = document.querySelector('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+    const r = el.getBoundingClientRect()
+    return { x: r.x + 24, y: r.y + r.height / 2 }
+  })
+  await page.mouse.click(labelPoint.x, labelPoint.y)
+  await page.waitForTimeout(400)
+  const toolbarShown = await page.evaluate(() => document.querySelector('[class*="tm_colorToolbar"]') !== null)
+  check('选中工作区后出现颜色工具条', toolbarShown === true)
+  await page.evaluate(() => {
+    const swatch = document.querySelectorAll('[class*="tm_colorSwatch"]')
+    swatch[5]?.click() // blue
+  })
+  await page.waitForTimeout(500)
+  const colorState = await page.evaluate(() => {
+    const lastGlobal = window.__harness.posts.filter(p => p.path.includes('talkmap/global') || p.path.includes('talk-map/global')).at(-1)
+    const label = document.querySelector('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+    const frame = document.querySelector('[data-talkmap-workspace="ws-medkit"]')
+    return {
+      saved: lastGlobal?.body?.global?.wsColors?.['ws-medkit'] ?? null,
+      labelBorder: label === null ? null : getComputedStyle(label).borderTopColor,
+      frameBorder: frame === null ? null : getComputedStyle(frame).borderTopColor,
+    }
+  })
+  check('颜色写入 wsColors 并落到标题栏/边框',
+    colorState.saved === 'blue' && (colorState.labelBorder ?? '').includes('62, 99, 221') && (colorState.frameBorder ?? '').includes('62, 99, 221'),
+    JSON.stringify(colorState))
+  // Clear it again so the rest of the run starts from a neutral frame.
+  await page.evaluate(() => {
+    const clear = document.querySelector('[class*="tm_colorSwatchClear"]')
+    clear?.click()
+  })
+  await page.waitForTimeout(400)
 
-  // ---- 10. pin / archive / delete / batch -----------------------------
+  // ---- 10. title bar wins over the top edge handle ---------------------
+  const beforeTitleDrag = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-medkit']
+  const titleGrab = await page.evaluate(() => {
+    const el = document.querySelector('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+    const r = el.getBoundingClientRect()
+    // Lower edge of the chip = inside the frame's top band, where the N handle sits.
+    return { x: r.x + r.width / 2, y: r.y + r.height - 2, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height - 2)?.className ?? '' }
+  })
+  check('标题栏压在顶边把手之上', String(titleGrab.hit).includes('wsFrameLabel'), titleGrab.hit)
+  await page.mouse.move(titleGrab.x, titleGrab.y)
+  await page.mouse.down()
+  for (let i = 1; i <= 6; i++) await page.mouse.move(titleGrab.x + i * 8, titleGrab.y + i * 8)
+  await page.mouse.up()
+  await page.waitForTimeout(600)
+  const afterTitleDrag = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-medkit']
+  check('拖标题栏移动整个工作区（不改尺寸）',
+    Math.abs(afterTitleDrag.w - beforeTitleDrag.w) <= 1 && Math.abs(afterTitleDrag.h - beforeTitleDrag.h) <= 1
+      && (Math.abs(afterTitleDrag.x - beforeTitleDrag.x) > 10 || Math.abs(afterTitleDrag.y - beforeTitleDrag.y) > 10),
+    `${beforeTitleDrag.x}/${beforeTitleDrag.y} ${beforeTitleDrag.w}x${beforeTitleDrag.h} → ${afterTitleDrag.x}/${afterTitleDrag.y} ${afterTitleDrag.w}x${afterTitleDrag.h}`)
+
+  // ---- 11. pin / archive / delete / batch -----------------------------
   const pinPoint = await cardPoint('s7')
   await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })
   await page.waitForTimeout(400)
@@ -370,16 +429,26 @@ try {
   const trashCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
   check('删除走 dsh-recycle-bin 的 trash 接口', trashCall?.action === 'trash' && trashCall?.sessionId === 's9', JSON.stringify(trashCall))
 
+  // Batch mode: every card wears a tick box, and picking one ticks it.
   const batchPoint = await cardPoint('s6')
   await page.mouse.click(batchPoint.x, batchPoint.y, { button: 'right' })
   await page.waitForTimeout(400)
   await clickMenuItem('批量操作')
-  const barShown = await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') !== null)
+  const boxes = await page.evaluate(() => ({
+    bar: document.querySelector('[class*="tm_batchBar"]') !== null,
+    total: document.querySelectorAll('[data-talkmap-pick]').length,
+    checked: document.querySelectorAll('[data-talkmap-pick][aria-checked="true"]').length,
+  }))
+  check('批量模式每张卡右上角都有勾选框', boxes.bar && boxes.total >= 4, JSON.stringify(boxes))
+  check('进入批量时第一张已勾选', boxes.checked === 1, `checked=${boxes.checked}`)
   const second = await cardPoint('s7')
   await page.mouse.click(second.x, second.y - 6)
   await page.waitForTimeout(400)
-  const batchCount = await page.evaluate(() => document.querySelector('[class*="tm_batchCount"]')?.textContent ?? '')
-  check('批量操作：工具条出现并可多选', barShown && /2/.test(batchCount), `${barShown} / ${batchCount}`)
+  const batchAfterPick = await page.evaluate(() => ({
+    count: document.querySelector('[class*="tm_batchCount"]')?.textContent ?? '',
+    checked: document.querySelectorAll('[data-talkmap-pick][aria-checked="true"]').length,
+  }))
+  check('再点一张 → 勾选框变勾 + 计数 2', /2/.test(batchAfterPick.count) && batchAfterPick.checked === 2, JSON.stringify(batchAfterPick))
   await page.screenshot({ path: path.join(shots, 'probe-batch.png') })
   await page.evaluate(() => {
     const target = [...document.querySelectorAll('[class*="tm_batchAction"]')].find(el => el.textContent.trim() === '删除')
@@ -390,7 +459,15 @@ try {
   check('批量删除一次提交 trashMany', batchCall?.action === 'trashMany' && (batchCall?.sessionIds?.length ?? 0) === 2, JSON.stringify(batchCall))
   check('批量删除后退出批量模式', await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') === null))
 
-  // ---- 11. no runtime errors ------------------------------------------
+  // ---- 12. single click opens the conversation ------------------------
+  const clickPoint = await cardPoint('s1')
+  await page.mouse.click(clickPoint.x, clickPoint.y - 6)
+  await page.waitForTimeout(600)
+  const opened = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.openSession').at(-1))
+  check('左键单击卡片即跳转对话', opened?.detail === 's1', JSON.stringify(opened?.detail))
+  check('跳转后离开地图', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
+
+  // ---- 13. no runtime errors ------------------------------------------
   const pluginErrors = consoleErrors.filter(text => !text.includes('favicon'))
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
 } catch (error) {

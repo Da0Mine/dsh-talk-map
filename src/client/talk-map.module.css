@@ -184,6 +184,7 @@
 }
 
 .card {
+  position: relative;
   width: 224px;
   min-height: 104px;
   display: flex;
@@ -628,6 +629,9 @@
   /* the frame body is click-through; the chip is the physical handle */
   pointer-events: auto;
   cursor: grab;
+  /* Above the resize strips: the title bar is the folder's primary drag
+   * surface, so it has to win wherever it overlaps the top-edge handle. */
+  z-index: 5;
 }
 
 .wsFrameLabel:active {
@@ -1079,4 +1083,80 @@
 
 .batchDanger {
   color: var(--dsw-alias-state-error-primary);
+}
+
+/* ---- batch pick tick box ------------------------------------------------- */
+.pickBox {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--dsw-alias-border-l3);
+  border-radius: 4px;
+  background: var(--dsw-alias-bg-base);
+  color: transparent;
+  font-size: 11px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.pickBoxChecked {
+  border-color: var(--dsw-alias-brand-primary);
+  background: var(--dsw-alias-brand-primary);
+  color: #fff;
+}
+
+/* ---- workspace colour toolbar ------------------------------------------- */
+.colorToolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--dsw-alias-border-l1);
+  border-radius: 999px;
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-2);
+}
+
+.colorToolbarLabel {
+  font-size: 11px;
+  color: var(--dsw-alias-label-tertiary);
+  margin-right: 2px;
+  white-space: nowrap;
+}
+
+.colorSwatch {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.colorSwatch:hover {
+  transform: scale(1.15);
+}
+
+.colorSwatchClear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.colorSwatchClear:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
 }

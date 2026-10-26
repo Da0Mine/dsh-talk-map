@@ -22,6 +22,7 @@ import '@xyflow/react/dist/style.css'
 import type { RootSlotStandardProps, SessionListState, SessionStatusFact, WorkspaceListState } from './dsh.ts'
 import type { Card, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
+import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
@@ -612,6 +613,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   const liveNodes = useMemo<TalkMapNode[]>(() => {
+    const wsColors = canvasState.global?.wsColors ?? {}
     const frameNodes: TalkMapNode[] = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? []
       return {
@@ -624,6 +626,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           count: members.length,
           width: rect.width,
           height: rect.height,
+          ...(wsColors[groupId] !== undefined ? { colorTag: wsColors[groupId] } : {}),
           onResizeStart: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => {
             beginResize(groupId, axis, event)
           },
@@ -1122,6 +1125,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     [batchPicks, visibleCards],
   )
 
+  /** Selected workspace frames — the only colourable thing on the board now. */
+  const selectedFrameWs = useMemo(
+    () => [...liveSelectedIds].filter(id => id.startsWith('frame-')).map(id => id.slice('frame-'.length)),
+    [liveSelectedIds],
+  )
+
   /** Toggle one card's batch membership. */
   const toggleBatchPick = (cardId: string): void => {
     setBatchPicks((previous) => {
@@ -1581,8 +1590,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         onSelectionStart={onSelectionStart}
         onSelectionEnd={onSelectionEnd}
         onNodeClick={(event, node) => {
+          // Batch mode: the card's own onPick already handled the click.
+          if (batchMode) return
+          // A single left click on a card jumps straight into that conversation.
+          if (node.type === 'sessionCard') {
+            const data = (node as SessionCardNodeType).data
+            if (!data.ghost) openSession(data.sessionId)
+            return
+          }
           if (node.type !== 'wsFrame') return
-          // Click-only frame selection (React Flow never selects frames).
+          // Click-only frame selection (React Flow never selects frames). A
+          // selected frame owns the colour toolbar.
           const frameId = node.id
           setSelectedIds((previous) => {
             if (event.shiftKey) {
@@ -1593,11 +1611,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             }
             return new Set([frameId])
           })
-        }}
-        onNodeDoubleClick={(_event, node) => {
-          if (node.type === 'sessionCard' && !(node as SessionCardNodeType).data.ghost) {
-            openSession((node as SessionCardNodeType).data.sessionId)
-          }
         }}
         onPaneContextMenu={(event) => { openMenu(event as MouseEvent, 'pane') }}
         onNodeContextMenu={(event, node) => {
@@ -1663,6 +1676,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             />
           )
         : null}
+      {!batchMode && selectedFrameWs.length > 0
+        ? <FrameColorToolbar workspaceIds={selectedFrameWs} />
+        : null}
       {hasContent ? null : <div className={styles['emptyHint']}>{t('map.empty')}</div>}
       {menuState !== null
         ? <ContextMenu key={menu?.view ?? 'root'} menu={menuState} onClose={() => { setMenu(null) }} />
@@ -1685,6 +1701,41 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           )
         : null}
       {toast !== null ? <div className={styles['toast']}>{toast}</div> : null}
+    </div>
+  )
+}
+
+/**
+ * Workspace colour picker. Cards are not colourable any more; a workspace frame
+ * is, and this appears as soon as one is selected (click its label or border).
+ */
+function FrameColorToolbar(props: { workspaceIds: readonly string[] }): React.JSX.Element {
+  const apply = (colorTag: string | undefined): void => {
+    for (const workspaceId of props.workspaceIds) canvas.setWorkspaceColor(workspaceId, colorTag)
+  }
+  return (
+    <div className={styles['colorToolbar']} role="toolbar" aria-label={t('color.toolbar')}>
+      <span className={styles['colorToolbarLabel']}>{t('color.toolbar')}</span>
+      {COLOR_TAGS.map(tag => (
+        <button
+          key={tag.id}
+          type="button"
+          className={styles['colorSwatch']}
+          style={{ background: tag.swatch }}
+          title={tag.id}
+          aria-label={tag.id}
+          onClick={() => { apply(tag.id) }}
+        />
+      ))}
+      <button
+        type="button"
+        className={`${styles['colorSwatch']} ${styles['colorSwatchClear']}`}
+        title={t('color.clear')}
+        aria-label={t('color.clear')}
+        onClick={() => { apply(undefined) }}
+      >
+        ×
+      </button>
     </div>
   )
 }

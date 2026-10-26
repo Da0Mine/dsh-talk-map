@@ -391,6 +391,16 @@ export const canvas = {
     }, 600)
   },
 
+  /** Recolor a workspace frame (undefined clears); persists immediately. */
+  setWorkspaceColor(workspaceId: string, colorTag: string | undefined): void {
+    if (state.global === null) return
+    pushUndo()
+    const wsColors = { ...state.global.wsColors }
+    if (colorTag === undefined) delete wsColors[workspaceId]
+    else wsColors[workspaceId] = colorTag
+    canvas.patchGlobalNow({ wsColors })
+  },
+
   /** Immediate global patch (layout-version stamp etc.) — no debounce. */
   patchGlobalNow(patch: Partial<MapGlobal>): void {
     if (state.global === null) return

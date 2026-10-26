@@ -97,6 +97,20 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
         * (CSS); legacy edges without stored handles anchor r→l. */}
       <Handle id="t" type="source" position={Position.Top} className={styles['cardHandle'] ?? ''} />
       <Handle id="l" type="source" position={Position.Left} className={styles['cardHandle'] ?? ''} />
+      {/* Batch mode: a tick box in the corner, so "which cards are selected" is
+        * readable without squinting at the card outline. */}
+      {data.onPick !== undefined
+        ? (
+            <span
+              className={`${styles['pickBox']}${selected === true ? ` ${styles['pickBoxChecked']}` : ''}`}
+              role="checkbox"
+              aria-checked={selected === true}
+              data-talkmap-pick=""
+            >
+              {selected === true ? '✓' : ''}
+            </span>
+          )
+        : null}
       <div className={styles['cardTop']}>
         <span className={styles['cardTitle']}>{data.ghost ? t('card.ghostTitle') : data.title}</span>
         {data.ghost

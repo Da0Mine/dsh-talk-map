@@ -13,6 +13,7 @@
  */
 import type { NodeProps, Node } from '@xyflow/react'
 import type { FrameGeometry } from '../shared/model.ts'
+import { colorOf } from './colors.ts'
 import styles from './talk-map.module.css'
 
 /** Which sides a drag moves: `n` grows upward, `w` grows leftward, … */
@@ -24,6 +25,8 @@ export interface WsFrameData extends Record<string, unknown> {
   count: number
   width: number
   height: number
+  /** Workspace colour: drives the frame border and the label chip. */
+  colorTag?: string
   /** Pointer-down on a resize handle; the canvas owns the pointer capture. */
   onResizeStart?: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => void
 }
@@ -57,6 +60,9 @@ const CORNER_HANDLES: HandleSpec[] = [
 
 export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Element {
   const { data, selected } = props
+  // The colour rides on the border and the label chip — the two surfaces the
+  // user actually reads as "this workspace".
+  const color = colorOf(data.colorTag)
   const start = (axis: ResizeAxis) => (event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault()
     event.stopPropagation()
@@ -65,11 +71,20 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
   return (
     <div
       className={`${styles['wsFrame']}${selected === true ? ` ${styles['wsFrameSelected']}` : ''}`}
-      style={{ width: data.width, height: data.height }}
+      style={{
+        width: data.width,
+        height: data.height,
+        ...(color !== undefined ? { borderColor: color.border, background: color.faint } : {}),
+      }}
       data-talkmap-frame=""
       data-talkmap-workspace={data.workspaceId}
     >
-      <div className={styles['wsFrameLabel']}>
+      <div
+        className={styles['wsFrameLabel']}
+        style={color !== undefined
+          ? { borderColor: color.border, backgroundImage: `linear-gradient(${color.fill}, ${color.fill})` }
+          : {}}
+      >
         {data.title}
         <span className={styles['wsFrameCount']}>{data.count}</span>
       </div>
