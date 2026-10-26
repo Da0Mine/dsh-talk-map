@@ -192,6 +192,50 @@ try {
       .includes('自动同步进来的会话'))
   check('打开地图时自动同步新会话', autoSync === true)
 
+  // ---- 3b. status chip text + colour follow the lamp -------------------
+  const readChips = () => page.evaluate(() => {
+    const state = window.__harness.state()
+    const out = {}
+    for (const node of document.querySelectorAll('.react-flow__node')) {
+      const sessionId = state.cards[node.getAttribute('data-id')]?.sessionId
+      const chip = node.querySelector('[data-talkmap-chip]')
+      if (sessionId === undefined || chip === null) continue
+      out[sessionId] = {
+        kind: chip.getAttribute('data-talkmap-chip'),
+        text: chip.textContent.trim(),
+        color: getComputedStyle(chip).color,
+      }
+    }
+    return out
+  })
+  const chips = await readChips()
+  check('运行中 → 文字「正在运行」白色',
+    chips.s1?.text === '正在运行' && chips.s1.color === 'rgb(255, 255, 255)', JSON.stringify(chips.s1))
+  check('等你回复 → 文字「等你回复」琥珀',
+    chips.s2?.text === '等你回复' && /245, 178, 46/.test(chips.s2?.color ?? ''), JSON.stringify(chips.s2))
+  await page.evaluate(() => window.__harness.raiseError('s2'))
+  await page.waitForTimeout(500)
+  const afterError = await readChips()
+  check('异常终止 → 文字「异常终止」红色',
+    afterError.s2?.text === '异常终止' && /242, 78, 78/.test(afterError.s2?.color ?? ''), JSON.stringify(afterError.s2))
+
+  // ---- 3c. a brand-new conversation takes the head of its folder -------
+  await page.evaluate(() => window.__harness.addSession('ws-daily', 's11', '刚刚新建的对话'))
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(400)
+  await openMap()
+  const headOrder = await page.evaluate(() => {
+    const state = window.__harness.state()
+    // Global reading order: the daily folder is the top-left one, so its first
+    // slot is the board's first card.
+    return [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(entry => state.cards[entry.id] !== undefined)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))
+      .map(entry => state.cards[entry.id].sessionId)
+  })
+  check('新建的对话排到文件夹最前', headOrder[0] === 's11', JSON.stringify(headOrder.slice(0, 3)))
+
   // ---- 4. overflow stack + drawer -------------------------------------
   const stack = await page.evaluate(() => {
     const el = document.querySelector('.react-flow__node[data-id^="stack-"]')
@@ -205,44 +249,62 @@ try {
       bottomGap: Math.round(frames.y + frames.h - (r.y + r.height)),
     }
   })
-  check('装不下时出现堆叠格子', stack !== null && stack.badge === '+3', JSON.stringify(stack))
+  check('装不下时出现堆叠格子', stack !== null && stack.badge === '+4', JSON.stringify(stack))
   check('堆叠格子落在文件夹右下角', stack !== null && stack.rightGap >= 10 && stack.rightGap <= 48 && stack.bottomGap >= 0 && stack.bottomGap <= 72,
     `右 ${stack?.rightGap}px / 下 ${stack?.bottomGap}px`)
 
   await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
   await page.waitForTimeout(400)
   const drawer = await page.evaluate(() => {
-    const el = document.querySelector('[class*="tm_drawer"]')
+    const el = document.querySelector('[class*="tm_drawer"]:not([class*="Backdrop"])')
     if (el === null) return null
     const cards = [...el.querySelectorAll('[data-stack-card]')]
+    const tops = new Set(cards.map(card => card.offsetTop))
     return {
       count: cards.length,
       width: cards[0] === undefined ? 0 : Math.round(cards[0].getBoundingClientRect().width),
-      scrollable: (() => {
-        const scroller = el.querySelector('[class*="drawerScroll"]')
-        return scroller !== null && scroller.scrollHeight > scroller.clientHeight + 4
-      })(),
+      rows: tops.size,
       running: cards.some(card => getComputedStyle(card).animationName.includes('lamp-white')),
       done: cards.some(card => getComputedStyle(card).boxShadow.includes('52, 199, 89')),
     }
   })
-  check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 5, `${drawer?.count} 张`)
+  check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 6, `${drawer?.count} 张`)
   check('抽屉里的卡片是 1:1 尺寸（224px）', drawer?.width === 224, `${drawer?.width}px`)
-  check('抽屉内容可滚动', drawer?.scrollable === true)
+  check('抽屉里至少两行（卡片排满整行再换行）', (drawer?.rows ?? 0) >= 2, `rows=${drawer?.rows}`)
   check('运行中 = 白光呼吸', drawer?.running === true)
   check('已完成 = 绿光', drawer?.done === true)
 
-  const scrollBefore = await page.evaluate(() => document.querySelector('[class*="drawerScroll"]').scrollTop)
+  const drawerGrid = await page.evaluate(() => {
+    const panel = document.querySelector('[class*="tm_drawer"]:not([class*="Backdrop"])')
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    const firstTop = Math.min(...cards.map(card => card.offsetTop))
+    return {
+      width: panel === null ? 0 : Math.round(panel.getBoundingClientRect().width),
+      firstRow: cards.filter(card => card.offsetTop === firstTop).length,
+      total: cards.length,
+    }
+  })
+  check('抽屉是多列网格（不是一列）', drawerGrid.firstRow >= 2, JSON.stringify(drawerGrid))
+  check('抽屉更宽（≥900px）', drawerGrid.width >= 900, `${drawerGrid.width}px`)
+
+  const scrollBefore = await page.evaluate(() => {
+    const scroller = document.querySelector('[class*="drawerScroll"]')
+    return { top: scroller.scrollTop, overflow: scroller.scrollHeight > scroller.clientHeight + 4 }
+  })
   const scrollBox = await box('[class*="drawerScroll"]')
   await page.mouse.move(scrollBox.x + scrollBox.w / 2, scrollBox.y + scrollBox.h / 2)
   await page.mouse.wheel(0, 300)
   await page.waitForTimeout(600)
   const scrollAfter = await page.evaluate(() => document.querySelector('[class*="drawerScroll"]').scrollTop)
-  check('滚轮切换视图', scrollAfter > scrollBefore, `${scrollBefore} → ${Math.round(scrollAfter)}`)
+  // The drawer is big enough that a handful of cards fit on one screen; the
+  // wheel pager only has something to do once the grid overflows.
+  check('滚轮翻页（有溢出时滚动，无溢出则整屏可见）',
+    scrollBefore.overflow ? scrollAfter > scrollBefore.top : scrollAfter === scrollBefore.top,
+    `overflow=${scrollBefore.overflow} ${scrollBefore.top} → ${Math.round(scrollAfter)}`)
   await page.screenshot({ path: path.join(shots, 'probe-drawer.png') })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
-  check('Esc 收起抽屉', await page.evaluate(() => document.querySelector('[class*="tm_drawer"]') === null))
+  check('Esc 收起抽屉', await page.evaluate(() => document.querySelector('[class*="tm_drawer"]:not([class*="Backdrop"])') === null))
 
   // ---- 5. panel model --------------------------------------------------
   check('地图是 main 面板（不是遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')
@@ -460,11 +522,20 @@ try {
   check('批量删除后退出批量模式', await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') === null))
 
   // ---- 12. single click opens the conversation ------------------------
-  const clickPoint = await cardPoint('s1')
-  await page.mouse.click(clickPoint.x, clickPoint.y - 6)
+  // Click whatever card is currently first on the board — by this point the
+  // mutations above have removed several of the fixtures.
+  const clickTarget = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return { sessionId: state.cards[entry.id].sessionId, x: entry.r.x + 40, y: entry.r.y + 14 }
+  })
+  await page.mouse.click(clickTarget.x, clickTarget.y - 6)
   await page.waitForTimeout(600)
   const opened = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.openSession').at(-1))
-  check('左键单击卡片即跳转对话', opened?.detail === 's1', JSON.stringify(opened?.detail))
+  check('左键单击卡片即跳转对话', opened?.detail === clickTarget.sessionId, `${JSON.stringify(opened?.detail)} vs ${clickTarget.sessionId}`)
   check('跳转后离开地图', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
 
   // ---- 13. no runtime errors ------------------------------------------

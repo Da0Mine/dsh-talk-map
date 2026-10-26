@@ -1,13 +1,13 @@
 /**
  * The drawer behind a folder's stack cell: every conversation of that
  * workspace, at 1:1 size (224px wide — exactly what the map looks like at
- * 100% zoom), in a wheel-driven pager: one notch scrolls one card, like a
- * phone's app menu.
+ * 100% zoom), in a multi-column grid. The wheel pages one ROW at a time, like a
+ * phone's app drawer.
  */
 import { useEffect, useRef } from 'react'
 import { mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
-import { relativeTime } from './SessionCard.tsx'
+import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
@@ -17,8 +17,21 @@ const LAMP_CLASS: Record<CardGlow, string> = {
   waiting: 'cardLampWaiting',
 }
 
-export interface StackEntry {
-  cardId: string
+/**
+ * Pitch of one grid row. The cards sit in a multi-column grid, so the step is
+ * the distance between the first card of this row and the first card of the
+ * next one (falling back to a single card's height when there is only one row).
+ */
+function rowStep(scroller: HTMLElement): number {
+  const cards = [...scroller.querySelectorAll('[data-stack-card]')] as HTMLElement[]
+  const first = cards[0]
+  if (first === undefined) return 140
+  const nextRow = cards.find(card => card.offsetTop > first.offsetTop + 2)
+  if (nextRow !== undefined) return nextRow.offsetTop - first.offsetTop
+  return first.offsetHeight + 12
+}
+
+export interface StackEntry {  cardId: string
   title: string
   summary?: string
   nextStep?: string
@@ -60,9 +73,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     if (scroller === null) return
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault()
-      const first = scroller.querySelector('[data-stack-card]')
-      const step = first instanceof HTMLElement ? first.offsetHeight + 12 : 140
-      scroller.scrollBy({ top: event.deltaY >= 0 ? step : -step, behavior: 'smooth' })
+      scroller.scrollBy({ top: event.deltaY >= 0 ? rowStep(scroller) : -rowStep(scroller), behavior: 'smooth' })
     }
     scroller.addEventListener('wheel', onWheel, { passive: false })
     return () => { scroller.removeEventListener('wheel', onWheel) }
@@ -119,7 +130,14 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   : null}
                 <div className={styles['cardFooter']}>
                   <span className={styles['cardTime']}>{relativeTime(item.updatedAt)}</span>
-                  {item.running === true ? <span className={styles['cardBadgeRunning']}>{t('card.running')}</span> : null}
+                  {item.glow === undefined
+                    ? null
+                    : (
+                        <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[item.glow].className]}`}>
+                          {item.glow === 'running' ? <span className={styles['runningDot']} /> : null}
+                          {t(LAMP_CHIP[item.glow].key)}
+                        </span>
+                      )}
                 </div>
               </button>
             )

@@ -231,7 +231,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--dsw-alias-state-success-primary);
+  background: #ffffff;
   animation: talkmap-pulse 1.6s ease-in-out infinite;
 }
 
@@ -283,15 +283,43 @@
   flex: none;
 }
 
-.cardBadgeRunning {
+/* Status chip: text and colour follow the lamp exactly — running = white,
+ * waiting = amber, done = green, error = red. The white running dot lives in
+ * the running chip only. */
+.cardChip {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 1px 7px;
+  padding: 1px 8px;
   border-radius: 999px;
   font-size: 10px;
-  color: var(--dsw-alias-state-success-primary);
-  background: var(--dsw-alias-state-success-tertiary);
+  font-weight: 600;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.cardChipRunning {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.cardChipWaiting {
+  color: rgb(245, 178, 46);
+  background: rgba(245, 178, 46, 0.14);
+  border-color: rgba(245, 178, 46, 0.42);
+}
+
+.cardChipDone {
+  color: rgb(52, 199, 89);
+  background: rgba(52, 199, 89, 0.14);
+  border-color: rgba(52, 199, 89, 0.42);
+}
+
+.cardChipError {
+  color: rgb(242, 78, 78);
+  background: rgba(242, 78, 78, 0.14);
+  border-color: rgba(242, 78, 78, 0.45);
 }
 
 .cardSummary {
@@ -870,8 +898,9 @@
 }
 
 .drawer {
-  width: min(640px, 92%);
-  max-height: 76%;
+  /* Wide enough for several columns: the drawer is a browser, not a list. */
+  width: min(1120px, 94%);
+  max-height: 84%;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -930,23 +959,23 @@
   color: var(--dsw-alias-label-primary);
 }
 
-/* One notch of the wheel lands on the next card: snap points, not free scroll. */
+/* Multi-column grid of 224px cards; one wheel notch = one row. */
 .drawerScroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-snap-type: y proximity;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 224px);
+  justify-content: center;
+  align-content: start;
   gap: 12px;
-  padding: 14px;
+  padding: 16px;
 }
 
 /* Cards render at 1:1 — 224px wide, exactly what the map shows at 100%. */
 .drawerCard {
-  flex: none;
   width: 224px;
   box-sizing: border-box;
   scroll-snap-align: start;

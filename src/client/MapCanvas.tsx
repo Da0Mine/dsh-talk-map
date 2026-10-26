@@ -391,21 +391,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
         .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
       if (missing.length === 0) continue
-      // Queue them after the current cards so the reading order appends.
-      let next = existing.length
-      const baseY = existing.length === 0
+      // A conversation that just appeared is "just sent a message", so it goes
+      // to the HEAD of the folder: place them above the current cards (the
+      // reading order sorts by y, and the slot layout rewrites every position
+      // right after). Newest of the newcomers gets the smallest y.
+      const pitchY = CARD_H + GAP_Y
+      const topY = existing.length === 0
         ? rect.y + FRAME_PAD + FRAME_LABEL_H
-        : Math.max(...existing.map(card => card.y)) + CARD_H + GAP_Y
+        : Math.min(...existing.map(card => card.y))
       const cols = Math.max(1, Math.floor((rect.width - FRAME_PAD * 2 + GAP_X) / (CARD_W + GAP_X)))
-      for (const sessionId of missing) {
+      missing.forEach((sessionId, index) => {
         const entry = remembered[sessionId]
+        const placedBefore = missing.length - index
         const position = entry !== undefined
           ? { x: entry.x, y: entry.y }
           : {
-              x: rect.x + FRAME_PAD + (next % cols) * (CARD_W + GAP_X),
-              y: baseY + Math.floor(next / cols) * (CARD_H + GAP_Y),
+              x: rect.x + FRAME_PAD + (index % cols) * (CARD_W + GAP_X),
+              y: topY - placedBefore * pitchY,
             }
-        next += 1
         added[newCardId()] = {
           boardId: INBOX_BOARD_ID,
           sessionId,
@@ -413,7 +416,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           y: position.y,
           createdAt: Date.now(),
         }
-      }
+      })
     }
     if (Object.keys(added).length > 0) canvas.addCards(added)
   }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds])
@@ -1251,19 +1254,27 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (rect === undefined) return
     const fresh = placeableSessionIds(sessions)
       .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
+      .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
     if (fresh.length === 0) return
     const members = (membersByGroup.get(groupId) ?? [])
       .map(id => canvasState.cards[id])
       .filter((card): card is Card => card !== undefined)
-    const origin = members.length > 0
-      ? { x: Math.min(...members.map(card => card.x)), y: Math.max(...members.map(card => card.y)) + CARD_H + GAP_Y }
-      : { x: rect.x + FRAME_PAD, y: rect.y + FRAME_LABEL_H + FRAME_PAD }
+    // Same rule as the automatic sync: newcomers take the head of the folder.
+    const pitchY = CARD_H + GAP_Y
+    const topY = members.length > 0
+      ? Math.min(...members.map(card => card.y))
+      : rect.y + FRAME_PAD + FRAME_LABEL_H
+    const cols = Math.max(1, Math.floor((rect.width - FRAME_PAD * 2 + GAP_X) / (CARD_W + GAP_X)))
     const memory = canvasState.global?.layoutMemory ?? {}
     const added: Record<string, Card> = {}
-    let gridIndex = 0
-    for (const sessionId of fresh) {
+    fresh.forEach((sessionId, index) => {
       const entry = memory[sessionId]
-      const position = entry !== undefined ? { x: entry.x, y: entry.y } : gridPosition(origin, gridIndex++)
+      const position = entry !== undefined
+        ? { x: entry.x, y: entry.y }
+        : {
+            x: rect.x + FRAME_PAD + (index % cols) * (CARD_W + GAP_X),
+            y: topY - (fresh.length - index) * pitchY,
+          }
       added[newCardId()] = {
         boardId: INBOX_BOARD_ID,
         sessionId,
@@ -1271,7 +1282,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         y: position.y,
         createdAt: Date.now(),
       }
-    }
+    })
     canvas.addCards(added)
   }
 

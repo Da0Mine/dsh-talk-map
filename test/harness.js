@@ -85,10 +85,11 @@
   })
   let workspacesState = buildWorkspaces()
   // ui-session's projection: s1 still running (white lamp), s3 finished while
-  // unwatched (green lamp) — the two states the probe asserts on.
+  // unwatched (green lamp), s2 blocked on the user (amber lamp).
   const statusById = new Map([
     ['s1', { running: true }],
     ['s3', { completionUnread: true }],
+    ['s2', { pendingInteraction: { kind: 'approval' } }],
   ])
 
   const PAD = 32
@@ -221,6 +222,7 @@
   const registered = {}
   /** `main` entries by key — the map is one now, like the recycle bin's page. */
   const panels = {}
+  const remoteListeners = new Map()
   let selectedPanel = null
   /** The fake shell's sidebar: the map folds it away while it is open. */
   let sidebarCollapsed = false
@@ -305,7 +307,13 @@
     },
     get(name) { return ctx[name] },
     inject() {},
-    remote: undefined,
+    // The Host event stream: api-session/error is what the red lamp reads.
+    remote: {
+      $on(event, listener) {
+        remoteListeners.set(event, listener)
+        return () => { remoteListeners.delete(event) }
+      },
+    },
   }
 
   const logEntries = []
@@ -399,6 +407,20 @@
     /** 'fail' = the preset RPC rejects (a cold boot / unavailable build). */
     setPresetsMode(mode) {
       presetsFail = mode === 'fail'
+    },
+    /** A brand-new session lands in this workspace (no card yet). */
+    addSession(workspaceId, sessionId, title) {
+      sessionRows[sessionId] = session(sessionId, title, { updatedAt: Date.now() })
+      const workspace = workspaceList.find(item => item.workspaceId === workspaceId)
+      if (workspace === undefined) throw new Error(`unknown workspace ${workspaceId}`)
+      workspace.sessionIds = [...workspace.sessionIds, sessionId]
+      sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+      workspacesState = buildWorkspaces()
+      sync()
+    },
+    /** Raise the Host's api-session/error for one session (the red lamp). */
+    raiseError(sessionId) {
+      remoteListeners.get('api-session/error')?.(sessionId, 'boom')
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }

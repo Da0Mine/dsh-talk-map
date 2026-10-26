@@ -21,6 +21,34 @@ const LAMP_CLASS: Record<CardGlow, string> = {
   waiting: 'cardLampWaiting',
 }
 
+/**
+ * The status chip: text AND colour follow the lamp, so "what the card says"
+ * never disagrees with "what the card glows". running = white, waiting = amber,
+ * done = green, error = red.
+ */
+const LAMP_CHIP: Record<CardGlow, { key: string; className: string; dot: boolean }> = {
+  running: { key: 'card.running', className: 'cardChipRunning', dot: true },
+  waiting: { key: 'card.waiting', className: 'cardChipWaiting', dot: false },
+  done: { key: 'card.done', className: 'cardChipDone', dot: false },
+  error: { key: 'card.error', className: 'cardChipError', dot: false },
+}
+
+export { LAMP_CHIP }
+
+function statusChip(glow: CardGlow | undefined, running: boolean): React.JSX.Element | null {
+  const spec = glow !== undefined ? LAMP_CHIP[glow] : running ? LAMP_CHIP.running : undefined
+  if (spec === undefined) return null
+  return (
+    <span
+      className={`${styles['cardChip']} ${styles[spec.className]}`}
+      data-talkmap-chip={glow ?? 'running'}
+    >
+      {spec.dot ? <span className={styles['runningDot']} /> : null}
+      {t(spec.key)}
+    </span>
+  )
+}
+
 export interface SessionCardData extends Record<string, unknown> {
   cardId: string
   sessionId: string
@@ -158,23 +186,8 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
           )}
       <div className={styles['cardFooter']}>
         <span className={styles['cardTime']}>{relativeTime(data.updatedAt)}</span>
-        {data.waiting === true
-          ? <span className={styles['cardBadgeWaiting']}>{t('card.waiting')}</span>
-          : data.running
-            ? <span className={styles['cardBadgeRunning']}><span className={styles['runningDot']} />{t('card.running')}</span>
-            : data.done === true
-              ? (
-                  <span
-                    className={styles['cardBadgeDone']}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontWeight: 600 }}
-                  >
-                    <span className={styles['runningDot']} style={{ animation: 'none', background: 'currentColor' }} />
-                    {t('card.done')}
-                  </span>
-                )
-              : null}
-      </div>
-      <Handle id="r" type="source" position={Position.Right} className={styles['cardHandle'] ?? ''} />
+        {statusChip(data.glow, data.running === true)}
+      </div>      <Handle id="r" type="source" position={Position.Right} className={styles['cardHandle'] ?? ''} />
       <Handle id="b" type="source" position={Position.Bottom} className={styles['cardHandle'] ?? ''} />
     </div>
   )
