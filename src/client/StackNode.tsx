@@ -14,6 +14,8 @@ export interface StackNodeData extends Record<string, unknown> {
   count: number
   /** Face of the stack: the newest folded card's title. */
   topTitle?: string
+  /** Something inside the stack has a status of its own (keeps the cell lit). */
+  busy?: boolean
   onOpen: () => void
 }
 
@@ -24,7 +26,7 @@ export function StackNode(props: NodeProps<StackNodeType>): React.JSX.Element {
   const open = (): void => { data.onOpen() }
   return (
     <div
-      className={styles['stackCell']}
+      className={[styles['stackCell'], styles['cardQuiet'] ?? ''].filter(Boolean).join(' ')}
       role="button"
       tabIndex={0}
       title={t('stack.open')}
@@ -43,7 +45,7 @@ export function StackNode(props: NodeProps<StackNodeType>): React.JSX.Element {
       <span className={styles['stackSheetMid']} />
       <div className={styles['stackFace']}>
         <span className={styles['stackFaceTitle']}>{data.topTitle ?? t('frame.unknown')}</span>
-        <span className={styles['stackBadge']}>+{data.count}</span>
+        <span className={[styles['stackBadge'], data.busy === true ? (styles['stackBadgeBusy'] ?? '') : ''].filter(Boolean).join(' ')}>+{data.count}</span>
       </div>
     </div>
   )

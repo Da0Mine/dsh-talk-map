@@ -322,6 +322,26 @@ try {
     }
   })
   check('装不下时出现堆叠格子', stack !== null && stack.badge === '+4', JSON.stringify(stack))
+  const stackDim = await page.evaluate(() => {
+    const cell = document.querySelector('[class*="tm_stackCell"]')
+    if (cell === null) return null
+    const r = cell.getBoundingClientRect()
+    return {
+      dimmed: Number(getComputedStyle(cell).opacity),
+      point: { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) },
+    }
+  })
+  check('堆叠格子同样被压暗', stackDim !== null && stackDim.dimmed < 0.75, JSON.stringify(stackDim))
+  if (stackDim !== null) {
+    await page.mouse.move(stackDim.point.x, stackDim.point.y)
+    await page.waitForTimeout(250)
+    check('堆叠格子悬浮恢复', await page.evaluate(() => {
+      const cell = document.querySelector('[class*="tm_stackCell"]')
+      return cell !== null && Number(getComputedStyle(cell).opacity) === 1
+    }))
+    await page.mouse.move(5, 5)
+    await page.waitForTimeout(200)
+  }
   check('堆叠格子落在文件夹右下角', stack !== null && stack.rightGap >= 10 && stack.rightGap <= 48 && stack.bottomGap >= 0 && stack.bottomGap <= 72,
     `右 ${stack?.rightGap}px / 下 ${stack?.bottomGap}px`)
 

@@ -409,6 +409,13 @@
   opacity: 1;
 }
 
+/* The stack cell dims like any idle card; a tinted count still says "something
+ * in here has news" without lighting the whole cell up. */
+.stackBadgeBusy {
+  color: rgb(255, 197, 61);
+  border-color: rgba(255, 197, 61, 0.5);
+}
+
 /* The travelling highlight: a conic gradient masked down to a 2px ring. The
  * RING stays put — only the gradient's start angle is animated (registered
  * custom property), which is what makes it read as light flowing around the

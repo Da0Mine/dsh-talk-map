@@ -776,6 +776,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         .reduce((best, stamp, position) => (stamp > best.stamp ? { stamp, position } : best), { stamp: -1, position: 0 })
       const topCardId = folded[newest.position]
       const topSessionId = topCardId === undefined ? undefined : visibleCards[topCardId]?.sessionId
+      // The cell is a card too: it dims like one unless something inside it is
+      // actually reporting (running / waiting / unread / unsent / interrupted).
+      const busy = folded.some((cardId) => {
+        const sessionId = visibleCards[cardId]?.sessionId
+        if (sessionId === undefined) return false
+        return glowOf(sessionId) !== undefined
+          || draftSessions.has(sessionId)
+          || interruptedById.has(sessionId)
+      })
       return {
         id: `stack-${groupId}`,
         type: 'stackCell' as const,
@@ -787,6 +796,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         data: {
           workspaceId: groupId,
           count: folded.length,
+          ...(busy ? { busy: true } : {}),
           ...(topSessionId !== undefined && sessions.byId[topSessionId] !== undefined
             ? { topTitle: sessions.byId[topSessionId].displayTitle }
             : {}),
