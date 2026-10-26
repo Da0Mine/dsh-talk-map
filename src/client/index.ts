@@ -71,16 +71,41 @@ function resolveRemote(ctx: TalkMapClientContext): AlertSource | undefined {
 export const name = 'dsh-talk-map'
 export const inject = ['slots', 'sessions', 'workspaces', 'connection']
 
-let applied = false
-
+/**
+ * Each page load may import this bundle more than once — the shell serves one
+ * aggregate `plugins/??…` script AND a per-plugin one, and a reload can evaluate
+ * both in the same document. So `apply` must be **re-entrant**: a second call has
+ * to complete its registrations (a silent early return makes the shell judge the
+ * entry "not activated", which it treats as fatal and exits — the crash loop
+ * observed on 2026-10-26). Registrations are wrapped so a duplicated id can never
+ * throw either.
+ */
 export function apply(ctx: TalkMapClientContext): void {
-  // A duplicated client injection (module factory executed twice in one page
-  // lifetime) would otherwise register a second button and overlay.
-  if (applied) return
-  applied = true
-  ctx.effect(() => () => { applied = false }, 'dsh-talk-map: apply claim')
-
   try {
+    /** Register, but never let a duplicate registration escape. */
+    const registerSafely = (slot: string, factory: () => unknown, label: string): void => {
+      try {
+        ctx.slots.inject(slot, factory as never)
+      } catch (error) {
+        console.error(`[dsh-talk-map] ${label} registration skipped:`, error)
+      }
+    }
+
+    // Registrations FIRST: the shell judges activation by what an entry
+    // contributed. If the optional wiring below throws (it does on a second load
+    // in the same document), the entry must still count as activated — that is
+    // exactly the crash loop observed on 2026-10-26.
+    registerSafely('sidebar.footer.action', () => ctx.slots.register({
+      name: 'sidebar.footer.action',
+      id: 'talk-map',
+      order: 10,
+      label: () => t('map.toggle'),
+    }, MapToggleButton), 'sidebar.footer.action')
+    registerSafely('main', () => ctx.slots.register({
+      name: 'main',
+      key: MAP_PANEL_ID,
+      label: () => t('map.title'),
+    }, MapOverlay), 'main panel')
     attachServices({
       sessions: ctx.sessions,
       workspaces: ctx.workspaces,
@@ -128,12 +153,7 @@ export function apply(ctx: TalkMapClientContext): void {
       }
     }, 'dsh-talk-map: session alerts')
 
-    ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
-      name: 'sidebar.footer.action',
-      id: 'talk-map',
-      order: 10,
-      label: () => t('map.toggle'),
-    }, MapToggleButton))
+
 
     // The map is an ordinary `main` panel (the seat the Plugins page, the map's
     // recycle-bin neighbour and the Plugin Market use), NOT a frame-wide
@@ -142,11 +162,7 @@ export function apply(ctx: TalkMapClientContext): void {
     //   - with a panel selected and no Session on screen, a session that
     //     finishes is still "unread", so its card can glow (the overlay used to
     //     keep the old conversation mounted, which silently acknowledged it).
-    ctx.slots.inject('main', () => ctx.slots.register({
-      name: 'main',
-      key: MAP_PANEL_ID,
-      label: () => t('map.title'),
-    }, MapOverlay))
+
 
     // Toggle hotkey (default ⌥F, user-configurable in the map header).
     // preventDefault stops macOS from typing the dead character (ƒ etc.)
