@@ -8,15 +8,31 @@
  * ui-session uses for its completion reminder).
  */
 import type { AlertSource, SessionListState } from './dsh.ts'
+import { loadLampState, saveLampState } from './state-persist.ts'
 
 const alerts = new Map<string, string>()
 let snapshot: ReadonlyMap<string, string> = new Map()
 const listeners = new Set<() => void>()
 
+// A restart keeps the red lamps: "this run failed" is a per-browser UI fact and
+// the Host exposes no last-error flag the map could rebuild it from.
+for (const [sessionId, detail] of Object.entries(loadLampState().errors)) {
+  alerts.set(sessionId, detail)
+}
+
+function persist(): void {
+  saveLampState({ errors: Object.fromEntries(alerts) })
+}
+
 function publish(): void {
   snapshot = new Map(alerts)
+  persist()
   for (const listener of listeners) listener()
 }
+
+// Publish what survived the restart: the snapshot, not just the map, is what the
+// cards read.
+snapshot = new Map(alerts)
 
 export const sessionAlerts = {
   getSnapshot(): ReadonlyMap<string, string> {

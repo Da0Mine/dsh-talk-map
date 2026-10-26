@@ -109,6 +109,24 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 所以 `src/client/draft-watch.ts` 直接读同一份存储；同一文档内的写入不会触发 `storage`
 事件，于是面板开着时每 1.5 秒重读一次（内容没变不 publish）。清空/发出后灰标自动消失。
 
+### 2b3. 跨重启保留灯的状态
+
+草稿本来就在 localStorage（上面那条），另外三类**只存在于客户端订阅里的灯**也落到了本地，
+放在 `dsh.talk-map.lamp-state.v1`（`src/client/state-persist.ts`；不改宿主 schema，
+`MapGlobal` 是 zod 校验的、未知字段会被丢掉）：
+
+| 状态 | 怎么来 | 重启后 |
+|---|---|---|
+| 已完成待读（绿） | running → 不在跑 的跳变 | 保留；你点开 / 它又跑起来 / 变成等你回复 时清除 |
+| 异常终止（红） | 宿主 `api-session/error` | 保留；同上清除 |
+| 已中断（暗琥珀小标） | `beforeunload` 时仍在跑的会话 | 保留；重启后它若已不在跑，就显示「已中断」 |
+
+两个细节：
+- **恢复出来的标记**在同一次会话里观察到 `retainedBy.mainView > 0`（也就是正好开在屏幕上）
+  会立刻清掉——避免每次启动都把上次的绿标全糊一遍；运行期新产生的标记不受这条影响
+  （这正是"从对话打开地图"那种情况不被误清的原因）。
+- 写入是 250ms 防抖 + `beforeunload` 强制 flush；超过 14 天的旧标记在读取时丢弃。
+
 ### 2c. 灯：运行中"流光"，其余"呼吸"
 
 `talk-map.module.css`：

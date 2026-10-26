@@ -73,6 +73,8 @@ export interface SessionCardData extends Record<string, unknown> {
   onPick?: () => void
   /** The composer holds unsent text for this conversation ("待发送"). */
   pendingDraft?: boolean
+  /** The last run was cut off (the app closed while it was running). */
+  interrupted?: boolean
 }
 
 export type SessionCardNodeType = Node<SessionCardData, 'sessionCard'>
@@ -200,8 +202,20 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
               </span>
             )
           : null}
+        {data.interrupted === true
+          ? (
+              <span
+                className={`${styles['cardChip']} ${styles['cardChipInterrupted']}`}
+                title={t('card.interruptedHint')}
+                data-talkmap-interrupted="1"
+              >
+                {t('card.interrupted')}
+              </span>
+            )
+          : null}
         {statusChip(data.glow, data.running === true)}
-      </div>      <Handle id="r" type="source" position={Position.Right} className={styles['cardHandle'] ?? ''} />
+      </div>
+      <Handle id="r" type="source" position={Position.Right} className={styles['cardHandle'] ?? ''} />
       <Handle id="b" type="source" position={Position.Bottom} className={styles['cardHandle'] ?? ''} />
     </div>
   )

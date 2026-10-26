@@ -674,7 +674,46 @@ try {
   check('左键单击卡片即跳转对话', opened?.detail === clickTarget.sessionId, `${JSON.stringify(opened?.detail)} vs ${clickTarget.sessionId}`)
   check('跳转后离开地图', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
 
-  // ---- 13. no runtime errors ------------------------------------------
+  // ---- 14. state survives a restart -----------------------------------
+  // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).
+  // All three live in localStorage, so a reload must bring them back — the
+  // harness rebuilds its status map from scratch, exactly like a restart.
+  // The panel must be UP for these transitions to be observed at all.
+  if ((await page.evaluate(() => window.__harness.panelState())).selectedPanel !== 'talk-map') await openMap()
+  await page.waitForTimeout(400)
+  await page.evaluate(() => window.__harness.setRunning('s4', true))
+  await page.waitForTimeout(300)
+  await page.evaluate(() => window.__harness.setRunning('s4', false))
+  await page.evaluate(() => window.__harness.setRunning('s5', true))
+  await page.evaluate(() => window.__harness.raiseError('s3'))
+  await page.waitForTimeout(800)
+  const preReloadBadge = await page.evaluate(() => { const chip = document.querySelector('[data-talkmap-session="s4"] [data-talkmap-chip]'); return chip === null ? null : chip.getAttribute('data-talkmap-chip') })
+  check('重启前 s4 已是待读', preReloadBadge === 'done', String(preReloadBadge))
+  await page.evaluate(() => window.dispatchEvent(new Event('beforeunload')))
+  await page.reload()
+  await page.waitForTimeout(1800)
+  if ((await page.evaluate(() => window.__harness.panelState())).selectedPanel !== 'talk-map') await openMap()
+  await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
+  await page.waitForTimeout(500)
+  const restored = await page.evaluate(() => {
+    const out = { chips: {}, interrupted: [], draft: [] }
+    for (const root of document.querySelectorAll('[data-talkmap-session]')) {
+      const sessionId = root.getAttribute('data-talkmap-session')
+      const chip = root.querySelector('[data-talkmap-chip]')
+      if (chip !== null) out.chips[sessionId] = chip.getAttribute('data-talkmap-chip')
+      if (root.querySelector('[data-talkmap-interrupted]') !== null) out.interrupted.push(sessionId)
+      if (root.querySelector('[data-talkmap-draft]') !== null) out.draft.push(sessionId)
+    }
+    return out
+  })
+  check('重启后「已完成待读」还在', restored.chips.s4 === 'done', JSON.stringify(restored.chips))
+  check('重启后「异常终止」还在', restored.chips.s3 === 'error', JSON.stringify(restored.chips))
+  check('重启后「已中断」还在', restored.interrupted.includes('s5'), JSON.stringify(restored.interrupted))
+  await page.screenshot({ path: path.join(shots, 'probe-after-restart.png') })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
+
+  // ---- 15. no runtime errors ------------------------------------------
   const pluginErrors = consoleErrors.filter(text => !text.includes('favicon'))
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
 } catch (error) {

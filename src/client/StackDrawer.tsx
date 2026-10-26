@@ -42,6 +42,8 @@ export interface StackEntry {
   glow?: CardGlow
   /** Unsent text sits in this conversation's composer. */
   pendingDraft?: boolean
+  /** Its last run was cut off by closing the app. */
+  interrupted?: boolean
 }
 
 export interface StackDrawerProps {
@@ -143,6 +145,17 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                           data-talkmap-draft="1"
                         >
                           {t('card.draft')}
+                        </span>
+                      )
+                    : null}
+                  {item.interrupted === true
+                    ? (
+                        <span
+                          className={`${styles['cardChip']} ${styles['cardChipInterrupted']}`}
+                          title={t('card.interruptedHint')}
+                          data-talkmap-interrupted="1"
+                        >
+                          {t('card.interrupted')}
                         </span>
                       )
                     : null}

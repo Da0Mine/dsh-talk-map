@@ -330,6 +330,14 @@
   border-color: rgba(125, 130, 141, 0.42);
 }
 
+/* A run cut off by closing the app: muted amber, no lamp — it is history, not
+ * something still happening. */
+.cardChipInterrupted {
+  color: rgb(214, 158, 92);
+  background: rgba(214, 158, 92, 0.14);
+  border-color: rgba(214, 158, 92, 0.42);
+}
+
 .cardSummary {
   font-size: 12px;
   line-height: 1.45;

@@ -1,5 +1,6 @@
 /**
- * "It finished while the map was up" tracking.
+ * "It finished while the map was up" tracking, plus the "this run was
+ * interrupted" note that only exists across a restart.
  *
  * The shell marks a session *unread* only when it finishes while that session is
  * not the main view. Opening the map from a conversation keeps that conversation
@@ -10,34 +11,78 @@
  * session's running flag, and a running → idle transition marks it finished.
  * The mark clears when the session runs again, when it starts waiting for the
  * user, or when the user opens it from the map.
+ *
+ * Both sets are persisted (see state-persist.ts) so a restart does not wipe the
+ * green "待查看" lamps — or the "已中断" notes of runs that were cut off.
  */
 import type { SessionStatusFact } from './dsh.ts'
+import { loadLampState, recordRunningAtShutdown, saveLampState } from './state-persist.ts'
 
 interface SummaryLike {
   readonly running?: boolean
   readonly pendingInteraction?: unknown
+  readonly retainedBy?: { readonly mainView?: number }
 }
 
 const lastRunning = new Map<string, boolean>()
 const finished = new Set<string>()
+const interrupted = new Set<string>()
+/** Ids restored from storage: the first observation may clear them (see observe). */
+const hydrated = new Set<string>()
 let snapshot: ReadonlySet<string> = new Set()
-const listeners = new Set<() => void>()
+let interruptedSnapshot: ReadonlySet<string> = new Set()
+const listenerSet = new Set<() => void>()
 
 function publish(): void {
   snapshot = new Set(finished)
-  for (const listener of listeners) listener()
+  interruptedSnapshot = new Set(interrupted)
+  for (const listener of listenerSet) listener()
 }
 
+function persist(): void {
+  const now = Date.now()
+  const finishedRecord: Record<string, number> = {}
+  for (const sessionId of finished) finishedRecord[sessionId] = now
+  const interruptedRecord: Record<string, number> = {}
+  for (const sessionId of interrupted) interruptedRecord[sessionId] = now
+  saveLampState({ finished: finishedRecord, interrupted: interruptedRecord })
+}
+
+function hydrate(): void {
+  const stored = loadLampState()
+  for (const sessionId of Object.keys(stored.finished)) {
+    finished.add(sessionId)
+    hydrated.add(sessionId)
+  }
+  for (const sessionId of Object.keys(stored.interrupted)) {
+    interrupted.add(sessionId)
+    hydrated.add(sessionId)
+  }
+  // The snapshots — not the sets — are what the components read, so publish them
+  // or the restored marks stay invisible until something else changes.
+  publish()
+}
+
+hydrate()
+
 export const sessionActivity = {
+  /** Sessions the map believes "finished, unread" (drives the green lamp). */
   getSnapshot(): ReadonlySet<string> {
     return snapshot
   },
+  /** Sessions whose run was cut off by a restart ("已中断"). */
+  getInterrupted(): ReadonlySet<string> {
+    return interruptedSnapshot
+  },
   subscribe(listener: () => void): () => void {
-    listeners.add(listener)
-    return () => { listeners.delete(listener) }
+    listenerSet.add(listener)
+    return () => { listenerSet.delete(listener) }
   },
   isFinished(sessionId: string): boolean {
     return finished.has(sessionId)
+  },
+  isInterrupted(sessionId: string): boolean {
+    return interrupted.has(sessionId)
   },
   /**
    * Feed one observation of the live status map. Only a transition observed
@@ -59,24 +104,62 @@ export const sessionActivity = {
       const wasRunning = lastRunning.get(sessionId)
       lastRunning.set(sessionId, running)
       if (running || blocked) {
-        // A new run (or a question) supersedes "finished, unread".
+        // A new run (or a question) supersedes both marks.
         if (finished.delete(sessionId)) changed = true
+        if (interrupted.delete(sessionId)) changed = true
+        hydrated.delete(sessionId)
         continue
       }
       if (wasRunning === true && !finished.has(sessionId)) {
         finished.add(sessionId)
         changed = true
       }
+      // A mark restored from storage is dropped as soon as the session is on
+      // screen now — the shell had already acknowledged it, someone looked at it
+      // while the app was closed, or (most often) it is the session the new start
+      // restored. Runtime-made marks are never in `hydrated`, so they survive.
+      if (hydrated.has(sessionId) && (row?.retainedBy?.mainView ?? 0) > 0) {
+        hydrated.delete(sessionId)
+        if (finished.delete(sessionId)) changed = true
+        if (interrupted.delete(sessionId)) changed = true
+      }
     }
-    if (changed) publish()
+    if (changed) {
+      persist()
+      publish()
+    }
   },
-  /** The user is looking at it now: stop advertising it as unread. */
+  /** The user is looking at it now: stop advertising it as unread/interrupted. */
   acknowledge(sessionId: string): void {
-    if (finished.delete(sessionId)) publish()
+    hydrated.delete(sessionId)
+    const removedFinished = finished.delete(sessionId)
+    const removedInterrupted = interrupted.delete(sessionId)
+    if (removedFinished || removedInterrupted) {
+      persist()
+      publish()
+    }
   },
   /** The session is gone (deleted / archived): drop both records. */
   forget(sessionId: string): void {
     lastRunning.delete(sessionId)
-    if (finished.delete(sessionId)) publish()
+    hydrated.delete(sessionId)
+    const removed = finished.delete(sessionId) || interrupted.delete(sessionId)
+    if (removed) {
+      persist()
+      publish()
+    }
+  },
+  /**
+   * Called from `beforeunload`: everything still running is a run that will be
+   * cut off, so the next start can say so.
+   */
+  recordShutdown(status: ReadonlyMap<string, SessionStatusFact>, summaries: Readonly<Record<string, SummaryLike>>): void {
+    const running: string[] = []
+    for (const [sessionId, fact] of status) if (fact.running === true) running.push(sessionId)
+    for (const [sessionId, row] of Object.entries(summaries)) if (row.running === true) running.push(sessionId)
+    if (running.length === 0) return
+    for (const sessionId of running) interrupted.add(sessionId)
+    recordRunningAtShutdown(running)
+    publish()
   },
 }

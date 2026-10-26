@@ -138,6 +138,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // "Ran to completion while the map was up" — the map's own projection, because
   // the shell keeps the session you came from as the main view (see the module).
   const finishedById = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getSnapshot)
+  // Runs cut off by closing the app ("已中断"): persisted, so a restart still
+  // tells you which conversations did not finish cleanly.
+  const interruptedById = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getInterrupted)
+  useEffect(() => {
+    const onUnload = (): void => { sessionActivity.recordShutdown(statusById, sessions.byId) }
+    window.addEventListener('beforeunload', onUnload)
+    return () => { window.removeEventListener('beforeunload', onUnload) }
+  }, [statusById, sessions])
   // Every status snapshot feeds the projection; a running → idle step is what it
   // turns into a "done, unread" lamp.
   useEffect(() => {
@@ -701,6 +709,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           done: status?.completionUnread === true,
           glow: glowOf(card.sessionId),
           ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
+          ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
         }
         return {
           id: cardId,
@@ -749,7 +758,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, draftSessions, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1117,6 +1126,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
         ...(glow !== undefined ? { glow } : {}),
         ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
+        ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
       })
     }
     return items
