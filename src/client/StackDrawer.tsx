@@ -126,7 +126,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
               >
                 <div className={styles['cardTop']}>
                   {item.pinned === true
-                    ? <span className={styles['cardPin']} title={t('card.pinned')} data-talkmap-pin="1"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M8 1a3.2 3.2 0 0 0-3.2 3.2c0 1.3.7 2.3 1.6 3l-.5 3.6a.85.85 0 0 0 .85.95h2.5a.85.85 0 0 0 .85-.95l-.5-3.6c.9-.7 1.6-1.7 1.6-3A3.2 3.2 0 0 0 8 1Z" /><path fill="currentColor" d="M7.3 11.9h1.4v2.5a.7.7 0 0 1-1.4 0Z" /></svg></span>
+                    ? <span className={styles['cardPin']} title={t('card.pinned')} data-talkmap-pin="1"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.2 2.4h11.6v3H6.2z"/><path fill="currentColor" d="M8.3 5.4h7.4l.9 5.2H7.4z"/><path fill="currentColor" d="M10.9 10.6h2.2v9.6a1.1 1.1 0 0 1-2.2 0z"/></svg></span>
                     : null}
                   <span className={styles['cardTitle']}>{item.title}</span>
                 </div>
