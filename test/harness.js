@@ -86,6 +86,7 @@
   let workspacesState = buildWorkspaces()
   // ui-session's projection: s1 still running (white lamp), s3 finished while
   // unwatched (green lamp), s2 blocked on the user (amber lamp).
+  let churnTimer
   let statusById = new Map([
     ['s1', { running: true }],
     ['s3', { completionUnread: true }],
@@ -453,6 +454,23 @@
       sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
       workspacesState = buildWorkspaces()
       sync()
+    },
+    /**
+     * Repaint the session list every 150ms, the way a running turn keeps the
+     * shell updating. Used to prove the card-body request is not starved by that
+     * churn (a debounce restarted by every change would never fire).
+     */
+    churn(on) {
+      if (churnTimer !== undefined) {
+        clearInterval(churnTimer)
+        churnTimer = undefined
+      }
+      if (!on) return
+      churnTimer = setInterval(() => {
+        sessionRows.s8 = { ...sessionRows.s8, updatedAt: Date.now() }
+        sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+        sync()
+      }, 150)
     },
     /** Raise the Host's api-session/error for one session (the red lamp). */
     raiseError(sessionId) {

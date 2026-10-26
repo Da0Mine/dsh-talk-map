@@ -11572,18 +11572,21 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
+  const previewInputs = (0, import_react8.useRef)({ cards: visibleCards, sessions });
+  previewInputs.current = { cards: visibleCards, sessions };
   (0, import_react8.useEffect)(() => {
-    const pending = [];
-    for (const card of Object.values(visibleCards)) {
-      const stamp = sessions.byId[card.sessionId]?.updatedAt ?? 0;
-      if (previewStamp.current.get(card.sessionId) === stamp) continue;
-      pending.push(card.sessionId);
-    }
-    if (pending.length === 0) return;
-    const timer3 = setTimeout(() => {
-      for (const sessionId of pending) {
-        previewStamp.current.set(sessionId, sessions.byId[sessionId]?.updatedAt ?? 0);
+    const tick = () => {
+      const { cards, sessions: latest } = previewInputs.current;
+      const pending = [];
+      const stamps = [];
+      for (const card of Object.values(cards)) {
+        const stamp = latest.byId[card.sessionId]?.updatedAt ?? 0;
+        if (previewStamp.current.get(card.sessionId) === stamp) continue;
+        pending.push(card.sessionId);
+        stamps.push([card.sessionId, stamp]);
       }
+      if (pending.length === 0) return;
+      for (const [sessionId, stamp] of stamps) previewStamp.current.set(sessionId, stamp);
       void talkMapApi.lastUserMessages(pending).then(({ texts }) => {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
@@ -11592,11 +11595,13 @@ function CanvasInner(props) {
         }
         setPreviews((previous) => ({ ...previous, ...cleaned }));
       }).catch(() => void 0);
-    }, 800);
-    return () => {
-      clearTimeout(timer3);
     };
-  }, [visibleCards, sessions]);
+    tick();
+    const timer3 = setInterval(tick, 2500);
+    return () => {
+      clearInterval(timer3);
+    };
+  }, []);
   const membersByGroup = (0, import_react8.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {

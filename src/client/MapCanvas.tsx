@@ -264,20 +264,27 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }, [canvasState.cards, sessions])
 
   // Card bodies: the user's last message, read off the Host's session surface
-  // (the LLM digest is no longer displayed). One batched request per change of
-  // "which sessions advanced", debounced so a burst of updates costs one.
+  // (the LLM digest is no longer displayed).
+  //
+  // Deliberately a POLL, not a debounced reaction to `sessions`: in the real app
+  // the session list repaints constantly (a running turn ticks every second), and
+  // a timer restarted by every change never fires — the preview simply never
+  // arrived. The poll owns its own clock, so churn cannot starve it.
+  const previewInputs = useRef({ cards: visibleCards, sessions })
+  previewInputs.current = { cards: visibleCards, sessions }
   useEffect(() => {
-    const pending: string[] = []
-    for (const card of Object.values(visibleCards)) {
-      const stamp = sessions.byId[card.sessionId]?.updatedAt ?? 0
-      if (previewStamp.current.get(card.sessionId) === stamp) continue
-      pending.push(card.sessionId)
-    }
-    if (pending.length === 0) return
-    const timer = setTimeout(() => {
-      for (const sessionId of pending) {
-        previewStamp.current.set(sessionId, sessions.byId[sessionId]?.updatedAt ?? 0)
+    const tick = (): void => {
+      const { cards, sessions: latest } = previewInputs.current
+      const pending: string[] = []
+      const stamps: [string, number][] = []
+      for (const card of Object.values(cards)) {
+        const stamp = latest.byId[card.sessionId]?.updatedAt ?? 0
+        if (previewStamp.current.get(card.sessionId) === stamp) continue
+        pending.push(card.sessionId)
+        stamps.push([card.sessionId, stamp])
       }
+      if (pending.length === 0) return
+      for (const [sessionId, stamp] of stamps) previewStamp.current.set(sessionId, stamp)
       void talkMapApi.lastUserMessages(pending)
         .then(({ texts }) => {
           const cleaned: Record<string, string> = {}
@@ -288,9 +295,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           setPreviews(previous => ({ ...previous, ...cleaned }))
         })
         .catch(() => undefined)
-    }, 800)
-    return () => { clearTimeout(timer) }
-  }, [visibleCards, sessions])
+    }
+    tick()
+    const timer = setInterval(tick, 2500)
+    return () => { clearInterval(timer) }
+  }, [])
 
   // Membership mirrors the sidebar truth: a card belongs to its session's
   // real workspace (dsh binds that to the session's cwd; sessions cannot

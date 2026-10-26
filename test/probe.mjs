@@ -289,6 +289,20 @@ try {
   })
   check('粒子效果已移除', (runningFx?.count ?? 0) === 0 && runningFx?.layerZ === null,
     JSON.stringify({ count: runningFx?.count, layerZ: runningFx?.layerZ }))
+  // Session-list churn must not starve the body request (the real app repaints
+  // the list every second while a turn runs).
+  await page.evaluate(() => window.__harness.churn(true))
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(300)
+  await openMap()
+  await page.waitForTimeout(2600)
+  const bodyUnderChurn = await page.evaluate(() => {
+    const card = document.querySelector('[data-talkmap-session="s1"]')
+    return card === null ? null : (card.querySelector('[class*="cardSummary"]')?.textContent ?? null)
+  })
+  await page.evaluate(() => window.__harness.churn(false))
+  check('列表高频刷新时正文仍然取到', bodyUnderChurn === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(bodyUnderChurn))
+
   check('卡片正文 = 用户最后发的那句话（不是摘要）',
     runningFx?.body === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(runningFx?.body))
   // ---- 3c. a brand-new conversation takes the head of its folder -------
