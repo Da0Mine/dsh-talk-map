@@ -37,6 +37,9 @@ const BANNER = `window.__ModuleLoader__.load({ id: ${JSON.stringify(PLUGIN_ID)},
 \tvar module = { exports: {} };
 \tvar exports = module.exports;
 \t"use strict";
+\t// Breadcrumb on disk: after a failed reload we need to know whether this bundle
+\t// was imported at all (see scripts/_.add-client-boot-log.mjs).
+\ttry { fetch('/talk-map/client-boot', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ phase: 'evaluate' }) }).catch(() => {}) } catch {}
 \t// A single plugin must never be able to kill the whole boot: the shell treats
 \t// "an entry did not activate" as fatal and exits. If this bundle fails to
 \t// evaluate (e.g. a reload re-imports it while the previous graph is alive),
