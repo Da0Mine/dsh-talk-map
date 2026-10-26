@@ -27,7 +27,11 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   class / `@keyframes` 加 `tm_` 前缀，`styles.x` 名字表与 CSS 一起生成；
 - 产物里不允许出现绝对构建路径（脚本自带断言）。
 
-宿主侧 `lib/index.js` 仍是上游原样，本改造没碰它。
+宿主侧 `lib/index.js` 原本没碰过；**2026-10-26 起动过一次**（上游这个包不附带
+`tsdown.config.ts`，宿主半没法重新构建，只能手改打包产物）：新增 `POST /talk-map/last-user`
+路由（卡片正文用），以及给 `runtime` 注入 `sessionQuery` 的那个 `ctx.inject` 块
+（`scripts/_.host-sessionquery.mjs` 是当时插 inject 的一次性脚本，带幂等判断）。
+`src/host/routes.ts`、`src/index.ts` 已按同一份逻辑同步，将来能重建宿主时以 src 为准。
 
 **改完必须重启 DSH**：client bundle 在宿主启动时汇总下发，F5 拿不到新文件。
 
