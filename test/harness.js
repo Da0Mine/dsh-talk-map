@@ -154,7 +154,21 @@
 
   /** Last thing the user said per session — the card body since the summary went. */
   const userMessages = {
-    s1: '把卡片改成网格槽位，含退让与补位动画',
+    // s1 is deliberately dirty: the runtime appends envelopes to every user
+    // message, and the card must show only the human sentence.
+    s1: [
+      '把卡片改成网格槽位，含退让与补位动画',
+      '',
+      'Time sampled while preparing turn 14, step 85: 2026-10-26T16:52:42+08:00[Asia/Shanghai]',
+      '',
+      '<system-reminder> The available skill catalog changed. This complete catalog replaces every earlier list. </system-reminder>',
+      '',
+      'MNEMON RUNTIME MEMORY SNAPSHOT',
+      'Revision: deadbeef',
+      '',
+      'Current runtime context. This snapshot supersedes earlier runtime-context snapshots.',
+      'Current working directory: D:/x',
+    ].join('\n'),
     s2: '清理一下临时截图和旧脚本',
   }
 

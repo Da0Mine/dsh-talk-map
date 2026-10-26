@@ -381,9 +381,13 @@
 
 /* White specks converging on the card: absolute dots on a fixed "orbit" that
  * travel inward and fade out, staggered by angle and delay. Pure CSS. */
+/* The specks live BEHIND the card (z-index: -1 paints under the card's own
+ * background, because the card is not a stacking context) — so they read as dust
+ * drifting inside the lamp's halo rather than dots stuck on the face. */
 .cardParticles {
   position: absolute;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
   overflow: visible;
 }
@@ -392,30 +396,30 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 4px;
-  height: 4px;
-  margin: -2px 0 0 -2px;
+  width: 2px;
+  height: 2px;
+  margin: -1px 0 0 -1px;
   border-radius: 50%;
-  background: #ffffff;
-  box-shadow: 0 0 6px 2px rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.45);
   opacity: 0;
-  animation: talkmap-particle-in 2.2s linear infinite;
+  animation: talkmap-particle-in 2.8s linear infinite;
   animation-delay: var(--tm-particle-delay, 0s);
 }
 
 @keyframes talkmap-particle-in {
   0% {
-    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(150px) scale(0.35);
+    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(var(--tm-particle-radius, 160px)) scale(0.3);
     opacity: 0;
   }
-  18% {
-    opacity: 0.95;
+  22% {
+    opacity: 0.85;
   }
-  85% {
-    opacity: 0.55;
+  80% {
+    opacity: 0.35;
   }
   100% {
-    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(6px) scale(0.9);
+    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(2px) scale(0.7);
     opacity: 0;
   }
 }
@@ -423,8 +427,9 @@
 /* The conversation the map was opened from: an outline, so it composes with
  * whatever lamp (box-shadow) the card already has. */
 .cardCurrent {
-  outline: 1.5px solid rgba(107, 146, 255, 0.9);
-  outline-offset: 2px;
+  outline: 2px solid rgba(255, 255, 255, 0.92);
+  outline-offset: 3px;
+  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.45));
 }
 
 /* Nothing to report? The card recedes until you point at it. */

@@ -278,14 +278,19 @@ try {
     const card = document.querySelector('[data-talkmap-session="s1"]')
     if (card === null) return null
     const particles = card.querySelectorAll('[class*="cardParticles"] i')
+    const layer = card.querySelector('[class*="cardParticles"]')
     return {
       count: particles.length,
+      layerZ: layer === null ? null : getComputedStyle(layer).zIndex,
+      size: particles.length === 0 ? null : parseFloat(getComputedStyle(particles[0]).width),
       animation: particles.length === 0 ? null : getComputedStyle(particles[0]).animationName,
       body: card.querySelector('[class*="cardSummary"]')?.textContent?.trim() ?? null,
     }
   })
-  check('运行中卡片有白色粒子汇入', (runningFx?.count ?? 0) >= 6 && (runningFx?.animation ?? '').includes('particle'),
+  check('运行中卡片有细密粒子汇入', (runningFx?.count ?? 0) >= 12 && (runningFx?.animation ?? '').includes('particle'),
     JSON.stringify({ count: runningFx?.count, animation: runningFx?.animation }))
+  check('粒子在卡片背后（z-index -1）', runningFx?.layerZ === '-1', String(runningFx?.layerZ))
+  check('粒子很小（≤2px）', (runningFx?.size ?? 99) <= 2 && (runningFx?.size ?? 0) > 0, String(runningFx?.size))
   check('卡片正文 = 用户最后发的那句话（不是摘要）',
     runningFx?.body === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(runningFx?.body))
   // ---- 3c. a brand-new conversation takes the head of its folder -------
@@ -495,6 +500,16 @@ try {
   })
   check('打开地图前所在的那个对话被标成当前',
     currentCard.includes(markedSession), `${JSON.stringify(currentCard)} vs ${markedSession}`)
+  const currentRing = await page.evaluate(() => {
+    const node = [...document.querySelectorAll('[data-talkmap-session]')]
+      .find(item => item.className.includes('tm_cardCurrent'))
+    if (node === undefined) return null
+    const style = getComputedStyle(node)
+    return { color: style.outlineColor, width: style.outlineWidth, glow: style.filter }
+  })
+  check('当前卡片的框是白色发光',
+    /255, 255, 255/.test(currentRing?.color ?? '') && (currentRing?.glow ?? '').includes('drop-shadow'),
+    JSON.stringify(currentRing))
   check('当前卡片不压暗', await page.evaluate(() => {
     const node = [...document.querySelectorAll('[data-talkmap-session]')]
       .find(item => item.className.includes('tm_cardCurrent'))

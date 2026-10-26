@@ -141,8 +141,11 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
   不花钱、不等模型；
 - **先剥掉每轮注入的信封**：模型看到的"用户消息"里还挂着 `Time sampled …`、
   `<system-reminder>`（技能目录变更）、`MNEMON RUNTIME MEMORY SNAPSHOT`、
-  `<runtime-memory-file>`、`Current runtime context.…` 这些尾巴——`stripEnvelopes()`
-  把它们去掉；整条只有信封的轮次会变成空串，于是往前找上一条真人写的话；
+  `<runtime-memory-file>`、`Current runtime context.…` 这些尾巴——宿主 `stripEnvelopes()`
+  先洗一遍，整条只有信封的轮次会变成空串，于是往前找上一条真人写的话；
+- **客户端还有第二道**（`src/client/preview-text.ts`，同一套规则）：宿主半没重启也能干净。
+  踩过的坑：`MNEMON RUNTIME MEMORY SNAPSHOT` 那条正则少写了 `m` 标志，`^` 只锚在串首，
+  快照照样漏出来——现在客户端 / src 宿主 / 打包产物三处都是 `/im`；
 - 客户端按"哪些会话的 `updatedAt` 变了"批量取一次，800ms 防抖，面板开着时才请求；
 - 摘要管线本身还在宿主里跑（`nextStep`/「下一步」那条还靠它），只是不再上卡片。
 
@@ -150,9 +153,10 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 
 - **没有任何状态的卡片**（无灯、无待发送、无已中断）整体压暗到 `opacity: .62`，鼠标悬浮
   140ms 内回到 1；
-- **运行中**：白光调亮（内描边 .34 / 16px .2 / 40px .1）；卡片四周 8 颗白色小点沿
-  8 个角度向卡片中心汇入（`@keyframes talkmap-particle-in`，2.2s 线性循环，
-  角度与延迟由 `--tm-particle-angle` / `--tm-particle-delay` 给），纯 CSS。
+- **运行中**：白光调亮（内描边 .34 / 16px .2 / 40px .1）；**18 颗 2px 白色微粒**沿各自角度向
+  卡片汇入，**画在卡片背后**（`z-index: -1`，落在灯的余光里而不是贴在脸上），起始半径
+  64~104px、2.8s 线性循环，角度/延迟/半径由 `--tm-particle-angle` / `--tm-particle-delay` /
+  `--tm-particle-radius` 给，纯 CSS。
 
 ### 2c. 灯：运行中"流光"，其余"呼吸"
 
@@ -211,10 +215,11 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 不跟着变色**（内部始终保持画布底色，颜色不会洗到卡片上）。选别的对象或按 Esc 取消选中，
 工具条随之消失。
 
-### 3f. 当前对话的卡片有轮廓
+### 3f. 当前对话的卡片有白色发光框
 
-打开地图时，**你原来所在的那个对话**的卡片加一圈蓝色 `outline`（`outline-offset: 2px`，
-不碰 `box-shadow`，所以和任何灯/粒子都不打架），并且不参与"无状态压暗"。
+打开地图时，**你原来所在的那个对话**的卡片加一圈**白色** `outline`（2px、`offset: 3px`）+
+`filter: drop-shadow(0 0 7px rgba(255,255,255,.45))` 的柔光；用 outline + drop-shadow 而不是
+`box-shadow`，是为了不覆盖卡片已有的灯（灯也用 box-shadow）。它同时不参与"无状态压暗"。
 
 会话 id 来自宿主持久化的 `localStorage["dsh.sessions.current"]`（`openMapPanel()` 在
 切面板**之前**先记一份，`currentSessionId()` 每次渲染再实时读一次兜底——面板选中后这个键可能被改写）。

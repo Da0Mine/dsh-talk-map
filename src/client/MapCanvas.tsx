@@ -29,6 +29,7 @@ import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
+import { cleanPreviewText } from './preview-text.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
@@ -278,7 +279,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         previewStamp.current.set(sessionId, sessions.byId[sessionId]?.updatedAt ?? 0)
       }
       void talkMapApi.lastUserMessages(pending)
-        .then(({ texts }) => { setPreviews(previous => ({ ...previous, ...texts })) })
+        .then(({ texts }) => {
+          const cleaned: Record<string, string> = {}
+          for (const [sessionId, text] of Object.entries(texts)) {
+            const value = cleanPreviewText(text).slice(0, 240)
+            if (value !== '') cleaned[sessionId] = value
+          }
+          setPreviews(previous => ({ ...previous, ...cleaned }))
+        })
         .catch(() => undefined)
     }, 800)
     return () => { clearTimeout(timer) }

@@ -121,12 +121,13 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
       {data.glow === 'running'
         ? (
             <span className={styles['cardParticles']} aria-hidden="true">
-              {[0, 1, 2, 3, 4, 5, 6, 7].map(index => (
+              {Array.from({ length: 18 }, (_, index) => (
                 <i
                   key={index}
                   style={{
-                    '--tm-particle-angle': `${index * 45}deg`,
-                    '--tm-particle-delay': `${(index % 4) * 0.55}s`,
+                    '--tm-particle-angle': `${(index * 360) / 18}deg`,
+                    '--tm-particle-delay': `${((index * 7) % 18) * 0.17}s`,
+                    '--tm-particle-radius': `${64 + (index % 3) * 20}px`,
                   } as React.CSSProperties}
                 />
               ))}
