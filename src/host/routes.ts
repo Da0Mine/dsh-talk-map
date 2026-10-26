@@ -364,7 +364,8 @@ export function mountTalkMapRoutes(
           const texts: Record<string, string> = {}
           const query = runtime.sessionQuery
           if (query !== undefined) {
-            for (const sessionId of ids) {
+            // ~250ms per surface read; read them concurrently — a board has ~20.
+            await Promise.all(ids.map(async (sessionId) => {
               try {
                 const surface = await query.readSurface(sessionId)
                 let text = ''
@@ -373,18 +374,18 @@ export function mountTalkMapRoutes(
                   if (event.type !== 'user/message') continue
                   // Tool results ride in as role "user"; they are not messages.
                   if (event.data?.source?.kind === 'tool') continue
-                  const raw = textOfBlocks(event.data?.content)
+                  const body = textOfBlocks(event.data?.content)
                   // Envelope-only turns (their own sampling remark, a runtime
-                  // context block) carry no human text: skip them and keep looking.
-                  if (isEnvelopeOnly(raw)) continue
-                  const cleaned = stripEnvelopes(raw)
+                  // context block) carry no human text: skip and keep looking.
+                  if (isEnvelopeOnly(body)) continue
+                  const cleaned = stripEnvelopes(body)
                   if (cleaned !== '') text = cleaned
                 }
                 if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text
               } catch {
                 // A session without a readable surface simply has no preview.
               }
-            }
+            }))
           }
           sendJson(response, 200, { texts })
           return

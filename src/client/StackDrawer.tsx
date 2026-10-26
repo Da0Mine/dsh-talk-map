@@ -128,14 +128,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 {item.preview !== undefined && item.preview !== ''
                   ? <div className={styles['cardSummary']}>{item.preview}</div>
                   : null}
-                {item.nextStep !== undefined && item.nextStep !== ''
-                  ? (
-                      <div className={styles['cardNext']}>
-                        <span className={styles['cardNextLabel']}>{t('card.next')}</span>
-                        <span className={styles['cardNextText']}>{item.nextStep}</span>
-                      </div>
-                    )
-                  : null}
                 <div className={styles['cardFooter']}>
                   <span className={styles['cardTime']}>{relativeTime(item.updatedAt)}</span>
                   {item.pendingDraft === true

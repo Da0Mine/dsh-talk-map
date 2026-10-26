@@ -272,6 +272,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // arrived. The poll owns its own clock, so churn cannot starve it.
   const previewInputs = useRef({ cards: visibleCards, sessions })
   previewInputs.current = { cards: visibleCards, sessions }
+  const previewTick = useRef<() => void>(() => {})
   useEffect(() => {
     const tick = (): void => {
       const { cards, sessions: latest } = previewInputs.current
@@ -296,10 +297,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         })
         .catch(() => undefined)
     }
+    previewTick.current = tick
     tick()
-    const timer = setInterval(tick, 2500)
+    const timer = setInterval(tick, 1500)
     return () => { clearInterval(timer) }
   }, [])
+
+  // Cards only exist after the canvas finishes loading: kick the request the
+  // moment the set changes instead of waiting for the next poll tick.
+  useEffect(() => { previewTick.current() }, [visibleCards])
 
   // Membership mirrors the sidebar truth: a card belongs to its session's
   // real workspace (dsh binds that to the session's cwd; sessions cannot
@@ -748,7 +754,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           running: status?.running ?? summary?.running ?? false,
           ghost: summary === undefined,
           updatedAt: summary?.updatedAt,
-          nextStep: digest?.nextStep ?? digest?.todoNext,
           ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
@@ -1171,13 +1176,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const summary = sessions.byId[card.sessionId]
       const digest = canvasState.digests[card.sessionId]
       const glow = glowOf(card.sessionId)
-      const nextStep = digest?.nextStep ?? digest?.todoNext
       items.push({
         cardId,
         sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
-        ...(nextStep !== undefined ? { nextStep } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
         ...(glow !== undefined ? { glow } : {}),

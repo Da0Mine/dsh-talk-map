@@ -158,18 +158,11 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
           )
         : (
             <>
-              {/* The body is what YOU last said — not an LLM digest. */}
+              {/* The body is what YOU last said — not an LLM digest, and no
+                * "next step" line either: the card is a conversation, not a
+                * progress report. */}
               {data.preview !== undefined && data.preview !== ''
                 ? <div className={styles['cardSummary']}>{data.preview}</div>
-                : null}
-              {data.nextStep !== undefined && data.nextStep !== ''
-                ? (
-                    <div className={styles['cardNext']}>
-                      <span className={styles['cardNextLabel']}>{t('card.next')}</span>
-                      <span className={styles['cardNextText']}>{data.nextStep}</span>
-                      {data.stale === true ? <span className={styles['cardStale']} title={t('card.stale')}>⟳</span> : null}
-                    </div>
-                  )
                 : null}
             </>
           )}

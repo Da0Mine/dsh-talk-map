@@ -290,18 +290,30 @@ try {
   check('粒子效果已移除', (runningFx?.count ?? 0) === 0 && runningFx?.layerZ === null,
     JSON.stringify({ count: runningFx?.count, layerZ: runningFx?.layerZ }))
   // Session-list churn must not starve the body request (the real app repaints
-  // the list every second while a turn runs).
+  // the list every second while a turn runs), and the body must land fast — the
+  // request is kicked as soon as the cards exist, not on the next poll tick.
   await page.evaluate(() => window.__harness.churn(true))
   await page.click('[class*="tm_backButton"]')
   await page.waitForTimeout(300)
+  const startedAt = Date.now()
   await openMap()
-  await page.waitForTimeout(2600)
-  const bodyUnderChurn = await page.evaluate(() => {
-    const card = document.querySelector('[data-talkmap-session="s1"]')
-    return card === null ? null : (card.querySelector('[class*="cardSummary"]')?.textContent ?? null)
-  })
+  let bodyUnderChurn = null
+  let waited = 0
+  for (let attempt = 0; attempt < 25; attempt += 1) {
+    bodyUnderChurn = await page.evaluate(() => {
+      const card = document.querySelector('[data-talkmap-session="s1"]')
+      return card === null ? null : (card.querySelector('[class*="cardSummary"]')?.textContent ?? null)
+    })
+    if (bodyUnderChurn !== null) break
+    await page.waitForTimeout(100)
+    waited += 100
+  }
+  const bodyLatency = Date.now() - startedAt
   await page.evaluate(() => window.__harness.churn(false))
   check('列表高频刷新时正文仍然取到', bodyUnderChurn === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(bodyUnderChurn))
+  check('正文在打开地图后 1.5s 内出现', bodyLatency < 1500, `${bodyLatency}ms（poll 等待 ${waited}ms）`)
+  check('卡片上不再有「下一步」那一行',
+    await page.evaluate(() => document.querySelectorAll('[class*="cardNext"]').length === 0))
 
   check('卡片正文 = 用户最后发的那句话（不是摘要）',
     runningFx?.body === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(runningFx?.body))

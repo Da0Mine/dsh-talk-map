@@ -10896,14 +10896,7 @@ function SessionCardNode(props) {
             },
             children: t("card.remove")
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-          data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null,
-          data.nextStep !== void 0 && data.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["cardNext"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardNextText"], children: data.nextStep }),
-            data.stale === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardStale"], title: t("card.stale"), children: "⟳" }) : null
-          ] }) : null
-        ] }),
+        ) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(import_jsx_runtime3.Fragment, { children: data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
           data.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
@@ -11326,10 +11319,6 @@ function StackDrawer(props) {
               children: [
                 /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title }) }),
                 item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
-                item.nextStep !== void 0 && item.nextStep !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["cardNext"], children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardNextLabel"], children: t("card.next") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardNextText"], children: item.nextStep })
-                ] }) : null,
                 /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
                   /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
                   item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
@@ -11574,6 +11563,8 @@ function CanvasInner(props) {
   }, [canvasState.cards, sessions]);
   const previewInputs = (0, import_react8.useRef)({ cards: visibleCards, sessions });
   previewInputs.current = { cards: visibleCards, sessions };
+  const previewTick = (0, import_react8.useRef)(() => {
+  });
   (0, import_react8.useEffect)(() => {
     const tick = () => {
       const { cards, sessions: latest } = previewInputs.current;
@@ -11596,12 +11587,16 @@ function CanvasInner(props) {
         setPreviews((previous) => ({ ...previous, ...cleaned }));
       }).catch(() => void 0);
     };
+    previewTick.current = tick;
     tick();
-    const timer3 = setInterval(tick, 2500);
+    const timer3 = setInterval(tick, 1500);
     return () => {
       clearInterval(timer3);
     };
   }, []);
+  (0, import_react8.useEffect)(() => {
+    previewTick.current();
+  }, [visibleCards]);
   const membersByGroup = (0, import_react8.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
@@ -11934,7 +11929,6 @@ function CanvasInner(props) {
         running: status?.running ?? summary?.running ?? false,
         ghost: summary === void 0,
         updatedAt: summary?.updatedAt,
-        nextStep: digest?.nextStep ?? digest?.todoNext,
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
         waiting: status !== void 0 ? status.pendingInteraction !== void 0 : summary?.pendingInteraction !== void 0,
         done: status?.completionUnread === true,
@@ -12262,13 +12256,11 @@ function CanvasInner(props) {
       const summary = sessions.byId[card.sessionId];
       const digest = canvasState.digests[card.sessionId];
       const glow = glowOf(card.sessionId);
-      const nextStep = digest?.nextStep ?? digest?.todoNext;
       items.push({
         cardId,
         sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
-        ...nextStep !== void 0 ? { nextStep } : {},
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
         ...glow !== void 0 ? { glow } : {},
