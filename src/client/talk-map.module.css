@@ -379,14 +379,27 @@
     0 0 40px 9px rgba(255, 255, 255, 0.1);
 }
 
-/* Pinned in the sidebar: a small mark before the title. The card keeps its full
- * strength (a pinned card is a deliberate choice, not something to fade out). */
+/* Pinned in the sidebar: a small mark before the title, lit so it reads at a
+ * glance. The card keeps its full strength (pinning is a deliberate choice, not
+ * something to fade out). */
 .cardPin {
   display: inline-flex;
   align-items: center;
   flex: none;
-  color: var(--dsw-alias-label-secondary);
-  opacity: 0.9;
+  color: rgb(255, 214, 106);
+  filter: drop-shadow(0 0 5px rgba(255, 214, 106, 0.85));
+  animation: talkmap-pin-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes talkmap-pin-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.6));
+    opacity: 0.92;
+  }
+  50% {
+    filter: drop-shadow(0 0 9px rgba(255, 214, 106, 1));
+    opacity: 1;
+  }
 }
 
 /* The conversation you came from: corner brackets, not a full frame. */

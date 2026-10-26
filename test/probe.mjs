@@ -817,12 +817,20 @@ try {
   const pinnedCard = await page.evaluate(() => {
     const card = document.querySelector('[data-talkmap-session="s7"]')
     if (card === null) return null
+    const mark = card.querySelector('[data-talkmap-pin]')
+    const style = mark === null ? null : getComputedStyle(mark)
     return {
-      pin: card.querySelector('[data-talkmap-pin]') !== null,
+      pin: mark !== null,
+      color: style?.color ?? null,
+      glow: style?.filter ?? null,
       opacity: Number(getComputedStyle(card).opacity),
     }
   })
-  check('置顶卡片带置顶图标', pinnedCard?.pin === true, JSON.stringify(pinnedCard))
+  check('置顶卡片带置顶图标（发光）',
+    pinnedCard?.pin === true
+      && /255, 214, 106/.test(pinnedCard?.color ?? '')
+      && (pinnedCard?.glow ?? '').includes('drop-shadow'),
+    JSON.stringify(pinnedCard))
   check('置顶卡片不压暗', pinnedCard?.opacity === 1, JSON.stringify(pinnedCard))
 
   const beforeArchive = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]').length)
