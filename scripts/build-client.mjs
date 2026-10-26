@@ -27,6 +27,7 @@ import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import * as esbuild from 'esbuild'
 import vm from 'node:vm'
+import { execFileSync } from 'node:child_process'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const ENTRY = 'src/client/index.ts'
@@ -172,6 +173,17 @@ const cssPlugin = {
   },
 }
 
+/** The desktop app's pid when it is running, else null. */
+function detectDsh() {
+  try {
+    const out = execFileSync('tasklist', ['/FI', 'IMAGENAME eq DeepSeek Harness.exe', '/FO', 'CSV', '/NH'], { encoding: 'utf8' })
+    const match = out.match(/"DeepSeek Harness\.exe","(\d+)"/)
+    return match === null ? null : Number(match[1])
+  } catch {
+    return null
+  }
+}
+
 const check = process.argv.includes('--check')
 /** Ship the bundle into `client/client.js` (what the running app loads). */
 const publish = process.argv.includes('--publish')
@@ -241,6 +253,24 @@ if (problems.length > 0) {
   // Never leave a broken artifact behind: remove the half-built file.
   fs.rmSync(outfile, { force: true })
   process.exit(1)
+}
+
+// PUBLISH SAFETY: a changed client.js is a landmine while DSH runs. The shell
+// cannot re-import a changed bundle on reload, it treats the resulting
+// non-activation as fatal and exits — verified three times on 2026-10-26 (each
+// time: a publish, then the user toggled a plugin, then the app died). So refuse
+// to publish while the desktop app is running, unless --force is given.
+if (publish && !process.argv.includes('--force')) {
+  const running = detectDsh()
+  if (running !== null) {
+    console.error(
+      'build-client: DSH is running (pid ' + running + '), refusing to publish.\n'
+      + '  A changed client.js crashes the app on the next reload (plugin toggle).\n'
+      + '  1) quit DSH   2) re-run this command   3) start DSH\n'
+      + '  (--force only if you are certain nothing will reload before the restart)',
+    )
+    process.exit(1)
+  }
 }
 
 // ATOMIC PUBLISH: build next to the target, then rename over it. A reload that
