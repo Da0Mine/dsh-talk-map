@@ -11989,7 +11989,7 @@ function CanvasInner(props) {
       };
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, liveSelectedIds, batchMode, batchPicks, locale]);
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, liveSelectedIds, batchMode, batchPicks, locale]);
   const sessionIdToCardId = (0, import_react8.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {

@@ -805,7 +805,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
