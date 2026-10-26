@@ -200,9 +200,12 @@ const publish = process.argv.includes('--publish')
  */
 const outfile = check
   ? path.join(ROOT, 'client', '.client.check.js')
-  : publish
-    ? path.join(ROOT, OUT)
-    : path.join(ROOT, 'client', 'client.dev.js')
+  // ALWAYS staged. `client/client.js` is only ever created by a rename, after
+  // every check below has passed — esbuild must never write it directly: a
+  // refused publish used to leave the app's live bundle already overwritten
+  // (2026-10-27 00:01: the guard said "refusing" and the file had changed anyway,
+  // so the next plugin toggle crashed the app).
+  : path.join(ROOT, 'client', '.client.build.js')
 
 const result = await esbuild.build({
   absWorkingDir: ROOT,
@@ -255,39 +258,27 @@ if (problems.length > 0) {
   process.exit(1)
 }
 
-// PUBLISH SAFETY: a changed client.js is a landmine while DSH runs. The shell
-// cannot re-import a changed bundle on reload, it treats the resulting
-// non-activation as fatal and exits — verified three times on 2026-10-26 (each
-// time: a publish, then the user toggled a plugin, then the app died). So refuse
-// to publish while the desktop app is running, unless --force is given.
+// PUBLISH SAFETY — runs BEFORE anything is renamed onto the live path.
 if (publish && !process.argv.includes('--force')) {
   const running = detectDsh()
   if (running !== null) {
     console.error(
       'build-client: DSH is running (pid ' + running + '), refusing to publish.\n'
       + '  A changed client.js crashes the app on the next reload (plugin toggle).\n'
-      + '  1) quit DSH   2) re-run this command   3) start DSH\n'
-      + '  (--force only if you are certain nothing will reload before the restart)',
+      + '  client/client.js was NOT touched; the build stayed in ' + path.basename(outfile) + '.\n'
+      + '  1) quit DSH   2) re-run this command   3) start DSH',
     )
+    fs.rmSync(outfile, { force: true })
     process.exit(1)
   }
 }
 
-// ATOMIC PUBLISH: build next to the target, then rename over it. A reload that
-// happens mid-build must see either the old bundle or the new one, never a
-// truncated file (renames inside one directory are atomic on NTFS).
-if (!check) {
-  const staged = `${outfile}.staged`
-  fs.copyFileSync(outfile, staged)
-  try {
-    new vm.Script(fs.readFileSync(staged, 'utf8'), { filename: 'client.js' })
-  } catch (error) {
-    fs.rmSync(staged, { force: true })
-    console.error('build-client: staged bundle does not parse: ' + (error?.message ?? error))
-    process.exit(1)
-  }
-  fs.renameSync(staged, outfile)
+// PUBLISH: one atomic rename (NTFS renames inside a directory are atomic), so a
+// reload sees either the old bundle or the new one, never a truncated file.
+if (check) {
+  fs.rmSync(outfile, { force: true })
+} else {
+  const target = publish ? path.join(ROOT, OUT) : path.join(ROOT, 'client', 'client.dev.js')
+  fs.renameSync(outfile, target)
+  console.log(`build-client: ${path.relative(ROOT, target)} ${(bytes / 1024).toFixed(1)} kB`)
 }
-
-console.log(`build-client: ${path.relative(ROOT, outfile)} ${(bytes / 1024).toFixed(1)} kB`)
-if (check) fs.rmSync(outfile, { force: true })
