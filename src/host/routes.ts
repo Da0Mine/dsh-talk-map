@@ -49,21 +49,47 @@ function textOfBlocks(content: unknown): string {
 /**
  * What the human actually typed.
  *
- * A "user message" as the model sees it also carries per-turn envelopes the
- * runtime appends: the sampling remark, `<system-reminder>` blocks (skill catalog
- * changes), the runtime-memory snapshot, and the "Current runtime context"
- * footer. Showing those on a card is noise, so they are stripped here; a message
- * that is nothing BUT envelope becomes empty and the caller walks back in time.
+ * Verified against real session logs: the runtime appends its envelopes either
+ * as their OWN user message (`Time sampled while preparing…` plus
+ * `Browser time zone…`/`Elapsed since…`, or a `Current runtime context.…` block)
+ * or onto the human's message. A message that STARTS with such a marker carries
+ * no human text and is skipped whole; everything else keeps its body with only
+ * the trailing envelope blocks removed.
  */
+const ENVELOPE_MARKERS: readonly RegExp[] = [
+  /^\[?time sampled while preparing/i,
+  /^current runtime context\./i,
+  /^<system-reminder>/i,
+  /^<available_skills>/i,
+  /^<runtime-memory-file/i,
+  /^mnemon runtime memory snapshot/i,
+  /^browser time zone for this request/i,
+  /^elapsed since the preceding/i,
+  // Subagent checkpoints are machine-authored prompts, not something a person typed.
+  /^\[dsh-mnemon:/i,
+]
+
+function isEnvelopeOnly(text: string): boolean {
+  const firstLine = text.split('\n').map(line => line.trim()).find(line => line !== '') ?? ''
+  return ENVELOPE_MARKERS.some(marker => marker.test(firstLine))
+}
+
 function stripEnvelopes(text: string): string {
   let out = text
   out = out.replace(/<system-reminder>[\s\S]*?<\/system-reminder>/gi, ' ')
   out = out.replace(/<available_skills>[\s\S]*?<\/available_skills>/gi, ' ')
   out = out.replace(/<runtime-memory-file[^>]*>[\s\S]*?<\/runtime-memory-file>/gi, ' ')
   out = out.replace(/^\[?Time sampled while preparing[^\n]*$/gim, ' ')
+  out = out.replace(/^Elapsed since the preceding[^\n]*$/gim, ' ')
+  out = out.replace(/^Browser time zone for this request[^\n]*$/gim, ' ')
   out = out.replace(/^\s*MNEMON RUNTIME MEMORY SNAPSHOT[\s\S]*$/im, ' ')
   out = out.replace(/^\s*MNEMON VIEW TOOLS[\s\S]*$/im, ' ')
   out = out.replace(/^\s*Current runtime context\.[\s\S]*$/im, ' ')
+  out = out.replace(/^\s*Current working directory:[^\n]*$/gim, ' ')
+  out = out.replace(/^\s*Current DSH file policy:[^\n]*$/gim, ' ')
+  out = out.replace(/^\s*Approval prompts are disabled[^\n]*$/gim, ' ')
+  out = out.replace(/^\s*Current DeepSeek Harness[^\n]*$/gim, ' ')
+  out = out.replace(/^\s*The available skill catalog changed[\s\S]*$/im, ' ')
   return out.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
@@ -347,9 +373,11 @@ export function mountTalkMapRoutes(
                   if (event.type !== 'user/message') continue
                   // Tool results ride in as role "user"; they are not messages.
                   if (event.data?.source?.kind === 'tool') continue
-                  const cleaned = stripEnvelopes(textOfBlocks(event.data?.content))
-                  // Envelope-only turns (a sampling remark, a memory refresh) are
-                  // skipped — the card keeps the last thing a human wrote.
+                  const raw = textOfBlocks(event.data?.content)
+                  // Envelope-only turns (their own sampling remark, a runtime
+                  // context block) carry no human text: skip them and keep looking.
+                  if (isEnvelopeOnly(raw)) continue
+                  const cleaned = stripEnvelopes(raw)
                   if (cleaned !== '') text = cleaned
                 }
                 if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text

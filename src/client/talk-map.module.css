@@ -379,58 +379,25 @@
     0 0 40px 9px rgba(255, 255, 255, 0.1);
 }
 
-/* White specks converging on the card: absolute dots on a fixed "orbit" that
- * travel inward and fade out, staggered by angle and delay. Pure CSS. */
-/* The specks live BEHIND the card (z-index: -1 paints under the card's own
- * background, because the card is not a stacking context) — so they read as dust
- * drifting inside the lamp's halo rather than dots stuck on the face. */
-.cardParticles {
+/* The conversation you came from: corner brackets, not a full frame. */
+.cardReticle {
   position: absolute;
-  inset: 0;
-  z-index: -1;
+  inset: -5px;
   pointer-events: none;
-  overflow: visible;
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45));
 }
 
-.cardParticles i {
+.cardReticle i {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 2px;
-  height: 2px;
-  margin: -1px 0 0 -1px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 0 5px 1px rgba(255, 255, 255, 0.45);
-  opacity: 0;
-  animation: talkmap-particle-in 2.8s linear infinite;
-  animation-delay: var(--tm-particle-delay, 0s);
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
 }
 
-@keyframes talkmap-particle-in {
-  0% {
-    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(var(--tm-particle-radius, 160px)) scale(0.3);
-    opacity: 0;
-  }
-  22% {
-    opacity: 0.85;
-  }
-  80% {
-    opacity: 0.35;
-  }
-  100% {
-    transform: rotate(var(--tm-particle-angle, 0deg)) translateX(2px) scale(0.7);
-    opacity: 0;
-  }
-}
-
-/* The conversation the map was opened from: an outline, so it composes with
- * whatever lamp (box-shadow) the card already has. */
-.cardCurrent {
-  outline: 2px solid rgba(255, 255, 255, 0.92);
-  outline-offset: 3px;
-  filter: drop-shadow(0 0 7px rgba(255, 255, 255, 0.45));
-}
+.cardReticle i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; }
+.cardReticle i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; }
+.cardReticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; }
+.cardReticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; }
 
 /* Nothing to report? The card recedes until you point at it. */
 .cardQuiet {

@@ -287,10 +287,8 @@ try {
       body: card.querySelector('[class*="cardSummary"]')?.textContent?.trim() ?? null,
     }
   })
-  check('运行中卡片有细密粒子汇入', (runningFx?.count ?? 0) >= 12 && (runningFx?.animation ?? '').includes('particle'),
-    JSON.stringify({ count: runningFx?.count, animation: runningFx?.animation }))
-  check('粒子在卡片背后（z-index -1）', runningFx?.layerZ === '-1', String(runningFx?.layerZ))
-  check('粒子很小（≤2px）', (runningFx?.size ?? 99) <= 2 && (runningFx?.size ?? 0) > 0, String(runningFx?.size))
+  check('粒子效果已移除', (runningFx?.count ?? 0) === 0 && runningFx?.layerZ === null,
+    JSON.stringify({ count: runningFx?.count, layerZ: runningFx?.layerZ }))
   check('卡片正文 = 用户最后发的那句话（不是摘要）',
     runningFx?.body === '把卡片改成网格槽位，含退让与补位动画', JSON.stringify(runningFx?.body))
   // ---- 3c. a brand-new conversation takes the head of its folder -------
@@ -494,7 +492,7 @@ try {
   await page.waitForTimeout(600)
   const currentCard = await page.evaluate(() => {
     const marked = [...document.querySelectorAll('[data-talkmap-session]')]
-      .filter(node => node.className.includes('tm_cardCurrent'))
+      .filter(node => node.querySelector('[class*="cardReticle"]') !== null)
       .map(node => node.getAttribute('data-talkmap-session'))
     return marked
   })
@@ -502,17 +500,27 @@ try {
     currentCard.includes(markedSession), `${JSON.stringify(currentCard)} vs ${markedSession}`)
   const currentRing = await page.evaluate(() => {
     const node = [...document.querySelectorAll('[data-talkmap-session]')]
-      .find(item => item.className.includes('tm_cardCurrent'))
+      .find(item => item.querySelector('[class*="cardReticle"]') !== null)
     if (node === undefined) return null
-    const style = getComputedStyle(node)
-    return { color: style.outlineColor, width: style.outlineWidth, glow: style.filter }
+    const corners = [...node.querySelectorAll('[class*="cardReticle"] i')]
+    const style = corners.length === 0 ? null : getComputedStyle(corners[0])
+    const self = getComputedStyle(node)
+    return {
+      count: corners.length,
+      color: style?.borderTopColor ?? null,
+      top: style?.borderTopWidth ?? null,
+      right: style?.borderRightWidth ?? null,
+      bottom: style?.borderBottomWidth ?? null,
+      outline: self.outlineStyle + ' ' + self.outlineWidth,
+    }
   })
-  check('当前卡片的框是白色发光',
-    /255, 255, 255/.test(currentRing?.color ?? '') && (currentRing?.glow ?? '').includes('drop-shadow'),
+  check('当前卡片用四角瞄镜（不是整圈边框）',
+    currentRing?.count === 4 && /255, 255, 255/.test(currentRing?.color ?? '')
+      && currentRing?.top === '2px' && currentRing?.right === '0px' && currentRing?.bottom === '0px',
     JSON.stringify(currentRing))
   check('当前卡片不压暗', await page.evaluate(() => {
     const node = [...document.querySelectorAll('[data-talkmap-session]')]
-      .find(item => item.className.includes('tm_cardCurrent'))
+      .find(item => item.querySelector('[class*="cardReticle"]') !== null)
     return node !== undefined && Number(getComputedStyle(node).opacity) === 1
   }))
 

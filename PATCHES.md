@@ -139,24 +139,30 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 - 数据来源：宿主侧的 `POST /talk-map/last-user`（`{sessionIds}` → `{texts}`），直接读会话
   表面里的 `user/message`（跳过 `source.kind === 'tool'` 的工具结果，最后一条胜出），
   不花钱、不等模型；
-- **先剥掉每轮注入的信封**：模型看到的"用户消息"里还挂着 `Time sampled …`、
-  `<system-reminder>`（技能目录变更）、`MNEMON RUNTIME MEMORY SNAPSHOT`、
-  `<runtime-memory-file>`、`Current runtime context.…` 这些尾巴——宿主 `stripEnvelopes()`
-  先洗一遍，整条只有信封的轮次会变成空串，于是往前找上一条真人写的话；
+- **先剥掉每轮注入的信封**：真实日志里宿主把这些信封当成**独立的用户消息**追加在真人消息
+  后面（`Time sampled while preparing…` 一条、`Current runtime context.…` 一条），所以规则是：
+  **以信封开头的整条消息直接跳过**（`isEnvelopeOnly`；真人消息以别的内容开头，不会误杀），
+  其余消息只剥尾部的信封块；整条只剩信封的轮次变空，于是往前找上一条真人写的话；
+- 已收录的信封标记：`Time sampled while preparing` / `Current runtime context.` /
+  `<system-reminder>` / `<available_skills>` / `<runtime-memory-file>` /
+  `MNEMON RUNTIME MEMORY SNAPSHOT` / `Browser time zone for this request` /
+  `Elapsed since the preceding` / `[dsh-mnemon:`（子代理检查点提示词）；
 - **客户端还有第二道**（`src/client/preview-text.ts`，同一套规则）：宿主半没重启也能干净。
   踩过的坑：`MNEMON RUNTIME MEMORY SNAPSHOT` 那条正则少写了 `m` 标志，`^` 只锚在串首，
   快照照样漏出来——现在客户端 / src 宿主 / 打包产物三处都是 `/im`；
+- 离线验证脚本 `scripts/_.verify-preview.mjs`：直接读真实 `session.v4.jsonl.zstd`（多 zstd 帧
+  自己拆），跑"信封跳过 + 清洗"并打印最终卡片正文——改规则先跑它，别靠猜；
 - 客户端按"哪些会话的 `updatedAt` 变了"批量取一次，800ms 防抖，面板开着时才请求；
 - 摘要管线本身还在宿主里跑（`nextStep`/「下一步」那条还靠它），只是不再上卡片。
 
 ### 2b5. 压暗 / 粒子
 
+（粒子汇入效果试过两版都嫌廉价，**已整体删除**，探针里有「粒子效果已移除」的断言。）
+
 - **没有任何状态的卡片**（无灯、无待发送、无已中断）整体压暗到 `opacity: .62`，鼠标悬浮
   140ms 内回到 1；
-- **运行中**：白光调亮（内描边 .34 / 16px .2 / 40px .1）；**18 颗 2px 白色微粒**沿各自角度向
-  卡片汇入，**画在卡片背后**（`z-index: -1`，落在灯的余光里而不是贴在脸上），起始半径
-  64~104px、2.8s 线性循环，角度/延迟/半径由 `--tm-particle-angle` / `--tm-particle-delay` /
-  `--tm-particle-radius` 给，纯 CSS。
+- **运行中**：白光调亮（内描边 .34 / 16px .2 / 40px .1）+ 外沿流光环。
+  （试过"粒子汇入"，看着廉价，已整体删除，探针里也加了"粒子效果已移除"的断言。）
 
 ### 2c. 灯：运行中"流光"，其余"呼吸"
 
@@ -215,11 +221,11 @@ npm run harness             # http://127.0.0.1:8791/test/index.html 离线测试
 不跟着变色**（内部始终保持画布底色，颜色不会洗到卡片上）。选别的对象或按 Esc 取消选中，
 工具条随之消失。
 
-### 3f. 当前对话的卡片有白色发光框
+### 3f. 当前对话的卡片：四角瞄镜
 
-打开地图时，**你原来所在的那个对话**的卡片加一圈**白色** `outline`（2px、`offset: 3px`）+
-`filter: drop-shadow(0 0 7px rgba(255,255,255,.45))` 的柔光；用 outline + drop-shadow 而不是
-`box-shadow`，是为了不覆盖卡片已有的灯（灯也用 box-shadow）。它同时不参与"无状态压暗"。
+打开地图时，**你原来所在的那个对话**的卡片四角各画一个 **13px 的白色 L 形角标**
+（`.cardReticle` 里 4 个 `i`，每个只留两条边），外面再加一层 `drop-shadow` 柔光——
+像瞄镜那样只框住四角，不是整圈边框。它同时不参与"无状态压暗"。
 
 会话 id 来自宿主持久化的 `localStorage["dsh.sessions.current"]`（`openMapPanel()` 在
 切面板**之前**先记一份，`currentSessionId()` 每次渲染再实时读一次兜底——面板选中后这个键可能被改写）。

@@ -100,7 +100,6 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
   if (data.glow !== undefined) classNames.push(styles[LAMP_CLASS[data.glow]] ?? '')
   // A card with nothing to report recedes; hovering brings it back. Any status
   // (lamp, unsent text, interrupted run) keeps it at full strength.
-  if (data.current === true) classNames.push(styles['cardCurrent'] ?? '')
   const quiet = data.current !== true && data.glow === undefined && data.pendingDraft !== true && data.interrupted !== true
   if (quiet) classNames.push(styles['cardQuiet'] ?? '')
 
@@ -116,25 +115,15 @@ export function SessionCardNode(props: NodeProps<SessionCardNodeType>): React.JS
       style={data.onPick !== undefined ? { cursor: 'pointer' } : undefined}
       data-talkmap-session={data.sessionId}
     >
-      {/* A running conversation pulls white specks in from every side: the card
-        * is doing work, and the movement says so without a pulse. */}
-      {data.glow === 'running'
+      {/* The conversation the map was opened from, marked like a reticle: four
+        * corner brackets instead of a full frame. */}
+      {data.current === true
         ? (
-            <span className={styles['cardParticles']} aria-hidden="true">
-              {Array.from({ length: 18 }, (_, index) => (
-                <i
-                  key={index}
-                  style={{
-                    '--tm-particle-angle': `${(index * 360) / 18}deg`,
-                    '--tm-particle-delay': `${((index * 7) % 18) * 0.17}s`,
-                    '--tm-particle-radius': `${64 + (index % 3) * 20}px`,
-                  } as React.CSSProperties}
-                />
-              ))}
+            <span className={styles['cardReticle']} aria-hidden="true">
+              <i /><i /><i /><i />
             </span>
           )
-        : null}
-      {/* Four connection points, one per side. All type "source" — the
+        : null}      {/* Four connection points, one per side. All type "source" — the
         * canvas runs ConnectionMode.Loose, so each also accepts incoming
         * edges. Hidden until the card is hovered or a drag is in flight
         * (CSS); legacy edges without stored handles anchor r→l. */}
