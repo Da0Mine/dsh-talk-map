@@ -838,6 +838,31 @@ try {
       && (Math.abs(afterTitleDrag.x - beforeTitleDrag.x) > 10 || Math.abs(afterTitleDrag.y - beforeTitleDrag.y) > 10),
     `${beforeTitleDrag.x}/${beforeTitleDrag.y} ${beforeTitleDrag.w}x${beforeTitleDrag.h} → ${afterTitleDrag.x}/${afterTitleDrag.y} ${afterTitleDrag.w}x${afterTitleDrag.h}`)
 
+  const frameLabelBox = await box('[data-talkmap-workspace="ws-daily"] [class*="wsFrameLabel"]')
+  await page.mouse.click(frameLabelBox.x + 20, frameLabelBox.y + 10, { button: 'right' })
+  await page.waitForTimeout(350)
+  const wsMenu = await menuItems()
+  check('工作区右键菜单含「重命名工作区」', wsMenu.some(text => text.includes('重命名工作区')), JSON.stringify(wsMenu))
+  await clickMenuItem('重命名工作区')
+  await page.waitForTimeout(350)
+  const wsDialog = await page.evaluate(() => {
+    const input = document.querySelector('[class*="renameInput"]')
+    return input === null ? null : input.value
+  })
+  check('对话框预填工作区当前名字', wsDialog === '日常任务', String(wsDialog))
+  await page.fill('[class*="renameInput"]', '改过的工作区')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(700)
+  const wsCall = await page.evaluate(() => window.__harness.log.filter(entry => entry.kind === 'rpc.call').at(-1))
+  check('工作区重命名走 workspace/rename',
+    wsCall?.detail?.endpoint === 'workspace/rename'
+      && wsCall?.detail?.args?.request?.workspaceId === 'ws-daily'
+      && wsCall?.detail?.args?.request?.title === '改过的工作区',
+    JSON.stringify(wsCall?.detail))
+  const wsLabelNow = await page.evaluate(() =>
+    document.querySelector('[data-talkmap-workspace="ws-daily"] [class*="wsFrameLabel"]')?.textContent ?? null)
+  check('文件夹标题跟着改', (wsLabelNow ?? '').includes('改过的工作区'), String(wsLabelNow))
+
   // ---- 11. pin / archive / delete / batch -----------------------------
   const pinPoint = await cardPoint('s7')
   await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })

@@ -345,7 +345,7 @@ var zh = {
   "card.draft": "待发送",
   "card.draftHint": "这个对话的输入框里还有没发出去的文字",
   "card.pinned": "已置顶",
-  "rename.title": "重命名对话",
+  "rename.title": "重命名",
   "rename.placeholder": "新的标题",
   "rename.confirm": "确定",
   "rename.cancel": "取消",
@@ -399,6 +399,7 @@ var zh = {
   "menu.open": "打开对话",
   "menu.markUnread": "标为未读",
   "menu.rename": "重命名",
+  "menu.renameWorkspace": "重命名工作区",
   "menu.removeCard": "从地图移除",
   "edge.push": "推送最新摘要",
   "edge.pushNoDigest": "来源还没有摘要",
@@ -462,7 +463,7 @@ var en = {
   "card.draft": "unsent",
   "card.draftHint": "This conversation has text typed but not sent",
   "card.pinned": "pinned",
-  "rename.title": "Rename conversation",
+  "rename.title": "Rename",
   "rename.placeholder": "New title",
   "rename.confirm": "Rename",
   "rename.cancel": "Cancel",
@@ -516,6 +517,7 @@ var en = {
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
   "menu.rename": "Rename",
+  "menu.renameWorkspace": "Rename workspace",
   "menu.removeCard": "Remove from map",
   "edge.push": "Push latest digest",
   "edge.pushNoDigest": "source has no digest yet",
@@ -10925,9 +10927,9 @@ function RenameDialog(props) {
         setBusy(false);
         return;
       }
-      const result = await rpc.call("/api", "session/rename", {
-        args: { request: { sessionId: props.target.sessionId, title } }
-      });
+      const endpoint = props.target.kind === "workspace" ? "workspace/rename" : "session/rename";
+      const request = props.target.kind === "workspace" ? { workspaceId: props.target.id, title } : { sessionId: props.target.id, title };
+      const result = await rpc.call("/api", endpoint, { args: { request } });
       if (result.ok !== true) {
         console.error("[dsh-talk-map] rename rejected:", result.error);
         setError(result.error?.message ?? t("rename.failed"));
@@ -11716,6 +11718,7 @@ function CanvasInner(props) {
   const [drawer, setDrawer] = (0, import_react9.useState)(null);
   const [renameTarget, setRenameTarget] = (0, import_react9.useState)(null);
   const [renamedTitles, setRenamedTitles] = (0, import_react9.useState)({});
+  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react9.useState)({});
   const [batchMode, setBatchMode] = (0, import_react9.useState)(false);
   const [batchPicks, setBatchPicks] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
   const [batchBusy, setBatchBusy] = (0, import_react9.useState)(false);
@@ -12127,7 +12130,7 @@ function CanvasInner(props) {
         position: { x: rect.x, y: rect.y },
         data: {
           workspaceId: groupId,
-          title: wsTitles.get(groupId) ?? t("frame.unknown"),
+          title: renamedWorkspaces[groupId] ?? wsTitles.get(groupId) ?? t("frame.unknown"),
           count: members.length,
           width: rect.width,
           height: rect.height,
@@ -12224,7 +12227,7 @@ function CanvasInner(props) {
       };
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, liveSelectedIds, batchMode, batchPicks, locale]);
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale]);
   const sessionIdToCardId = (0, import_react9.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
@@ -12795,8 +12798,9 @@ function CanvasInner(props) {
           close();
           if (card !== void 0) {
             setRenameTarget({
-              sessionId: card.sessionId,
-              title: sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId
+              kind: "session",
+              id: card.sessionId,
+              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId
             });
           }
         }
@@ -12867,13 +12871,21 @@ function CanvasInner(props) {
       }
     } else if (menu.kind === "frame" && menu.targetId !== void 0) {
       const groupId = menu.targetId;
-      title = wsTitles.get(groupId) ?? t("frame.unknown");
+      title = renamedWorkspaces[groupId] ?? wsTitles.get(groupId) ?? t("frame.unknown");
       items.push({
         key: "new-chat",
         label: t("menu.newChat"),
         onPick: () => {
           startSessionIn(groupId);
           close();
+        }
+      });
+      items.push({
+        key: "rename-workspace",
+        label: t("menu.renameWorkspace"),
+        onPick: () => {
+          close();
+          setRenameTarget({ kind: "workspace", id: groupId, title: wsTitles.get(groupId) ?? t("frame.unknown") });
         }
       });
       items.push({
@@ -13037,10 +13049,14 @@ function CanvasInner(props) {
           {
             target: renameTarget,
             onDone: (title) => {
-              const sessionId = renameTarget.sessionId;
+              const target = renameTarget;
               setRenameTarget(null);
               if (title === null) return;
-              setRenamedTitles((previous) => ({ ...previous, [sessionId]: title }));
+              if (target.kind === "workspace") {
+                setRenamedWorkspaces((previous) => ({ ...previous, [target.id]: title }));
+              } else {
+                setRenamedTitles((previous) => ({ ...previous, [target.id]: title }));
+              }
               showToast(t("toast.renamed"));
             }
           }
@@ -13048,7 +13064,7 @@ function CanvasInner(props) {
         drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           StackDrawer,
           {
-            workspaceTitle: wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
+            workspaceTitle: renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
             items: drawerItems(drawer.groupId),
             onOpenCard: (cardId) => {
               const card = visibleCards[cardId];

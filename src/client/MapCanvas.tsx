@@ -204,6 +204,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
   const [renamedTitles, setRenamedTitles] = useState<Record<string, string>>({})
+  const [renamedWorkspaces, setRenamedWorkspaces] = useState<Record<string, string>>({})
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
   const [batchMode, setBatchMode] = useState(false)
   /** The cards picked in batch mode. */
@@ -775,7 +776,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         position: { x: rect.x, y: rect.y },
         data: {
           workspaceId: groupId,
-          title: wsTitles.get(groupId) ?? t('frame.unknown'),
+          title: renamedWorkspaces[groupId] ?? wsTitles.get(groupId) ?? t('frame.unknown'),
           count: members.length,
           width: rect.width,
           height: rect.height,
@@ -880,7 +881,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1607,8 +1608,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           close()
           if (card !== undefined) {
             setRenameTarget({
-              sessionId: card.sessionId,
-              title: sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+              kind: 'session',
+              id: card.sessionId,
+              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
             })
           }
         },
@@ -1690,7 +1692,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     } else if (menu.kind === 'frame' && menu.targetId !== undefined) {
       const groupId = menu.targetId
-      title = wsTitles.get(groupId) ?? t('frame.unknown')
+      title = renamedWorkspaces[groupId] ?? wsTitles.get(groupId) ?? t('frame.unknown')
       // Same deal as the double-click: a new chat started from a folder belongs
       // to that folder's workspace.
       items.push({
@@ -1699,6 +1701,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         onPick: () => {
           startSessionIn(groupId)
           close()
+        },
+      })
+      items.push({
+        key: 'rename-workspace',
+        label: t('menu.renameWorkspace'),
+        onPick: () => {
+          close()
+          setRenameTarget({ kind: 'workspace', id: groupId, title: wsTitles.get(groupId) ?? t('frame.unknown') })
         },
       })
       // Sync is automatic now (once per open), so the manual row is gone.
@@ -1870,10 +1880,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             <RenameDialog
               target={renameTarget}
               onDone={(title) => {
-                const sessionId = renameTarget.sessionId
+                const target = renameTarget
                 setRenameTarget(null)
                 if (title === null) return
-                setRenamedTitles(previous => ({ ...previous, [sessionId]: title }))
+                if (target.kind === 'workspace') {
+                  setRenamedWorkspaces(previous => ({ ...previous, [target.id]: title }))
+                } else {
+                  setRenamedTitles(previous => ({ ...previous, [target.id]: title }))
+                }
                 showToast(t('toast.renamed'))
               }}
             />
@@ -1882,7 +1896,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       {drawer !== null
         ? (
             <StackDrawer
-              workspaceTitle={wsTitles.get(drawer.groupId) ?? t('frame.unknown')}
+              workspaceTitle={renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t('frame.unknown')}
               items={drawerItems(drawer.groupId)}
               onOpenCard={(cardId) => {
                 const card = visibleCards[cardId]

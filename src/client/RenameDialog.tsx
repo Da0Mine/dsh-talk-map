@@ -68,11 +68,11 @@ export function RenameDialog(props: RenameDialogProps): React.JSX.Element {
       }
       // The wire payload takes NAMED args: the endpoint declares a single parameter
       // with "Remote payload must contain exactly one plain-object args field".
-            // called "request", so args is { request: {...} }. An array is refused
-      // with "Remote payload must contain exactly one plain-object args field".
-      const result = await rpc.call('/api', 'session/rename', {
-        args: { request: { sessionId: props.target.sessionId, title } },
-      })
+      const endpoint = props.target.kind === 'workspace' ? 'workspace/rename' : 'session/rename'
+      const request = props.target.kind === 'workspace'
+        ? { workspaceId: props.target.id, title }
+        : { sessionId: props.target.id, title }
+      const result = await rpc.call('/api', endpoint, { args: { request } })
       if (result.ok !== true) {
         console.error('[dsh-talk-map] rename rejected:', result.error)
         setError(result.error?.message ?? t('rename.failed'))

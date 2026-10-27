@@ -274,6 +274,14 @@
       rpc: {
         call: (channel, endpoint, payload) => {
           log('rpc.call', { channel, endpoint, args: payload?.args })
+          if (endpoint === 'workspace/rename') {
+            const request = payload?.args?.request ?? {}
+            const workspace = workspaceList.find(item => item.workspaceId === request.workspaceId)
+            if (workspace !== undefined) workspace.title = request.title
+            workspacesState = buildWorkspaces()
+            sync()
+            return Promise.resolve({ ok: true, value: { workspaceId: request.workspaceId, title: request.title } })
+          }
           if (endpoint === 'session/rename') {
             const request = payload?.args?.request ?? {}
             const row = sessionRows[request.sessionId]
