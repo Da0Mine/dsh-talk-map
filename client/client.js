@@ -10907,7 +10907,7 @@ function RenameDialog(props) {
         return;
       }
       const result = await rpc.call("/api", "session/rename", {
-        args: [{ sessionId: props.target.sessionId, title }]
+        args: { request: { sessionId: props.target.sessionId, title } }
       });
       if (result.ok !== true) {
         console.error("[dsh-talk-map] rename rejected:", result.error);

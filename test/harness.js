@@ -275,7 +275,7 @@
         call: (channel, endpoint, payload) => {
           log('rpc.call', { channel, endpoint, args: payload?.args })
           if (endpoint === 'session/rename') {
-            const request = payload?.args?.[0] ?? {}
+            const request = payload?.args?.request ?? {}
             const row = sessionRows[request.sessionId]
             if (row !== undefined) sessionRows[request.sessionId] = { ...row, displayTitle: request.title }
             sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
