@@ -8,10 +8,15 @@ import { useEffect, useRef, useState } from 'react'
 import { mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
+import { MenuIcon, type MenuIconName } from './MenuIcons.tsx'
 
 export interface MenuItem {
   key: string
   label: string
+  /** Leading glyph, so the list is scanned by shape rather than read. */
+  icon?: MenuIconName
+  /** Destructive row: rendered in red. */
+  danger?: boolean
   /** Dimmed suffix rendered after the label (e.g. 已在地图). */
   hint?: string
   disabled?: boolean
@@ -144,10 +149,11 @@ export function ContextMenu(props: { menu: MenuState; onClose: () => void }): Re
             key={item.key}
             type="button"
             role="menuitem"
-            className={styles['menuItem']}
+            className={`${styles['menuItem']}${item.danger === true ? ` ${styles['menuItemDanger'] ?? ''}` : ''}`}
             disabled={item.disabled === true}
             onClick={() => { item.onPick() }}
           >
+            {item.icon !== undefined ? <MenuIcon name={item.icon} /> : <span className={styles['menuIcon']} />}
             {item.label}
             {item.hint !== undefined ? <span className={styles['menuHint']}> {item.hint}</span> : null}
           </button>

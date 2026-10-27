@@ -871,6 +871,23 @@ try {
   check('右键菜单含置顶/标为未读/归档/删除/批量',
     ['置顶', '标为未读', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
     JSON.stringify(cardMenu))
+  const menuDecor = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('[class*="menuItem"]')]
+    const danger = rows.find(node => node.textContent.includes('删除'))
+    return {
+      total: rows.length,
+      withIcon: rows.filter(node => node.querySelector('svg') !== null).length,
+      dangerColor: danger === null ? null : getComputedStyle(danger).color,
+      dangerText: danger === null ? null : danger.textContent.trim(),
+    }
+  })
+  check('菜单每一项前面都有图标',
+    menuDecor.total >= 5 && menuDecor.withIcon === menuDecor.total, JSON.stringify(menuDecor))
+  // capture with the menu open, for eyeballing the glyphs
+  await page.screenshot({ path: path.join(shots, 'probe-menu.png') })
+  check('「删除」那一项是红字',
+    /242, 78, 78/.test(menuDecor.dangerColor ?? ''), JSON.stringify(menuDecor))
+
   check('右键菜单不再有「打开对话」「从地图移除」',
     !cardMenu.some(text => text.includes('打开对话') || text.includes('从地图移除')),
     JSON.stringify(cardMenu))

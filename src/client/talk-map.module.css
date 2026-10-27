@@ -938,7 +938,10 @@
   /* .menu is a flex column with max-height: without flex:none a long list
    * SHRINKS every row and clips the text vertically */
   flex: none;
-  display: block;
+  /* Leading 14px glyph + label on one baseline. */
+  display: flex;
+  align-items: center;
+  gap: 8px;
   width: 100%;
   text-align: left;
   padding: 6px 10px;
@@ -951,6 +954,22 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.menuIcon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: var(--dsw-alias-label-secondary);
+}
+
+/* Destructive rows read red end to end: label plus glyph. */
+.menuItemDanger {
+  color: rgb(242, 78, 78);
+}
+
+.menuItemDanger .menuIcon {
+  color: rgb(242, 78, 78);
 }
 
 .menuItem:hover:not(:disabled) {

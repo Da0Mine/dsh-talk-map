@@ -1595,6 +1595,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // folder layout keeps pinned cards in front.
       items.push({
         key: 'pin',
+        icon: isPinned ? 'unpin' : 'pin',
         label: isPinned ? t('menu.unpin') : t('menu.pin'),
         onPick: () => {
           close()
@@ -1603,6 +1604,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
       items.push({
         key: 'rename',
+        icon: 'rename',
         label: t('menu.rename'),
         onPick: () => {
           close()
@@ -1619,6 +1621,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // map computes on its own, cleared the same way (open the conversation).
       items.push({
         key: 'unread',
+        icon: 'unread',
         label: t('menu.markUnread'),
         onPick: () => {
           close()
@@ -1627,6 +1630,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
       items.push({
         key: 'archive',
+        icon: 'archive',
         label: t('menu.archive'),
         onPick: () => {
           close()
@@ -1635,6 +1639,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
       items.push({
         key: 'delete-session',
+        icon: 'delete',
+        danger: true,
         label: t('menu.deleteSession'),
         onPick: () => {
           close()
@@ -1643,6 +1649,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
       items.push({
         key: 'batch',
+        icon: 'batch',
         label: t('menu.batch'),
         onPick: () => {
           close()
@@ -1697,6 +1704,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // to that folder's workspace.
       items.push({
         key: 'new-chat',
+        icon: 'open',
         label: t('menu.newChat'),
         onPick: () => {
           startSessionIn(groupId)
@@ -1705,6 +1713,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
       items.push({
         key: 'rename-workspace',
+        icon: 'rename',
         label: t('menu.renameWorkspace'),
         onPick: () => {
           close()
@@ -1714,6 +1723,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // Sync is automatic now (once per open), so the manual row is gone.
       items.push({
         key: 'remove-group',
+        icon: 'delete',
         label: t('menu.removeGroup'),
         onPick: () => {
           removeGroup(groupId)
