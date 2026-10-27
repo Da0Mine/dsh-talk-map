@@ -269,7 +269,23 @@
       open: (id) => { log('openSession', id) },
     },
     workspaces: { list: { getSnapshot: () => workspacesState, subscribe: () => () => {} } },
-    connection: { api: {
+    connection: {
+      // The real unary RPC face: rpc.call(channel, endpoint, { args }) → { ok, value }.
+      rpc: {
+        call: (channel, endpoint, payload) => {
+          log('rpc.call', { channel, endpoint, args: payload?.args })
+          if (endpoint === 'session/rename') {
+            const request = payload?.args?.[0] ?? {}
+            const row = sessionRows[request.sessionId]
+            if (row !== undefined) sessionRows[request.sessionId] = { ...row, displayTitle: request.title }
+            sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+            sync()
+            return Promise.resolve({ ok: true, value: { title: request.title, seq: 1 } })
+          }
+          return Promise.resolve({ ok: false, error: { code: 'gateway/bad-request', message: 'unknown endpoint ' + String(endpoint) } })
+        },
+      },
+      api: {
       // RPC results, not HTTP responses: `{ result: { ok, value } }`.
       llm: { models: () => Promise.resolve({ result: { ok: true, value: { groups: [
         { id: 'deepseek', name: 'DeepSeek', models: [{ id: 'deepseek-v4-pro', name: 'V4 Pro' }] },
@@ -280,19 +296,8 @@
           { id: 'standard', name: '标准模式' }, { id: 'cordis', name: '创造模式' },
         ] } } }) },
       workspace: { create: () => Promise.resolve({ result: { ok: true, value: { workspace: { workspaceId: 'ws-new' } } } }) },
-      sessions: {
-        // sessionController.rename: record it and rename in the fixture, so the
-        // card title can be asserted end to end.
-        rename: (payload) => {
-          log('rpc.rename', payload)
-          const row = sessionRows[payload.sessionId]
-          if (row !== undefined) sessionRows[payload.sessionId] = { ...row, displayTitle: payload.title }
-          sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
-          sync()
-          return Promise.resolve({ result: { ok: true, value: { title: payload.title, seq: 1 } } })
-        },
       },
-    } },
+    },
     uiWorkspace: {
       openSession: (id) => log('ui.openSession', id),
       startSession: (workspaceId, options) => log('ui.startSession', { workspaceId, options }),

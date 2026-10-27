@@ -272,6 +272,11 @@ export function restoreSidebarAfterMap(): void {
  * pre-connection instance whose `.api` never appears — the same cold-boot trap
  * as uiWorkspace, which showed up as "界面服务还在初始化" on the map's draft card.
  */
+/** The whole connection handle (the map needs pc, not just pi). */
+export function connectionService(): ConnectionService | undefined {
+  return services?.connection
+}
+
 export function connectionApi(): ConnectionService['api'] | undefined {
   const current = getServices()
   if (current === undefined) return undefined

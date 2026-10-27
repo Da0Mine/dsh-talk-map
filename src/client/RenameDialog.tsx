@@ -8,7 +8,7 @@
  * client exposes as `api.sessions.rename`.
  */
 import { useEffect, useRef, useState } from 'react'
-import { connectionApi, mapUi } from './map-state.ts'
+import { connectionService, mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
 
@@ -54,10 +54,24 @@ export function RenameDialog(props: RenameDialogProps): React.JSX.Element {
     setBusy(true)
     setError(null)
     try {
-      const renamed = await connectionApi()?.sessions.rename({ sessionId: props.target.sessionId, title })
-      const failure = renamed?.result !== undefined && renamed.result.ok !== true ? renamed.result : undefined
-      if (failure !== undefined) {
-        setError(t('rename.failed'))
+      // The real channel: connection.rpc.call('/api', endpoint, { args }), where
+      // the endpoint is the generated one for sessionController.rename
+      // ("Rename one Session after explicitly resuming it"). The legacy
+      // pi.sessions.* shape never existed — an optional chain there silently
+      // did nothing, which is why the title used to stay put.
+      const connection = connectionService()
+      const rpc = connection?.rpc
+      if (rpc === undefined) {
+        setError(t('rename.unavailable'))
+        setBusy(false)
+        return
+      }
+      const result = await rpc.call('/api', 'session/rename', {
+        args: [{ sessionId: props.target.sessionId, title }],
+      })
+      if (result.ok !== true) {
+        console.error('[dsh-talk-map] rename rejected:', result.error)
+        setError(result.error?.message ?? t('rename.failed'))
         setBusy(false)
         return
       }

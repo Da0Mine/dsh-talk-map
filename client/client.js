@@ -351,6 +351,7 @@ var zh = {
   "rename.cancel": "取消",
   "rename.saving": "保存中…",
   "rename.failed": "改名失败，请重试",
+  "rename.unavailable": "改名通道不可用（连接还没就绪）",
   "toast.renamed": "已重命名",
   "card.interrupted": "已中断",
   "card.interruptedHint": "上次关闭时这个对话还在跑",
@@ -467,6 +468,7 @@ var en = {
   "rename.cancel": "Cancel",
   "rename.saving": "Saving…",
   "rename.failed": "Rename failed, try again",
+  "rename.unavailable": "Rename channel unavailable (connection not ready)",
   "toast.renamed": "Renamed",
   "card.interrupted": "interrupted",
   "card.interruptedHint": "This conversation was still running when the app closed",
@@ -1097,6 +1099,9 @@ function restoreSidebarAfterMap() {
   } catch (error) {
     console.error("[dsh-talk-map] restoring the sidebar failed:", error);
   }
+}
+function connectionService() {
+  return services?.connection;
 }
 function connectionApi() {
   const current = getServices();
@@ -10894,10 +10899,19 @@ function RenameDialog(props) {
     setBusy(true);
     setError(null);
     try {
-      const renamed = await connectionApi()?.sessions.rename({ sessionId: props.target.sessionId, title });
-      const failure = renamed?.result !== void 0 && renamed.result.ok !== true ? renamed.result : void 0;
-      if (failure !== void 0) {
-        setError(t("rename.failed"));
+      const connection = connectionService();
+      const rpc = connection?.rpc;
+      if (rpc === void 0) {
+        setError(t("rename.unavailable"));
+        setBusy(false);
+        return;
+      }
+      const result = await rpc.call("/api", "session/rename", {
+        args: [{ sessionId: props.target.sessionId, title }]
+      });
+      if (result.ok !== true) {
+        console.error("[dsh-talk-map] rename rejected:", result.error);
+        setError(result.error?.message ?? t("rename.failed"));
         setBusy(false);
         return;
       }
@@ -11679,6 +11693,7 @@ function CanvasInner(props) {
   const [menu, setMenu] = (0, import_react9.useState)(null);
   const [drawer, setDrawer] = (0, import_react9.useState)(null);
   const [renameTarget, setRenameTarget] = (0, import_react9.useState)(null);
+  const [renamedTitles, setRenamedTitles] = (0, import_react9.useState)({});
   const [batchMode, setBatchMode] = (0, import_react9.useState)(false);
   const [batchPicks, setBatchPicks] = (0, import_react9.useState)(/* @__PURE__ */ new Set());
   const [batchBusy, setBatchBusy] = (0, import_react9.useState)(false);
@@ -12123,7 +12138,7 @@ function CanvasInner(props) {
       const data = {
         cardId,
         sessionId: card.sessionId,
-        title: summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
         running: status?.running ?? summary?.running ?? false,
         ghost: summary === void 0,
         updatedAt: summary?.updatedAt,
@@ -12187,7 +12202,7 @@ function CanvasInner(props) {
       };
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, liveSelectedIds, batchMode, batchPicks, locale]);
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, liveSelectedIds, batchMode, batchPicks, locale]);
   const sessionIdToCardId = (0, import_react9.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
@@ -12458,7 +12473,7 @@ function CanvasInner(props) {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -13000,8 +13015,11 @@ function CanvasInner(props) {
           {
             target: renameTarget,
             onDone: (title) => {
+              const sessionId = renameTarget.sessionId;
               setRenameTarget(null);
-              if (title !== null) showToast(t("toast.renamed"));
+              if (title === null) return;
+              setRenamedTitles((previous) => ({ ...previous, [sessionId]: title }));
+              showToast(t("toast.renamed"));
             }
           }
         ) : null,

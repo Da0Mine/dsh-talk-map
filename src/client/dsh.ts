@@ -203,7 +203,19 @@ export interface AgentPresetEntry {
  * ctx.connection — the shared typed RPC client (ConnectionHandle.api subset;
  * packages/client/connection + packages/host/apiproxy/src/fetch/client.ts).
  */
+/** connection.rpc.call(channel, endpoint, payload) — the real unary RPC face. */
+export interface ConnectionRpc {
+  call(
+    channel: string,
+    endpoint: string,
+    payload: unknown,
+    signal?: AbortSignal,
+  ): Promise<{ ok: true; value: unknown } | { ok: false; error: { code: string; message: string } }>
+}
+
 export interface ConnectionService {
+  /** Present on the live handle; the map prefers it over the legacy pi shape. */
+  rpc?: ConnectionRpc
   api: {
     sessions: {
       create(payload: { workspaceId?: string; cwd?: string; sessionId?: string; agentPreset?: string }):

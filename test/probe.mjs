@@ -874,9 +874,9 @@ try {
   await page.fill('[class*="renameInput"]', '改过的标题')
   await page.keyboard.press('Enter')
   await page.waitForTimeout(700)
-  const renameCall = await page.evaluate(() => window.__harness.log.filter(entry => entry.kind === 'rpc.rename').at(-1))
+  const renameCall = await page.evaluate(() => window.__harness.log.filter(entry => entry.kind === 'rpc.call').at(-1))
   check('重命名走 sessionController 的 rename RPC',
-    renameCall?.detail?.sessionId === 's7' && renameCall?.detail?.title === '改过的标题',
+    renameCall?.detail?.endpoint === 'session/rename' && renameCall?.detail?.args?.[0]?.sessionId === 's7' && renameCall?.detail?.args?.[0]?.title === '改过的标题',
     JSON.stringify(renameCall?.detail))
   const renamedTitle = await page.evaluate(() => {
     const node = document.querySelector('[data-talkmap-session="s7"] [class*="cardTitle"]')

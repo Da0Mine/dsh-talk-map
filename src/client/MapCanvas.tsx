@@ -195,6 +195,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   /** Folder whose stack cell was clicked: the drawer lists all of its cards. */
   const [drawer, setDrawer] = useState<{ groupId: string } | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
+  // Renamed titles we already know: the card updates at once instead of waiting
+  // for the session list to round-trip.
+  const [renamedTitles, setRenamedTitles] = useState<Record<string, string>>({})
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
   const [batchMode, setBatchMode] = useState(false)
   /** The cards picked in batch mode. */
@@ -801,7 +804,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const data: SessionCardData = {
           cardId,
           sessionId: card.sessionId,
-          title: summary?.displayTitle ?? card.sessionId,
+          title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
           running: status?.running ?? summary?.running ?? false,
           ghost: summary === undefined,
           updatedAt: summary?.updatedAt,
@@ -871,7 +874,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1231,7 +1234,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -1861,8 +1864,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             <RenameDialog
               target={renameTarget}
               onDone={(title) => {
+                const sessionId = renameTarget.sessionId
                 setRenameTarget(null)
-                if (title !== null) showToast(t('toast.renamed'))
+                if (title === null) return
+                setRenamedTitles(previous => ({ ...previous, [sessionId]: title }))
+                showToast(t('toast.renamed'))
               }}
             />
           )
