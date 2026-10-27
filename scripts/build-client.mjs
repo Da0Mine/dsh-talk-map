@@ -259,7 +259,22 @@ if (problems.length > 0) {
 }
 
 // PUBLISH SAFETY — runs BEFORE anything is renamed onto the live path.
-if (publish && !process.argv.includes('--force')) {
+/**
+ * `dsh-unlag` swaps a plugin's code in place and rebuilds the UI without
+ * restarting the host — with it installed, publishing is the normal flow and the
+ * "quit DSH first" dance is obsolete. Detect it from the profile manifest.
+ */
+function hasUnlag() {
+  try {
+    const profile = path.join(process.env.USERPROFILE ?? '', '.dsh', 'profiles', 'desktop', 'package.json')
+    const manifest = JSON.parse(fs.readFileSync(profile, 'utf8'))
+    return Object.keys(manifest.dependencies ?? {}).some(name => name.includes('unlag'))
+  } catch {
+    return false
+  }
+}
+
+if (publish && !process.argv.includes('--force') && !hasUnlag()) {
   const running = detectDsh()
   if (running !== null) {
     console.error(

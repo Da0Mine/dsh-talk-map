@@ -11756,6 +11756,34 @@ function CanvasInner(props) {
     if (canvasState.phase !== "ready" || !workspacesReady || autoSyncedRef.current) return;
     autoSyncedRef.current = true;
     const remembered = canvasState.global?.layoutMemory ?? {};
+    const framed = new Set(Object.keys(wsFrames));
+    const newcomers = /* @__PURE__ */ new Map();
+    for (const sessionId of placeableSessionIds(sessions)) {
+      const groupId = sessionWs.get(sessionId);
+      if (groupId === void 0 || framed.has(groupId) || boardSessionIds.has(sessionId)) continue;
+      newcomers.set(groupId, [...newcomers.get(groupId) ?? [], sessionId]);
+    }
+    if (newcomers.size > 0) {
+      const boxes = Object.values(frameRects);
+      const left = boxes.length === 0 ? 0 : snap(Math.min(...boxes.map((box) => box.x)));
+      let cursorY = boxes.length === 0 ? 0 : snap(Math.max(...boxes.map((box) => box.y + box.height)) + GAP_Y);
+      for (const [groupId, sessionIds] of [...newcomers.entries()].slice(0, 6)) {
+        const ordered = sessionIds.sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0)).slice(0, 9);
+        const cards = ordered.map((sessionId, index2) => ({
+          boardId: INBOX_BOARD_ID,
+          sessionId,
+          ...gridPosition({ x: left + FRAME_PAD, y: cursorY + FRAME_PAD + FRAME_LABEL_H }, index2),
+          createdAt: Date.now()
+        }));
+        if (cards.length === 0) continue;
+        const rect = fitRect(cards);
+        const batch = {};
+        for (const card of cards) batch[newCardId()] = card;
+        canvas.addCards(batch);
+        canvas.setWsFrameRect(groupId, rect);
+        cursorY = snap(rect.y + rect.height + GAP_Y);
+      }
+    }
     const added = {};
     for (const [groupId] of Object.entries(wsFrames)) {
       const rect = frameRects[groupId];
@@ -13121,14 +13149,26 @@ function resolveRemote(ctx) {
 }
 var name = "dsh-talk-map";
 var inject = ["slots", "sessions", "workspaces", "connection"];
-var applied = false;
 function apply(ctx) {
-  if (applied) return;
-  applied = true;
-  ctx.effect(() => () => {
-    applied = false;
-  }, "dsh-talk-map: apply claim");
   try {
+    const registerSafely = (slot, factory, label) => {
+      try {
+        ctx.slots.inject(slot, factory);
+      } catch (error) {
+        console.error(`[dsh-talk-map] ${label} registration skipped:`, error);
+      }
+    };
+    registerSafely("sidebar.footer.action", () => ctx.slots.register({
+      name: "sidebar.footer.action",
+      id: "talk-map",
+      order: 10,
+      label: () => t("map.toggle")
+    }, MapToggleButton), "sidebar.footer.action");
+    registerSafely("main", () => ctx.slots.register({
+      name: "main",
+      key: MAP_PANEL_ID,
+      label: () => t("map.title")
+    }, MapOverlay), "main panel");
     attachServices({
       sessions: ctx.sessions,
       workspaces: ctx.workspaces,
@@ -13167,17 +13207,6 @@ function apply(ctx) {
         };
       }
     }, "dsh-talk-map: session alerts");
-    ctx.slots.inject("sidebar.footer.action", () => ctx.slots.register({
-      name: "sidebar.footer.action",
-      id: "talk-map",
-      order: 10,
-      label: () => t("map.toggle")
-    }, MapToggleButton));
-    ctx.slots.inject("main", () => ctx.slots.register({
-      name: "main",
-      key: MAP_PANEL_ID,
-      label: () => t("map.title")
-    }, MapOverlay));
     canvas.ensureLoaded();
     ctx.effect(() => {
       const onKeyDown = (event) => {
