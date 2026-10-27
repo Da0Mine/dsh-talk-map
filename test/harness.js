@@ -439,6 +439,17 @@
     setPresetsMode(mode) {
       presetsFail = mode === 'fail'
     },
+    /**
+     * A whole new WORKSPACE appears (the user imported a session in a fresh cwd).
+     * The map has no folder for it, so the auto-sync on open has to create one.
+     */
+    addWorkspace(workspaceId, title, sessionId, sessionTitle) {
+      sessionRows[sessionId] = session(sessionId, sessionTitle, { updatedAt: Date.now() })
+      workspaceList.push({ workspaceId, title, path: 'D:/Projects/' + workspaceId, sessionIds: [sessionId] })
+      sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+      workspacesState = buildWorkspaces()
+      sync()
+    },
     /** A brand-new session lands in this workspace (no card yet). */
     addSession(workspaceId, sessionId, title) {
       sessionRows[sessionId] = session(sessionId, title, { updatedAt: Date.now() })

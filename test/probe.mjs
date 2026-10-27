@@ -208,6 +208,29 @@ try {
       .includes('自动同步进来的会话'))
   check('打开地图时自动同步新会话', autoSync === true)
 
+  // ---- 3b2. a whole NEW workspace also arrives without a folder ----------
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(300)
+  await page.evaluate(() => window.__harness.addWorkspace('ws-imported', '新导入的工作区', 's30', '导入进来的会话'))
+  await openMap()
+  await page.waitForTimeout(900)
+  const importedFrame = await page.evaluate(() => {
+    const frame = document.querySelector('[data-talkmap-workspace="ws-imported"]')
+    if (frame === null) return null
+    const card = document.querySelector('[data-talkmap-session="s30"]')
+    const box = frame.getBoundingClientRect()
+    // Overlap against every other folder: a new folder must not be dropped on top.
+    const others = [...document.querySelectorAll('[data-talkmap-frame]')]
+      .filter(node => node.getAttribute('data-talkmap-workspace') !== 'ws-imported')
+      .map(node => node.getBoundingClientRect())
+    const overlaps = others.some(other => !(box.right <= other.left + 1 || box.left >= other.right - 1
+      || box.bottom <= other.top + 1 || box.top >= other.bottom - 1))
+    return { frame: true, card: card !== null, overlaps }
+  })
+  check('新工作区自动长出一个文件夹', importedFrame?.frame === true, JSON.stringify(importedFrame))
+  check('新工作区里的会话有卡片', importedFrame?.card === true, JSON.stringify(importedFrame))
+  check('新文件夹不和已有文件夹重叠', importedFrame?.overlaps === false, JSON.stringify(importedFrame))
+
   // ---- 3b. status chip text + colour follow the lamp -------------------
   const readChips = () => page.evaluate(() => {
     const out = {}

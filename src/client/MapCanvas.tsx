@@ -480,6 +480,43 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (canvasState.phase !== 'ready' || !workspacesReady || autoSyncedRef.current) return
     autoSyncedRef.current = true
     const remembered = canvasState.global?.layoutMemory ?? {}
+
+    // Workspaces that arrived after the map was last opened (an imported session,
+    // a new cwd) have no folder yet — and a conversation without a folder is
+    // invisible. Give each of them a folder of its own, stacked below the ones
+    // already on the board.
+    const framed = new Set(Object.keys(wsFrames))
+    const newcomers = new Map<string, string[]>()
+    for (const sessionId of placeableSessionIds(sessions)) {
+      const groupId = sessionWs.get(sessionId)
+      if (groupId === undefined || framed.has(groupId) || boardSessionIds.has(sessionId)) continue
+      newcomers.set(groupId, [...(newcomers.get(groupId) ?? []), sessionId])
+    }
+    if (newcomers.size > 0) {
+      const boxes = Object.values(frameRects)
+      const left = boxes.length === 0 ? 0 : snap(Math.min(...boxes.map(box => box.x)))
+      let cursorY = boxes.length === 0
+        ? 0
+        : snap(Math.max(...boxes.map(box => box.y + box.height)) + GAP_Y)
+      for (const [groupId, sessionIds] of [...newcomers.entries()].slice(0, 6)) {
+        const ordered = sessionIds
+          .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
+          .slice(0, 9)
+        const cards: Card[] = ordered.map((sessionId, index) => ({
+          boardId: INBOX_BOARD_ID,
+          sessionId,
+          ...gridPosition({ x: left + FRAME_PAD, y: cursorY + FRAME_PAD + FRAME_LABEL_H }, index),
+          createdAt: Date.now(),
+        }))
+        if (cards.length === 0) continue
+        const rect = fitRect(cards)
+        const batch: Record<string, Card> = {}
+        for (const card of cards) batch[newCardId()] = card
+        canvas.addCards(batch)
+        canvas.setWsFrameRect(groupId, rect)
+        cursorY = snap(rect.y + rect.height + GAP_Y)
+      }
+    }
     const added: Record<string, Card> = {}
     for (const [groupId] of Object.entries(wsFrames)) {
       const rect = frameRects[groupId]
