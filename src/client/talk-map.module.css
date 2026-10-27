@@ -113,13 +113,17 @@
 }
 
 .fontButton {
+  /* Both buttons must be the same box with the text optically centred: the
+   * A and the sign are two spans of different sizes, so centre them as a pair
+   * (baseline alignment made the two buttons sit at different heights). */
   display: inline-flex;
-  align-items: baseline;
-  gap: 1px;
+  align-items: center;
   justify-content: center;
-  min-width: 40px;
+  gap: 3px;
+  min-width: 46px;
   height: 28px;
   padding: 0 8px;
+  line-height: 1;
   border: 1px solid var(--dsw-alias-border-l2);
   border-radius: 8px;
   background: transparent;
@@ -139,16 +143,32 @@
   cursor: default;
 }
 
-.fontGlyphSmall {
-  font-size: calc(11px + var(--tm-font-step, 0px));
+.fontGlyphSmall,
+.fontGlyphLarge {
+  display: inline-block;
+  /* Same advance width for both, so the two buttons are symmetric. */
+  width: calc(9px + 0px);
+  text-align: center;
+  line-height: 1;
 }
 
+/* Both glyphs the same size: the − / + sign alone tells the two buttons apart,
+ * so the pair reads as one control instead of two mismatched ones. */
+.fontGlyphSmall,
 .fontGlyphLarge {
-  font-size: calc(15px + var(--tm-font-step, 0px));
+  font-size: calc(13px + var(--tm-font-step, 0px));
 }
 
 .fontSign {
+  display: inline-block;
   font-size: calc(10px + var(--tm-font-step, 0px));
+  line-height: 1;
+  /* Reads as a superscript rather than a trailing character. */
+  transform: translateY(-3px);
+}
+
+.fontReset {
+  min-width: 50px;
 }
 
 .fontReset {

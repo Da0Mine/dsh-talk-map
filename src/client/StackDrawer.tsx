@@ -117,6 +117,12 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           {props.items.map(item => {
             const classNames = [styles['card'], styles['drawerCard']]
             if (item.glow !== undefined) classNames.push(styles[LAMP_CLASS[item.glow]] ?? '')
+            // Same rule as the grid: a card with nothing to report recedes, one
+            // that carries a status (lamp / unsent text / interrupted / pinned)
+            // stays at full strength.
+            const quiet = item.glow === undefined && item.pendingDraft !== true
+              && item.interrupted !== true && item.pinned !== true
+            if (quiet) classNames.push(styles['cardQuiet'] ?? '')
             return (
               <button
                 key={item.cardId}

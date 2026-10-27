@@ -157,6 +157,31 @@ try {
     buttons: document.querySelectorAll('[class*="react-flow__controls-button"]').length,
     toggle: document.querySelector('[class*="react-flow__controls"] [aria-pressed]') !== null,
   }))
+  const fontAlign = await page.evaluate(() => {
+    const buttons = [...document.querySelectorAll('[class*="fontButton"]')]
+    const boxes = buttons.map(node => node.getBoundingClientRect())
+    const centers = buttons.map(node => {
+      const glyph = node.querySelector('span')
+      if (glyph === null) return null
+      const r = glyph.getBoundingClientRect()
+      return Math.round(r.y + r.height / 2)
+    })
+    return {
+      heights: boxes.map(b => Math.round(b.height)),
+      tops: boxes.map(b => Math.round(b.y)),
+      centers,
+    }
+  })
+  check('A− / A+ 两个按钮同高同位（不再东倒西歪）',
+    fontAlign.heights.every(h => h === fontAlign.heights[0]) && fontAlign.tops.every(t => t === fontAlign.tops[0]),
+    JSON.stringify(fontAlign))
+  const fontShot = await page.evaluate(() => {
+    const group = document.querySelector('[class*="fontGroup"]')
+    const r = group.getBoundingClientRect()
+    return { x: Math.round(r.x - 8), y: Math.round(r.y - 8), width: Math.round(r.width + 16), height: Math.round(r.height + 16) }
+  })
+  await page.screenshot({ path: path.join(shots, 'probe-font-buttons.png'), clip: fontShot })
+
   check('左下角没有模式切换按钮（只剩缩放/适配/1:1）',
     controlsState.toggle === false && controlsState.buttons === 4, JSON.stringify(controlsState))
 
@@ -520,6 +545,15 @@ try {
   check('点堆叠格子打开抽屉，列出全部对话', drawer?.count === 6, `${drawer?.count} 张`)
   check('抽屉里的卡片是 1:1 尺寸（224px）', drawer?.width === 224, `${drawer?.width}px`)
   check('抽屉里至少两行（卡片排满整行再换行）', (drawer?.rows ?? 0) >= 2, `rows=${drawer?.rows}`)
+  const drawerQuiet = await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    const dim = cards.filter(node => Number(getComputedStyle(node).opacity) < 0.75).length
+    const lit = cards.filter(node => Number(getComputedStyle(node).opacity) >= 0.99).length
+    return { total: cards.length, dim, lit }
+  })
+  check('抽屉里无状态的卡片同样压暗（有状态的保持原样）',
+    drawerQuiet.dim >= 1 && drawerQuiet.lit >= 1, JSON.stringify(drawerQuiet))
+
   check('运行中 = 环绕卡片的加载光环', drawer?.runningRing === true)
   check('已完成 = 绿光呼吸', drawer?.doneBreath === true)
   check('抽屉里的卡片也带状态胶囊', (drawer?.chipCount ?? 0) >= 3, `chips=${drawer?.chipCount}`)
