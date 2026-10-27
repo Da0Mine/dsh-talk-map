@@ -99,6 +99,18 @@ function gridPosition(origin: { x: number; y: number }, index: number): { x: num
   }
 }
 
+/** Smallest shift that makes other stop overlapping ect (0,0 when clear). */
+function separationShift(rect: FrameGeometry, other: FrameGeometry): { x: number; y: number } {
+  const overlapX = Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x)
+  const overlapY = Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y)
+  if (overlapX <= 1 || overlapY <= 1) return { x: 0, y: 0 }
+  if (overlapX <= overlapY) {
+    // Separate horizontally: push other to whichever side it already leans.
+    return { x: rect.x + rect.width / 2 <= other.x + other.width / 2 ? overlapX : -overlapX, y: 0 }
+  }
+  return { x: 0, y: rect.y + rect.height / 2 <= other.y + other.height / 2 ? overlapY : -overlapY }
+}
+
 /** Frame rect that fits a set of member cards. */
 function fitRect(members: Card[]): FrameGeometry {
   const minX = Math.min(...members.map(card => card.x))
@@ -713,6 +725,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const movesNorth = axis === 'n' || axis === 'ne' || axis === 'nw'
     const movesEast = axis === 'e' || axis === 'ne' || axis === 'se'
     const movesSouth = axis === 's' || axis === 'se' || axis === 'sw'
+    // How far each moving side may travel before it touches another folder.
+    let maxRight = Number.POSITIVE_INFINITY
+    let minLeft = Number.NEGATIVE_INFINITY
+    let maxBottom = Number.POSITIVE_INFINITY
+    let minTop = Number.NEGATIVE_INFINITY
+    for (const [otherId, other] of Object.entries(frameRects)) {
+      if (otherId === groupId) continue
+      const spansRows = other.y < start.y + start.height && other.y + other.height > start.y
+      const spansCols = other.x < start.x + start.width && other.x + other.width > start.x
+      if (spansRows) {
+        if (other.x >= start.x + start.width) maxRight = Math.min(maxRight, other.x)
+        if (other.x + other.width <= start.x) minLeft = Math.max(minLeft, other.x + other.width)
+      }
+      if (spansCols) {
+        if (other.y >= start.y + start.height) maxBottom = Math.min(maxBottom, other.y)
+        if (other.y + other.height <= start.y) minTop = Math.max(minTop, other.y + other.height)
+      }
+    }
     let next: FrameGeometry = { ...start }
     const onMove = (moveEvent: PointerEvent): void => {
       const now = screenToFlowPosition({ x: moveEvent.clientX, y: moveEvent.clientY })
@@ -723,6 +753,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         y: movesNorth ? start.y + dy : start.y,
         width: movesWest ? start.width - dx : movesEast ? start.width + dx : start.width,
         height: movesNorth ? start.height - dy : movesSouth ? start.height + dy : start.height,
+      }
+      // Stop the moving side(s) at the nearest neighbouring folder: a folder
+      // cannot be grown into another one.
+      if (movesEast && next.x + next.width > maxRight) next.width = maxRight - next.x
+      if (movesWest && next.x < minLeft) {
+        next.width = start.x + start.width - minLeft
+        next.x = minLeft
+      }
+      if (movesSouth && next.y + next.height > maxBottom) next.height = maxBottom - next.y
+      if (movesNorth && next.y < minTop) {
+        next.height = start.y + start.height - minTop
+        next.y = minTop
       }
       setLiveFrame({ groupId, rect: next })
     }
@@ -990,6 +1032,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             canvas.setWsFrameRect(groupId, rect)
           } else if (change.dragging === true) {
             setLiveFrame({ groupId, rect })
+            // Folders are solid: whatever this one runs into is pushed just far
+            // enough to stop overlapping, and its cards reflow with the new rect.
+            for (const [otherId, otherRect] of Object.entries(frameRects)) {
+              if (otherId === groupId) continue
+              const shift = separationShift(rect, otherRect)
+              if (shift.x === 0 && shift.y === 0) continue
+              canvas.setWsFrameRect(otherId, {
+                ...otherRect,
+                x: otherRect.x + shift.x,
+                y: otherRect.y + shift.y,
+              })
+            }
           }
         } else if (change.dragging === false) {
           // Dropped. Slot order is recency, not position, so the card glides

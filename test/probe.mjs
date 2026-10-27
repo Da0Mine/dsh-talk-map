@@ -143,6 +143,37 @@ try {
   await page.waitForTimeout(800)
   await page.screenshot({ path: path.join(shots, 'probe-initial.png') })
 
+  // ---- 0b. header: font size controls, no language switch ----------------
+  const headerButtons = await page.evaluate(() => ({
+    font: document.querySelectorAll('[class*="fontButton"]').length,
+    lang: document.querySelectorAll('[class*="langButton"]').length,
+    sizes: [...document.querySelectorAll('[class*="fontButton"]')].map(node => node.textContent.trim()),
+  }))
+  check('右上角有 3 个字号按钮（加 / 减 / 默认）',
+    headerButtons.font === 3 && headerButtons.sizes.join('|').includes('+') && headerButtons.sizes.join('|').includes('−'),
+    JSON.stringify(headerButtons))
+  check('语言切换按钮已移除', headerButtons.lang === 0, String(headerButtons.lang))
+
+  const sampleFont = () => page.evaluate(() => {
+    const node = document.querySelector('.react-flow__node [data-talkmap-session] [class*="cardTitle"]')
+      ?? document.querySelector('[class*="cardTitle"]')
+    return node === null ? null : parseFloat(getComputedStyle(node).fontSize)
+  })
+  const baseFont = await sampleFont()
+  await page.click('[class*="fontButton"]:nth-of-type(2)')
+  await page.waitForTimeout(250)
+  const biggerFont = await sampleFont()
+  await page.click('[class*="fontButton"]:nth-of-type(1)')
+  await page.click('[class*="fontButton"]:nth-of-type(1)')
+  await page.waitForTimeout(250)
+  const smallerFont = await sampleFont()
+  await page.click('[class*="fontButton"]:nth-of-type(3)')
+  await page.waitForTimeout(250)
+  const resetFont = await sampleFont()
+  check('点「加」→ 每项字号 +1', biggerFont === baseFont + 1, String(baseFont) + ' → ' + String(biggerFont))
+  check('点两次「减」→ 每项字号 −1', smallerFont === baseFont - 1, String(baseFont) + ' → ' + String(smallerFont))
+  check('点「默认」→ 回到原始字号', resetFont === baseFont, String(baseFont) + ' → ' + String(resetFont))
+
   // ---- 1. header -------------------------------------------------------
   const header = await page.evaluate(() => {
     const read = (el) => {
@@ -1040,6 +1071,48 @@ try {
   const opened = await page.evaluate(() => window.__harness.log.filter(e => e.kind === 'ui.openSession').at(-1))
   check('左键单击卡片即跳转对话', opened?.detail === clickTarget.sessionId, `${JSON.stringify(opened?.detail)} vs ${clickTarget.sessionId}`)
   check('跳转后离开地图', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === null)
+
+  // ---- 7b. folders are solid: no overlap, by resize or by drag -----------
+  // The previous step navigated into a conversation, so the map is closed here.
+  await openMap()
+  await page.waitForTimeout(700)
+  const framesNow = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const dailyBefore = framesNow['ws-daily']
+  const medkitBefore = framesNow['ws-medkit']
+  const eastHandle = await box('[data-talkmap-workspace="ws-daily"] [data-talkmap-resize="e"]')
+  await page.mouse.move(eastHandle.x + eastHandle.w / 2, eastHandle.y + eastHandle.h / 2)
+  await page.mouse.down()
+  await page.mouse.move(eastHandle.x + 600, eastHandle.y + eastHandle.h / 2, { steps: 14 })
+  await page.mouse.up()
+  await page.waitForTimeout(500)
+  const dailyAfterPush = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-daily']
+  check('拉伸撞到相邻文件夹就停住（不会压过去）',
+    dailyAfterPush.x + dailyAfterPush.w <= medkitBefore.x + 1,
+    `右边缘 ${Math.round(dailyAfterPush.x + dailyAfterPush.w)} vs 邻居左边 ${Math.round(medkitBefore.x)}（原宽 ${Math.round(dailyBefore.w)}）`)
+
+  const frameLabel2 = await box('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+  await page.mouse.move(frameLabel2.x + 18, frameLabel2.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(frameLabel2.x - 320, frameLabel2.y + 40, { steps: 14 })
+  await page.mouse.up()
+  await page.waitForTimeout(600)
+  const overlapPairs = await page.evaluate(() => {
+    const frames = Object.entries(window.__harness.nodeBoxes().frames)
+      .map(([id, rect]) => ({ id, ...rect }))
+    const bad = []
+    for (let i = 0; i < frames.length; i += 1) {
+      for (let j = i + 1; j < frames.length; j += 1) {
+        const a = frames[i]
+        const b = frames[j]
+        const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+        const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+        if (overlapX > 2 && overlapY > 2) bad.push([a.id, b.id])
+      }
+    }
+    return bad
+  })
+  check('拖进别的文件夹会把对方弹开（任何两个都不重叠）',
+    overlapPairs.length === 0, JSON.stringify(overlapPairs))
 
   // ---- 14. state survives a restart -----------------------------------
   // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).

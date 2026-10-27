@@ -10,31 +10,55 @@
  * button mirrors it.
  */
 import { useEffect, useSyncExternalStore } from 'react'
-import type { LocalePref } from '../shared/model.ts'
 import type { RootSlotStandardProps } from './dsh.ts'
-import { canvas } from './canvas-store.ts'
-import { activeLocale, LOCALE_CYCLE, subscribeLocale, t } from './i18n.ts'
+import { activeLocale, subscribeLocale, t } from './i18n.ts'
+import { fontScale } from './font-scale.ts'
 import { closeMapPanel, hideSidebarForMap, mapUi, restoreSidebarAfterMap } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
 
 /**
- * Interface language: cycles auto → 中文 → English. 'auto' follows dsh's
- * own <html lang>, which is what every install had before this setting.
+ * Text size for the whole map: one step = +1px on every style, each keeping its
+ * own base size (the request was "every font +1 step", not "all fonts equal").
+ * The third button returns to the default.
  */
-function LanguageButton(): React.JSX.Element {
-  const pref = useSyncExternalStore(canvas.subscribe, () => canvas.get().global?.locale ?? 'auto')
-  const index = LOCALE_CYCLE.indexOf(pref)
-  const next: LocalePref = LOCALE_CYCLE[(index + 1) % LOCALE_CYCLE.length] ?? 'auto'
+function FontSizeButtons(): React.JSX.Element {
+  const step = useSyncExternalStore(fontScale.subscribe, fontScale.getSnapshot)
   return (
-    <button
-      type="button"
-      className={styles['langButton']}
-      title={t('lang.hint', { current: t(`lang.${pref}`), next: t(`lang.${next}`) })}
-      onClick={() => { canvas.patchGlobalNow({ locale: next }) }}
-    >
-      {t(`lang.${pref}`)}
-    </button>
+    <div className={styles['fontGroup']} role="group" aria-label={t('font.group')}>
+      <button
+        type="button"
+        className={styles['fontButton']}
+        title={t('font.decrease')}
+        aria-label={t('font.decrease')}
+        disabled={!fontScale.canDecrease()}
+        onClick={() => { fontScale.decrease() }}
+      >
+        <span className={styles['fontGlyphSmall']}>A</span>
+        <span className={styles['fontSign']}>−</span>
+      </button>
+      <button
+        type="button"
+        className={styles['fontButton']}
+        title={t('font.increase')}
+        aria-label={t('font.increase')}
+        disabled={!fontScale.canIncrease()}
+        onClick={() => { fontScale.increase() }}
+      >
+        <span className={styles['fontGlyphLarge']}>A</span>
+        <span className={styles['fontSign']}>+</span>
+      </button>
+      <button
+        type="button"
+        className={`${styles['fontButton']} ${styles['fontReset']}`}
+        title={t('font.reset')}
+        aria-label={t('font.reset')}
+        disabled={step === 0}
+        onClick={() => { fontScale.reset() }}
+      >
+        {t('font.resetShort')}
+      </button>
+    </div>
   )
 }
 
@@ -58,6 +82,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   // Subscribing here re-renders the whole panel on a language switch;
   // MapCanvas re-keys its own memos so the React-Flow nodes follow.
   useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
+  const fontStep = useSyncExternalStore(fontScale.subscribe, fontScale.getSnapshot)
 
   // The shell selected this panel: publish that so the sidebar button, the
   // hotkey and the context menu all agree on the state — and give the map the
@@ -86,7 +111,14 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   }, [])
 
   return (
-    <div className={styles['panel']} lang={activeLocale()} role="dialog" aria-label={t('map.title')}>
+    <div
+      className={styles['panel']}
+      lang={activeLocale()}
+      role="dialog"
+      aria-label={t('map.title')}
+      // One variable drives every font size in the panel (see talk-map.module.css).
+      style={{ '--tm-font-step': `${fontStep}px` } as React.CSSProperties}
+    >
       <div className={styles['header']}>
         <button
           type="button"
@@ -99,7 +131,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
           <span>{t('map.back')}</span>
         </button>
         <span className={styles['headerSpace']} />
-        <LanguageButton />
+        <FontSizeButtons />
         <button
           type="button"
           className={styles['closeButton']}
