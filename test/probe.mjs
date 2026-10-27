@@ -856,6 +856,34 @@ try {
     JSON.stringify(pinnedCard))
   check('置顶卡片不压暗', pinnedCard?.opacity === 1, JSON.stringify(pinnedCard))
 
+  // ---- 重命名 -----------------------------------------------------------
+  const renamePoint = await cardPoint('s7')
+  await page.mouse.click(renamePoint.x, renamePoint.y, { button: 'right' })
+  await page.waitForTimeout(350)
+  const hasRename = (await menuItems()).some(text => text.includes('重命名'))
+  check('右键菜单含「重命名」', hasRename, JSON.stringify(await menuItems()))
+  await clickMenuItem('重命名')
+  await page.waitForTimeout(350)
+  const renameDialog = await page.evaluate(() => {
+    const input = document.querySelector('[class*="renameInput"]')
+    return input === null ? null : { value: input.value }
+  })
+  check('弹出重命名对话框并预填当前标题',
+    renameDialog !== null && renameDialog.value !== '' && renameDialog.value !== 's7',
+    JSON.stringify(renameDialog))
+  await page.fill('[class*="renameInput"]', '改过的标题')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(700)
+  const renameCall = await page.evaluate(() => window.__harness.log.filter(entry => entry.kind === 'rpc.rename').at(-1))
+  check('重命名走 sessionController 的 rename RPC',
+    renameCall?.detail?.sessionId === 's7' && renameCall?.detail?.title === '改过的标题',
+    JSON.stringify(renameCall?.detail))
+  const renamedTitle = await page.evaluate(() => {
+    const node = document.querySelector('[data-talkmap-session="s7"] [class*="cardTitle"]')
+    return node === null ? null : node.textContent
+  })
+  check('卡片标题跟着改名', renamedTitle === '改过的标题', String(renamedTitle))
+
   const beforeArchive = await page.evaluate(() => document.querySelectorAll('.react-flow__node[data-id^="card-"]').length)
   const archivePoint = await cardPoint('s10')
   await page.mouse.click(archivePoint.x, archivePoint.y, { button: 'right' })

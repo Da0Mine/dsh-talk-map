@@ -379,6 +379,90 @@
     0 0 40px 9px rgba(255, 255, 255, 0.1);
 }
 
+/* ---- rename dialog ------------------------------------------------------ */
+.renameBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 22vh;
+}
+
+.renameDialog {
+  width: min(420px, 90vw);
+  background: var(--dsw-alias-bg-layer-1);
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 12px;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42);
+  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.renameHeading {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.renameInput {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 13px;
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  outline: none;
+}
+
+.renameInput:focus {
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.35));
+}
+
+.renameError {
+  font-size: 12px;
+  color: rgb(242, 78, 78);
+}
+
+.renameActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.renameButton {
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.renameButton:hover {
+  color: var(--dsw-alias-label-primary);
+}
+
+.renamePrimary {
+  color: #0b0b0c;
+  background: rgb(255, 214, 106);
+  border-color: rgb(255, 214, 106);
+}
+
+.renamePrimary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* Pinned in the sidebar: a small mark before the title, lit so it reads at a
  * glance. The card keeps its full strength (pinning is a deliberate choice, not
  * something to fade out). */

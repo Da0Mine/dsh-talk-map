@@ -280,6 +280,18 @@
           { id: 'standard', name: '标准模式' }, { id: 'cordis', name: '创造模式' },
         ] } } }) },
       workspace: { create: () => Promise.resolve({ result: { ok: true, value: { workspace: { workspaceId: 'ws-new' } } } }) },
+      sessions: {
+        // sessionController.rename: record it and rename in the fixture, so the
+        // card title can be asserted end to end.
+        rename: (payload) => {
+          log('rpc.rename', payload)
+          const row = sessionRows[payload.sessionId]
+          if (row !== undefined) sessionRows[payload.sessionId] = { ...row, displayTitle: payload.title }
+          sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+          sync()
+          return Promise.resolve({ result: { ok: true, value: { title: payload.title, seq: 1 } } })
+        },
+      },
     } },
     uiWorkspace: {
       openSession: (id) => log('ui.openSession', id),

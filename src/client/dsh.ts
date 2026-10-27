@@ -218,6 +218,9 @@ export interface ConnectionService {
         content: { type: 'text'; text: string }[]
         clientTimeZone?: string
       }): Promise<RpcEnvelope<{ accepted: true }>>
+      /** sessionController.rename — "Rename one Session after explicitly resuming it". */
+      rename(payload: { sessionId: string; title: string }):
+      Promise<RpcEnvelope<{ title: string; seq: number }>>
     }
     workspace: {
       create(payload: { path: string }):

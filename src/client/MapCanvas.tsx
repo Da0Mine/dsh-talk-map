@@ -32,6 +32,7 @@ import { draftWatch } from './draft-watch.ts'
 import { cleanPreviewText } from './preview-text.ts'
 import { loadPreviewCache, putPreview, readPreviewTexts } from './preview-cache.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
+import { RenameDialog, type RenameTarget } from './RenameDialog.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
 import { WsFrameNode, type ResizeAxis, type WsFrameNodeType } from './WsFrame.tsx'
@@ -193,6 +194,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [menu, setMenu] = useState<MenuContext | null>(null)
   /** Folder whose stack cell was clicked: the drawer lists all of its cards. */
   const [drawer, setDrawer] = useState<{ groupId: string } | null>(null)
+  const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
   const [batchMode, setBatchMode] = useState(false)
   /** The cards picked in batch mode. */
@@ -1589,6 +1591,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           togglePin(cardId)
         },
       })
+      items.push({
+        key: 'rename',
+        label: t('menu.rename'),
+        onPick: () => {
+          close()
+          if (card !== undefined) {
+            setRenameTarget({
+              sessionId: card.sessionId,
+              title: sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+            })
+          }
+        },
+      })
       // Mark it unread by hand: exactly the "finished, nobody looked" state the
       // map computes on its own, cleared the same way (open the conversation).
       items.push({
@@ -1840,6 +1855,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         : null}
       {pendingSpawn !== null
         ? <SpawnPreview pending={pendingSpawn} onClose={() => { setPendingSpawn(null) }} />
+        : null}
+      {renameTarget !== null
+        ? (
+            <RenameDialog
+              target={renameTarget}
+              onDone={(title) => {
+                setRenameTarget(null)
+                if (title !== null) showToast(t('toast.renamed'))
+              }}
+            />
+          )
         : null}
       {drawer !== null
         ? (
