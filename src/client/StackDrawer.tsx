@@ -53,6 +53,8 @@ export interface StackDrawerProps {
   workspaceTitle: string
   items: readonly StackEntry[]
   onOpenCard: (cardId: string) => void
+  /** Right-click on a card: the same card menu the grid uses. */
+  onCardMenu?: (cardId: string, event: React.MouseEvent) => void
   onClose: () => void
 }
 
@@ -123,6 +125,11 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 data-talkmap-session={item.sessionId}
                 className={classNames.filter(Boolean).join(' ')}
                 onClick={() => { props.onOpenCard(item.cardId) }}
+                onContextMenu={(event) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  props.onCardMenu?.(item.cardId, event)
+                }}
               >
                 <div className={styles['cardTop']}>
                   {item.pinned === true

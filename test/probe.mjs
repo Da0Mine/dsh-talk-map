@@ -153,6 +153,12 @@ try {
     headerButtons.font === 3 && headerButtons.sizes.join('|').includes('+') && headerButtons.sizes.join('|').includes('−'),
     JSON.stringify(headerButtons))
   check('语言切换按钮已移除', headerButtons.lang === 0, String(headerButtons.lang))
+  const controlsState = await page.evaluate(() => ({
+    buttons: document.querySelectorAll('[class*="react-flow__controls-button"]').length,
+    toggle: document.querySelector('[class*="react-flow__controls"] [aria-pressed]') !== null,
+  }))
+  check('左下角没有模式切换按钮（只剩缩放/适配/1:1）',
+    controlsState.toggle === false && controlsState.buttons === 4, JSON.stringify(controlsState))
 
   const sampleFont = () => page.evaluate(() => {
     const node = document.querySelector('.react-flow__node [data-talkmap-session] [class*="cardTitle"]')
@@ -650,6 +656,28 @@ try {
   }, quietSession)
   check('关着地图时跑完 → 不亮「待查看」', closedFinish !== 'done',
     String(quietSession) + ' → ' + String(closedFinish))
+
+  // ---- 4d. right-click a card INSIDE the stack drawer --------------------
+  await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
+  await page.waitForTimeout(450)
+  const drawerCardPoint = await page.evaluate(() => {
+    const card = document.querySelector('[data-stack-card]')
+    if (card === null) return null
+    const r = card.getBoundingClientRect()
+    return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + 24) }
+  })
+  if (drawerCardPoint !== null) {
+    await page.mouse.click(drawerCardPoint.x, drawerCardPoint.y, { button: 'right' })
+    await page.waitForTimeout(450)
+  }
+  const drawerMenu = await menuItems()
+  check('堆叠抽屉里右键也有卡片菜单',
+    drawerMenu.some(text => text.includes('重命名')) && drawerMenu.some(text => text.includes('删除会话')),
+    JSON.stringify(drawerMenu))
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(250)
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(250)
 
   // ---- 5. panel model --------------------------------------------------
   check('地图是 main 面板（不是遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')

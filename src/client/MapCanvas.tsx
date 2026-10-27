@@ -99,7 +99,8 @@ function gridPosition(origin: { x: number; y: number }, index: number): { x: num
   }
 }
 
-/** Smallest shift that makes other stop overlapping ect (0,0 when clear). */
+/** Smallest shift that makes other stop overlapping 
+ect (0,0 when clear). */
 function separationShift(rect: FrameGeometry, other: FrameGeometry): { x: number; y: number } {
   const overlapX = Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x)
   const overlapY = Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y)
@@ -197,7 +198,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   )
   const { screenToFlowPosition, zoomTo } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
-  const [panMode, setPanMode] = useState(true)
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<ReadonlySet<string>>(new Set())
   // Connection drag in flight → every card shows its (otherwise hidden)
@@ -1888,8 +1888,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         zoomOnDoubleClick={false}
         // Batch mode turns the pane into a selection surface: drag a box to
         // pick many cards, Shift-click to add one.
-        panOnDrag={batchMode ? false : (panMode ? true : [1, 2])}
-        selectionOnDrag={batchMode ? true : !panMode}
+        // The canvas is a map: the mouse always pans. No rubber-band mode
+        panOnDrag
+        selectionOnDrag={false}
         selectionMode={SelectionMode.Partial}
         deleteKeyCode={['Backspace', 'Delete']}
         minZoom={0.1}
@@ -1900,21 +1901,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         <Controls showInteractive={false}>
           <ControlButton title={t('map.zoom100')} onClick={() => { void zoomTo(1, { duration: 200 }) }}>
             <span className={styles['zoomResetLabel']}>1:1</span>
-          </ControlButton>
-          <ControlButton
-            title={panMode ? '拖拽平移中（点一下切成框选）' : '框选模式（点一下切成拖拽平移）'}
-            aria-pressed={panMode}
-            onClick={() => { setPanMode((v) => !v) }}
-          >
-            {panMode ? (
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3" />
-              </svg>
-            ) : (
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" aria-hidden="true">
-                <rect x={3} y={3} width={18} height={18} rx={2} strokeDasharray="3 3" />
-              </svg>
-            )}
           </ControlButton>
         </Controls>
       </ReactFlow>
@@ -1967,6 +1953,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                 setDrawer(null)
                 if (card !== undefined) openSession(card.sessionId)
               }}
+              // Right-click inside the drawer opens the SAME card menu as the
+              // grid: 置顶 / 重命名 / 标为未读 / 归档 / 删除 / 批量.
+              onCardMenu={(cardId, event) => { openMenu(event, 'card', cardId) }}
               onClose={() => { setDrawer(null) }}
             />
           )
