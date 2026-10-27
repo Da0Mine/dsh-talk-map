@@ -10470,6 +10470,7 @@ var lastRunning = /* @__PURE__ */ new Map();
 var finished = /* @__PURE__ */ new Set();
 var interrupted = /* @__PURE__ */ new Set();
 var hydrated = /* @__PURE__ */ new Set();
+var needsBaseline = true;
 var snapshot2 = /* @__PURE__ */ new Set();
 var interruptedSnapshot = /* @__PURE__ */ new Set();
 var listenerSet = /* @__PURE__ */ new Set();
@@ -10525,9 +10526,27 @@ var sessionActivity = {
    * while the map is mounted counts, so a session that finished while the map
    * was closed keeps whatever the shell decided for it.
    */
+  /**
+   * The map panel (re)mounts: the next observation is a BASELINE, not a
+   * transition. Without this, a run that finished while the panel was closed
+   * looked like "was running, now idle" and produced a false 待查看 lamp — the
+   * mark must only exist for completions that happen while the map is up.
+   */
+  beginPanelSession() {
+    needsBaseline = true;
+  },
   observe(status, summaries) {
     let changed = false;
     const ids = /* @__PURE__ */ new Set([...status.keys(), ...Object.keys(summaries)]);
+    if (needsBaseline) {
+      needsBaseline = false;
+      for (const sessionId of ids) {
+        const fact = status.get(sessionId);
+        const row = summaries[sessionId];
+        lastRunning.set(sessionId, fact?.running === true || row?.running === true);
+      }
+      return;
+    }
     for (const sessionId of ids) {
       const fact = status.get(sessionId);
       const row = summaries[sessionId];
@@ -11662,6 +11681,9 @@ function CanvasInner(props) {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, [statusById, sessions]);
+  (0, import_react9.useEffect)(() => {
+    sessionActivity.beginPanelSession();
+  }, []);
   (0, import_react9.useEffect)(() => {
     sessionActivity.observe(statusById, sessions.byId);
   }, [statusById, sessions]);

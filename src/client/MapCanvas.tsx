@@ -149,8 +149,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     window.addEventListener('beforeunload', onUnload)
     return () => { window.removeEventListener('beforeunload', onUnload) }
   }, [statusById, sessions])
-  // Every status snapshot feeds the projection; a running → idle step is what it
-  // turns into a "done, unread" lamp.
+  // The first observation after the panel mounts is a baseline: a run that
+  // finished while the map was closed must NOT produce a "待查看" lamp (you were
+  // watching that conversation). Declared before the observe effect so it wins.
+  useEffect(() => {
+    sessionActivity.beginPanelSession()
+  }, [])
+  // Every status snapshot feeds the projection; a running → idle step seen while
+  // the map is up is what it turns into a "done, unread" lamp.
   useEffect(() => {
     sessionActivity.observe(statusById, sessions.byId)
   }, [statusById, sessions])

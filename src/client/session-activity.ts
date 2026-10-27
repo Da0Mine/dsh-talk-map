@@ -29,6 +29,8 @@ const finished = new Set<string>()
 const interrupted = new Set<string>()
 /** Ids restored from storage: the first observation may clear them (see observe). */
 const hydrated = new Set<string>()
+/** Set when the panel mounts; the first observation then re-establishes the baseline. */
+let needsBaseline = true
 let snapshot: ReadonlySet<string> = new Set()
 let interruptedSnapshot: ReadonlySet<string> = new Set()
 const listenerSet = new Set<() => void>()
@@ -89,12 +91,30 @@ export const sessionActivity = {
    * while the map is mounted counts, so a session that finished while the map
    * was closed keeps whatever the shell decided for it.
    */
+  /**
+   * The map panel (re)mounts: the next observation is a BASELINE, not a
+   * transition. Without this, a run that finished while the panel was closed
+   * looked like "was running, now idle" and produced a false 待查看 lamp — the
+   * mark must only exist for completions that happen while the map is up.
+   */
+  beginPanelSession(): void {
+    needsBaseline = true
+  },
   observe(
     status: ReadonlyMap<string, SessionStatusFact>,
     summaries: Readonly<Record<string, SummaryLike>>,
   ): void {
     let changed = false
     const ids = new Set<string>([...status.keys(), ...Object.keys(summaries)])
+    if (needsBaseline) {
+      needsBaseline = false
+      for (const sessionId of ids) {
+        const fact = status.get(sessionId)
+        const row = summaries[sessionId]
+        lastRunning.set(sessionId, fact?.running === true || row?.running === true)
+      }
+      return
+    }
     for (const sessionId of ids) {
       const fact = status.get(sessionId)
       const row = summaries[sessionId]

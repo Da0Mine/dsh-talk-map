@@ -593,6 +593,33 @@ try {
   const afterAck = (await readChips())[chatId]
   check('打开过后不再显示待查看', afterAck?.kind !== 'done', JSON.stringify(afterAck))
 
+  // ---- 4c. finished while the map was CLOSED → stay quiet ----------------
+  // The mark exists for completions that happen BEHIND the map. If you were
+  // watching the conversation itself, you already saw it — no lamp.
+  const quietSession = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  await page.evaluate((id) => window.__harness.setRunning(id, true), quietSession)
+  await page.waitForTimeout(400)
+  await page.click('[class*="tm_backButton"]')
+  await page.waitForTimeout(400)
+  await page.evaluate((id) => window.__harness.setRunning(id, false), quietSession)
+  await page.waitForTimeout(400)
+  await openMap()
+  await page.waitForTimeout(700)
+  const closedFinish = await page.evaluate((id) => {
+    const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+    const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+    return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+  }, quietSession)
+  check('关着地图时跑完 → 不亮「待查看」', closedFinish !== 'done',
+    String(quietSession) + ' → ' + String(closedFinish))
+
   // ---- 5. panel model --------------------------------------------------
   check('地图是 main 面板（不是遮罩）', (await page.evaluate(() => window.__harness.panelState())).selectedPanel === 'talk-map')
   await page.click('[class*="tm_backButton"]')
