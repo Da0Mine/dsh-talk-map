@@ -9,6 +9,7 @@ import { mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
+import { drawerState } from './drawer-state.ts'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -60,6 +61,12 @@ export interface StackDrawerProps {
 
 export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  // Coming back from a conversation should land on the same rows.
+  useEffect(() => {
+    const scroller = scrollerRef.current
+    if (scroller === null) return
+    scroller.scrollTop = drawerState.readScroll()
+  }, [])
 
   useEffect(() => {
     const release = mapUi.claimEscape('stack-drawer')
@@ -113,7 +120,11 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             ×
           </button>
         </div>
-        <div className={styles['drawerScroll']} ref={scrollerRef}>
+        <div
+          className={styles['drawerScroll']}
+          ref={scrollerRef}
+          onScroll={(event) => { drawerState.writeScroll(event.currentTarget.scrollTop) }}
+        >
           {props.items.map(item => {
             const classNames = [styles['card'], styles['drawerCard']]
             if (item.glow !== undefined) classNames.push(styles[LAMP_CLASS[item.glow]] ?? '')
@@ -123,6 +134,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             const quiet = item.glow === undefined && item.pendingDraft !== true
               && item.interrupted !== true && item.pinned !== true
             if (quiet) classNames.push(styles['cardQuiet'] ?? '')
+            if (item.selected === true) classNames.push(styles['cardSelected'] ?? '')
             return (
               <button
                 key={item.cardId}
@@ -137,6 +149,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   props.onCardMenu?.(item.cardId, event)
                 }}
               >
+                {item.current === true ? <span className={styles['cardReticle']}><i /><i /><i /><i /></span> : null}
                 <div className={styles['cardTop']}>
                   {item.pinned === true
                     ? <span className={styles['cardPin']} title={t('card.pinned')} data-talkmap-pin="1"><svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z"/></svg></span>

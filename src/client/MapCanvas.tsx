@@ -26,6 +26,7 @@ import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
+import { drawerState } from './drawer-state.ts'
 import { callRpc } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
@@ -209,7 +210,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [pendingSpawn, setPendingSpawn] = useState<PendingSpawn | null>(null)
   const [menu, setMenu] = useState<MenuContext | null>(null)
   /** Folder whose stack cell was clicked: the drawer lists all of its cards. */
-  const [drawer, setDrawer] = useState<{ groupId: string } | null>(null)
+  // The open drawer survives leaving the map: the folder id lives in
+  // localStorage, so reading a conversation and coming back keeps it open.
+  const [drawer, setDrawer] = useState<{ groupId: string } | null>(() => {
+    const remembered = drawerState.readGroup()
+    return remembered === null ? null : { groupId: remembered }
+  })
+  /** Explicit close: forget the position, the drawer is done. */
+  const closeDrawer = (): void => {
+    setDrawer(null)
+    drawerState.clear()
+  }
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -936,7 +947,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           ...(topSessionId !== undefined && sessions.byId[topSessionId] !== undefined
             ? { topTitle: sessions.byId[topSessionId].displayTitle }
             : {}),
-          onOpen: () => { setDrawer({ groupId }) },
+          onOpen: () => {
+            setDrawer({ groupId })
+            drawerState.writeGroup(groupId)
+          },
         },
       }
     })
@@ -1337,6 +1351,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         ...(draftSessions.has(card.sessionId) ? { pendingDraft: true } : {}),
         ...(interruptedById.has(card.sessionId) ? { interrupted: true } : {}),
         ...(pinnedSessions.has(card.sessionId) ? { pinned: true } : {}),
+        // The drawer mirrors the canvas selection (single pick or batch tick),
+        // and marks the conversation the map was opened from.
+        selected: batchMode ? batchPicks.has(cardId) : liveSelectedIds.has(cardId),
+        current: currentSessionId() === card.sessionId,
       })
     }
     return items
@@ -1979,13 +1997,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               items={drawerItems(drawer.groupId)}
               onOpenCard={(cardId) => {
                 const card = visibleCards[cardId]
-                setDrawer(null)
+                // Deliberately NOT clearing the drawer: jumping into a
+                // conversation and coming back should land on the same folder
+                // at the same scroll position.
                 if (card !== undefined) openSession(card.sessionId)
               }}
               // Right-click inside the drawer opens the SAME card menu as the
               // grid: 置顶 / 重命名 / 标为未读 / 归档 / 删除 / 批量.
               onCardMenu={(cardId, event) => { openMenu(event, 'card', cardId) }}
-              onClose={() => { setDrawer(null) }}
+              onClose={closeDrawer}
             />
           )
         : null}

@@ -1084,7 +1084,7 @@ try {
     checked: document.querySelectorAll('[data-talkmap-pick][aria-checked="true"]').length,
   }))
   check('再点一张 → 勾选框变勾 + 计数 2', /2/.test(batchAfterPick.count) && batchAfterPick.checked === 2, JSON.stringify(batchAfterPick))
-  await page.screenshot({ path: path.join(shots, 'probe-batch.png') })
+
   await page.evaluate(() => {
     const target = [...document.querySelectorAll('[class*="tm_batchAction"]')].find(el => el.textContent.trim() === '删除')
     target?.click()
@@ -1093,6 +1093,76 @@ try {
   const batchCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
   check('批量删除一次提交 trashMany', batchCall?.action === 'trashMany' && (batchCall?.sessionIds?.length ?? 0) === 2, JSON.stringify(batchCall))
   check('批量删除后退出批量模式', await page.evaluate(() => document.querySelector('[class*="tm_batchBar"]') === null))
+
+  // ---- 11b. the stack drawer survives jumping into a conversation --------
+  // Open the daily drawer, jump into one of its conversations, then come back.
+  // The panel unmounts on the way out, so this only works because the drawer
+  // remembers which folder it was on.
+  const drawerOpenClick = await page.evaluate(() => {
+    const face = document.querySelector('.react-flow__node[data-id="stack-ws-daily"] [class*="stackFace"]')
+    if (face === null) return false
+    face.click()
+    return true
+  })
+  await page.waitForTimeout(600)
+  const drawerBefore = await page.evaluate(() => {
+    const head = document.querySelector('[class*="drawerTitle"]')
+    return {
+      open: document.querySelector('[class*="drawerBackdrop"]') !== null,
+      title: head === null ? null : head.textContent.trim(),
+      rows: document.querySelectorAll('[data-stack-card]').length,
+    }
+  })
+  check('堆叠抽屉可以打开', drawerOpenClick === true && drawerBefore.open === true, JSON.stringify(drawerBefore))
+  await page.evaluate(() => {
+    const row = document.querySelector('[data-stack-card]')
+    if (row !== null) { const r = row.getBoundingClientRect(); window.__rowPoint = { x: Math.round(r.x + 60), y: Math.round(r.y + 30) } }
+  })
+  const rowPoint = await page.evaluate(() => window.__rowPoint ?? null)
+  if (rowPoint !== null) await page.mouse.click(rowPoint.x, rowPoint.y)
+  const leftMap = await page.evaluate(() => document.querySelector('[class*="tm_panel"]') === null)
+  check('从抽屉点卡片会跳进对话', leftMap === true, String(leftMap))
+  await page.evaluate(() => {
+  })
+  await openMap()
+  await page.waitForTimeout(1000)
+  const drawerAfter = await page.evaluate(() => {
+    const head = document.querySelector('[class*="drawerTitle"]')
+    return {
+      open: document.querySelector('[class*="drawerBackdrop"]') !== null,
+      mapOpen: document.querySelector('[class*="tm_panel"]') !== null,
+      sideButton: document.querySelector('[class*="tm_sideButton"]') !== null,
+      title: head === null ? null : head.textContent.trim(),
+      rows: document.querySelectorAll('[data-stack-card]').length,
+    }
+  })
+  const storedDrawer = await page.evaluate(() => ({
+    stored: localStorage.getItem('dsh.talk-map.drawer.v1'),
+    scroll: localStorage.getItem('dsh.talk-map.drawer-scroll.v1'),
+  }))
+  console.log('   drawer storage:', JSON.stringify(storedDrawer))
+  check('回到地图时抽屉还开着（保留打开进度）',
+    drawerAfter.open === true && drawerAfter.title === drawerBefore.title,
+    JSON.stringify({ before: drawerBefore, after: drawerAfter }))
+  check('抽屉里的内容也没丢', drawerAfter.rows === drawerBefore.rows,
+    String(drawerBefore.rows) + ' → ' + String(drawerAfter.rows))
+  // The row we just came back from is the map's current conversation: the
+  // drawer marks it with the same corner brackets the grid card wears.
+  const drawerCurrent = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('[data-stack-card]')]
+    return {
+      rows: rows.length,
+      reticle: rows.filter(node => node.querySelector('[class*="cardReticle"]') !== null).length,
+    }
+  })
+  check('堆叠抽屉里也标出当前对话（选中样式）',
+    drawerCurrent.reticle >= 1, JSON.stringify(drawerCurrent))
+  await page.evaluate(() => {
+    const backdrop = document.querySelector('[class*="drawerBackdrop"]')
+    if (backdrop !== null) backdrop.click()
+  })
+  await page.waitForTimeout(300)
+
 
   // ---- 11b. 标为未读 ---------------------------------------------------
   const unreadPoint = await page.evaluate(() => {

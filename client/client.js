@@ -10375,6 +10375,48 @@ async function setPinned(sessionId, pinned) {
   await call.call(ui, sessionId);
 }
 
+// src/client/drawer-state.ts
+var GROUP_KEY = "dsh.talk-map.drawer.v1";
+var SCROLL_KEY = "dsh.talk-map.drawer-scroll.v1";
+function safeRead(key) {
+  try {
+    return typeof localStorage === "undefined" ? null : localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function safeWrite(key, value) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch {
+  }
+}
+var drawerState = {
+  /** Folder the drawer was last open on, or null. */
+  readGroup() {
+    const value = safeRead(GROUP_KEY);
+    return value === null || value === "" ? null : value;
+  },
+  writeGroup(groupId) {
+    safeWrite(GROUP_KEY, groupId);
+  },
+  readScroll() {
+    const raw = safeRead(SCROLL_KEY);
+    const value = raw === null ? 0 : Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 0;
+  },
+  writeScroll(offset) {
+    safeWrite(SCROLL_KEY, String(Math.max(0, Math.round(offset))));
+  },
+  /** Both together: closing the drawer forgets where it was. */
+  clear() {
+    safeWrite(GROUP_KEY, null);
+    safeWrite(SCROLL_KEY, null);
+  }
+};
+
 // src/client/rpc.ts
 async function callRpc(endpoint, request = {}) {
   const rpc = connectionService()?.rpc;
@@ -11559,6 +11601,11 @@ function rowStep(scroller) {
 function StackDrawer(props) {
   const scrollerRef = (0, import_react7.useRef)(null);
   (0, import_react7.useEffect)(() => {
+    const scroller = scrollerRef.current;
+    if (scroller === null) return;
+    scroller.scrollTop = drawerState.readScroll();
+  }, []);
+  (0, import_react7.useEffect)(() => {
     const release = mapUi.claimEscape("stack-drawer");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
@@ -11608,69 +11655,86 @@ function StackDrawer(props) {
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["drawerScroll"], ref: scrollerRef, children: props.items.map((item) => {
-          const classNames = [talk_map_default["card"], talk_map_default["drawerCard"]];
-          if (item.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS2[item.glow]] ?? "");
-          const quiet = item.glow === void 0 && item.pendingDraft !== true && item.interrupted !== true && item.pinned !== true;
-          if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
-          return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
-            "button",
-            {
-              type: "button",
-              "data-stack-card": "",
-              "data-talkmap-session": item.sessionId,
-              className: classNames.filter(Boolean).join(" "),
-              onClick: () => {
-                props.onOpenCard(item.cardId);
-              },
-              onContextMenu: (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                props.onCardMenu?.(item.cardId, event);
-              },
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-                  item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
-                ] }),
-                item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
-                /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
-                  item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                    "span",
-                    {
-                      className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
-                      title: t("card.draftHint"),
-                      "data-talkmap-draft": "1",
-                      children: t("card.draft")
-                    }
-                  ) : null,
-                  item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-                    "span",
-                    {
-                      className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
-                      title: t("card.interruptedHint"),
-                      "data-talkmap-interrupted": "1",
-                      children: t("card.interrupted")
-                    }
-                  ) : null,
-                  item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
-                    "span",
-                    {
-                      className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`,
-                      "data-talkmap-chip": item.glow,
-                      children: [
-                        item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
-                        t(LAMP_CHIP[item.glow].key)
-                      ]
-                    }
-                  )
-                ] })
-              ]
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "div",
+          {
+            className: talk_map_default["drawerScroll"],
+            ref: scrollerRef,
+            onScroll: (event) => {
+              drawerState.writeScroll(event.currentTarget.scrollTop);
             },
-            item.cardId
-          );
-        }) })
+            children: props.items.map((item) => {
+              const classNames = [talk_map_default["card"], talk_map_default["drawerCard"]];
+              if (item.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS2[item.glow]] ?? "");
+              const quiet = item.glow === void 0 && item.pendingDraft !== true && item.interrupted !== true && item.pinned !== true;
+              if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
+              if (item.selected === true) classNames.push(talk_map_default["cardSelected"] ?? "");
+              return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+                "button",
+                {
+                  type: "button",
+                  "data-stack-card": "",
+                  "data-talkmap-session": item.sessionId,
+                  className: classNames.filter(Boolean).join(" "),
+                  onClick: () => {
+                    props.onOpenCard(item.cardId);
+                  },
+                  onContextMenu: (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    props.onCardMenu?.(item.cardId, event);
+                  },
+                  children: [
+                    item.current === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["cardReticle"], children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {})
+                    ] }) : null,
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+                      item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
+                    ] }),
+                    item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
+                    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
+                      item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                        "span",
+                        {
+                          className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
+                          title: t("card.draftHint"),
+                          "data-talkmap-draft": "1",
+                          children: t("card.draft")
+                        }
+                      ) : null,
+                      item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                        "span",
+                        {
+                          className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
+                          title: t("card.interruptedHint"),
+                          "data-talkmap-interrupted": "1",
+                          children: t("card.interrupted")
+                        }
+                      ) : null,
+                      item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+                        "span",
+                        {
+                          className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`,
+                          "data-talkmap-chip": item.glow,
+                          children: [
+                            item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                            t(LAMP_CHIP[item.glow].key)
+                          ]
+                        }
+                      )
+                    ] })
+                  ]
+                },
+                item.cardId
+              );
+            })
+          }
+        )
       ] })
     }
   );
@@ -11837,7 +11901,14 @@ function CanvasInner(props) {
   const toastTimer = (0, import_react9.useRef)(void 0);
   const [pendingSpawn, setPendingSpawn] = (0, import_react9.useState)(null);
   const [menu, setMenu] = (0, import_react9.useState)(null);
-  const [drawer, setDrawer] = (0, import_react9.useState)(null);
+  const [drawer, setDrawer] = (0, import_react9.useState)(() => {
+    const remembered = drawerState.readGroup();
+    return remembered === null ? null : { groupId: remembered };
+  });
+  const closeDrawer = () => {
+    setDrawer(null);
+    drawerState.clear();
+  };
   const [renameTarget, setRenameTarget] = (0, import_react9.useState)(null);
   const [renamedTitles, setRenamedTitles] = (0, import_react9.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react9.useState)({});
@@ -12383,6 +12454,7 @@ function CanvasInner(props) {
           ...topSessionId !== void 0 && sessions.byId[topSessionId] !== void 0 ? { topTitle: sessions.byId[topSessionId].displayTitle } : {},
           onOpen: () => {
             setDrawer({ groupId });
+            drawerState.writeGroup(groupId);
           }
         }
       };
@@ -12681,7 +12753,11 @@ function CanvasInner(props) {
         ...glow !== void 0 ? { glow } : {},
         ...draftSessions.has(card.sessionId) ? { pendingDraft: true } : {},
         ...interruptedById.has(card.sessionId) ? { interrupted: true } : {},
-        ...pinnedSessions.has(card.sessionId) ? { pinned: true } : {}
+        ...pinnedSessions.has(card.sessionId) ? { pinned: true } : {},
+        // The drawer mirrors the canvas selection (single pick or batch tick),
+        // and marks the conversation the map was opened from.
+        selected: batchMode ? batchPicks.has(cardId) : liveSelectedIds.has(cardId),
+        current: currentSessionId() === card.sessionId
       });
     }
     return items;
@@ -13236,15 +13312,12 @@ function CanvasInner(props) {
             items: drawerItems(drawer.groupId),
             onOpenCard: (cardId) => {
               const card = visibleCards[cardId];
-              setDrawer(null);
               if (card !== void 0) openSession(card.sessionId);
             },
             onCardMenu: (cardId, event) => {
               openMenu(event, "card", cardId);
             },
-            onClose: () => {
-              setDrawer(null);
-            }
+            onClose: closeDrawer
           }
         ) : null,
         toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
