@@ -70,11 +70,23 @@ export function apply(ctx: OuterContext): void {
       const pipeline = new DigestPipeline(services, storeReady)
       const stop = pipeline.start()
       runtime.digest = pipeline
-    // Full-text search across every conversation, exposed to the drawer through
-    // POST /talk-map/search (see routes.ts).
-    runtime.search = (query: string) =>
-      (services as { sessionController?: { search: (r: { query: string }, s: AbortSignal) => Promise<unknown> } })
-        .sessionController?.search({ query }, new AbortController().signal)
+    /**
+     * Full-text search across every conversation, exposed to the drawer through
+     * POST /talk-map/search (see routes.ts).
+     *
+     * Uses the corpus query service, not sessionController.search: the latter
+     * is the API-domain wrapper and needs an owning Agent (it answers
+     * SessionQueryError when the Host itself asks).
+     */
+    runtime.search = async (query: string) => {
+      const corpus = (runtime as { sessionQuery?: { searchSessions: (r: { query: string; limit?: number }, e?: { signal?: AbortSignal }) => Promise<{ items?: unknown[]; nextCursor?: unknown }> } }).sessionQuery
+      if (corpus === undefined) throw new Error('sessionQuery unavailable')
+      const page = await corpus.searchSessions({ query, limit: 20 }, { signal: new AbortController().signal })
+      const items = ((page.items ?? []) as { header?: { id?: string }; bestMatch?: { snippet?: string } }[])
+        .map(hit => ({ sessionId: hit.header?.id ?? '', snippet: hit.bestMatch?.snippet ?? '' }))
+        .filter(item => item.sessionId !== '')
+      return { items, hasMore: page.nextCursor !== undefined }
+    }
       // Backfill: cards already on the board whose session has no digest yet
       // (historic conversations never hit the turn/end trigger).
       void storeReady.then((store) => {
