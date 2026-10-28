@@ -99,7 +99,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           if (!alive) return
           // Never swallow it: the drawer says what the Host answered, which is
           // the only way to tell "no hits" from "the search did not run".
-          console.error('[dsh-talk-map] content search failed:', cause)
+          console.warn('[dsh-talk-map] content search failed:', cause)
           setHits([])
           setSearchError(String(cause?.message ?? cause))
         })
@@ -183,7 +183,11 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           />
           {searching ? <span className={styles['drawerSearchState']}>{t('stack.searching')}</span> : null}
           {searchError !== null
-            ? <span className={styles['drawerSearchError']} title={searchError}>{t('stack.searchFailed')}</span>
+            ? (
+                <span className={styles['drawerSearchError']} title={searchError}>
+                  {t('stack.searchFailed')}：{searchError.length > 70 ? searchError.slice(0, 70) + '…' : searchError}
+                </span>
+              )
             : null}
         </div>
         <div

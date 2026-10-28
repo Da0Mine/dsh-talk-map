@@ -32,7 +32,12 @@ export interface RpcFailure {
 export async function callRpc<T>(endpoint: string, request: Record<string, unknown> = {}): Promise<T> {
   const rpc = connectionService()?.rpc
   if (rpc === undefined) throw new Error(t('spawn.apiUnavailable'))
-  const result = await rpc.call('/api', endpoint, { args: { request } })
+  // Endpoints that declare cancellation: { parameter: 'signal' } (session/search
+  // is one) expect the signal as the RPC call's own argument, not inside rgs.
+  // Omitting it is what made the full-text search fail while rename/create were
+  // fine — same helper, different arity.
+  const controller = new AbortController()
+  const result = await rpc.call('/api', endpoint, { args: { request } }, controller.signal)
   if (result.ok !== true) {
     const failure = (result as { error?: RpcFailure }).error
     throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? 'failed'}`)

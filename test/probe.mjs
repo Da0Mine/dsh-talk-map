@@ -1244,6 +1244,20 @@ try {
     check('RPC 不可用时回退到宿主路由 /talk-map/search',
       fallbackHits.hits >= 1 && (fallbackHits.routeCalls ?? []).includes('物理'),
       JSON.stringify(fallbackHits))
+    // Both paths down: the drawer must NAME the failure (never a bare i18n key).
+    await page.evaluate(() => { window.__harness.failSearchRpc(true); window.__harness.failSearchRoute(true) })
+    await page.fill('[data-talkmap-drawer-search]', '')
+    await page.keyboard.type('物理')
+    await page.waitForTimeout(900)
+    const searchFailure = await page.evaluate(() => {
+      const node = document.querySelector('[class*="drawerSearchError"]')
+      return node === null ? null : node.textContent.trim()
+    })
+    check('两条通道都失败时显示真实原因（不是 key 裸奔）',
+      typeof searchFailure === 'string' && searchFailure.includes('全文搜索失败')
+        && (searchFailure.includes('session/search') || searchFailure.includes('/talk-map/search')),
+      String(searchFailure))
+    await page.evaluate(() => { window.__harness.failSearchRpc(false); window.__harness.failSearchRoute(false) })
     await page.evaluate(() => window.__harness.failSearchRpc(false))
   }
   await page.evaluate(() => {

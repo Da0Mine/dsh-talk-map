@@ -1271,6 +1271,16 @@
   flex: none;
 }
 
+.drawerSearchError {
+  flex: none;
+  max-width: 52%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(11px + var(--tm-font-step, 0px));
+  color: rgb(242, 78, 78);
+}
+
 .drawerEmpty {
   grid-column: 1 / -1;
   padding: 10px 4px;

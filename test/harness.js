@@ -187,6 +187,7 @@
   /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
   const searchRouteCalls = []
   let searchRpcFails = false
+  let searchRouteFails = false
   const posts = []
   /** Every POST the map makes to dsh-recycle-bin's route. */
   const recycleCalls = []
@@ -223,6 +224,7 @@
       // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
     if (path.indexOf('/talk-map/search') >= 0) {
+      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: 'host search route down' }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
       const items = query.includes('物理') || query.includes('Matter')
@@ -250,6 +252,7 @@
     // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
     if (path.indexOf('/talk-map/search') >= 0) {
+      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: 'host search route down' }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
       const items = query.includes('物理') || query.includes('Matter')
@@ -601,6 +604,9 @@
     /** Make the connection RPC path fail, forcing the Host-route fallback. */
     failSearchRpc(fail) {
       searchRpcFails = fail === true
+    },
+    failSearchRoute(fail) {
+      searchRouteFails = fail === true
     },
     searchRouteCalls() {
       return searchRouteCalls.slice()
