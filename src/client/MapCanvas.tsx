@@ -40,7 +40,7 @@ import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
 import {
   CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y, MIN_FRAME_HEIGHT, MIN_FRAME_WIDTH,
-  capacityFor, frameRect, layoutFor, readingOrder, slotPoint, visibleCount, type PlacedCard,
+  capacityFor, frameRect, layoutFor, readingOrder, slotIndexAt, slotPoint, visibleCount, type PlacedCard,
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
@@ -228,6 +228,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [liveFrame, setLiveFrame] = useState<{ groupId: string; rect: FrameGeometry } | null>(null)
   // Folder currently overlapping another one while being dragged (drop will bounce).
   const [blockedFrame, setBlockedFrame] = useState<string | null>(null)
+  // Centre of the card being dragged, in flow coordinates: the folder uses it to
+  // decide which slot the card would be inserted into.
+  const [dragCenter, setDragCenter] = useState<{ x: number; y: number } | null>(null)
   // While a rubber-band drag is running, the node/edge arrays are frozen:
   // a mid-drag data refresh (digest SSE, running-state flip) re-renders the
   // flow and corrupts React Flow's in-flight hit testing — the intermittent
@@ -390,24 +393,37 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // Pinned sessions lead their folder — same pin the sidebar flips, so a
       // pin made there shows up here and vice versa. A stable sort keeps the
       // reading order inside each group.
-      const ordered = pinnedSessions.size === 0
+      const ordered = (pinnedSessions.size === 0
         ? reading
         : [...reading].sort((a, b) => {
           const pinA = pinnedSessions.has(visibleCards[a]?.sessionId ?? '') ? 0 : 1
           const pinB = pinnedSessions.has(visibleCards[b]?.sessionId ?? '') ? 0 : 1
           return pinA - pinB
-        })
+        }))
       const capacity = capacityFor(rect)
-      const visibleSlots = visibleCount(capacity, ordered.length)
+      let preview = ordered
+      if (draggingCardId !== null && ordered.includes(draggingCardId)) {
+        // While a card is in the air the folder previews the INSERTION: the card
+        // leaves the order and goes back in at the slot under its centre, so the
+        // neighbour it reaches yields immediately instead of at drop time. It
+        // also keeps the dragged card out of the overflow cell — otherwise it
+        // could sort itself into the stack and vanish mid-drag.
+        const others = ordered.filter(cardId => cardId !== draggingCardId)
+        const slots = Math.max(1, visibleCount(capacity, others.length + 1))
+        const wanted = dragCenter === null ? others.length : slotIndexAt(rect, dragCenter)
+        const insertAt = Math.min(Math.max(0, wanted), Math.max(0, Math.min(slots, others.length) - 1))
+        preview = [...others.slice(0, insertAt), draggingCardId, ...others.slice(insertAt)]
+      }
+      const visibleSlots = visibleCount(capacity, preview.length)
       out[groupId] = {
         rect,
-        ordered,
-        shown: ordered.slice(0, visibleSlots),
-        folded: ordered.length > capacity ? ordered.slice(visibleSlots) : [],
+        ordered: preview,
+        shown: preview.slice(0, visibleSlots),
+        folded: preview.length > capacity ? preview.slice(visibleSlots) : [],
       }
     }
     return out
-  }, [frameRects, membersByGroup, visibleCards, pinnedSessions])
+  }, [frameRects, membersByGroup, visibleCards, pinnedSessions, draggingCardId, dragCenter])
 
   // Slot positions for every card that lives in a folder. Positions are derived
   // from the order, never stored-and-trusted: that is what makes a resize
@@ -1062,9 +1078,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           // reconciliation effect rewrites the position it was dragged away
           // from, and nothing else has to move.
           setDraggingCardId(null)
+          setDragCenter(null)
+          // Persist the insertion the folder was previewing: the card lands on
+          // that slot, so the derived reading order keeps the new arrangement.
+          const landing = cardLayout[change.id]
+          if (landing !== undefined) canvas.moveCard(change.id, landing.x, landing.y)
         } else if (change.dragging === true) {
           // Live drag — this card is the only one that ignores its slot.
           setDraggingCardId(change.id)
+          setDragCenter({ x: change.position.x + CARD_W / 2, y: change.position.y + CARD_H / 2 })
           canvas.moveCard(change.id, change.position.x, change.position.y)
         }
       } else if (change.type === 'select') {

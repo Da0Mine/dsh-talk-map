@@ -11523,6 +11523,12 @@ function frameRect(stored) {
     height: Math.max(MIN_FRAME_HEIGHT, stored.height)
   };
 }
+function slotIndexAt(rect, point) {
+  const cols = colsForWidth(rect.width);
+  const col = clamp2(Math.round((point.x - rect.x - FRAME_PAD) / (CARD_W + GAP_X)), 0, cols - 1);
+  const row = Math.max(0, Math.round((point.y - rect.y - TOP_INSET) / (CARD_H + GAP_Y)));
+  return row * cols + col;
+}
 function layoutFor(rect, orderedIds) {
   const cols = colsForWidth(rect.width);
   const out = {};
@@ -11537,6 +11543,9 @@ function visibleCount(capacity, total) {
 }
 function readingOrder(cards) {
   return [...cards].sort((a, b) => a.y - b.y || a.x - b.x || a.cardId.localeCompare(b.cardId)).map((card) => card.cardId);
+}
+function clamp2(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 // src/client/StackDrawer.tsx
@@ -11848,6 +11857,7 @@ function CanvasInner(props) {
   const [draggingCardId, setDraggingCardId] = (0, import_react9.useState)(null);
   const [liveFrame, setLiveFrame] = (0, import_react9.useState)(null);
   const [blockedFrame, setBlockedFrame] = (0, import_react9.useState)(null);
+  const [dragCenter, setDragCenter] = (0, import_react9.useState)(null);
   const [isSelecting, setIsSelecting] = (0, import_react9.useState)(false);
   const frozenRef = (0, import_react9.useRef)(null);
   const locale = (0, import_react9.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
@@ -11961,16 +11971,24 @@ function CanvasInner(props) {
         return pinA - pinB;
       });
       const capacity = capacityFor(rect);
-      const visibleSlots = visibleCount(capacity, ordered.length);
+      let preview = ordered;
+      if (draggingCardId !== null && ordered.includes(draggingCardId)) {
+        const others = ordered.filter((cardId) => cardId !== draggingCardId);
+        const slots = Math.max(1, visibleCount(capacity, others.length + 1));
+        const wanted = dragCenter === null ? others.length : slotIndexAt(rect, dragCenter);
+        const insertAt = Math.min(Math.max(0, wanted), Math.max(0, Math.min(slots, others.length) - 1));
+        preview = [...others.slice(0, insertAt), draggingCardId, ...others.slice(insertAt)];
+      }
+      const visibleSlots = visibleCount(capacity, preview.length);
       out[groupId] = {
         rect,
-        ordered,
-        shown: ordered.slice(0, visibleSlots),
-        folded: ordered.length > capacity ? ordered.slice(visibleSlots) : []
+        ordered: preview,
+        shown: preview.slice(0, visibleSlots),
+        folded: preview.length > capacity ? preview.slice(visibleSlots) : []
       };
     }
     return out;
-  }, [frameRects, membersByGroup, visibleCards, pinnedSessions]);
+  }, [frameRects, membersByGroup, visibleCards, pinnedSessions, draggingCardId, dragCenter]);
   const cardLayout = (0, import_react9.useMemo)(() => {
     const out = {};
     for (const layout of Object.values(folderLayouts)) {
@@ -12479,8 +12497,12 @@ function CanvasInner(props) {
           }
         } else if (change.dragging === false) {
           setDraggingCardId(null);
+          setDragCenter(null);
+          const landing = cardLayout[change.id];
+          if (landing !== void 0) canvas.moveCard(change.id, landing.x, landing.y);
         } else if (change.dragging === true) {
           setDraggingCardId(change.id);
+          setDragCenter({ x: change.position.x + CARD_W / 2, y: change.position.y + CARD_H / 2 });
           canvas.moveCard(change.id, change.position.x, change.position.y);
         }
       } else if (change.type === "select") {

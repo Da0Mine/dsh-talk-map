@@ -1,12 +1,41 @@
-  // A legal drop still sticks: drag a folder into empty space.
-  const framesBeforeFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
-  const freeLabel = await box('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
-  await page.mouse.move(freeLabel.x + 18, freeLabel.y + 10)
+  // ---- 7c. a neighbour yields MID-DRAG, before the mouse is released ------
+  const slotPair = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return [...document.querySelectorAll('.react-flow__node')]
+      .map((node) => {
+        const card = state.cards[node.getAttribute('data-id')]
+        if (card === undefined) return null
+        const r = node.getBoundingClientRect()
+        return {
+          cardId: node.getAttribute('data-id'),
+          sessionId: card.sessionId,
+          x: Math.round(r.x),
+          y: Math.round(r.y),
+        }
+      })
+      .filter(entry => entry !== null)
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .slice(0, 2)
+  })
+  const firstCard = slotPair[0]
+  const secondCard = slotPair[1]
+  const cardGrab = await page.evaluate((cardId) => {
+    const node = document.querySelector(`[data-id="${cardId}"]`)
+    const r = node.getBoundingClientRect()
+    return { x: Math.round(r.x + 50), y: Math.round(r.y + 14) }
+  }, firstCard.cardId)
+  await page.mouse.move(cardGrab.x, cardGrab.y)
   await page.mouse.down()
-  await page.mouse.move(freeLabel.x + 40, freeLabel.y + 200, { steps: 14 })
+  await page.mouse.move(secondCard.x + 40, cardGrab.y, { steps: 10 })
+  await page.waitForTimeout(320)
+  const neighbourMidDrag = await page.evaluate((sid) => {
+    const state = window.__harness.state()
+    const node = [...document.querySelectorAll('.react-flow__node')]
+      .find(el => state.cards[el.getAttribute('data-id')]?.sessionId === sid)
+    return node === undefined ? null : Math.round(node.getBoundingClientRect().x)
+  }, secondCard.sessionId)
   await page.mouse.up()
-  await page.waitForTimeout(700)
-  const framesAfterFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
-  const freeShift = Math.abs(framesAfterFree['ws-medkit'].x - framesBeforeFree['ws-medkit'].x)
-    + Math.abs(framesAfterFree['ws-medkit'].y - framesBeforeFree['ws-medkit'].y)
-  check('拖到空地 → 正常停在原地（不是一律拒绝）', freeShift > 60, `${Math.round(freeShift)}px`)
+  await page.waitForTimeout(500)
+  check('拖到邻居身上时，邻居在松手前就让位',
+    neighbourMidDrag !== null && Math.abs(neighbourMidDrag - firstCard.x) <= 8,
+    `邻居 x: ${secondCard.x} → ${neighbourMidDrag}（被拖卡片原位 ${firstCard.x}）`)
