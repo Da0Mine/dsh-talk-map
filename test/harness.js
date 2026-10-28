@@ -61,6 +61,7 @@
   }
   // Distinct recency stamps: the folder must lay these out newest-first, so the
   // probe can assert the slot order against this table.
+  let spawnCount = 0
   const minutesAgo = { s1: 2, s2: 15, s3: 90, s4: 240, s5: 40, s6: 5, s7: 60, s8: 30, s9: 8, s10: 300 }
   for (const ws of workspaceList) {
     for (const id of ws.sessionIds) {
@@ -274,6 +275,27 @@
       rpc: {
         call: (channel, endpoint, payload) => {
           log('rpc.call', { channel, endpoint, args: payload?.args })
+          if (endpoint === 'session/create') {
+            const request = payload?.args?.request ?? {}
+            spawnCount += 1
+            const sessionId = 's-spawn-' + spawnCount
+            sessionRows[sessionId] = session(sessionId, '连线新建的对话', { updatedAt: Date.now() })
+            const workspace = workspaceList.find(item => item.workspaceId === request.workspaceId)
+            if (workspace !== undefined) workspace.sessionIds = [...workspace.sessionIds, sessionId]
+            sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+            workspacesState = buildWorkspaces()
+            sync()
+            log('rpc.create', request)
+            return Promise.resolve({ ok: true, value: { sessionId } })
+          }
+          if (endpoint === 'session/prompt') {
+            log('rpc.prompt', payload?.args?.request)
+            return Promise.resolve({ ok: true, value: { accepted: true } })
+          }
+          if (endpoint === 'workspace/create') {
+            log('rpc.workspaceCreate', payload?.args?.request)
+            return Promise.resolve({ ok: true, value: { workspace: { workspaceId: 'ws-created' }, created: true } })
+          }
           if (endpoint === 'workspace/rename') {
             const request = payload?.args?.request ?? {}
             const workspace = workspaceList.find(item => item.workspaceId === request.workspaceId)

@@ -26,6 +26,7 @@ import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
+import { callRpc } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
@@ -1598,15 +1599,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           onSubmit: async (value: string) => {
             const services = getServices()
             if (services === undefined || parentDir === '') throw new Error('no workspace root available')
-            const api = connectionApi()
-            if (api === undefined) throw new Error(t('spawn.apiUnavailable'))
             const path = `${parentDir}/${value}`
             await talkMapApi.ensureDir(path)
-            const response = await api.workspace.create({ path })
-            if (!response.result.ok) {
-              throw new Error(`workspace.create: ${response.result.error.message ?? response.result.error.code ?? ''}`)
-            }
-            importWorkspace(response.result.value.workspace.workspaceId, menu.flowX, menu.flowY)
+            const created = await callRpc<{ workspace: { workspaceId: string } }>('workspace/create', { path })
+            importWorkspace(created.workspace.workspaceId, menu.flowX, menu.flowY)
             close()
           },
         },

@@ -4,7 +4,7 @@ import fs from 'node:fs'
 const probe = 'test/probe.mjs'
 const lines = fs.readFileSync(probe, 'utf8').split('\n')
 const block = fs.readFileSync('scripts/_probe-block.txt', 'utf8').replace(/\n$/, '').split('\n')
-const marker = "check('拖到空地 → 正常停在原地（不是一律拒绝）'"
+const marker = "// ---- 14. state survives a restart -----------------------------------"
 
 const at = lines.findIndex(line => line.includes(marker))
 if (at < 0) {

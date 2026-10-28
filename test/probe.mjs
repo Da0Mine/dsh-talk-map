@@ -1246,6 +1246,59 @@ try {
     `邻居 x: ${secondCard.x} → ${neighbourMidDrag}（被拖卡片原位 ${firstCard.x}）`)
 
   // ---- 14. state survives a restart -----------------------------------
+
+  // ---- 13b. connection → new conversation (spawn) -----------------------
+  // Drag from a card's right handle onto empty canvas: the fork panel opens,
+  // "新对话" creates a session through session/create and prompts it. This is
+  // the flow that used to fail with "界面服务还在初始化".
+  // Pick a card that is actually rendered (some may be folded into a stack cell).
+  const spawnCardId = await page.evaluate(() => {
+    const handle = document.querySelector('.react-flow__node .react-flow__handle-right')
+    if (handle === null) return null
+    const node = handle.closest('.react-flow__node')
+    return node === null ? null : node.getAttribute('data-id')
+  })
+  if (spawnCardId !== null) {
+    const handlePoint = await page.evaluate((cardId) => {
+      const node = document.querySelector('[data-id="' + cardId + '"]')
+      const handle = node === null ? null : node.querySelector('.react-flow__handle-right')
+      if (handle === null) return null
+      const r = handle.getBoundingClientRect()
+      return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }
+    }, spawnCardId)
+    if (handlePoint !== null) {
+      await page.mouse.move(handlePoint.x, handlePoint.y)
+      await page.mouse.down()
+      await page.mouse.move(handlePoint.x + 160, handlePoint.y + 220, { steps: 12 })
+      await page.mouse.up()
+      await page.waitForTimeout(600)
+    }
+  }
+  const spawnPanel = await box('[class*="spawnPanel"]')
+  check('从卡片连线拖到空白处弹出新建面板', spawnPanel !== null, JSON.stringify(spawnPanel))
+  if (spawnPanel !== null) {
+    await page.click('[class*="spawnModes"] button:first-of-type')
+    await page.waitForTimeout(250)
+    await page.fill('[class*="spawnPanel"] textarea', '这条对话是连线新建的')
+    await page.waitForTimeout(200)
+    const spawnHasButton = await page.evaluate(() =>
+      document.querySelectorAll('[class*="spawnBtnPrimary"]').length > 0)
+    check('新建面板有首条消息输入框和确认按钮', spawnHasButton === true, String(spawnHasButton))
+    await page.click('[class*="spawnBtnPrimary"]')
+    await page.waitForTimeout(1400)
+    const spawnCalls = await page.evaluate(() => ({
+      create: window.__harness.log.filter(entry => entry.kind === 'rpc.create').at(-1) ?? null,
+      prompt: window.__harness.log.filter(entry => entry.kind === 'rpc.prompt').at(-1) ?? null,
+      error: document.querySelector('[class*="spawnError"]')?.textContent ?? null,
+    }))
+    check('走 session/create 建会话（不是那个不存在的 api）',
+      spawnCalls.create !== null, JSON.stringify(spawnCalls.create))
+    check('走 session/prompt 发出首条消息',
+      spawnCalls.prompt?.detail?.content?.[0]?.text === '这条对话是连线新建的',
+      JSON.stringify(spawnCalls.prompt?.detail))
+    check('面板不再报「界面服务还在初始化」',
+      (spawnCalls.error ?? '').includes('初始化') === false, String(spawnCalls.error))
+  }
   // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).
   // All three live in localStorage, so a reload must bring them back — the
   // harness rebuilds its status map from scratch, exactly like a restart.

@@ -1114,20 +1114,6 @@ function restoreSidebarAfterMap() {
 function connectionService() {
   return services?.connection;
 }
-function connectionApi() {
-  const current = getServices();
-  if (current === void 0) return void 0;
-  const direct = current.connection?.api;
-  if (direct !== void 0) return direct;
-  const get3 = current.ctx?.get;
-  if (typeof get3 !== "function") return void 0;
-  try {
-    const live = get3.call(current.ctx, "connection");
-    return live?.api;
-  } catch {
-    return void 0;
-  }
-}
 function openSessionInUi(sessionId) {
   const current = getServices();
   if (current === void 0) return false;
@@ -10389,6 +10375,18 @@ async function setPinned(sessionId, pinned) {
   await call.call(ui, sessionId);
 }
 
+// src/client/rpc.ts
+async function callRpc(endpoint, request = {}) {
+  const rpc = connectionService()?.rpc;
+  if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
+  const result = await rpc.call("/api", endpoint, { args: { request } });
+  if (result.ok !== true) {
+    const failure = result.error;
+    throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? "failed"}`);
+  }
+  return result.value;
+}
+
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
 var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
@@ -11234,11 +11232,6 @@ function SessionCardNode(props) {
 // src/client/SpawnPreview.tsx
 var import_react6 = require("react");
 var import_jsx_runtime6 = require("react/jsx-runtime");
-function unwrap(response, what) {
-  const { result } = response;
-  if (result.ok) return result.value;
-  throw new Error(`${what}: ${result.error.code ?? ""} ${result.error.message ?? ""}`.trim());
-}
 function SpawnPreview(props) {
   const { pending } = props;
   const digest = canvas.get().digests[pending.parent.sessionId];
@@ -11293,13 +11286,13 @@ function SpawnPreview(props) {
     setBusy(true);
     setError(void 0);
     try {
-      const api = connectionApi();
-      if (api === void 0) throw new Error(t("spawn.apiUnavailable"));
+      const createSession = async () => callRpc(
+        "session/create",
+        pending.parentWorkspaceId !== void 0 ? { workspaceId: pending.parentWorkspaceId } : {}
+      );
       if (mode === "digest") {
         if (text.trim() === "") throw new Error(t("spawn.needText"));
-        const created2 = unwrap(await api.sessions.create(
-          pending.parentWorkspaceId !== void 0 ? { workspaceId: pending.parentWorkspaceId } : {}
-        ), "session.create");
+        const created2 = await createSession();
         await talkMapApi.injectContext(created2.sessionId, [
           { sessionId: pending.parent.sessionId, text }
         ]);
@@ -11314,16 +11307,14 @@ function SpawnPreview(props) {
         return;
       }
       if (firstMessage.trim() === "") throw new Error(t("spawn.needFirstMessage"));
-      const created = unwrap(await api.sessions.create(
-        pending.parentWorkspaceId !== void 0 ? { workspaceId: pending.parentWorkspaceId } : {}
-      ), "session.create");
+      const created = await createSession();
       addCardAndEdge(created.sessionId, "none");
-      unwrap(await api.sessions.prompt({
+      await callRpc("session/prompt", {
         sessionId: created.sessionId,
         mode: "queue",
         content: [{ type: "text", text: firstMessage }],
         clientTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      }), "session.prompt");
+      });
       jumpIn(created.sessionId);
     } catch (spawnError) {
       setError(String(spawnError));
@@ -12887,15 +12878,10 @@ function CanvasInner(props) {
           onSubmit: async (value) => {
             const services2 = getServices();
             if (services2 === void 0 || parentDir === "") throw new Error("no workspace root available");
-            const api = connectionApi();
-            if (api === void 0) throw new Error(t("spawn.apiUnavailable"));
             const path = `${parentDir}/${value}`;
             await talkMapApi.ensureDir(path);
-            const response = await api.workspace.create({ path });
-            if (!response.result.ok) {
-              throw new Error(`workspace.create: ${response.result.error.message ?? response.result.error.code ?? ""}`);
-            }
-            importWorkspace(response.result.value.workspace.workspaceId, menu.flowX, menu.flowY);
+            const created = await callRpc("workspace/create", { path });
+            importWorkspace(created.workspace.workspaceId, menu.flowX, menu.flowY);
             close();
           }
         },
