@@ -1152,29 +1152,56 @@ try {
     dailyAfterPush.x + dailyAfterPush.w <= medkitBefore.x + 1,
     `右边缘 ${Math.round(dailyAfterPush.x + dailyAfterPush.w)} vs 邻居左边 ${Math.round(medkitBefore.x)}（原宽 ${Math.round(dailyBefore.w)}）`)
 
+  const framesBeforeDrop = await page.evaluate(() => window.__harness.nodeBoxes().frames)
   const frameLabel2 = await box('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+  const dropTarget = {
+    x: framesBeforeDrop['ws-daily'].x + framesBeforeDrop['ws-daily'].w / 2,
+    y: framesBeforeDrop['ws-daily'].y + framesBeforeDrop['ws-daily'].h / 2,
+  }
   await page.mouse.move(frameLabel2.x + 18, frameLabel2.y + 10)
   await page.mouse.down()
-  await page.mouse.move(frameLabel2.x - 320, frameLabel2.y + 40, { steps: 14 })
+  await page.mouse.move(dropTarget.x, dropTarget.y, { steps: 16 })
+  await page.waitForTimeout(200)
+  const blockedOutline = await page.evaluate(() => {
+    const node = document.querySelector('[data-talkmap-workspace="ws-medkit"]')
+    return node === null ? null : node.className.includes('wsFrameBlocked')
+  })
   await page.mouse.up()
-  await page.waitForTimeout(600)
-  const overlapPairs = await page.evaluate(() => {
-    const frames = Object.entries(window.__harness.nodeBoxes().frames)
-      .map(([id, rect]) => ({ id, ...rect }))
-    const bad = []
+  await page.waitForTimeout(700)
+  check('拖到别的文件夹上方时给出红色提示', blockedOutline === true, String(blockedOutline))
+  const framesAfterDrop = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const shiftOf = id => Math.abs(framesAfterDrop[id].x - framesBeforeDrop[id].x)
+    + Math.abs(framesAfterDrop[id].y - framesBeforeDrop[id].y)
+  check('重叠着松手 → 被拖的退回原位，对方一动不动',
+    shiftOf('ws-medkit') <= 2 && shiftOf('ws-daily') <= 2,
+    `medkit 位移 ${Math.round(shiftOf('ws-medkit'))}px / daily 位移 ${Math.round(shiftOf('ws-daily'))}px`)
+  const overlapAfterDrop = await page.evaluate(() => {
+    const frames = Object.entries(window.__harness.nodeBoxes().frames).map(([id, rect]) => ({ id, ...rect }))
     for (let i = 0; i < frames.length; i += 1) {
       for (let j = i + 1; j < frames.length; j += 1) {
         const a = frames[i]
         const b = frames[j]
-        const overlapX = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
-        const overlapY = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
-        if (overlapX > 2 && overlapY > 2) bad.push([a.id, b.id])
+        const ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)
+        const oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)
+        if (ox > 2 && oy > 2) return [a.id, b.id]
       }
     }
-    return bad
+    return null
   })
-  check('拖进别的文件夹会把对方弹开（任何两个都不重叠）',
-    overlapPairs.length === 0, JSON.stringify(overlapPairs))
+  check('松手之后任何两个文件夹都不重叠', overlapAfterDrop === null, JSON.stringify(overlapAfterDrop))
+
+  // A legal drop still sticks: drag a folder into empty space.
+  const framesBeforeFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const freeLabel = await box('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+  await page.mouse.move(freeLabel.x + 18, freeLabel.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(freeLabel.x + 40, freeLabel.y + 200, { steps: 14 })
+  await page.mouse.up()
+  await page.waitForTimeout(700)
+  const framesAfterFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const freeShift = Math.abs(framesAfterFree['ws-medkit'].x - framesBeforeFree['ws-medkit'].x)
+    + Math.abs(framesAfterFree['ws-medkit'].y - framesBeforeFree['ws-medkit'].y)
+  check('拖到空地 → 正常停在原地（不是一律拒绝）', freeShift > 60, `${Math.round(freeShift)}px`)
 
   // ---- 14. state survives a restart -----------------------------------
   // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).

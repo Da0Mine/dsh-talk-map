@@ -1,0 +1,12 @@
+  // A legal drop still sticks: drag a folder into empty space.
+  const framesBeforeFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const freeLabel = await box('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
+  await page.mouse.move(freeLabel.x + 18, freeLabel.y + 10)
+  await page.mouse.down()
+  await page.mouse.move(freeLabel.x + 40, freeLabel.y + 200, { steps: 14 })
+  await page.mouse.up()
+  await page.waitForTimeout(700)
+  const framesAfterFree = await page.evaluate(() => window.__harness.nodeBoxes().frames)
+  const freeShift = Math.abs(framesAfterFree['ws-medkit'].x - framesBeforeFree['ws-medkit'].x)
+    + Math.abs(framesAfterFree['ws-medkit'].y - framesBeforeFree['ws-medkit'].y)
+  check('拖到空地 → 正常停在原地（不是一律拒绝）', freeShift > 60, `${Math.round(freeShift)}px`)

@@ -887,6 +887,12 @@
   background: transparent;
 }
 
+/* Mid-drag over a neighbour: the drop will bounce, so say so before release. */
+.wsFrameBlocked {
+  border-color: rgb(242, 78, 78) !important;
+  box-shadow: 0 0 0 1px rgba(242, 78, 78, 0.45) inset;
+}
+
 .wsFrameSelected {
   border-style: solid;
   border-color: var(--dsw-alias-brand-primary);

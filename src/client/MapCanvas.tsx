@@ -99,17 +99,14 @@ function gridPosition(origin: { x: number; y: number }, index: number): { x: num
   }
 }
 
-/** Smallest shift that makes other stop overlapping 
-ect (0,0 when clear). */
-function separationShift(rect: FrameGeometry, other: FrameGeometry): { x: number; y: number } {
+/**
+ * True when the two rects share actual area. Folders are never allowed to sit
+ * on each other, so a drop that overlaps bounces back instead of being stored.
+ */
+function rectsOverlap(rect: FrameGeometry, other: FrameGeometry): boolean {
   const overlapX = Math.min(rect.x + rect.width, other.x + other.width) - Math.max(rect.x, other.x)
   const overlapY = Math.min(rect.y + rect.height, other.y + other.height) - Math.max(rect.y, other.y)
-  if (overlapX <= 1 || overlapY <= 1) return { x: 0, y: 0 }
-  if (overlapX <= overlapY) {
-    // Separate horizontally: push other to whichever side it already leans.
-    return { x: rect.x + rect.width / 2 <= other.x + other.width / 2 ? overlapX : -overlapX, y: 0 }
-  }
-  return { x: 0, y: rect.y + rect.height / 2 <= other.y + other.height / 2 ? overlapY : -overlapY }
+  return overlapX > 1 && overlapY > 1
 }
 
 /** Frame rect that fits a set of member cards. */
@@ -196,7 +193,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .filter(([, entry]) => typeof entry?.text === 'string' && cleanPreviewText(entry.text) !== '')
       .map(([sessionId, entry]) => [sessionId, entry.stamp])),
   )
-  const { screenToFlowPosition, zoomTo } = useReactFlow()
+  const { screenToFlowPosition, zoomTo, setNodes } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<ReadonlySet<string>>(new Set())
@@ -229,6 +226,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // gesture commits.
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null)
   const [liveFrame, setLiveFrame] = useState<{ groupId: string; rect: FrameGeometry } | null>(null)
+  // Folder currently overlapping another one while being dragged (drop will bounce).
+  const [blockedFrame, setBlockedFrame] = useState<string | null>(null)
   // While a rubber-band drag is running, the node/edge arrays are frozen:
   // a mid-drag data refresh (digest SSE, running-state flip) re-renders the
   // flow and corrupts React Flow's in-flight hit testing — the intermittent
@@ -823,6 +822,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           width: rect.width,
           height: rect.height,
           ...(wsColors[groupId] !== undefined ? { colorTag: wsColors[groupId] } : {}),
+          // Red outline while this folder overlaps another one mid-drag.
+          blocked: blockedFrame === groupId,
           onResizeStart: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => {
             beginResize(groupId, axis, event)
           },
@@ -1007,6 +1008,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     setIsSelecting(false)
   }
 
+  /** Put a dragged folder back where it started (an illegal drop). */
+  const rejectFrameDrop = (nodeId: string, base: FrameGeometry): void => {
+    setNodes(current => current.map(node => (
+      node.id === nodeId ? { ...node, position: { x: base.x, y: base.y } } : node
+    )))
+  }
+
   const onNodesChange = (changes: NodeChange<TalkMapNode>[]): void => {
     const removedCardIds = changes
       .filter((change): change is Extract<NodeChange<TalkMapNode>, { type: 'remove' }> => change.type === 'remove')
@@ -1029,21 +1037,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           }
           if (change.dragging === false) {
             setLiveFrame(null)
-            canvas.setWsFrameRect(groupId, rect)
+            setBlockedFrame(null)
+            // The drop has to be legal: folders never sit on each other. An
+            // overlapping drop is refused and the folder returns to where it
+            // started — the neighbour it brushed past does not move.
+            const collides = Object.entries(frameRects)
+              .some(([otherId, otherRect]) => otherId !== groupId && rectsOverlap(rect, otherRect))
+            if (collides) {
+              rejectFrameDrop(change.id, base)
+            } else {
+              canvas.setWsFrameRect(groupId, rect)
+            }
           } else if (change.dragging === true) {
             setLiveFrame({ groupId, rect })
-            // Folders are solid: whatever this one runs into is pushed just far
-            // enough to stop overlapping, and its cards reflow with the new rect.
-            for (const [otherId, otherRect] of Object.entries(frameRects)) {
-              if (otherId === groupId) continue
-              const shift = separationShift(rect, otherRect)
-              if (shift.x === 0 && shift.y === 0) continue
-              canvas.setWsFrameRect(otherId, {
-                ...otherRect,
-                x: otherRect.x + shift.x,
-                y: otherRect.y + shift.y,
-              })
-            }
+            // Nothing is pushed while dragging: the folder may travel over a
+            // neighbour, it just cannot be dropped there.
+            const blocked = Object.entries(frameRects)
+              .some(([otherId, otherRect]) => otherId !== groupId && rectsOverlap(rect, otherRect))
+            setBlockedFrame(blocked ? groupId : null)
           }
         } else if (change.dragging === false) {
           // Dropped. Slot order is recency, not position, so the card glides

@@ -27,6 +27,8 @@ export interface WsFrameData extends Record<string, unknown> {
   height: number
   /** Workspace colour: drives the frame border and the label chip. */
   colorTag?: string
+  /** The folder is being dragged over another one: a red outline warns that the drop will bounce. */
+  blocked?: boolean
   /** Pointer-down on a resize handle; the canvas owns the pointer capture. */
   onResizeStart?: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => void
 }
@@ -70,7 +72,7 @@ export function WsFrameNode(props: NodeProps<WsFrameNodeType>): React.JSX.Elemen
   }
   return (
     <div
-      className={`${styles['wsFrame']}${selected === true ? ` ${styles['wsFrameSelected']}` : ''}`}
+      className={`${styles['wsFrame']}${selected === true ? ` ${styles['wsFrameSelected']}` : ''}${data.blocked === true ? ` ${styles['wsFrameBlocked']}` : ''}`}
       style={{
         width: data.width,
         height: data.height,
