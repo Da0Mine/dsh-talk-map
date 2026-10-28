@@ -10461,19 +10461,16 @@ function reportToHost(payload) {
 async function searchSessions(query) {
   const normalize = (items) => (items ?? []).filter((item) => typeof item.sessionId === "string").map((item) => ({ sessionId: item.sessionId, snippet: item.snippet ?? "" }));
   try {
-    const page = await callRpc("session/search", { query });
-    const hits = normalize(page.items);
-    if (hits.length > 0) return hits;
-    reportToHost({ phase: "search-rpc-empty", query });
-    return hits;
-  } catch (error) {
-    reportToHost({ phase: "search-rpc-failed", query, message: String(error?.message ?? error) });
-  }
-  try {
-    const fallback = await talkMapApi.searchSessions(query);
-    return normalize(fallback.items);
+    const page = await talkMapApi.searchSessions(query);
+    return normalize(page.items);
   } catch (error) {
     reportToHost({ phase: "search-host-failed", query, message: String(error?.message ?? error) });
+  }
+  try {
+    const page = await callRpc("session/search", { query });
+    return normalize(page.items);
+  } catch (error) {
+    reportToHost({ phase: "search-rpc-failed", query, message: String(error?.message ?? error) });
     throw error;
   }
 }

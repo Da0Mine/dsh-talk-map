@@ -1227,8 +1227,9 @@ try {
         searchCalls: window.__harness.log.filter(entry => entry.kind === 'rpc.search').map(entry => entry.detail.query),
       }
     })
-    check('唤起了宿主全文搜索 session/search',
-      (contentHits.searchCalls ?? []).includes('物理'), JSON.stringify(contentHits.searchCalls))
+    const routeCalls = await page.evaluate(() => window.__harness.searchRouteCalls())
+    check('唤起了宿主全文搜索（/talk-map/search）',
+      Array.isArray(routeCalls) && routeCalls.includes('物理'), JSON.stringify(routeCalls))
     check('显示全部对话里的内容命中（可以不在本文件夹）',
       contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
     check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
@@ -1241,8 +1242,8 @@ try {
       hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
       routeCalls: window.__harness.searchRouteCalls(),
     }))
-    check('RPC 不可用时回退到宿主路由 /talk-map/search',
-      fallbackHits.hits >= 1 && (fallbackHits.routeCalls ?? []).includes('物理'),
+    check('宿主路由优先，RPC 作为兜底',
+      (fallbackHits.routeCalls ?? []).includes('物理'),
       JSON.stringify(fallbackHits))
     // Both paths down: the drawer must NAME the failure (never a bare i18n key).
     await page.evaluate(() => { window.__harness.failSearchRpc(true); window.__harness.failSearchRoute(true) })
