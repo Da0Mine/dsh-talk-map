@@ -32,6 +32,11 @@ function rowStep(scroller: HTMLElement): number {
   return first.offsetHeight + 12
 }
 
+/** The Host answers this when the deployment turned the session index off. */
+function isIndexDisabled(message: string): boolean {
+  return message.includes('search is disabled') || message.includes('SESSION_QUERY_SEARCH_DISABLED')
+}
+
 /** One full-text hit: which conversation, its title, and where it matched. */
 export interface DrawerSearchHit {
   sessionId: string
@@ -185,7 +190,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           {searchError !== null
             ? (
                 <span className={styles['drawerSearchError']} title={searchError}>
-                  {t('stack.searchFailed')}：{searchError.length > 70 ? searchError.slice(0, 70) + '…' : searchError}
+                  {isIndexDisabled(searchError)
+                    ? t('stack.searchDisabled')
+                    : t('stack.searchFailed') + '：' + (searchError.length > 70 ? searchError.slice(0, 70) + '…' : searchError)}
                 </span>
               )
             : null}

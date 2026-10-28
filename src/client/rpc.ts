@@ -80,17 +80,22 @@ export async function searchSessions(query: string): Promise<ContentHit[]> {
   // entry point that actually works from inside the Host. The API-domain
   // endpoint (session/search) needs an owning Agent and answers
   // SessionQueryError when the plugin asks, so it is only the fallback.
+  let routeError: Error | undefined
   try {
     const page = await talkMapApi.searchSessions(query)
     return normalize(page.items)
   } catch (error) {
-    reportToHost({ phase: 'search-host-failed', query, message: String((error as Error)?.message ?? error) })
+    routeError = error as Error
+    reportToHost({ phase: 'search-host-failed', query, message: String(routeError?.message ?? error) })
   }
   try {
     const page = await callRpc<{ items?: { sessionId: string; snippet?: string }[] }>('session/search', { query })
     return normalize(page.items)
   } catch (error) {
     reportToHost({ phase: 'search-rpc-failed', query, message: String((error as Error)?.message ?? error) })
-    throw error
+    // Keep BOTH reasons: the Host route is the one that knows whether the
+    // deployment disabled the index, so its message must not be lost.
+    const combined = [routeError?.message, (error as Error)?.message].filter(Boolean).join('；')
+    throw new Error(combined === '' ? 'search failed' : combined)
   }
 }

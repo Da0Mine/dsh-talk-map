@@ -188,6 +188,7 @@
   const searchRouteCalls = []
   let searchRpcFails = false
   let searchRouteFails = false
+  let searchRouteMessage = 'host search route down'
   const posts = []
   /** Every POST the map makes to dsh-recycle-bin's route. */
   const recycleCalls = []
@@ -224,7 +225,7 @@
       // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
     if (path.indexOf('/talk-map/search') >= 0) {
-      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: 'host search route down' }), { status: 500, headers: { 'content-type': 'application/json' } }))
+      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
       const items = query.includes('物理') || query.includes('Matter')
@@ -252,7 +253,7 @@
     // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
     if (path.indexOf('/talk-map/search') >= 0) {
-      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: 'host search route down' }), { status: 500, headers: { 'content-type': 'application/json' } }))
+      if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
       const items = query.includes('物理') || query.includes('Matter')
@@ -607,6 +608,10 @@
     },
     failSearchRoute(fail) {
       searchRouteFails = fail === true
+    },
+    /** Make the route answer with a specific message (e.g. index disabled). */
+    searchRouteError(text) {
+      searchRouteMessage = String(text)
     },
     searchRouteCalls() {
       return searchRouteCalls.slice()

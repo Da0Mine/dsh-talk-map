@@ -376,6 +376,7 @@ var zh = {
   "stack.searchPlaceholder": "搜索标题，也能搜全部对话内容",
   "stack.searching": "全文搜索中…",
   "stack.searchFailed": "全文搜索失败",
+  "stack.searchDisabled": "全文搜索未启用（本机索引关闭）",
   "stack.noTitleMatch": "没有标题匹配的对话",
   "stack.contentHits": "全部对话里的命中 · {n} 条",
   "menu.empty": "（没有可选项）",
@@ -504,6 +505,7 @@ var en = {
   "stack.noTitleMatch": "No title matches",
   "stack.contentHits": "Matches in all conversations · {n}",
   "stack.searchFailed": "Full-text search failed",
+  "stack.searchDisabled": "Full-text search is off (session index disabled)",
   "stack.hint": "Scroll to page",
   "stack.close": "Close (Esc)",
   "menu.empty": "(nothing to pick)",
@@ -10460,18 +10462,21 @@ function reportToHost(payload) {
 }
 async function searchSessions(query) {
   const normalize = (items) => (items ?? []).filter((item) => typeof item.sessionId === "string").map((item) => ({ sessionId: item.sessionId, snippet: item.snippet ?? "" }));
+  let routeError;
   try {
     const page = await talkMapApi.searchSessions(query);
     return normalize(page.items);
   } catch (error) {
-    reportToHost({ phase: "search-host-failed", query, message: String(error?.message ?? error) });
+    routeError = error;
+    reportToHost({ phase: "search-host-failed", query, message: String(routeError?.message ?? error) });
   }
   try {
     const page = await callRpc("session/search", { query });
     return normalize(page.items);
   } catch (error) {
     reportToHost({ phase: "search-rpc-failed", query, message: String(error?.message ?? error) });
-    throw error;
+    const combined = [routeError?.message, error?.message].filter(Boolean).join("；");
+    throw new Error(combined === "" ? "search failed" : combined);
   }
 }
 
@@ -11648,6 +11653,9 @@ function rowStep(scroller) {
   if (nextRow !== void 0) return nextRow.offsetTop - first.offsetTop;
   return first.offsetHeight + 12;
 }
+function isIndexDisabled(message) {
+  return message.includes("search is disabled") || message.includes("SESSION_QUERY_SEARCH_DISABLED");
+}
 function StackDrawer(props) {
   const scrollerRef = (0, import_react7.useRef)(null);
   const [query, setQuery] = (0, import_react7.useState)("");
@@ -11759,11 +11767,7 @@ function StackDrawer(props) {
             }
           ),
           searching ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
-          searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: [
-            t("stack.searchFailed"),
-            "：",
-            searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError
-          ] }) : null
+          searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
           "div",

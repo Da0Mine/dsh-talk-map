@@ -1258,6 +1258,23 @@ try {
       typeof searchFailure === 'string' && searchFailure.includes('全文搜索失败')
         && (searchFailure.includes('session/search') || searchFailure.includes('/talk-map/search')),
       String(searchFailure))
+    // The deployment may have the session index switched off: that deserves a
+    // calmer sentence than a raw SessionQueryError.
+    await page.evaluate(() => {
+      window.__harness.searchRouteError('session search is disabled: this deployment configures the session-query index with openAt never')
+      window.__harness.failSearchRpc(true)
+      window.__harness.failSearchRoute(true)
+    })
+    await page.fill('[data-talkmap-drawer-search]', '')
+    await page.keyboard.type('物理')
+    await page.waitForTimeout(900)
+    const disabledLabel = await page.evaluate(() => {
+      const node = document.querySelector('[class*="drawerSearchError"]')
+      return node === null ? null : node.textContent.trim()
+    })
+    check('索引被部署关掉时给出明确说明',
+      typeof disabledLabel === 'string' && disabledLabel.includes('未启用'), String(disabledLabel))
+    await page.evaluate(() => { window.__harness.failSearchRpc(false); window.__harness.failSearchRoute(false) })
     await page.evaluate(() => { window.__harness.failSearchRpc(false); window.__harness.failSearchRoute(false) })
     await page.evaluate(() => window.__harness.failSearchRpc(false))
   }
