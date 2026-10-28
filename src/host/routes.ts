@@ -329,6 +329,27 @@ export function mountTalkMapRoutes(
 
         // Card bodies: the last thing the USER said in each session, read off the
         // session surface. Batched — the map asks once per change, not per card.
+        /**
+         * Full-text search over every conversation, on the Host's own service.
+         * The drawer prefers the shared connection's session/search, but falls
+         * back here so the feature cannot degrade to title-only matching.
+         */
+        if (route === 'POST /talk-map/search') {
+          const body = await readJsonBody(request) as { query?: unknown } | undefined
+          const query = typeof body?.query === 'string' ? body.query.trim() : ''
+          const search = (runtime as { search?: (q: string) => Promise<{ items?: unknown[]; hasMore?: boolean }> }).search
+          if (query === '' || search === undefined) {
+            sendJson(response, 200, { items: [], hasMore: false })
+            return
+          }
+          try {
+            const page = await search(query)
+            sendJson(response, 200, { items: page?.items ?? [], hasMore: page?.hasMore === true })
+          } catch (error) {
+            sendJson(response, 500, { error: String((error as Error)?.message ?? error) })
+          }
+          return
+        }
         if (route === 'POST /talk-map/last-user') {
           const body = await readJsonBody(request)
           const ids = Array.isArray((body as { sessionIds?: unknown }).sessionIds)

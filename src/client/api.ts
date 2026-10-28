@@ -81,6 +81,14 @@ export const talkMapApi = {
   lastUserMessages(sessionIds: readonly string[]): Promise<{ texts: Record<string, string> }> {
     return postJson('/talk-map/last-user', { sessionIds })
   },
+  /**
+   * Full-text search across every conversation, done Host-side. This is the
+   * fallback when the shared connection's RPC surface is unavailable, so the
+   * drawer's search never silently degrades to title-only matching.
+   */
+  searchSessions(query: string): Promise<{ items: { sessionId: string; snippet: string }[]; hasMore?: boolean }> {
+    return postJson('/talk-map/search', { query })
+  },
   ensureDir(path: string): Promise<{ ok: true; path: string }> {
     return postJson('/talk-map/fs/ensure-dir', { path })
   },

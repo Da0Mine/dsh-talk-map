@@ -78,6 +78,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<DrawerSearchHit[]>([])
   const [searching, setSearching] = useState(false)
+  const [searchError, setSearchError] = useState<string | null>(null)
 
   // Title filter is instant; the content search is debounced and runs on the
   // Host (session/search), so it also covers conversations outside this folder.
@@ -86,14 +87,22 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     if (trimmed.length < 2 || props.onSearchContent === undefined) {
       setHits([])
       setSearching(false)
+      setSearchError(null)
       return
     }
     let alive = true
     setSearching(true)
     const timer = setTimeout(() => {
       void props.onSearchContent?.(trimmed)
-        .then((found) => { if (alive) setHits(found) })
-        .catch(() => { if (alive) setHits([]) })
+        .then((found) => { if (alive) { setHits(found); setSearchError(null) } })
+        .catch((cause) => {
+          if (!alive) return
+          // Never swallow it: the drawer says what the Host answered, which is
+          // the only way to tell "no hits" from "the search did not run".
+          console.error('[dsh-talk-map] content search failed:', cause)
+          setHits([])
+          setSearchError(String(cause?.message ?? cause))
+        })
         .finally(() => { if (alive) setSearching(false) })
     }, 300)
     return () => { alive = false; clearTimeout(timer) }
@@ -173,6 +182,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             onKeyDown={(event) => { if (event.key === 'Escape') event.stopPropagation() }}
           />
           {searching ? <span className={styles['drawerSearchState']}>{t('stack.searching')}</span> : null}
+          {searchError !== null
+            ? <span className={styles['drawerSearchError']} title={searchError}>{t('stack.searchFailed')}</span>
+            : null}
         </div>
         <div
           className={styles['drawerScroll']}
@@ -252,9 +264,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
               </button>
             )
           })}
-          {needle !== '' && visibleItems.length === 0
-            ? <div className={styles['drawerEmpty']}>{t('stack.noTitleMatch')}</div>
-            : null}
           {hits.length > 0
             ? (
                 <div className={styles['drawerHits']}>
@@ -275,6 +284,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   ))}
                 </div>
               )
+            : null}
+          {needle !== '' && visibleItems.length === 0
+            ? <div className={styles['drawerEmpty']}>{t('stack.noTitleMatch')}</div>
             : null}
         </div>
       </div>

@@ -272,6 +272,14 @@ var talkMapApi = {
   lastUserMessages(sessionIds) {
     return postJson("/talk-map/last-user", { sessionIds });
   },
+  /**
+   * Full-text search across every conversation, done Host-side. This is the
+   * fallback when the shared connection's RPC surface is unavailable, so the
+   * drawer's search never silently degrades to title-only matching.
+   */
+  searchSessions(query) {
+    return postJson("/talk-map/search", { query });
+  },
   ensureDir(path) {
     return postJson("/talk-map/fs/ensure-dir", { path });
   },
@@ -10432,6 +10440,36 @@ async function callRpc(endpoint, request = {}) {
   }
   return result.value;
 }
+function reportToHost(payload) {
+  try {
+    void fetch("/talk-map/client-boot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...payload })
+    }).catch(() => {
+    });
+  } catch {
+  }
+}
+async function searchSessions(query) {
+  const normalize = (items) => (items ?? []).filter((item) => typeof item.sessionId === "string").map((item) => ({ sessionId: item.sessionId, snippet: item.snippet ?? "" }));
+  try {
+    const page = await callRpc("session/search", { query });
+    const hits = normalize(page.items);
+    if (hits.length > 0) return hits;
+    reportToHost({ phase: "search-rpc-empty", query });
+    return hits;
+  } catch (error) {
+    reportToHost({ phase: "search-rpc-failed", query, message: String(error?.message ?? error) });
+  }
+  try {
+    const fallback = await talkMapApi.searchSessions(query);
+    return normalize(fallback.items);
+  } catch (error) {
+    reportToHost({ phase: "search-host-failed", query, message: String(error?.message ?? error) });
+    throw error;
+  }
+}
 
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
@@ -11611,20 +11649,28 @@ function StackDrawer(props) {
   const [query, setQuery] = (0, import_react7.useState)("");
   const [hits, setHits] = (0, import_react7.useState)([]);
   const [searching, setSearching] = (0, import_react7.useState)(false);
+  const [searchError, setSearchError] = (0, import_react7.useState)(null);
   (0, import_react7.useEffect)(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2 || props.onSearchContent === void 0) {
       setHits([]);
       setSearching(false);
+      setSearchError(null);
       return;
     }
     let alive = true;
     setSearching(true);
     const timer4 = setTimeout(() => {
       void props.onSearchContent?.(trimmed).then((found) => {
-        if (alive) setHits(found);
-      }).catch(() => {
-        if (alive) setHits([]);
+        if (alive) {
+          setHits(found);
+          setSearchError(null);
+        }
+      }).catch((cause) => {
+        if (!alive) return;
+        console.error("[dsh-talk-map] content search failed:", cause);
+        setHits([]);
+        setSearchError(String(cause?.message ?? cause));
       }).finally(() => {
         if (alive) setSearching(false);
       });
@@ -11708,7 +11754,8 @@ function StackDrawer(props) {
               }
             }
           ),
-          searching ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null
+          searching ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
+          searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: t("stack.searchFailed") }) : null
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
           "div",
@@ -11789,7 +11836,6 @@ function StackDrawer(props) {
                   item.cardId
                 );
               }),
-              needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null,
               hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
                 /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: t("stack.contentHits", { n: String(hits.length) }) }),
                 hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
@@ -11808,7 +11854,8 @@ function StackDrawer(props) {
                   },
                   hit.sessionId
                 ))
-              ] }) : null
+              ] }) : null,
+              needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
             ]
           }
         )
@@ -13395,14 +13442,11 @@ function CanvasInner(props) {
               openMenu(event, "card", cardId);
             },
             onSearchContent: async (query) => {
-              const page = await callRpc(
-                "session/search",
-                { query }
-              );
-              return (page.items ?? []).slice(0, 20).map((item) => ({
-                sessionId: item.sessionId,
-                title: renamedTitles[item.sessionId] ?? sessions.byId[item.sessionId]?.displayTitle ?? item.sessionId,
-                snippet: item.snippet ?? ""
+              const found = await searchSessions(query);
+              return found.slice(0, 20).map((hit) => ({
+                sessionId: hit.sessionId,
+                title: renamedTitles[hit.sessionId] ?? sessions.byId[hit.sessionId]?.displayTitle ?? hit.sessionId,
+                snippet: hit.snippet
               }));
             },
             onOpenSession: (sessionId) => {

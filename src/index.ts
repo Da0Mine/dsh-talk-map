@@ -62,7 +62,7 @@ export function apply(ctx: OuterContext): void {
   })
 
   // Layer 2: digest pipeline (needs the llm route and session surfaces).
-  ctx.inject(['sessions', 'sessionQuery', 'llm', 'agentDefaultModel'], (injected: unknown) => {
+  ctx.inject(['sessions', 'sessionQuery', 'sessionController', 'llm', 'agentDefaultModel'], (injected: unknown) => {
     const services = injected as DigestHostServices
     services.effect(() => {
       // Auto-sync is shelved: the pipeline's onFresh hook and
@@ -70,6 +70,11 @@ export function apply(ctx: OuterContext): void {
       const pipeline = new DigestPipeline(services, storeReady)
       const stop = pipeline.start()
       runtime.digest = pipeline
+    // Full-text search across every conversation, exposed to the drawer through
+    // POST /talk-map/search (see routes.ts).
+    runtime.search = (query: string) =>
+      (services as { sessionController?: { search: (r: { query: string }, s: AbortSignal) => Promise<unknown> } })
+        .sessionController?.search({ query }, new AbortController().signal)
       // Backfill: cards already on the board whose session has no digest yet
       // (historic conversations never hit the turn/end trigger).
       void storeReady.then((store) => {

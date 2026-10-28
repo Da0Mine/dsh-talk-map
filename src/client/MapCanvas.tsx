@@ -27,7 +27,7 @@ import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { drawerState } from './drawer-state.ts'
-import { callRpc } from './rpc.ts'
+import { callRpc, searchSessions } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
@@ -2008,16 +2008,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               // Full-text search runs on the Host (session/search), so it also
               // finds conversations that are not on this map at all.
               onSearchContent={async (query) => {
-                const page = await callRpc<{ items?: { sessionId: string; snippet?: string }[] }>(
-                  'session/search',
-                  { query },
-                )
-                return (page.items ?? []).slice(0, 20).map(item => ({
-                  sessionId: item.sessionId,
-                  title: renamedTitles[item.sessionId]
-                    ?? sessions.byId[item.sessionId]?.displayTitle
-                    ?? item.sessionId,
-                  snippet: item.snippet ?? '',
+                // searchSessions() tries the Host's generated endpoint first and
+                // falls back to our own Host route, so this cannot degrade to
+                // title-only matching.
+                const found = await searchSessions(query)
+                return found.slice(0, 20).map(hit => ({
+                  sessionId: hit.sessionId,
+                  title: renamedTitles[hit.sessionId]
+                    ?? sessions.byId[hit.sessionId]?.displayTitle
+                    ?? hit.sessionId,
+                  snippet: hit.snippet,
                 }))
               }}
               onOpenSession={(sessionId) => { openSession(sessionId) }}

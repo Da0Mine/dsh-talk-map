@@ -1232,6 +1232,19 @@ try {
     check('显示全部对话里的内容命中（可以不在本文件夹）',
       contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
     check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
+    // When the connection RPC cannot answer, the Host route must take over.
+    await page.evaluate(() => window.__harness.failSearchRpc(true))
+    await page.fill('[data-talkmap-drawer-search]', '')
+    await page.keyboard.type('物理')
+    await page.waitForTimeout(900)
+    const fallbackHits = await page.evaluate(() => ({
+      hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+      routeCalls: window.__harness.searchRouteCalls(),
+    }))
+    check('RPC 不可用时回退到宿主路由 /talk-map/search',
+      fallbackHits.hits >= 1 && (fallbackHits.routeCalls ?? []).includes('物理'),
+      JSON.stringify(fallbackHits))
+    await page.evaluate(() => window.__harness.failSearchRpc(false))
   }
   await page.evaluate(() => {
     const backdrop = document.querySelector('[class*="drawerBackdrop"]')

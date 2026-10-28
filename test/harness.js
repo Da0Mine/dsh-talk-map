@@ -183,7 +183,10 @@
     global: globalState,
   }
 
-  // ---- fetch / EventSource mocks ---------------------------------------
+  // ---- fetch / EventSource mocks ------------------------------------
+  /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
+  const searchRouteCalls = []
+  let searchRpcFails = false
   const posts = []
   /** Every POST the map makes to dsh-recycle-bin's route. */
   const recycleCalls = []
@@ -217,7 +220,17 @@
       if (path.includes('/talk-map/global') && body !== null && body.global !== undefined) {
         payload.global = body.global
       }
-      // The card body is the user's last message now, not an LLM digest.
+      // Host-side fallback for the drawer's full-text search (the client calls
+    // this when the shared RPC surface does not answer).
+    if (path.indexOf('/talk-map/search') >= 0) {
+      searchRouteCalls.push(String(body?.query ?? ''))
+      const query = String(body?.query ?? '')
+      const items = query.includes('物理') || query.includes('Matter')
+        ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+        : []
+      return json({ items, hasMore: false })
+    }
+    // The card body is the user's last message now, not an LLM digest.
       if (path.indexOf('/talk-map/last-user') >= 0) {
         const texts = {}
         for (const sessionId of body?.sessionIds ?? []) {
@@ -233,6 +246,16 @@
     if (path.indexOf('/talk-map/state') >= 0) return json(payload)
     if (path.indexOf('/talk-map/defaults') >= 0) {
       return json({ model: { provider: 'deepseek', model: 'deepseek-v4-pro' }, preset: 'standard' })
+    }
+    // Host-side fallback for the drawer's full-text search (the client calls
+    // this when the shared RPC surface does not answer).
+    if (path.indexOf('/talk-map/search') >= 0) {
+      searchRouteCalls.push(String(body?.query ?? ''))
+      const query = String(body?.query ?? '')
+      const items = query.includes('物理') || query.includes('Matter')
+        ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+        : []
+      return json({ items, hasMore: false })
     }
     // The card body is the user's last message now, not an LLM digest.
     if (path.indexOf('/talk-map/last-user') >= 0) {
@@ -289,6 +312,9 @@
             return Promise.resolve({ ok: true, value: { sessionId } })
           }
           if (endpoint === 'session/search') {
+            if (searchRpcFails) {
+              return Promise.resolve({ ok: false, error: { code: 'gateway/unavailable', message: 'rpc surface unavailable' } })
+            }
             const query = String(payload?.args?.request?.query ?? '')
             log('rpc.search', { query })
             // Fixture: the word appears in a conversation that is NOT on the map.
@@ -571,6 +597,13 @@
       sessionRows[sessionId] = { ...sessionRows[sessionId], running: false }
       sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
       sync()
+    },
+    /** Make the connection RPC path fail, forcing the Host-route fallback. */
+    failSearchRpc(fail) {
+      searchRpcFails = fail === true
+    },
+    searchRouteCalls() {
+      return searchRouteCalls.slice()
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }
