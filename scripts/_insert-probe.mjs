@@ -4,7 +4,7 @@ import fs from 'node:fs'
 const probe = 'test/probe.mjs'
 const lines = fs.readFileSync(probe, 'utf8').split('\n')
 const block = fs.readFileSync('scripts/_probe-block.txt', 'utf8').replace(/\n$/, '').split('\n')
-const marker = "check('再点一张 → 勾选框变勾 + 计数 2'"
+const marker = "// Leave it closed for the checks that follow."
 
 const at = lines.findIndex(line => line.includes(marker))
 if (at < 0) {

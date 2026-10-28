@@ -4,7 +4,7 @@
  * 100% zoom), in a multi-column grid. The wheel pages one ROW at a time, like a
  * phone's app drawer.
  */
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
@@ -32,6 +32,13 @@ function rowStep(scroller: HTMLElement): number {
   return first.offsetHeight + 12
 }
 
+/** One full-text hit: which conversation, its title, and where it matched. */
+export interface DrawerSearchHit {
+  sessionId: string
+  title: string
+  snippet: string
+}
+
 export interface StackEntry {
   cardId: string
   sessionId: string
@@ -56,11 +63,46 @@ export interface StackDrawerProps {
   onOpenCard: (cardId: string) => void
   /** Right-click on a card: the same card menu the grid uses. */
   onCardMenu?: (cardId: string, event: React.MouseEvent) => void
+  /**
+   * Full-text search across EVERY conversation (the Host session/search).
+   * Absent = the drawer only filters its own titles.
+   */
+  onSearchContent?: (query: string) => Promise<DrawerSearchHit[]>
+  /** Open a session found by the content search (it may live in another folder). */
+  onOpenSession?: (sessionId: string) => void
   onClose: () => void
 }
 
 export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
+  const [query, setQuery] = useState('')
+  const [hits, setHits] = useState<DrawerSearchHit[]>([])
+  const [searching, setSearching] = useState(false)
+
+  // Title filter is instant; the content search is debounced and runs on the
+  // Host (session/search), so it also covers conversations outside this folder.
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length < 2 || props.onSearchContent === undefined) {
+      setHits([])
+      setSearching(false)
+      return
+    }
+    let alive = true
+    setSearching(true)
+    const timer = setTimeout(() => {
+      void props.onSearchContent?.(trimmed)
+        .then((found) => { if (alive) setHits(found) })
+        .catch(() => { if (alive) setHits([]) })
+        .finally(() => { if (alive) setSearching(false) })
+    }, 300)
+    return () => { alive = false; clearTimeout(timer) }
+  }, [query, props.onSearchContent])
+
+  const needle = query.trim().toLowerCase()
+  const visibleItems = needle === ''
+    ? props.items
+    : props.items.filter(item => item.title.toLowerCase().includes(needle))
   // Coming back from a conversation should land on the same rows.
   useEffect(() => {
     const scroller = scrollerRef.current
@@ -120,12 +162,24 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             ×
           </button>
         </div>
+        <div className={styles['drawerSearchRow']}>
+          <input
+            className={styles['drawerSearch']}
+            value={query}
+            placeholder={t('stack.searchPlaceholder')}
+            aria-label={t('stack.searchPlaceholder')}
+            data-talkmap-drawer-search=""
+            onChange={(event) => { setQuery(event.target.value) }}
+            onKeyDown={(event) => { if (event.key === 'Escape') event.stopPropagation() }}
+          />
+          {searching ? <span className={styles['drawerSearchState']}>{t('stack.searching')}</span> : null}
+        </div>
         <div
           className={styles['drawerScroll']}
           ref={scrollerRef}
           onScroll={(event) => { drawerState.writeScroll(event.currentTarget.scrollTop) }}
         >
-          {props.items.map(item => {
+          {visibleItems.map(item => {
             const classNames = [styles['card'], styles['drawerCard']]
             if (item.glow !== undefined) classNames.push(styles[LAMP_CLASS[item.glow]] ?? '')
             // Same rule as the grid: a card with nothing to report recedes, one
@@ -198,6 +252,30 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
               </button>
             )
           })}
+          {needle !== '' && visibleItems.length === 0
+            ? <div className={styles['drawerEmpty']}>{t('stack.noTitleMatch')}</div>
+            : null}
+          {hits.length > 0
+            ? (
+                <div className={styles['drawerHits']}>
+                  <div className={styles['drawerHitsHead']}>
+                    {t('stack.contentHits', { n: String(hits.length) })}
+                  </div>
+                  {hits.map(hit => (
+                    <button
+                      key={hit.sessionId}
+                      type="button"
+                      className={styles['drawerHit']}
+                      data-talkmap-search-hit={hit.sessionId}
+                      onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                    >
+                      <span className={styles['drawerHitTitle']}>{hit.title}</span>
+                      <span className={styles['drawerHitSnippet']}>{hit.snippet}</span>
+                    </button>
+                  ))}
+                </div>
+              )
+            : null}
         </div>
       </div>
     </div>

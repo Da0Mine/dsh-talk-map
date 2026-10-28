@@ -2005,6 +2005,22 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               // Right-click inside the drawer opens the SAME card menu as the
               // grid: 置顶 / 重命名 / 标为未读 / 归档 / 删除 / 批量.
               onCardMenu={(cardId, event) => { openMenu(event, 'card', cardId) }}
+              // Full-text search runs on the Host (session/search), so it also
+              // finds conversations that are not on this map at all.
+              onSearchContent={async (query) => {
+                const page = await callRpc<{ items?: { sessionId: string; snippet?: string }[] }>(
+                  'session/search',
+                  { query },
+                )
+                return (page.items ?? []).slice(0, 20).map(item => ({
+                  sessionId: item.sessionId,
+                  title: renamedTitles[item.sessionId]
+                    ?? sessions.byId[item.sessionId]?.displayTitle
+                    ?? item.sessionId,
+                  snippet: item.snippet ?? '',
+                }))
+              }}
+              onOpenSession={(sessionId) => { openSession(sessionId) }}
               onClose={closeDrawer}
             />
           )

@@ -1,50 +1,38 @@
-  // ---- 11b. the stack drawer survives jumping into a conversation --------
-  // Open the daily drawer, jump into one of its conversations, then come back.
-  // The panel unmounts on the way out, so this only works because the drawer
-  // remembers which folder it was on.
-  const drawerOpenClick = await page.evaluate(() => {
-    const face = document.querySelector('.react-flow__node[data-id="stack-ws-daily"] [class*="stackFace"]')
-    if (face === null) return false
-    face.click()
-    return true
+  // ---- 11c. drawer search: titles + full conversation content ------------
+  const searchBoxPoint = await page.evaluate(() => {
+    const input = document.querySelector('[data-talkmap-drawer-search]')
+    if (input === null) return null
+    const r = input.getBoundingClientRect()
+    return { x: Math.round(r.x + 30), y: Math.round(r.y + r.height / 2) }
   })
-  await page.waitForTimeout(600)
-  const drawerBefore = await page.evaluate(() => {
-    const head = document.querySelector('[class*="drawerTitle"]')
-    return {
-      open: document.querySelector('[class*="drawerBackdrop"]') !== null,
-      title: head === null ? null : head.textContent.trim(),
-      rows: document.querySelectorAll('[data-stack-card]').length,
-    }
-  })
-  check('堆叠抽屉可以打开', drawerOpenClick === true && drawerBefore.open === true, JSON.stringify(drawerBefore))
-  await page.evaluate(() => {
-    const row = document.querySelector('[data-stack-card]')
-    if (row !== null) row.click()
-  })
-  await page.waitForTimeout(1000)
-  const leftMap = await page.evaluate(() => document.querySelector('[class*="tm_panel"]') === null)
-  check('从抽屉点卡片会跳进对话', leftMap === true, String(leftMap))
-  await page.evaluate(() => {
-    const button = document.querySelector('[class*="tm_sideButton"]')
-    if (button !== null) button.click()
-  })
-  await page.waitForTimeout(1000)
-  const drawerAfter = await page.evaluate(() => {
-    const head = document.querySelector('[class*="drawerTitle"]')
-    return {
-      open: document.querySelector('[class*="drawerBackdrop"]') !== null,
-      title: head === null ? null : head.textContent.trim(),
-      rows: document.querySelectorAll('[data-stack-card]').length,
-    }
-  })
-  check('回到地图时抽屉还开着（保留打开进度）',
-    drawerAfter.open === true && drawerAfter.title === drawerBefore.title,
-    JSON.stringify({ before: drawerBefore, after: drawerAfter }))
-  check('抽屉里的内容也没丢', drawerAfter.rows === drawerBefore.rows,
-    String(drawerBefore.rows) + ' → ' + String(drawerAfter.rows))
-  await page.evaluate(() => {
-    const backdrop = document.querySelector('[class*="drawerBackdrop"]')
-    if (backdrop !== null) backdrop.click()
-  })
-  await page.waitForTimeout(300)
+  check('抽屉里有搜索框', searchBoxPoint !== null, JSON.stringify(searchBoxPoint))
+  if (searchBoxPoint !== null) {
+    await page.mouse.click(searchBoxPoint.x, searchBoxPoint.y)
+    await page.keyboard.type('标注')
+    await page.waitForTimeout(400)
+    const titleFiltered = await page.evaluate(() => ({
+      rows: [...document.querySelectorAll('[data-stack-card]')].map(node => node.textContent),
+      hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+    }))
+    check('按标题筛选抽屉里的对话',
+      titleFiltered.rows.length === 1 && (titleFiltered.rows[0] ?? '').includes('标注'),
+      JSON.stringify(titleFiltered))
+    // now a term that only exists in conversation CONTENT (harness: s3)
+    await page.fill('[data-talkmap-drawer-search]', '')
+    await page.keyboard.type('物理')
+    await page.waitForTimeout(900)
+    const contentHits = await page.evaluate(() => {
+      const hits = [...document.querySelectorAll('[data-talkmap-search-hit]')]
+      return {
+        count: hits.length,
+        sessionIds: hits.map(node => node.getAttribute('data-talkmap-search-hit')),
+        snippet: hits[0] === undefined ? null : hits[0].textContent,
+        searchCalls: window.__harness.log.filter(entry => entry.kind === 'rpc.search').map(entry => entry.detail.query),
+      }
+    })
+    check('唤起了宿主全文搜索 session/search',
+      (contentHits.searchCalls ?? []).includes('物理'), JSON.stringify(contentHits.searchCalls))
+    check('显示全部对话里的内容命中（可以不在本文件夹）',
+      contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
+    check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
+  }

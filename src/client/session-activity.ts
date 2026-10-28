@@ -143,6 +143,14 @@ export const sessionActivity = {
         if (finished.delete(sessionId)) changed = true
         if (interrupted.delete(sessionId)) changed = true
       }
+      // The shell itself says this completion has been read — you opened it from
+      // a desktop notification, the sidebar, anywhere that is not this map. Our
+      // mark only covers the case where the shell stays quiet about a run it
+      // could not see finished, so once the shell says "read", drop it.
+      if (finished.has(sessionId) && fact?.completionUnread === false) {
+        finished.delete(sessionId)
+        changed = true
+      }
     }
     if (changed) {
       persist()

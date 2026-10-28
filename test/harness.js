@@ -288,6 +288,15 @@
             log('rpc.create', request)
             return Promise.resolve({ ok: true, value: { sessionId } })
           }
+          if (endpoint === 'session/search') {
+            const query = String(payload?.args?.request?.query ?? '')
+            log('rpc.search', { query })
+            // Fixture: the word appears in a conversation that is NOT on the map.
+            const hits = query.includes('物理') || query.includes('Matter')
+              ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+              : []
+            return Promise.resolve({ ok: true, value: { items: hits, hasMore: false } })
+          }
           if (endpoint === 'session/prompt') {
             log('rpc.prompt', payload?.args?.request)
             return Promise.resolve({ ok: true, value: { accepted: true } })
@@ -544,6 +553,22 @@
       next.set(sessionId, fact)
       statusById = next
       sessionRows[sessionId] = { ...sessionRows[sessionId], running, updatedAt: Date.now() }
+      sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
+      sync()
+    },
+    /**
+     * The user opened this session from somewhere else (a desktop notification,
+     * the sidebar): the shell marks the completion read and clears the status
+     * bit — the map must stop showing its own 待查看 mark.
+     */
+    notificationJump(sessionId) {
+      const next = new Map(statusById)
+      const fact = { ...(next.get(sessionId) ?? {}) }
+      delete fact.running
+      fact.completionUnread = false
+      next.set(sessionId, fact)
+      statusById = next
+      sessionRows[sessionId] = { ...sessionRows[sessionId], running: false }
       sessionsState = { ids: Object.keys(sessionRows), byId: { ...sessionRows } }
       sync()
     },

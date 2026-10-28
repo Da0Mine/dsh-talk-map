@@ -1,0 +1,36 @@
+  // ---- 4e. read elsewhere → the map's own mark must go away ---------------
+  // Finished while the map was up (mark appears), then the user opened it from
+  // the desktop notification: the shell reports the completion as read and the
+  // 待查看 lamp has to disappear.
+  const notifySession = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined && item.r.width > 10)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  if (notifySession !== null) {
+    await page.evaluate((id) => window.__harness.setRunning(id, true), notifySession)
+    await page.waitForTimeout(450)
+    await page.evaluate((id) => window.__harness.setRunning(id, false), notifySession)
+    await page.waitForTimeout(450)
+    const beforeRead = await page.evaluate((id) => {
+      const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+      const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+      return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+    }, notifySession)
+    check('地图开着时跑完 → 亮起待查看', beforeRead === 'done', String(beforeRead))
+    // the notification click: shell marks it read
+    await page.evaluate((id) => window.__harness.notificationJump(id), notifySession)
+    await page.waitForTimeout(600)
+    const afterRead = await page.evaluate((id) => {
+      const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+      const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+      return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+    }, notifySession)
+    check('从通知进去看过之后 → 待查看消失', afterRead !== 'done',
+      String(notifySession) + ' → ' + String(afterRead))
+  } else {
+    check('从通知进去看过之后 → 待查看消失', false, '没有可用的卡片')
+  }

@@ -691,6 +691,43 @@ try {
   check('关着地图时跑完 → 不亮「待查看」', closedFinish !== 'done',
     String(quietSession) + ' → ' + String(closedFinish))
 
+  // ---- 4e. read elsewhere → the map's own mark must go away ---------------
+  // Finished while the map was up (mark appears), then the user opened it from
+  // the desktop notification: the shell reports the completion as read and the
+  // 待查看 lamp has to disappear.
+  const notifySession = await page.evaluate(() => {
+    const state = window.__harness.state()
+    const entry = [...document.querySelectorAll('.react-flow__node')]
+      .map(el => ({ id: el.getAttribute('data-id'), r: el.getBoundingClientRect() }))
+      .filter(item => state.cards[item.id] !== undefined && item.r.width > 10)
+      .sort((a, b) => (a.r.y - b.r.y) || (a.r.x - b.r.x))[0]
+    return entry === undefined ? null : state.cards[entry.id].sessionId
+  })
+  if (notifySession !== null) {
+    await page.evaluate((id) => window.__harness.setRunning(id, true), notifySession)
+    await page.waitForTimeout(450)
+    await page.evaluate((id) => window.__harness.setRunning(id, false), notifySession)
+    await page.waitForTimeout(450)
+    const beforeRead = await page.evaluate((id) => {
+      const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+      const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+      return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+    }, notifySession)
+    check('地图开着时跑完 → 亮起待查看', beforeRead === 'done', String(beforeRead))
+    // the notification click: shell marks it read
+    await page.evaluate((id) => window.__harness.notificationJump(id), notifySession)
+    await page.waitForTimeout(600)
+    const afterRead = await page.evaluate((id) => {
+      const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+      const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+      return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+    }, notifySession)
+    check('从通知进去看过之后 → 待查看消失', afterRead !== 'done',
+      String(notifySession) + ' → ' + String(afterRead))
+  } else {
+    check('从通知进去看过之后 → 待查看消失', false, '没有可用的卡片')
+  }
+
   // ---- 4d. right-click a card INSIDE the stack drawer --------------------
   await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
   await page.waitForTimeout(450)
@@ -1157,6 +1194,45 @@ try {
   })
   check('堆叠抽屉里也标出当前对话（选中样式）',
     drawerCurrent.reticle >= 1, JSON.stringify(drawerCurrent))
+
+  // ---- 11c. drawer search: titles + full conversation content ------------
+  const searchBoxPoint = await page.evaluate(() => {
+    const input = document.querySelector('[data-talkmap-drawer-search]')
+    if (input === null) return null
+    const r = input.getBoundingClientRect()
+    return { x: Math.round(r.x + 30), y: Math.round(r.y + r.height / 2) }
+  })
+  check('抽屉里有搜索框', searchBoxPoint !== null, JSON.stringify(searchBoxPoint))
+  if (searchBoxPoint !== null) {
+    await page.mouse.click(searchBoxPoint.x, searchBoxPoint.y)
+    await page.keyboard.type('地图')
+    await page.waitForTimeout(400)
+    const titleFiltered = await page.evaluate(() => ({
+      rows: [...document.querySelectorAll('[data-stack-card]')].map(node => node.textContent),
+      hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+    }))
+    check('按标题筛选抽屉里的对话',
+      titleFiltered.rows.length === 1 && (titleFiltered.rows[0] ?? '').includes('地图'),
+      JSON.stringify(titleFiltered))
+    // now a term that only exists in conversation CONTENT (harness: s3)
+    await page.fill('[data-talkmap-drawer-search]', '')
+    await page.keyboard.type('物理')
+    await page.waitForTimeout(900)
+    const contentHits = await page.evaluate(() => {
+      const hits = [...document.querySelectorAll('[data-talkmap-search-hit]')]
+      return {
+        count: hits.length,
+        sessionIds: hits.map(node => node.getAttribute('data-talkmap-search-hit')),
+        snippet: hits[0] === undefined ? null : hits[0].textContent,
+        searchCalls: window.__harness.log.filter(entry => entry.kind === 'rpc.search').map(entry => entry.detail.query),
+      }
+    })
+    check('唤起了宿主全文搜索 session/search',
+      (contentHits.searchCalls ?? []).includes('物理'), JSON.stringify(contentHits.searchCalls))
+    check('显示全部对话里的内容命中（可以不在本文件夹）',
+      contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
+    check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
+  }
   await page.evaluate(() => {
     const backdrop = document.querySelector('[class*="drawerBackdrop"]')
     if (backdrop !== null) backdrop.click()
