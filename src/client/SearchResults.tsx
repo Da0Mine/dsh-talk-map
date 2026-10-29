@@ -105,6 +105,10 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
       }
       void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
         if (lines.length === 0) return
+        // Never swap in a passage that does not contain the searched word: a
+        // stale seq used to show an unrelated paragraph.
+        const needle = props.query.trim().toLowerCase()
+        if (!lines.some(line => line.toLowerCase().includes(needle))) return
         cache.current.set(key, lines)
         setPeek(current => (current === null ? current : { ...current, lines }))
       })

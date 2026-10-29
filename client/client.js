@@ -1481,6 +1481,8 @@ function SearchResults(props) {
       }
       void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
         if (lines.length === 0) return;
+        const needle = props.query.trim().toLowerCase();
+        if (!lines.some((line) => line.toLowerCase().includes(needle))) return;
         cache3.current.set(key, lines);
         setPeek((current) => current === null ? current : { ...current, lines });
       });
@@ -13318,16 +13320,16 @@ function CanvasInner(props) {
         // Endpoints ride along for the edge context menu (id parsing would
         // be ambiguous — card ids contain dashes).
         data: { fromCardId: edge.fromCardId, toCardId: edge.toCardId },
+        // Every line carries its direction now: 「推送摘要」 always travels
+        // source → target, so a link edge gets a lighter arrow instead of none.
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          width: kind === "link" ? 13 : 16,
+          height: kind === "link" ? 13 : 16,
+          color: kind === "link" ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 214, 106, 0.85)"
+        },
         // Pure association lines: no label, lighter than injection edges.
         ...kind === "link" ? { style: { opacity: 0.4 } } : {
-          // An arrowhead says which conversation feeds which: the line runs
-          // from the source (parent) into the card that receives the context.
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-            width: 16,
-            height: 16,
-            color: "rgba(255, 214, 106, 0.85)"
-          },
           label: kind === "none" ? t("edge.none") : kind === "full" ? t("edge.full") : t("edge.injected"),
           ...kind === "none" ? { style: { opacity: 0.65 } } : {}
         }
