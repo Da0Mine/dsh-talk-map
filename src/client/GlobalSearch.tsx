@@ -6,7 +6,7 @@ import { t } from './i18n.ts'
 import { mapUi, sessionTitle } from './map-state.ts'
 import styles from './talk-map.module.css'
 
-export function GlobalSearch(props: { onOpenSession: (sessionId: string) => void }): React.JSX.Element {
+export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: string) => void }): React.JSX.Element {
   const [query, setQuery] = useState('')
   /** The query the visible results belong to (empty = panel closed). */
   const [submitted, setSubmitted] = useState('')
@@ -111,9 +111,9 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string) => void
                     searching={searching}
                     error={error}
                     heading={t('stack.contentHits', { n: String(hits.length) })}
-                    onOpenSession={(sessionId) => {
+                    onOpenSession={(sessionId, q) => {
                       setSubmitted('')
-                      props.onOpenSession(sessionId)
+                      props.onOpenSession(sessionId, q)
                     }}
                     onFetchContext={(sessionId, seq, text) => fetchSearchContext(sessionId, seq, text)}
                     onFetchSessionHits={(sessionId, text) => fetchSessionHits(sessionId, text)}

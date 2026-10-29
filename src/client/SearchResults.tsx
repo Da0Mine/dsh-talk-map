@@ -3,12 +3,13 @@
  *   • the stack drawer — scoped to ONE workspace (its folder)
  *   • the header search — global, every conversation
  *
- * One conversation is one section (agent badge + title), each match is one line,
- * hovering a line shows the whole passage in a floating box, and the rest of a
- * conversation's hits are one click away (that is what keeps a search to a
- * single corpus query).
+ * One conversation is one section; every match inside it is listed right away
+ * (the extra hits are fetched in the background, no "more" button). Hovering a
+ * line shows the whole passage in a floating box — rendered into <body> so a
+ * transformed ancestor cannot shift it away from the pointer.
  */
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { renderMarkdownInline } from './markdown-inline.tsx'
 import { SearchLoading } from './SearchLoading.tsx'
 import { t } from './i18n.ts'
@@ -19,34 +20,9 @@ export interface SearchHitView {
   title: string
   blocks: string[][]
   seqs?: (number | null)[]
+  /** Sub-agent sessions are labelled; ordinary ones are not. */
   agent?: 'main' | 'subagent'
   depth?: number
-}
-
-/** Split `text` around every occurrence of `query` and mark the matches. */
-export function highlight(text: string, query: string): React.ReactNode[] {
-  const needle = query.trim().toLowerCase()
-  if (needle === '') return [text]
-  const haystack = text.toLowerCase()
-  const parts: React.ReactNode[] = []
-  let cursor = 0
-  let key = 0
-  while (cursor < text.length) {
-    const at = haystack.indexOf(needle, cursor)
-    if (at < 0) {
-      parts.push(text.slice(cursor))
-      break
-    }
-    if (at > cursor) parts.push(text.slice(cursor, at))
-    parts.push(<mark key={key++} className={styles['hitMark']}>{text.slice(at, at + needle.length)}</mark>)
-    cursor = at + needle.length
-  }
-  return parts
-}
-
-/** The Host answers this when the deployment turned the session index off. */
-export function isIndexDisabled(message: string): boolean {
-  return message.includes('search is disabled') || message.includes('SESSION_QUERY_SEARCH_DISABLED')
 }
 
 export interface SearchResultsProps {
@@ -55,19 +31,27 @@ export interface SearchResultsProps {
   searching: boolean
   error: string | null
   heading: string
-  onOpenSession: (sessionId: string) => void
+  /** `q` is the searched text: the caller flashes it after the jump. */
+  onOpenSession: (sessionId: string, q?: string) => void
   onFetchContext?: (sessionId: string, seq: number, query: string) => Promise<string[]>
+  /** Every hit inside one conversation: fetched automatically after the first paint. */
   onFetchSessionHits?: (sessionId: string, query: string) => Promise<{ blocks: string[][]; seqs: (number | null)[] }>
 }
 
+/** Cursor-anchored, viewport-clamped position for the floating passage. */
+function place(x: number, y: number): { left: number; top: number } {
+  const width = Math.min(560, window.innerWidth - 24)
+  const left = Math.min(Math.max(12, x + 14), Math.max(12, window.innerWidth - width - 12))
+  const estimated = 260
+  const top = y + estimated > window.innerHeight ? Math.max(12, y - estimated) : y + 14
+  return { left, top }
+}
+
 export function SearchResults(props: SearchResultsProps): React.JSX.Element {
-  const needle = props.query.trim().toLowerCase()
   const [peek, setPeek] = useState<{ title: string; lines: string[]; x: number; y: number } | null>(null)
   const peekTimer = useRef<number | null>(null)
-  const lastScrollAt = useRef(0)
   const cache = useRef(new Map<string, string[]>())
   const [more, setMore] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>({})
-  const [loadingMore, setLoadingMore] = useState<string | null>(null)
 
   const cancelPeek = (): void => {
     if (peekTimer.current !== null) {
@@ -78,41 +62,40 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
   }
   useEffect(() => cancelPeek, [])
 
+  // Every match of a conversation, loaded once, in the background.
+  useEffect(() => {
+    if (props.onFetchSessionHits === undefined) return
+    let alive = true
+    for (const hit of props.hits.slice(0, 5)) {
+      if (more[hit.sessionId] !== undefined) continue
+      void props.onFetchSessionHits(hit.sessionId, props.query).then((page) => {
+        if (!alive || page.blocks.length <= 1) return
+        setMore(previous => (previous[hit.sessionId] === undefined ? { ...previous, [hit.sessionId]: page } : previous))
+      }).catch(() => {})
+    }
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.hits, props.query, props.onFetchSessionHits])
+
   const schedulePeek = (hit: SearchHitView, block: string[], event: React.MouseEvent, seq?: number | null): void => {
-    if (Date.now() - lastScrollAt.current < 220) return
     if (peekTimer.current !== null) window.clearTimeout(peekTimer.current)
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    const eventSeq = seq === undefined ? hit.seqs?.[0] : seq
+    const { clientX, clientY } = event
     peekTimer.current = window.setTimeout(() => {
       peekTimer.current = null
-      setPeek({ title: hit.title, lines: block, x: rect.left, y: rect.bottom + 6 })
-      if (typeof eventSeq !== 'number' || props.onFetchContext === undefined) return
-      const key = hit.sessionId + ':' + String(eventSeq)
+      setPeek({ title: hit.title, lines: block, x: clientX, y: clientY })
+      if (typeof seq !== 'number' || props.onFetchContext === undefined) return
+      const key = hit.sessionId + ':' + String(seq)
       const remembered = cache.current.get(key)
       if (remembered !== undefined) {
         setPeek(current => (current === null ? current : { ...current, lines: remembered }))
         return
       }
-      void props.onFetchContext(hit.sessionId, eventSeq, props.query).then((lines) => {
+      void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
         if (lines.length === 0) return
         cache.current.set(key, lines)
         setPeek(current => (current === null ? current : { ...current, lines }))
       })
-    }, 180)
-  }
-
-  const expandHits = async (hit: SearchHitView): Promise<void> => {
-    if (props.onFetchSessionHits === undefined || loadingMore !== null) return
-    setLoadingMore(hit.sessionId)
-    try {
-      const page = await props.onFetchSessionHits(hit.sessionId, props.query)
-      setMore(previous => ({
-        ...previous,
-        [hit.sessionId]: page.blocks.length > 0 ? page : { blocks: hit.blocks, seqs: hit.seqs ?? [] },
-      }))
-    } finally {
-      setLoadingMore(null)
-    }
+    }, 170)
   }
 
   return (
@@ -124,7 +107,7 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
       {props.error !== null
         ? (
             <div className={styles['drawerSearchError']} title={props.error}>
-              {isIndexDisabled(props.error)
+              {props.error.includes('search is disabled') || props.error.includes('SESSION_QUERY_SEARCH_DISABLED')
                 ? t('stack.searchDisabled')
                 : t('stack.searchFailed') + '：' + (props.error.length > 70 ? props.error.slice(0, 70) + '…' : props.error)}
             </div>
@@ -135,55 +118,54 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
         const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? []
         return (
           <div key={hit.sessionId} className={styles['drawerHit']} data-talkmap-search-hit={hit.sessionId}>
-            <button
-              type="button"
-              className={styles['drawerHitTitle']}
-              onClick={() => { props.onOpenSession(hit.sessionId) }}
-            >
-              {highlight(hit.title, props.query)}
-            </button>
+            <div className={styles['drawerHitHead']}>
+              {hit.agent === 'subagent'
+                ? (
+                    <span
+                      className={`${styles['drawerAgentChip']} ${styles['drawerAgentChipSub']}`}
+                      data-talkmap-agent="subagent"
+                      title={t('stack.agentSubHint')}
+                    >
+                      {t('stack.agentSub')}
+                    </span>
+                  )
+                : null}
+              <button
+                type="button"
+                className={styles['drawerHitTitle']}
+                onClick={() => { props.onOpenSession(hit.sessionId, props.query) }}
+              >
+                {renderMarkdownInline(hit.title, props.query).nodes}
+              </button>
+            </div>
             {blocks.map((block, index) => {
-              const matched = block.find(line => line.toLowerCase().includes(needle)) ?? block[0] ?? ''
+              const needle = props.query.trim().toLowerCase()
+              const line = block.find(entry => entry.toLowerCase().includes(needle)) ?? block[0] ?? ''
               return (
                 <button
                   key={index}
                   type="button"
                   className={styles['drawerHitLine']}
                   data-talkmap-search-line={hit.sessionId}
-                  onClick={() => { props.onOpenSession(hit.sessionId) }}
+                  onClick={() => { props.onOpenSession(hit.sessionId, props.query) }}
                   onMouseEnter={(event) => { schedulePeek(hit, block, event, seqs[index] ?? null) }}
                   onMouseLeave={cancelPeek}
                   onFocus={(event) => { schedulePeek(hit, block, event as unknown as React.MouseEvent, seqs[index] ?? null) }}
                   onBlur={cancelPeek}
                 >
-                  {renderMarkdownInline(matched, props.query).nodes}
+                  {renderMarkdownInline(line, props.query).nodes}
                 </button>
               )
             })}
-            {props.onFetchSessionHits !== undefined && more[hit.sessionId] === undefined
-              ? (
-                  <button
-                    type="button"
-                    className={styles['drawerHitMore']}
-                    data-talkmap-search-more={hit.sessionId}
-                    onClick={() => { void expandHits(hit) }}
-                  >
-                    {loadingMore === hit.sessionId ? t('stack.moreLoading') : t('stack.moreHits')}
-                  </button>
-                )
-              : null}
           </div>
         )
       })}
       {peek !== null
-        ? (
+        ? createPortal(
             <div
               className={styles['peek']}
               data-talkmap-search-peek=""
-              style={{
-                left: Math.min(Math.max(12, peek.x), Math.max(12, window.innerWidth - 520)),
-                top: Math.min(peek.y, Math.max(12, window.innerHeight - 220)),
-              }}
+              style={place(peek.x, peek.y)}
               onMouseEnter={() => { if (peekTimer.current !== null) window.clearTimeout(peekTimer.current) }}
               onMouseLeave={cancelPeek}
             >
@@ -192,18 +174,10 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
                 <div key={index} className={styles['peekLine']}>{renderMarkdownInline(line, props.query).nodes}</div>
               ))}
               <div className={styles['peekHint']}>{t('stack.peekHint')}</div>
-            </div>
+            </div>,
+            document.body,
           )
         : null}
-      <div
-        className={styles['drawerScrollSensor']}
-        ref={(node) => {
-          if (node === null) return
-          const scroller = node.parentElement
-          if (scroller === null) return
-          scroller.onscroll = () => { lastScrollAt.current = Date.now() }
-        }}
-      />
     </div>
   )
 }

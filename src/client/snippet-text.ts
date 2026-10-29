@@ -26,8 +26,29 @@ function punctuationRatio(value: string): number {
   return noisy / value.length
 }
 
+/** True when the text carries serialized JSON rather than prose. */
+function looksSerialized(value: string): boolean {
+  if (/\{\s*"|"\s*:\s*("|\[|\{|\d|true|false|null)/.test(value)) return true
+  return (value.match(/"/g) ?? []).length >= 4
+}
+
+/** Keep the human strings of a serialized payload, drop the keys. */
+function keepProse(value: string): string {
+  const quoted = [...value.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map(match => match[1])
+  const prose = quoted
+    .map(part => part.replace(/\\n|\\r|\\t/g, ' ').trim())
+    .filter(part => part.length >= 6 && /[\u4e00-\u9fff]|[A-Za-z]/.test(part))
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 3)
+  return prose.length > 0 ? prose.join(' … ') : ''
+}
+
 export function cleanSnippet(raw: string, query: string): string {
   let text = unescape(String(raw ?? ''))
+  if (looksSerialized(text)) {
+    const prose = keepProse(text)
+    if (prose !== '') text = prose
+  }
   text = text.replace(NOISE_MARKER, ' ')
   text = text.replace(JSON_KEY, ' ')
   text = text.replace(/[{}\[\]]/g, ' ')

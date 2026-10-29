@@ -110,8 +110,10 @@ export function layoutFor(rect: FrameGeometry, orderedIds: readonly string[]): R
 /** How many cards render normally once the overflow cell takes the last slot. */
 export function visibleCount(capacity: number, total: number): number {
   if (total <= capacity) return total
-  // One slot is spent on the stack cell, so the grid shows one card fewer.
-  return Math.max(1, capacity - 1)
+  // One slot is spent on the stack cell, so the grid shows one card fewer —
+  // and when the folder only fits ONE card, that slot is the stack itself
+  // (otherwise the second card would spill outside the frame).
+  return Math.max(0, capacity - 1)
 }
 
 export interface PlacedCard {

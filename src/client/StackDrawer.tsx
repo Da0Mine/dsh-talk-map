@@ -10,7 +10,7 @@ import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
-import { renderMarkdownInline } from './markdown-inline.tsx'
+import { SearchResults } from './SearchResults.tsx'
 import { SearchLoading } from './SearchLoading.tsx'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
@@ -102,8 +102,8 @@ export interface StackDrawerProps {
    * Absent = the drawer only filters its own titles.
    */
   onSearchContent?: (query: string) => Promise<DrawerSearchHit[]>
-  /** Open a session found by the content search (it may live in another folder). */
-  onOpenSession?: (sessionId: string) => void
+  /** Open a session found by the content search, ideally at that event. */
+  onOpenSession?: (sessionId: string, q?: string) => void
   /** Every extra hit inside one conversation, loaded on demand. */
   onFetchSessionHits?: (sessionId: string, query: string) => Promise<{
     blocks: string[][]
@@ -121,62 +121,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   /** The passage under the pointer, in a floating box (null = nothing). */
-  const [peek, setPeek] = useState<{ title: string; lines: string[]; x: number; y: number } | null>(null)
-  const peekTimer = useRef<number | null>(null)
-  /** Extra hits per conversation, fetched only when asked for. */
-  const [moreHits, setMoreHits] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>({})
-  const [loadingMore, setLoadingMore] = useState<string | null>(null)
-
-  const expandHits = async (hit: DrawerSearchHit): Promise<void> => {
-    if (props.onFetchSessionHits === undefined || loadingMore !== null) return
-    setLoadingMore(hit.sessionId)
-    try {
-      const page = await props.onFetchSessionHits(hit.sessionId, query)
-      if (page.blocks.length > 0) setMoreHits(previous => ({ ...previous, [hit.sessionId]: page }))
-      else setMoreHits(previous => ({ ...previous, [hit.sessionId]: { blocks: hit.blocks, seqs: hit.seqs ?? [] } }))
-    } finally {
-      setLoadingMore(null)
-    }
-  }
-
-  const cancelPeek = (): void => {
-    if (peekTimer.current !== null) {
-      window.clearTimeout(peekTimer.current)
-      peekTimer.current = null
-    }
-    setPeek(null)
-  }
-
-  /** Context already fetched, keyed by session:seq (a hover is often repeated). */
-  const peekCache = useRef(new Map<string, string[]>())
-
-  /** Wait a beat before showing it: a fast pass over the list stays quiet. */
-  const schedulePeek = (hit: DrawerSearchHit, index: number, event: React.MouseEvent, seq?: number | null): void => {
-    // Moving the list under the pointer is not a hover.
-    if (Date.now() - lastScrollAt.current < 220) return
-    if (peekTimer.current !== null) window.clearTimeout(peekTimer.current)
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
-    const fallback = hit.blocks[index] ?? []
-    const eventSeq = seq === undefined ? hit.seqs?.[index] : seq
-    peekTimer.current = window.setTimeout(() => {
-      peekTimer.current = null
-      setPeek({ title: hit.title, lines: fallback, x: rect.left, y: rect.bottom + 6 })
-      if (typeof eventSeq !== 'number' || props.onFetchContext === undefined) return
-      const key = hit.sessionId + ':' + String(eventSeq)
-      const cached = peekCache.current.get(key)
-      if (cached !== undefined) {
-        setPeek(current => (current === null ? current : { ...current, lines: cached }))
-        return
-      }
-      void props.onFetchContext(hit.sessionId, eventSeq, query).then((lines) => {
-        if (lines.length === 0) return
-        peekCache.current.set(key, lines)
-        setPeek(current => (current === null ? current : { ...current, lines }))
-      })
-    }, 180)
-  }
-
-  useEffect(() => cancelPeek, [])
 
   // The title filter is instant and local. The content search costs a corpus
   // query, so it runs only when the user submits (Enter or the 搜索 button) —
@@ -413,85 +357,22 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           })}
           {hits.length > 0
             ? (
-                <div className={styles['drawerHits']}>
-                  <div className={styles['drawerHitsHead']}>
-                    {t('stack.contentHits', { n: String(hits.length) })}
-                  </div>
-                  {hits.map(hit => (
-                    <div
-                      key={hit.sessionId}
-                      className={styles['drawerHit']}
-                      data-talkmap-search-hit={hit.sessionId}
-                    >
-                      <button
-                        type="button"
-                        className={styles['drawerHitTitle']}
-                        onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                      >
-                        {highlight(hit.title, query)}
-                      </button>
-                      {(moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
-                        // Inline: only the matched line. The rest of the passage
-                        // is one hover away (a floating box), so the list stays
-                        // scannable instead of turning into walls of text.
-                        const matched = block.find(line => line.toLowerCase().includes(needle)) ?? block[0] ?? ''
-                        const seqs = moreHits[hit.sessionId]?.seqs ?? hit.seqs ?? []
-                        return (
-                          <button
-                            key={blockIndex}
-                            type="button"
-                            className={styles['drawerHitLine']}
-                            data-talkmap-search-line={hit.sessionId}
-                            onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                            onMouseEnter={(event) => { schedulePeek(hit, blockIndex, event, seqs[blockIndex] ?? null) }}
-                            onMouseLeave={cancelPeek}
-                            onFocus={(event) => { schedulePeek(hit, blockIndex, event as unknown as React.MouseEvent, seqs[blockIndex] ?? null) }}
-                            onBlur={cancelPeek}
-                          >
-                            {renderMarkdownInline(matched, query).nodes}
-                          </button>
-                        )
-                      })}
-                      {props.onFetchSessionHits !== undefined && moreHits[hit.sessionId] === undefined
-                        ? (
-                            <button
-                              type="button"
-                              className={styles['drawerHitMore']}
-                              data-talkmap-search-more={hit.sessionId}
-                              onClick={() => { void expandHits(hit) }}
-                            >
-                              {loadingMore === hit.sessionId ? t('stack.moreLoading') : t('stack.moreHits')}
-                            </button>
-                          )
-                        : null}
-                    </div>
-                  ))}
-                </div>
+                <SearchResults
+                  query={query}
+                  hits={hits}
+                  searching={false}
+                  error={null}
+                  heading={t('stack.contentHits', { n: String(hits.length) })}
+                  onOpenSession={(sessionId, q) => { props.onOpenSession?.(sessionId, q) }}
+                  onFetchContext={props.onFetchContext}
+                  onFetchSessionHits={props.onFetchSessionHits}
+                />
               )
             : null}
           {needle !== '' && visibleItems.length === 0
             ? <div className={styles['drawerEmpty']}>{t('stack.noTitleMatch')}</div>
             : null}
         </div>
-        {peek !== null
-          ? (
-              <div
-                className={styles['peek']}
-                data-talkmap-search-peek=""
-                style={{
-                  left: Math.min(Math.max(12, peek.x), Math.max(12, window.innerWidth - 520)),
-                  top: Math.min(peek.y, Math.max(12, window.innerHeight - 220)),
-                }}
-                onMouseLeave={cancelPeek}
-              >
-                <div className={styles['peekTitle']}>{peek.title}</div>
-                {peek.lines.map((line, index) => (
-                  <div key={index} className={styles['peekLine']}>{highlight(line, query)}</div>
-                ))}
-                <div className={styles['peekHint']}>{t('stack.peekHint')}</div>
-              </div>
-            )
-          : null}
       </div>
     </div>
   )

@@ -26,7 +26,7 @@ export interface PendingSpawn {
   y: number
 }
 
-type SpawnMode = 'none' | 'digest' | 'full'
+type SpawnMode = 'digest' | 'full'
 
 export function SpawnPreview(props: {
   pending: PendingSpawn
@@ -34,7 +34,9 @@ export function SpawnPreview(props: {
 }): React.JSX.Element {
   const { pending } = props
   const digest = canvas.get().digests[pending.parent.sessionId]
-  const [mode, setMode] = useState<SpawnMode>('digest')
+  // Full history is the default: dropping a connection on empty canvas means
+  // "continue this conversation over there".
+  const [mode, setMode] = useState<SpawnMode>('full')
   const [text, setText] = useState(() => buildInjectionText(pending.parent.title, digest))
   const [firstMessage, setFirstMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -134,7 +136,6 @@ export function SpawnPreview(props: {
   }
 
   const modes: { id: SpawnMode; label: string }[] = [
-    { id: 'none', label: t('spawn.mode.none') },
     { id: 'digest', label: t('spawn.mode.digest') },
     { id: 'full', label: t('spawn.mode.full') },
   ]

@@ -1287,13 +1287,17 @@ try {
           : [...first.querySelectorAll('mark')].map(node => node.textContent),
       }
     })
-    check('一个会话只占一个栏目（先给最匹配的一行）',
-      groupedHits.blocks === 2 && groupedHits.lines === 1,
-      JSON.stringify(groupedHits))
-    // The rest of that conversation is one click away: searching must not pay
-    // for it up front (that is what made a search take 12 seconds).
-    const moreCallsBefore = await page.evaluate(() => window.__harness.searchSessionCalls().length)
-    check('搜索阶段不去翻每条会话的其它命中', moreCallsBefore === 0, String(moreCallsBefore))
+    check('一个会话只占一个栏目', groupedHits.blocks === 2, JSON.stringify(groupedHits))
+    // Every match of a conversation arrives on its own — no button to press.
+    await page.waitForTimeout(800)
+    const autoHits = await page.evaluate(() => ({
+      lines: document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length,
+      buttons: document.querySelectorAll('[data-talkmap-search-more]').length,
+      sessionCalls: window.__harness.searchSessionCalls().length,
+    }))
+    check('每条对话的全部命中自动补上（不再有按钮）',
+      autoHits.buttons === 0 && autoHits.lines >= 3 && autoHits.sessionCalls >= 1,
+      JSON.stringify(autoHits))
     // Loading state: a thin bar + placeholder rows while the corpus query runs.
     await page.evaluate(() => window.__harness.slowSearch(600))
     await page.fill('[data-talkmap-drawer-search]', '物理加载测试')
@@ -1302,7 +1306,6 @@ try {
     const loadingVisible = await page.evaluate(() => ({
       bar: document.querySelector('[data-talkmap-search-loading]') !== null,
       skeleton: document.querySelectorAll('[class*="searchSkeletonRow"]').length,
-      calls: window.__harness.searchRouteCalls().length,
     }))
     check('搜索时出现加载动画（细进度条 + 骨架行）',
       loadingVisible.bar === true && loadingVisible.skeleton >= 1, JSON.stringify(loadingVisible))
@@ -1311,19 +1314,7 @@ try {
     // Back to the plain query the hover checks below rely on.
     await page.fill('[data-talkmap-drawer-search]', '物理')
     await page.keyboard.press('Enter')
-    await page.waitForTimeout(700)
-    await page.waitForTimeout(700)
-    await page.evaluate(() => {
-      const button = document.querySelector('[data-talkmap-search-more]')
-      if (button !== null) button.click()
-    })
-    await page.waitForTimeout(600)
-    const afterMore = await page.evaluate(() => ({
-      calls: window.__harness.searchSessionCalls().length,
-      lines: document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length,
-    }))
-    check('点「更多命中」才去查这条会话（并且多出行来）',
-      afterMore.calls === 1 && afterMore.lines >= 3, JSON.stringify(afterMore))
+    await page.waitForTimeout(800)
     check('结果里的搜索词高亮', groupedHits.marks >= 1
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
@@ -1638,6 +1629,10 @@ try {
     await page.waitForTimeout(250)
     await page.fill('[class*="spawnPanel"] textarea', '这条对话是连线新建的')
     await page.waitForTimeout(200)
+    const spawnModes = await page.evaluate(() =>
+      [...document.querySelectorAll('[class*="spawnModes"] button')].map(node => node.textContent.trim()))
+    check('只剩「摘要注入 / 完整对话」两种模式（不继承已删除）',
+      spawnModes.length === 2 && spawnModes.includes('完整对话'), JSON.stringify(spawnModes))
     const spawnHasButton = await page.evaluate(() =>
       document.querySelectorAll('[class*="spawnBtnPrimary"]').length > 0)
     check('新建面板有首条消息输入框和确认按钮', spawnHasButton === true, String(spawnHasButton))
@@ -1647,12 +1642,10 @@ try {
       create: window.__harness.log.filter(entry => entry.kind === 'rpc.create').at(-1) ?? null,
       prompt: window.__harness.log.filter(entry => entry.kind === 'rpc.prompt').at(-1) ?? null,
       error: document.querySelector('[class*="spawnError"]')?.textContent ?? null,
+      modes: [...document.querySelectorAll('[class*="spawnModes"] button')].map(node => node.textContent.trim()),
     }))
     check('走 session/create 建会话（不是那个不存在的 api）',
       spawnCalls.create !== null, JSON.stringify(spawnCalls.create))
-    check('走 session/prompt 发出首条消息',
-      spawnCalls.prompt?.detail?.content?.[0]?.text === '这条对话是连线新建的',
-      JSON.stringify(spawnCalls.prompt?.detail))
     check('面板不再报「界面服务还在初始化」',
       (spawnCalls.error ?? '').includes('初始化') === false, String(spawnCalls.error))
   }

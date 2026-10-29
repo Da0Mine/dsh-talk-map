@@ -14,7 +14,7 @@
  */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
-  Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, ReactFlow, ReactFlowProvider,
+  Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
   SelectionMode, useReactFlow, type Connection, type Edge, type EdgeChange, type FinalConnectionState,
   type NodeChange, type Viewport,
 } from '@xyflow/react'
@@ -28,6 +28,7 @@ import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, u
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { setTitleResolver } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
+import { flashInTranscript } from './jump-highlight.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
@@ -997,6 +998,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         ...(kind === 'link'
           ? { style: { opacity: 0.4 } }
           : {
+              // An arrowhead says which conversation feeds which: the line runs
+              // from the source (parent) into the card that receives the context.
+              markerEnd: {
+                type: MarkerType.ArrowClosed,
+                width: 16,
+                height: 16,
+                color: 'rgba(255, 214, 106, 0.85)',
+              },
               label: kind === 'none'
                 ? t('edge.none')
                 : kind === 'full'
@@ -1341,6 +1350,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /** Every card of a folder (shown and folded), in the folder's own order. */
+  /** Open a conversation found by a search, then flash the searched text in it. */
+  const openSearchHit = (sessionId: string, query?: string): void => {
+    openSession(sessionId)
+    if (query !== undefined && query.trim() !== '') flashInTranscript(query)
+  }
+
   /**
    * Search inside ONE workspace: the folder's cwd is passed to the Host as a
    * corpus filter, so results cannot leak in from other workspaces.
@@ -2044,7 +2059,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               // Scope: this folder's workspace only. The header search is the
               // global one (see GlobalSearch).
               onSearchContent={async (query) => searchInWorkspace(drawer.groupId, query)}
-              onOpenSession={(sessionId) => { openSession(sessionId) }}
+              onOpenSession={(sessionId, q) => { openSearchHit(sessionId, q) }}
               // Hover asks for that one hit's passage (an on-demand log read).
               onFetchContext={(sessionId, seq, query) => fetchSearchContext(sessionId, seq, query)}
               onFetchSessionHits={(sessionId, query) => fetchSessionHits(sessionId, query)}

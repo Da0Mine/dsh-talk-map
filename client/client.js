@@ -1275,6 +1275,7 @@ var import_react2 = require("react");
 
 // src/client/SearchResults.tsx
 var import_react = require("react");
+var import_react_dom = require("react-dom");
 
 // src/client/snippet-text.ts
 var NOISE_MARKER = /\[(?:tool\/result|assistant\/message|user\/message|system\/message|developer\/message|dsh-[a-z-]+)[^\]]*\]/gi;
@@ -1287,8 +1288,21 @@ function punctuationRatio(value) {
   const noisy = value.replace(/[^\s"{}[\],:]/g, "").length;
   return noisy / value.length;
 }
+function looksSerialized(value) {
+  if (/\{\s*"|"\s*:\s*("|\[|\{|\d|true|false|null)/.test(value)) return true;
+  return (value.match(/"/g) ?? []).length >= 4;
+}
+function keepProse(value) {
+  const quoted = [...value.matchAll(/"([^"\\]*(?:\\.[^"\\]*)*)"/g)].map((match) => match[1]);
+  const prose = quoted.map((part) => part.replace(/\\n|\\r|\\t/g, " ").trim()).filter((part) => part.length >= 6 && /[\u4e00-\u9fff]|[A-Za-z]/.test(part)).sort((a, b) => b.length - a.length).slice(0, 3);
+  return prose.length > 0 ? prose.join(" … ") : "";
+}
 function cleanSnippet(raw, query) {
   let text = unescape(String(raw ?? ""));
+  if (looksSerialized(text)) {
+    const prose = keepProse(text);
+    if (prose !== "") text = prose;
+  }
   text = text.replace(NOISE_MARKER, " ");
   text = text.replace(JSON_KEY, " ");
   text = text.replace(/[{}\[\]]/g, " ");
@@ -1405,36 +1419,18 @@ function SearchLoading(props) {
 
 // src/client/SearchResults.tsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
-function highlight2(text, query) {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return [text];
-  const haystack = text.toLowerCase();
-  const parts = [];
-  let cursor = 0;
-  let key = 0;
-  while (cursor < text.length) {
-    const at = haystack.indexOf(needle, cursor);
-    if (at < 0) {
-      parts.push(text.slice(cursor));
-      break;
-    }
-    if (at > cursor) parts.push(text.slice(cursor, at));
-    parts.push(/* @__PURE__ */ (0, import_jsx_runtime3.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
-    cursor = at + needle.length;
-  }
-  return parts;
-}
-function isIndexDisabled(message) {
-  return message.includes("search is disabled") || message.includes("SESSION_QUERY_SEARCH_DISABLED");
+function place(x, y) {
+  const width = Math.min(560, window.innerWidth - 24);
+  const left = Math.min(Math.max(12, x + 14), Math.max(12, window.innerWidth - width - 12));
+  const estimated = 260;
+  const top = y + estimated > window.innerHeight ? Math.max(12, y - estimated) : y + 14;
+  return { left, top };
 }
 function SearchResults(props) {
-  const needle = props.query.trim().toLowerCase();
   const [peek, setPeek] = (0, import_react.useState)(null);
   const peekTimer = (0, import_react.useRef)(null);
-  const lastScrollAt = (0, import_react.useRef)(0);
   const cache3 = (0, import_react.useRef)(/* @__PURE__ */ new Map());
   const [more, setMore] = (0, import_react.useState)({});
-  const [loadingMore, setLoadingMore] = (0, import_react.useState)(null);
   const cancelPeek = () => {
     if (peekTimer.current !== null) {
       window.clearTimeout(peekTimer.current);
@@ -1443,62 +1439,74 @@ function SearchResults(props) {
     setPeek(null);
   };
   (0, import_react.useEffect)(() => cancelPeek, []);
+  (0, import_react.useEffect)(() => {
+    if (props.onFetchSessionHits === void 0) return;
+    let alive = true;
+    for (const hit of props.hits.slice(0, 5)) {
+      if (more[hit.sessionId] !== void 0) continue;
+      void props.onFetchSessionHits(hit.sessionId, props.query).then((page) => {
+        if (!alive || page.blocks.length <= 1) return;
+        setMore((previous) => previous[hit.sessionId] === void 0 ? { ...previous, [hit.sessionId]: page } : previous);
+      }).catch(() => {
+      });
+    }
+    return () => {
+      alive = false;
+    };
+  }, [props.hits, props.query, props.onFetchSessionHits]);
   const schedulePeek = (hit, block, event, seq) => {
-    if (Date.now() - lastScrollAt.current < 220) return;
     if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
-    const rect = event.currentTarget.getBoundingClientRect();
-    const eventSeq = seq === void 0 ? hit.seqs?.[0] : seq;
+    const { clientX, clientY } = event;
     peekTimer.current = window.setTimeout(() => {
       peekTimer.current = null;
-      setPeek({ title: hit.title, lines: block, x: rect.left, y: rect.bottom + 6 });
-      if (typeof eventSeq !== "number" || props.onFetchContext === void 0) return;
-      const key = hit.sessionId + ":" + String(eventSeq);
+      setPeek({ title: hit.title, lines: block, x: clientX, y: clientY });
+      if (typeof seq !== "number" || props.onFetchContext === void 0) return;
+      const key = hit.sessionId + ":" + String(seq);
       const remembered = cache3.current.get(key);
       if (remembered !== void 0) {
         setPeek((current) => current === null ? current : { ...current, lines: remembered });
         return;
       }
-      void props.onFetchContext(hit.sessionId, eventSeq, props.query).then((lines) => {
+      void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
         if (lines.length === 0) return;
         cache3.current.set(key, lines);
         setPeek((current) => current === null ? current : { ...current, lines });
       });
-    }, 180);
-  };
-  const expandHits = async (hit) => {
-    if (props.onFetchSessionHits === void 0 || loadingMore !== null) return;
-    setLoadingMore(hit.sessionId);
-    try {
-      const page = await props.onFetchSessionHits(hit.sessionId, props.query);
-      setMore((previous) => ({
-        ...previous,
-        [hit.sessionId]: page.blocks.length > 0 ? page : { blocks: hit.blocks, seqs: hit.seqs ?? [] }
-      }));
-    } finally {
-      setLoadingMore(null);
-    }
+    }, 170);
   };
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: props.searching ? t("stack.searching") : props.heading }),
     props.searching ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SearchLoading, { rows: 2 }) : null,
-    props.error !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerSearchError"], title: props.error, children: isIndexDisabled(props.error) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (props.error.length > 70 ? props.error.slice(0, 70) + "…" : props.error) }) : null,
+    props.error !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerSearchError"], title: props.error, children: props.error.includes("search is disabled") || props.error.includes("SESSION_QUERY_SEARCH_DISABLED") ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (props.error.length > 70 ? props.error.slice(0, 70) + "…" : props.error) }) : null,
     props.hits.map((hit) => {
       const blocks = more[hit.sessionId]?.blocks ?? hit.blocks;
       const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? [];
       return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-          "button",
-          {
-            type: "button",
-            className: talk_map_default["drawerHitTitle"],
-            onClick: () => {
-              props.onOpenSession(hit.sessionId);
-            },
-            children: highlight2(hit.title, props.query)
-          }
-        ),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
+          hit.agent === "subagent" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+            "span",
+            {
+              className: `${talk_map_default["drawerAgentChip"]} ${talk_map_default["drawerAgentChipSub"]}`,
+              "data-talkmap-agent": "subagent",
+              title: t("stack.agentSubHint"),
+              children: t("stack.agentSub")
+            }
+          ) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+            "button",
+            {
+              type: "button",
+              className: talk_map_default["drawerHitTitle"],
+              onClick: () => {
+                props.onOpenSession(hit.sessionId, props.query);
+              },
+              children: renderMarkdownInline(hit.title, props.query).nodes
+            }
+          )
+        ] }),
         blocks.map((block, index2) => {
-          const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
+          const needle = props.query.trim().toLowerCase();
+          const line = block.find((entry) => entry.toLowerCase().includes(needle)) ?? block[0] ?? "";
           return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
             "button",
             {
@@ -1506,7 +1514,7 @@ function SearchResults(props) {
               className: talk_map_default["drawerHitLine"],
               "data-talkmap-search-line": hit.sessionId,
               onClick: () => {
-                props.onOpenSession(hit.sessionId);
+                props.onOpenSession(hit.sessionId, props.query);
               },
               onMouseEnter: (event) => {
                 schedulePeek(hit, block, event, seqs[index2] ?? null);
@@ -1516,59 +1524,33 @@ function SearchResults(props) {
                 schedulePeek(hit, block, event, seqs[index2] ?? null);
               },
               onBlur: cancelPeek,
-              children: renderMarkdownInline(matched, props.query).nodes
+              children: renderMarkdownInline(line, props.query).nodes
             },
             index2
           );
-        }),
-        props.onFetchSessionHits !== void 0 && more[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-          "button",
-          {
-            type: "button",
-            className: talk_map_default["drawerHitMore"],
-            "data-talkmap-search-more": hit.sessionId,
-            onClick: () => {
-              void expandHits(hit);
-            },
-            children: loadingMore === hit.sessionId ? t("stack.moreLoading") : t("stack.moreHits")
-          }
-        ) : null
+        })
       ] }, hit.sessionId);
     }),
-    peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-      "div",
-      {
-        className: talk_map_default["peek"],
-        "data-talkmap-search-peek": "",
-        style: {
-          left: Math.min(Math.max(12, peek.x), Math.max(12, window.innerWidth - 520)),
-          top: Math.min(peek.y, Math.max(12, window.innerHeight - 220))
-        },
-        onMouseEnter: () => {
-          if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
-        },
-        onMouseLeave: cancelPeek,
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
-          peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekLine"], children: renderMarkdownInline(line, props.query).nodes }, index2)),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
-        ]
-      }
-    ) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-      "div",
-      {
-        className: talk_map_default["drawerScrollSensor"],
-        ref: (node) => {
-          if (node === null) return;
-          const scroller = node.parentElement;
-          if (scroller === null) return;
-          scroller.onscroll = () => {
-            lastScrollAt.current = Date.now();
-          };
+    peek !== null ? (0, import_react_dom.createPortal)(
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
+        "div",
+        {
+          className: talk_map_default["peek"],
+          "data-talkmap-search-peek": "",
+          style: place(peek.x, peek.y),
+          onMouseEnter: () => {
+            if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
+          },
+          onMouseLeave: cancelPeek,
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
+            peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekLine"], children: renderMarkdownInline(line, props.query).nodes }, index2)),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
+          ]
         }
-      }
-    )
+      ),
+      document.body
+    ) : null
   ] });
 }
 
@@ -1788,9 +1770,9 @@ function GlobalSearch(props) {
               searching,
               error,
               heading: t("stack.contentHits", { n: String(hits.length) }),
-              onOpenSession: (sessionId) => {
+              onOpenSession: (sessionId, q) => {
                 setSubmitted("");
-                props.onOpenSession(sessionId);
+                props.onOpenSession(sessionId, q);
               },
               onFetchContext: (sessionId, seq, text) => fetchSearchContext(sessionId, seq, text),
               onFetchSessionHits: (sessionId, text) => fetchSessionHits(sessionId, text)
@@ -7590,7 +7572,7 @@ function shallow$1(objA, objB) {
 }
 
 // node_modules/@xyflow/react/dist/esm/index.js
-var import_react_dom = require("react-dom");
+var import_react_dom2 = require("react-dom");
 var StoreContext = (0, import_react4.createContext)(null);
 var Provider$1 = StoreContext.Provider;
 var zustandErrorMessage = errorMessages["error001"]("react");
@@ -11013,6 +10995,89 @@ var drawerState = {
   }
 };
 
+// src/client/jump-highlight.ts
+var MARK_CLASS = "tm_search_flash";
+var STYLE_ID = "tm-search-flash-style";
+function ensureStyle() {
+  if (document.getElementById(STYLE_ID) !== null) return;
+  const style2 = document.createElement("style");
+  style2.id = STYLE_ID;
+  style2.textContent = `
+    .${MARK_CLASS} {
+      background: rgba(255, 214, 106, 0.42);
+      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0.42);
+      border-radius: 3px;
+      transition: background 600ms ease-out, box-shadow 600ms ease-out;
+    }
+    .${MARK_CLASS}.tm_search_flash_out {
+      background: rgba(255, 214, 106, 0);
+      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0);
+    }
+  `;
+  document.head.appendChild(style2);
+}
+function isTranscriptNode(node, query) {
+  if (node.nodeValue === null || !node.nodeValue.toLowerCase().includes(query)) return false;
+  const parent = node.parentElement;
+  if (parent === null) return false;
+  if (parent.closest('[class*="tm_"]') !== null) return false;
+  if (parent.closest("nav, aside, header") !== null) return false;
+  return true;
+}
+function findNode(query) {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let current = walker.nextNode();
+  while (current !== null) {
+    const text = current;
+    if (isTranscriptNode(text, query)) return text;
+    current = walker.nextNode();
+  }
+  return null;
+}
+function markNode(node, query) {
+  const value = node.nodeValue ?? "";
+  const at = value.toLowerCase().indexOf(query);
+  if (at < 0) return null;
+  const range = document.createRange();
+  range.setStart(node, at);
+  range.setEnd(node, at + query.length);
+  const mark = document.createElement("mark");
+  mark.className = MARK_CLASS;
+  try {
+    range.surroundContents(mark);
+  } catch {
+    return null;
+  }
+  return mark;
+}
+function flashInTranscript2(query) {
+  const needle = query.trim().toLowerCase();
+  if (needle.length < 2) return;
+  ensureStyle();
+  const deadline = Date.now() + 6e3;
+  const tick = () => {
+    const node = findNode(needle);
+    if (node !== null) {
+      const mark = markNode(node, needle);
+      if (mark !== null) {
+        mark.scrollIntoView({ block: "center", behavior: "smooth" });
+        window.setTimeout(() => {
+          mark.classList.add("tm_search_flash_out");
+          window.setTimeout(() => {
+            const parent = mark.parentNode;
+            if (parent === null) return;
+            while (mark.firstChild !== null) parent.insertBefore(mark.firstChild, mark);
+            parent.removeChild(mark);
+          }, 700);
+        }, 4500);
+        return;
+      }
+    }
+    if (Date.now() < deadline) window.setTimeout(tick, 200);
+  };
+  window.setTimeout(tick, 120);
+}
+
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
 var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
@@ -11850,7 +11915,7 @@ var import_jsx_runtime10 = require("react/jsx-runtime");
 function SpawnPreview(props) {
   const { pending } = props;
   const digest = canvas.get().digests[pending.parent.sessionId];
-  const [mode, setMode] = (0, import_react8.useState)("digest");
+  const [mode, setMode] = (0, import_react8.useState)("full");
   const [text, setText] = (0, import_react8.useState)(() => buildInjectionText(pending.parent.title, digest));
   const [firstMessage, setFirstMessage] = (0, import_react8.useState)("");
   const [busy, setBusy] = (0, import_react8.useState)(false);
@@ -11937,7 +12002,6 @@ function SpawnPreview(props) {
     }
   };
   const modes = [
-    { id: "none", label: t("spawn.mode.none") },
     { id: "digest", label: t("spawn.mode.digest") },
     { id: "full", label: t("spawn.mode.full") }
   ];
@@ -12145,7 +12209,7 @@ function layoutFor(rect, orderedIds) {
 }
 function visibleCount(capacity, total) {
   if (total <= capacity) return total;
-  return Math.max(1, capacity - 1);
+  return Math.max(0, capacity - 1);
 }
 function readingOrder(cards) {
   return [...cards].sort((a, b) => a.y - b.y || a.x - b.x || a.cardId.localeCompare(b.cardId)).map((card) => card.cardId);
@@ -12163,26 +12227,7 @@ var LAMP_CLASS2 = {
   error: "cardLampError",
   waiting: "cardLampWaiting"
 };
-function highlight3(text, query) {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return [text];
-  const haystack = text.toLowerCase();
-  const parts = [];
-  let cursor = 0;
-  let key = 0;
-  while (cursor < text.length) {
-    const at = haystack.indexOf(needle, cursor);
-    if (at < 0) {
-      parts.push(text.slice(cursor));
-      break;
-    }
-    if (at > cursor) parts.push(text.slice(cursor, at));
-    parts.push(/* @__PURE__ */ (0, import_jsx_runtime12.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
-    cursor = at + needle.length;
-  }
-  return parts;
-}
-function isIndexDisabled2(message) {
+function isIndexDisabled(message) {
   return message.includes("search is disabled") || message.includes("SESSION_QUERY_SEARCH_DISABLED");
 }
 function StackDrawer(props) {
@@ -12191,53 +12236,6 @@ function StackDrawer(props) {
   const [hits, setHits] = (0, import_react9.useState)([]);
   const [searching, setSearching] = (0, import_react9.useState)(false);
   const [searchError, setSearchError] = (0, import_react9.useState)(null);
-  const [peek, setPeek] = (0, import_react9.useState)(null);
-  const peekTimer = (0, import_react9.useRef)(null);
-  const [moreHits, setMoreHits] = (0, import_react9.useState)({});
-  const [loadingMore, setLoadingMore] = (0, import_react9.useState)(null);
-  const expandHits = async (hit) => {
-    if (props.onFetchSessionHits === void 0 || loadingMore !== null) return;
-    setLoadingMore(hit.sessionId);
-    try {
-      const page = await props.onFetchSessionHits(hit.sessionId, query);
-      if (page.blocks.length > 0) setMoreHits((previous) => ({ ...previous, [hit.sessionId]: page }));
-      else setMoreHits((previous) => ({ ...previous, [hit.sessionId]: { blocks: hit.blocks, seqs: hit.seqs ?? [] } }));
-    } finally {
-      setLoadingMore(null);
-    }
-  };
-  const cancelPeek = () => {
-    if (peekTimer.current !== null) {
-      window.clearTimeout(peekTimer.current);
-      peekTimer.current = null;
-    }
-    setPeek(null);
-  };
-  const peekCache = (0, import_react9.useRef)(/* @__PURE__ */ new Map());
-  const schedulePeek = (hit, index2, event, seq) => {
-    if (Date.now() - lastScrollAt.current < 220) return;
-    if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
-    const rect = event.currentTarget.getBoundingClientRect();
-    const fallback = hit.blocks[index2] ?? [];
-    const eventSeq = seq === void 0 ? hit.seqs?.[index2] : seq;
-    peekTimer.current = window.setTimeout(() => {
-      peekTimer.current = null;
-      setPeek({ title: hit.title, lines: fallback, x: rect.left, y: rect.bottom + 6 });
-      if (typeof eventSeq !== "number" || props.onFetchContext === void 0) return;
-      const key = hit.sessionId + ":" + String(eventSeq);
-      const cached = peekCache.current.get(key);
-      if (cached !== void 0) {
-        setPeek((current) => current === null ? current : { ...current, lines: cached });
-        return;
-      }
-      void props.onFetchContext(hit.sessionId, eventSeq, query).then((lines) => {
-        if (lines.length === 0) return;
-        peekCache.current.set(key, lines);
-        setPeek((current) => current === null ? current : { ...current, lines });
-      });
-    }, 180);
-  };
-  (0, import_react9.useEffect)(() => cancelPeek, []);
   const runSearch = async () => {
     const trimmed = query.trim();
     if (trimmed.length < 2 || props.onSearchContent === void 0) {
@@ -12367,7 +12365,7 @@ function StackDrawer(props) {
                 }
               ),
               searching ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
-              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled2(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
+              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
             ] }),
             searching ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SearchLoading, { rows: 2 }) : null,
             /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
@@ -12455,88 +12453,25 @@ function StackDrawer(props) {
                       item.cardId
                     );
                   }),
-                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: t("stack.contentHits", { n: String(hits.length) }) }),
-                    hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
-                      "div",
-                      {
-                        className: talk_map_default["drawerHit"],
-                        "data-talkmap-search-hit": hit.sessionId,
-                        children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
-                            "button",
-                            {
-                              type: "button",
-                              className: talk_map_default["drawerHitTitle"],
-                              onClick: () => {
-                                props.onOpenSession?.(hit.sessionId);
-                              },
-                              children: highlight3(hit.title, query)
-                            }
-                          ),
-                          (moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
-                            const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
-                            const seqs = moreHits[hit.sessionId]?.seqs ?? hit.seqs ?? [];
-                            return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
-                              "button",
-                              {
-                                type: "button",
-                                className: talk_map_default["drawerHitLine"],
-                                "data-talkmap-search-line": hit.sessionId,
-                                onClick: () => {
-                                  props.onOpenSession?.(hit.sessionId);
-                                },
-                                onMouseEnter: (event) => {
-                                  schedulePeek(hit, blockIndex, event, seqs[blockIndex] ?? null);
-                                },
-                                onMouseLeave: cancelPeek,
-                                onFocus: (event) => {
-                                  schedulePeek(hit, blockIndex, event, seqs[blockIndex] ?? null);
-                                },
-                                onBlur: cancelPeek,
-                                children: renderMarkdownInline(matched, query).nodes
-                              },
-                              blockIndex
-                            );
-                          }),
-                          props.onFetchSessionHits !== void 0 && moreHits[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
-                            "button",
-                            {
-                              type: "button",
-                              className: talk_map_default["drawerHitMore"],
-                              "data-talkmap-search-more": hit.sessionId,
-                              onClick: () => {
-                                void expandHits(hit);
-                              },
-                              children: loadingMore === hit.sessionId ? t("stack.moreLoading") : t("stack.moreHits")
-                            }
-                          ) : null
-                        ]
+                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+                    SearchResults,
+                    {
+                      query,
+                      hits,
+                      searching: false,
+                      error: null,
+                      heading: t("stack.contentHits", { n: String(hits.length) }),
+                      onOpenSession: (sessionId, q) => {
+                        props.onOpenSession?.(sessionId, q);
                       },
-                      hit.sessionId
-                    ))
-                  ] }) : null,
+                      onFetchContext: props.onFetchContext,
+                      onFetchSessionHits: props.onFetchSessionHits
+                    }
+                  ) : null,
                   needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
                 ]
               }
-            ),
-            peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
-              "div",
-              {
-                className: talk_map_default["peek"],
-                "data-talkmap-search-peek": "",
-                style: {
-                  left: Math.min(Math.max(12, peek.x), Math.max(12, window.innerWidth - 520)),
-                  top: Math.min(peek.y, Math.max(12, window.innerHeight - 220))
-                },
-                onMouseLeave: cancelPeek,
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
-                  peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekLine"], children: highlight3(line, query) }, index2)),
-                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
-                ]
-              }
-            ) : null
+            )
           ]
         }
       )
@@ -13295,6 +13230,14 @@ function CanvasInner(props) {
         data: { fromCardId: edge.fromCardId, toCardId: edge.toCardId },
         // Pure association lines: no label, lighter than injection edges.
         ...kind === "link" ? { style: { opacity: 0.4 } } : {
+          // An arrowhead says which conversation feeds which: the line runs
+          // from the source (parent) into the card that receives the context.
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+            width: 16,
+            height: 16,
+            color: "rgba(255, 214, 106, 0.85)"
+          },
           label: kind === "none" ? t("edge.none") : kind === "full" ? t("edge.full") : t("edge.injected"),
           ...kind === "none" ? { style: { opacity: 0.65 } } : {}
         }
@@ -13544,6 +13487,10 @@ function CanvasInner(props) {
   const openSession = (sessionId) => {
     sessionActivity.acknowledge(sessionId);
     if (openSessionInUi(sessionId)) closeMapPanel();
+  };
+  const openSearchHit = (sessionId, query) => {
+    openSession(sessionId);
+    if (query !== void 0 && query.trim() !== "") flashInTranscript2(query);
   };
   const searchInWorkspace = async (groupId, query) => {
     const cwd = workspaces.items.find((item) => item.workspaceId === groupId)?.path;
@@ -14149,8 +14096,8 @@ function CanvasInner(props) {
               openMenu(event, "card", cardId);
             },
             onSearchContent: async (query) => searchInWorkspace(drawer.groupId, query),
-            onOpenSession: (sessionId) => {
-              openSession(sessionId);
+            onOpenSession: (sessionId, q) => {
+              openSearchHit(sessionId, q);
             },
             onFetchContext: (sessionId, seq, query) => fetchSearchContext(sessionId, seq, query),
             onFetchSessionHits: (sessionId, query) => fetchSessionHits(sessionId, query),
@@ -14374,9 +14321,15 @@ function MapOverlay(props) {
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["headerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
-            openSessionInUi(sessionId);
-          } }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+            GlobalSearch,
+            {
+              onOpenSession: (sessionId, q) => {
+                openSessionInUi(sessionId);
+                if (q !== void 0 && q.trim() !== "") flashInTranscript(q);
+              }
+            }
+          ),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FontSizeButtons, {}),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
             "button",
