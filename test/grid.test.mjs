@@ -82,7 +82,8 @@ ok('overflow spends one slot on the stack cell', () => {
   assert.equal(visibleCount(3, 3), 3, 'exactly fits: everything shows')
   assert.equal(visibleCount(3, 4), 2, 'one over: two cards + the stack cell')
   assert.equal(visibleCount(3, 9), 2)
-  assert.equal(visibleCount(1, 1), 1, 'a single-slot folder shows its one card')\n  assert.equal(visibleCount(1, 5), 0, 'a single-slot folder that overflows IS the stack cell')
+  assert.equal(visibleCount(1, 1), 1, 'a single-slot folder shows its one card')
+  assert.equal(visibleCount(1, 5), 0, 'a single-slot folder that overflows IS the stack cell')
   assert.equal(visibleCount(6, 2), 2)
 })
 
