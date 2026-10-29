@@ -1417,6 +1417,39 @@ function SearchLoading(props) {
   ] });
 }
 
+// src/client/search-store.ts
+var TTL_MS = 12 * 60 * 60 * 1e3;
+function keyFor(scope) {
+  return `dsh.talk-map.search.${scope}.v1`;
+}
+function saveSearch(scope, value) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    const payload = { ...value, at: Date.now() };
+    localStorage.setItem(keyFor(scope), JSON.stringify(payload));
+  } catch {
+  }
+}
+function loadSearch(scope) {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    const raw = localStorage.getItem(keyFor(scope));
+    if (raw === null) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.query !== "string" || !Array.isArray(parsed?.hits)) return null;
+    if (Date.now() - Number(parsed.at ?? 0) > TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+function clearSearch(scope) {
+  try {
+    if (typeof localStorage !== "undefined") localStorage.removeItem(keyFor(scope));
+  } catch {
+  }
+}
+
 // src/client/SearchResults.tsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
 function place(x, y) {
@@ -1430,7 +1463,10 @@ function SearchResults(props) {
   const [peek, setPeek] = (0, import_react.useState)(null);
   const peekTimer = (0, import_react.useRef)(null);
   const cache3 = (0, import_react.useRef)(/* @__PURE__ */ new Map());
-  const [more, setMore] = (0, import_react.useState)({});
+  const remembered = props.storageScope === void 0 ? null : loadSearch(props.storageScope);
+  const [more, setMore] = (0, import_react.useState)(
+    remembered?.more ?? {}
+  );
   const [pending, setPending] = (0, import_react.useState)({});
   const cancelPeek = () => {
     if (peekTimer.current !== null) {
@@ -1466,6 +1502,11 @@ function SearchResults(props) {
       alive = false;
     };
   }, [props.hits, props.query, props.onFetchSessionHits]);
+  (0, import_react.useEffect)(() => {
+    if (props.storageScope === void 0) return;
+    if (Object.keys(more).length === 0) return;
+    saveSearch(props.storageScope, { query: props.query, hits: props.hits, more });
+  }, [more, props.hits, props.query, props.storageScope]);
   const schedulePeek = (hit, block, event, seq) => {
     if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
     const { clientX, clientY } = event;
@@ -1474,9 +1515,9 @@ function SearchResults(props) {
       setPeek({ title: hit.title, lines: block, x: clientX, y: clientY });
       if (typeof seq !== "number" || props.onFetchContext === void 0) return;
       const key = hit.sessionId + ":" + String(seq);
-      const remembered = cache3.current.get(key);
-      if (remembered !== void 0) {
-        setPeek((current) => current === null ? current : { ...current, lines: remembered });
+      const remembered2 = cache3.current.get(key);
+      if (remembered2 !== void 0) {
+        setPeek((current) => current === null ? current : { ...current, lines: remembered2 });
         return;
       }
       void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
@@ -1665,39 +1706,6 @@ async function fetchSessionHits(sessionId, query) {
   }
 }
 
-// src/client/search-store.ts
-var TTL_MS = 12 * 60 * 60 * 1e3;
-function keyFor(scope) {
-  return `dsh.talk-map.search.${scope}.v1`;
-}
-function saveSearch(scope, value) {
-  try {
-    if (typeof localStorage === "undefined") return;
-    const payload = { ...value, at: Date.now() };
-    localStorage.setItem(keyFor(scope), JSON.stringify(payload));
-  } catch {
-  }
-}
-function loadSearch(scope) {
-  try {
-    if (typeof localStorage === "undefined") return null;
-    const raw = localStorage.getItem(keyFor(scope));
-    if (raw === null) return null;
-    const parsed = JSON.parse(raw);
-    if (typeof parsed?.query !== "string" || !Array.isArray(parsed?.hits)) return null;
-    if (Date.now() - Number(parsed.at ?? 0) > TTL_MS) return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-function clearSearch(scope) {
-  try {
-    if (typeof localStorage !== "undefined") localStorage.removeItem(keyFor(scope));
-  } catch {
-  }
-}
-
 // src/client/GlobalSearch.tsx
 var import_jsx_runtime4 = require("react/jsx-runtime");
 var GLOBAL_SCOPE = "global";
@@ -1822,6 +1830,7 @@ function GlobalSearch(props) {
             SearchResults,
             {
               query: submitted === "" ? query : submitted,
+              storageScope: GLOBAL_SCOPE,
               hits,
               searching,
               error,
@@ -11059,8 +11068,8 @@ function ensureStyle() {
   style2.id = STYLE_ID;
   style2.textContent = `
     .${MARK_CLASS} {
-      background: rgba(255, 214, 106, 0.42);
-      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0.42);
+      background: rgba(255, 214, 106, 0.45);
+      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0.45);
       border-radius: 3px;
       transition: background 600ms ease-out, box-shadow 600ms ease-out;
     }
@@ -11090,33 +11099,6 @@ function findNode(needle) {
   }
   return null;
 }
-function transcriptScroller() {
-  let best = null;
-  for (const element of document.querySelectorAll("div, main, section")) {
-    if (element.scrollHeight <= element.clientHeight + 60) continue;
-    if (element.closest('[class*="tm_"]') !== null) continue;
-    const overflow = getComputedStyle(element).overflowY;
-    if (overflow !== "auto" && overflow !== "scroll") continue;
-    if (best === null || element.scrollHeight > best.scrollHeight) best = element;
-  }
-  return best;
-}
-function markNode(node, needle) {
-  const value = node.nodeValue ?? "";
-  const at = value.toLowerCase().indexOf(needle);
-  if (at < 0) return null;
-  const range = document.createRange();
-  range.setStart(node, at);
-  range.setEnd(node, at + needle.length);
-  const mark = document.createElement("mark");
-  mark.className = MARK_CLASS;
-  try {
-    range.surroundContents(mark);
-  } catch {
-    return null;
-  }
-  return mark;
-}
 function flash(mark) {
   mark.scrollIntoView({ block: "center", behavior: "smooth" });
   window.setTimeout(() => {
@@ -11129,43 +11111,63 @@ function flash(mark) {
     }, 700);
   }, 4500);
 }
+function markSelection() {
+  const selection2 = window.getSelection();
+  if (selection2 === null || selection2.rangeCount === 0) return null;
+  const range = selection2.getRangeAt(0);
+  if (range.collapsed) return null;
+  const mark = document.createElement("mark");
+  mark.className = MARK_CLASS;
+  try {
+    range.surroundContents(mark);
+  } catch {
+    return null;
+  }
+  selection2.removeAllRanges();
+  return mark;
+}
+function findInPage(needle) {
+  const finder = window.find;
+  if (typeof finder !== "function") return null;
+  const found = finder.call(window, needle, false, false, true, false, false, false);
+  if (found !== true) return null;
+  return markSelection();
+}
 function flashInTranscript2(query) {
   const needle = query.trim().toLowerCase();
   if (needle.length < 2) return;
   ensureStyle();
-  let steps = 0;
-  let direction = "up";
-  let atTop = false;
-  const maxSteps = 26;
-  const tick = () => {
+  let waited = 0;
+  const deadline = 7e3;
+  const attempt = () => {
+    const viaFind = findInPage(needle);
+    if (viaFind !== null) {
+      flash(viaFind);
+      return;
+    }
     const node = findNode(needle);
     if (node !== null) {
-      const mark = markNode(node, needle);
-      if (mark !== null) {
-        flash(mark);
-        return;
-      }
-    }
-    steps += 1;
-    if (steps > maxSteps) return;
-    const scroller = transcriptScroller();
-    if (scroller !== null) {
-      const step2 = Math.max(240, Math.round(scroller.clientHeight * 0.8));
-      if (direction === "up") {
-        if (scroller.scrollTop <= 2 && atTop) {
-          direction = "down";
-          scroller.scrollTop = 0;
-        } else {
-          if (scroller.scrollTop <= 2) atTop = true;
-          scroller.scrollTop = Math.max(0, scroller.scrollTop - step2);
+      const value = node.nodeValue ?? "";
+      const at = value.toLowerCase().indexOf(needle);
+      if (at >= 0) {
+        const range = document.createRange();
+        range.setStart(node, at);
+        range.setEnd(node, at + needle.length);
+        const mark = document.createElement("mark");
+        mark.className = MARK_CLASS;
+        try {
+          range.surroundContents(mark);
+          flash(mark);
+          return;
+        } catch {
         }
-      } else {
-        scroller.scrollTop = Math.min(scroller.scrollHeight, scroller.scrollTop + step2);
       }
     }
-    window.setTimeout(tick, 140);
+    waited += 200;
+    if (waited > deadline) return;
+    window.setTimeout(attempt, 200);
   };
-  window.setTimeout(tick, 160);
+  window.setTimeout(attempt, 160);
 }
 
 // src/client/state-persist.ts
@@ -12549,8 +12551,9 @@ function StackDrawer(props) {
                     SearchResults,
                     {
                       query,
+                      storageScope: "drawer:" + props.groupId,
                       hits,
-                      searching: false,
+                      searching,
                       error: null,
                       heading: t("stack.contentHits", { n: String(hits.length) }),
                       onOpenSession: (sessionId, q) => {

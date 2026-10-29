@@ -7,9 +7,14 @@
  */
 const TTL_MS = 12 * 60 * 60 * 1000
 
+/** Every extra hit fetched for a session (shape owned by the caller). */
+export type StoredMore = Record<string, unknown>
+
 export interface StoredSearch<T> {
   query: string
   hits: T[]
+  /** Extra per-session hits already loaded — do not fetch them again. */
+  more?: StoredMore
   at: number
 }
 
@@ -17,7 +22,7 @@ function keyFor(scope: string): string {
   return `dsh.talk-map.search.${scope}.v1`
 }
 
-export function saveSearch<T>(scope: string, value: { query: string; hits: T[] }): void {
+export function saveSearch<T>(scope: string, value: { query: string; hits: T[]; more?: StoredMore }): void {
   try {
     if (typeof localStorage === 'undefined') return
     const payload: StoredSearch<T> = { ...value, at: Date.now() }

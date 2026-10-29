@@ -364,8 +364,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             ? (
                 <SearchResults
                   query={query}
+                  storageScope={'drawer:' + props.groupId}
                   hits={hits}
-                  searching={false}
+                  searching={searching}
                   error={null}
                   heading={t('stack.contentHits', { n: String(hits.length) })}
                   onOpenSession={(sessionId, q) => { props.onOpenSession?.(sessionId, q) }}

@@ -124,6 +124,7 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
                 <div className={styles['globalSearchBody']}>
                   <SearchResults
                     query={submitted === '' ? query : submitted}
+                  storageScope={GLOBAL_SCOPE}
                     hits={hits}
                     searching={searching}
                     error={error}

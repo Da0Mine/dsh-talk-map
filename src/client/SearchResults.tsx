@@ -13,6 +13,7 @@ import { createPortal } from 'react-dom'
 import { renderMarkdownInline } from './markdown-inline.tsx'
 import { SearchLoading } from './SearchLoading.tsx'
 import { t } from './i18n.ts'
+import { loadSearch, saveSearch } from './search-store.ts'
 import styles from './talk-map.module.css'
 
 export interface SearchHitView {
@@ -27,6 +28,8 @@ export interface SearchHitView {
 
 export interface SearchResultsProps {
   query: string
+  /** Where to remember the loaded extra hits (one per surface). */
+  storageScope?: string
   hits: SearchHitView[]
   searching: boolean
   error: string | null
@@ -51,7 +54,10 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
   const [peek, setPeek] = useState<{ title: string; lines: string[]; x: number; y: number } | null>(null)
   const peekTimer = useRef<number | null>(null)
   const cache = useRef(new Map<string, string[]>())
-  const [more, setMore] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>({})
+  const remembered = props.storageScope === undefined ? null : loadSearch<SearchHitView>(props.storageScope)
+  const [more, setMore] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>(
+    (remembered?.more ?? {}) as Record<string, { blocks: string[][]; seqs: (number | null)[] }>,
+  )
   /** Sessions whose extra hits are still being fetched. */
   const [pending, setPending] = useState<Record<string, true>>({})
 
@@ -89,6 +95,13 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.hits, props.query, props.onFetchSessionHits])
+
+  // Remember the extra hits: reopening the search must not refetch them.
+  useEffect(() => {
+    if (props.storageScope === undefined) return
+    if (Object.keys(more).length === 0) return
+    saveSearch(props.storageScope, { query: props.query, hits: props.hits, more })
+  }, [more, props.hits, props.query, props.storageScope])
 
   const schedulePeek = (hit: SearchHitView, block: string[], event: React.MouseEvent, seq?: number | null): void => {
     if (peekTimer.current !== null) window.clearTimeout(peekTimer.current)

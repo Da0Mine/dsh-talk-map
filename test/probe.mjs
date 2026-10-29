@@ -1310,18 +1310,27 @@ try {
         hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
       }
     })
+    const extraCallsBefore = await page.evaluate(() => window.__harness.searchSessionCalls().length)
     check('重新打开抽屉时保留上次的搜索',
       restoredSearch.value === '物理' && restoredSearch.hits >= 1,
       JSON.stringify(restoredSearch))
+    const extraCallsAfter = await page.evaluate(() => window.__harness.searchSessionCalls().length)
+    check('重开抽屉不再重新拉取各会话的额外命中',
+      extraCallsAfter === extraCallsBefore, extraCallsBefore + ' → ' + extraCallsAfter)
     // Loading state: a thin bar + placeholder rows while the corpus query runs.
-    await page.evaluate(() => window.__harness.slowSearch(600))
-    await page.fill('[data-talkmap-drawer-search]', '物理加载测试')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(220)
-    const loadingVisible = await page.evaluate(() => ({
-      bar: document.querySelector('[data-talkmap-search-loading]') !== null,
-      skeleton: document.querySelectorAll('[class*="searchSkeletonRow"]').length,
-    }))
+    await page.evaluate(() => window.__harness.slowSearch(900))
+    await page.fill('[data-talkmap-drawer-search]', '物理加载测试' + String(Date.now()))
+    await page.click('[data-talkmap-drawer-search-run]')
+    let loadingVisible = { bar: false, skeleton: 0 }
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const seen = await page.evaluate(() => ({
+        bar: document.querySelector('[data-talkmap-search-loading]') !== null,
+        skeleton: document.querySelectorAll('[class*="searchSkeletonRow"]').length,
+      }))
+      loadingVisible = seen
+      if (seen.bar || (seen.skeleton ?? 0) > 0) break
+      await page.waitForTimeout(50)
+    }
     check('搜索时出现加载动画（细进度条 + 骨架行）',
       loadingVisible.bar === true && loadingVisible.skeleton >= 1, JSON.stringify(loadingVisible))
     await page.waitForTimeout(900)
