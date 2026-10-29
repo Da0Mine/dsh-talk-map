@@ -350,6 +350,26 @@ export function mountTalkMapRoutes(
           }
           return
         }
+        /** The passage around one hit — read on demand (hover), never with search. */
+        if (route === 'POST /talk-map/search-context') {
+          const body = await readJsonBody(request) as { sessionId?: unknown; seq?: unknown; query?: unknown } | undefined
+          const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : ''
+          const seq = typeof body?.seq === 'number' ? body.seq : null
+          const query = typeof body?.query === 'string' ? body.query : ''
+          const read = (runtime as {
+            searchContext?: (id: string, seq: number, q: string) => Promise<{ lines: string[] }>
+          }).searchContext
+          if (sessionId === '' || seq === null || read === undefined) {
+            sendJson(response, 200, { lines: [] })
+            return
+          }
+          try {
+            sendJson(response, 200, await read(sessionId, seq, query))
+          } catch (error) {
+            sendJson(response, 200, { lines: [], error: String((error as Error)?.message ?? error) })
+          }
+          return
+        }
         if (route === 'POST /talk-map/last-user') {
           const body = await readJsonBody(request)
           const ids = Array.isArray((body as { sessionIds?: unknown }).sessionIds)
