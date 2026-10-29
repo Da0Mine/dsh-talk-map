@@ -1304,8 +1304,8 @@ try {
       sub: document.querySelectorAll('[data-talkmap-agent="subagent"]').length,
       labels: [...document.querySelectorAll('[data-talkmap-agent]')].map(node => node.textContent.trim()),
     }))
-    check('每条结果标注主/子智能体',
-      agentChips.main >= 1 && agentChips.sub >= 1, JSON.stringify(agentChips))
+    check('不再标注主/子智能体', agentChips.main === 0 && agentChips.sub === 0,
+      JSON.stringify(agentChips))
     // The passage must NOT be fetched with the search: only when the pointer
     // rests on one hit (that is what made searching take seconds).
     const contextCallsAfterSearch = await page.evaluate(() => window.__harness.searchContextCalls().length)

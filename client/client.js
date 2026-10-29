@@ -1376,28 +1376,17 @@ function SearchResults(props) {
       const blocks = more[hit.sessionId]?.blocks ?? hit.blocks;
       const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? [];
       return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "span",
-            {
-              className: `${talk_map_default["drawerAgentChip"]} ${hit.agent === "subagent" ? talk_map_default["drawerAgentChipSub"] : ""}`,
-              "data-talkmap-agent": hit.agent ?? "main",
-              title: hit.agent === "subagent" ? t("stack.agentSubHint") : t("stack.agentMainHint"),
-              children: hit.agent === "subagent" ? t("stack.agentSub") : t("stack.agentMain")
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
-            "button",
-            {
-              type: "button",
-              className: talk_map_default["drawerHitTitle"],
-              onClick: () => {
-                props.onOpenSession(hit.sessionId);
-              },
-              children: highlight(hit.title, props.query)
-            }
-          )
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+          "button",
+          {
+            type: "button",
+            className: talk_map_default["drawerHitTitle"],
+            onClick: () => {
+              props.onOpenSession(hit.sessionId);
+            },
+            children: highlight(hit.title, props.query)
+          }
+        ),
         blocks.map((block, index2) => {
           const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
           return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
@@ -12341,28 +12330,17 @@ function StackDrawer(props) {
                     className: talk_map_default["drawerHit"],
                     "data-talkmap-search-hit": hit.sessionId,
                     children: [
-                      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
-                        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-                          "span",
-                          {
-                            className: `${talk_map_default["drawerAgentChip"]} ${hit.agent === "subagent" ? talk_map_default["drawerAgentChipSub"] : ""}`,
-                            "data-talkmap-agent": hit.agent ?? "main",
-                            title: hit.agent === "subagent" ? t("stack.agentSubHint") : t("stack.agentMainHint"),
-                            children: hit.agent === "subagent" ? t("stack.agentSub") : t("stack.agentMain")
-                          }
-                        ),
-                        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
-                          "button",
-                          {
-                            type: "button",
-                            className: talk_map_default["drawerHitTitle"],
-                            onClick: () => {
-                              props.onOpenSession?.(hit.sessionId);
-                            },
-                            children: highlight2(hit.title, query)
-                          }
-                        )
-                      ] }),
+                      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+                        "button",
+                        {
+                          type: "button",
+                          className: talk_map_default["drawerHitTitle"],
+                          onClick: () => {
+                            props.onOpenSession?.(hit.sessionId);
+                          },
+                          children: highlight2(hit.title, query)
+                        }
+                      ),
                       (moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
                         const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
                         const seqs = moreHits[hit.sessionId]?.seqs ?? hit.seqs ?? [];

@@ -396,24 +396,13 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                       className={styles['drawerHit']}
                       data-talkmap-search-hit={hit.sessionId}
                     >
-                      <div className={styles['drawerHitHead']}>
-                        <span
-                          className={`${styles['drawerAgentChip']} ${hit.agent === 'subagent' ? styles['drawerAgentChipSub'] : ''}`}
-                          data-talkmap-agent={hit.agent ?? 'main'}
-                          title={hit.agent === 'subagent' ? t('stack.agentSubHint') : t('stack.agentMainHint')}
-                        >
-                          {hit.agent === 'subagent'
-                            ? t('stack.agentSub')
-                            : t('stack.agentMain')}
-                        </span>
-                        <button
-                          type="button"
-                          className={styles['drawerHitTitle']}
-                          onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                        >
-                          {highlight(hit.title, query)}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        className={styles['drawerHitTitle']}
+                        onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                      >
+                        {highlight(hit.title, query)}
+                      </button>
                       {(moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
                         // Inline: only the matched line. The rest of the passage
                         // is one hover away (a floating box), so the list stays

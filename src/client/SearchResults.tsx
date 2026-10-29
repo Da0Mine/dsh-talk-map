@@ -133,22 +133,13 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
         const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? []
         return (
           <div key={hit.sessionId} className={styles['drawerHit']} data-talkmap-search-hit={hit.sessionId}>
-            <div className={styles['drawerHitHead']}>
-              <span
-                className={`${styles['drawerAgentChip']} ${hit.agent === 'subagent' ? styles['drawerAgentChipSub'] : ''}`}
-                data-talkmap-agent={hit.agent ?? 'main'}
-                title={hit.agent === 'subagent' ? t('stack.agentSubHint') : t('stack.agentMainHint')}
-              >
-                {hit.agent === 'subagent' ? t('stack.agentSub') : t('stack.agentMain')}
-              </span>
-              <button
-                type="button"
-                className={styles['drawerHitTitle']}
-                onClick={() => { props.onOpenSession(hit.sessionId) }}
-              >
-                {highlight(hit.title, props.query)}
-              </button>
-            </div>
+            <button
+              type="button"
+              className={styles['drawerHitTitle']}
+              onClick={() => { props.onOpenSession(hit.sessionId) }}
+            >
+              {highlight(hit.title, props.query)}
+            </button>
             {blocks.map((block, index) => {
               const matched = block.find(line => line.toLowerCase().includes(needle)) ?? block[0] ?? ''
               return (
