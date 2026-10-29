@@ -1423,6 +1423,9 @@
 }
 
 .drawerScroll {
+  /* Native wheel/trackpad scrolling, contained in the panel. */
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
   flex: 1;
   min-height: 0;
   overflow-y: auto;

@@ -1,0 +1,4 @@
+    // The passage must NOT be fetched with the search: only when the pointer
+    // rests on one hit (that is what made searching take seconds).
+    const contextCallsAfterSearch = await page.evaluate(() => window.__harness.searchContextCalls().length)
+    check('搜索本身不读日志（上下文献按需取）', contextCallsAfterSearch === 0, String(contextCallsAfterSearch))

@@ -27,7 +27,7 @@ import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { drawerState } from './drawer-state.ts'
-import { callRpc, searchSessions } from './rpc.ts'
+import { callRpc, fetchSearchContext, searchSessions } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
@@ -2018,9 +2018,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                     ?? sessions.byId[hit.sessionId]?.displayTitle
                     ?? hit.sessionId,
                   blocks: hit.blocks,
+                  seqs: hit.seqs,
                 }))
               }}
               onOpenSession={(sessionId) => { openSession(sessionId) }}
+              // Hover asks for that one hit's passage (an on-demand log read).
+              onFetchContext={(sessionId, seq, query) => fetchSearchContext(sessionId, seq, query)}
               onClose={closeDrawer}
             />
           )

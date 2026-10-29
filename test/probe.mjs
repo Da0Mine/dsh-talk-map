@@ -1256,6 +1256,18 @@ try {
     check('结果里的搜索词高亮', groupedHits.marks >= 2
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
+    // The passage must NOT be fetched with the search: only when the pointer
+    // rests on one hit (that is what made searching take seconds).
+    const contextCallsAfterSearch = await page.evaluate(() => window.__harness.searchContextCalls().length)
+    check('搜索本身不读日志（上下文献按需取）', contextCallsAfterSearch === 0, String(contextCallsAfterSearch))
+    const scrollStyle = await page.evaluate(() => {
+      const scroller = document.querySelector('[class*="drawerScroll"]')
+      if (scroller === null) return null
+      const style = getComputedStyle(scroller)
+      return { overscroll: style.overscrollBehaviorY, behavior: style.scrollBehavior }
+    })
+    check('滚动交回浏览器原生（无平滑动画、滚动被 contain 住）',
+      scrollStyle !== null && scrollStyle.behavior === 'auto', JSON.stringify(scrollStyle))
     // Hovering a hit reveals the whole passage in a floating box; the inline row
     // stays a single line so the list remains scannable.
     const inlineLines = await page.evaluate(() =>
@@ -1279,6 +1291,11 @@ try {
     check('命中行只占一行（不再内联铺开三行）', inlineLines >= 1, String(inlineLines))
     check('悬停后弹出框显示更多上下文',
       peekBox !== null && peekBox.lines >= 2, JSON.stringify(peekBox))
+    const contextCallsAfterHover = await page.evaluate(() => window.__harness.searchContextCalls())
+    check('悬停时才去取这一段原文', contextCallsAfterHover.length >= 1,
+      JSON.stringify(contextCallsAfterHover))
+    check('取回来的上下文比单行多（≥3 行）',
+      (peekBox?.lines ?? 0) >= 3, JSON.stringify(peekBox))
     check('弹出框里也高亮搜索词', (peekBox?.marks ?? 0) >= 1, JSON.stringify(peekBox))
     await page.screenshot({ path: path.join(shots, 'probe-peek.png') })
     await page.mouse.move(4, 4)

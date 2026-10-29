@@ -186,6 +186,7 @@
   // ---- fetch / EventSource mocks ------------------------------------
   /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
   const searchRouteCalls = []
+  const searchContextCalls = []
   let searchRpcFails = false
   let searchRouteFails = false
   let searchRouteMessage = 'host search route down'
@@ -224,6 +225,11 @@
       }
       // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
+    // Lazy passage for one hit (hover).
+    if (path.indexOf('/talk-map/search-context') >= 0) {
+      searchContextCalls.push({ sessionId: body?.sessionId, seq: body?.seq })
+      return json({ lines: ['上文第一行', '上文第二行', '…按 SI 单位换算 Matter.js 的物理参数…', '下文第一行', '下文第二行'] })
+    }
     if (path.indexOf('/talk-map/search') >= 0) {
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
@@ -233,9 +239,10 @@
         ? [{
           sessionId: 's3',
           blocks: [
-            ['单位换算第一条', '…按 SI 单位换算 Matter.js 的物理参数…', '换算完再写进图表'],
-            ['量纲检查', '…物理量单位统一走 PX_PER_M…', '不通过就报错'],
+            ['…按 SI 单位换算 Matter.js 的物理参数…'],
+            ['…物理量单位统一走 PX_PER_M…'],
           ],
+          seqs: [42, 43],
         }]
         : []
       return json({ items, hasMore: false })
@@ -259,6 +266,11 @@
     }
     // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
+    // Lazy passage for one hit (hover).
+    if (path.indexOf('/talk-map/search-context') >= 0) {
+      searchContextCalls.push({ sessionId: body?.sessionId, seq: body?.seq })
+      return json({ lines: ['上文第一行', '上文第二行', '…按 SI 单位换算 Matter.js 的物理参数…', '下文第一行', '下文第二行'] })
+    }
     if (path.indexOf('/talk-map/search') >= 0) {
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
@@ -268,9 +280,10 @@
         ? [{
           sessionId: 's3',
           blocks: [
-            ['单位换算第一条', '…按 SI 单位换算 Matter.js 的物理参数…', '换算完再写进图表'],
-            ['量纲检查', '…物理量单位统一走 PX_PER_M…', '不通过就报错'],
+            ['…按 SI 单位换算 Matter.js 的物理参数…'],
+            ['…物理量单位统一走 PX_PER_M…'],
           ],
+          seqs: [42, 43],
         }]
         : []
       return json({ items, hasMore: false })
@@ -629,6 +642,10 @@
     },
     searchRouteCalls() {
       return searchRouteCalls.slice()
+    },
+    /** Which hits asked for their passage (hover), and when. */
+    searchContextCalls() {
+      return searchContextCalls.slice()
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }
