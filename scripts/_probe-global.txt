@@ -1,0 +1,23 @@
+  // ---- 0c. global search lives in the header ---------------------------
+  const globalBox = await box('[data-talkmap-global-search]')
+  check('右上角有全局搜索框（在字体按钮左边）', globalBox !== null, JSON.stringify(globalBox))
+  const callsBeforeTyping = await page.evaluate(() => window.__harness.searchRouteCalls().length)
+  await page.fill('[data-talkmap-global-search]', '物理')
+  await page.waitForTimeout(500)
+  const callsAfterTyping = await page.evaluate(() => window.__harness.searchRouteCalls().length)
+  check('打字不触发搜索（只在回车或点按钮时）',
+    callsAfterTyping === callsBeforeTyping, `${callsBeforeTyping} → ${callsAfterTyping}`)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(900)
+  const globalPanel = await page.evaluate(() => ({
+    open: document.querySelector('[class*="globalSearchPanel"]') !== null,
+    hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+  }))
+  check('回车后弹出全局搜索面板并列出结果',
+    globalPanel.open && globalPanel.hits >= 1, JSON.stringify(globalPanel))
+  const globalScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
+  check('全局搜索不带工作区限定（cwd 为空）', globalScope === '', String(globalScope))
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(350)
+  const globalPanelClosed = await page.evaluate(() => document.querySelector('[class*="globalSearchPanel"]') === null)
+  check('Esc 关闭全局搜索面板', globalPanelClosed === true, String(globalPanelClosed))

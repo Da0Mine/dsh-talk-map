@@ -176,33 +176,29 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
 
   useEffect(() => cancelPeek, [])
 
-  // Title filter is instant; the content search is debounced and runs on the
-  // Host (session/search), so it also covers conversations outside this folder.
-  useEffect(() => {
+  // The title filter is instant and local. The content search costs a corpus
+  // query, so it runs only when the user submits (Enter or the 搜索 button) —
+  // not on every keystroke.
+  const runSearch = async (): Promise<void> => {
     const trimmed = query.trim()
     if (trimmed.length < 2 || props.onSearchContent === undefined) {
       setHits([])
-      setSearching(false)
       setSearchError(null)
       return
     }
-    let alive = true
     setSearching(true)
-    const timer = setTimeout(() => {
-      void props.onSearchContent?.(trimmed)
-        .then((found) => { if (alive) { setHits(found); setSearchError(null) } })
-        .catch((cause) => {
-          if (!alive) return
-          // Never swallow it: the drawer says what the Host answered, which is
-          // the only way to tell "no hits" from "the search did not run".
-          console.warn('[dsh-talk-map] content search failed:', cause)
-          setHits([])
-          setSearchError(String(cause?.message ?? cause))
-        })
-        .finally(() => { if (alive) setSearching(false) })
-    }, 300)
-    return () => { alive = false; clearTimeout(timer) }
-  }, [query, props.onSearchContent])
+    try {
+      const found = await props.onSearchContent(trimmed)
+      setHits(found)
+      setSearchError(null)
+    } catch (cause) {
+      console.warn('[dsh-talk-map] content search failed:', cause)
+      setHits([])
+      setSearchError(String((cause as Error)?.message ?? cause))
+    } finally {
+      setSearching(false)
+    }
+  }
 
   const needle = query.trim().toLowerCase()
   const visibleItems = needle === ''
@@ -268,9 +264,27 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             placeholder={t('stack.searchPlaceholder')}
             aria-label={t('stack.searchPlaceholder')}
             data-talkmap-drawer-search=""
-            onChange={(event) => { setQuery(event.target.value) }}
-            onKeyDown={(event) => { if (event.key === 'Escape') event.stopPropagation() }}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              // Clearing the box forgets the previous search, so the list goes
+              // back to the whole folder without another request.
+              if (event.target.value.trim() === '') { setHits([]); setSearchError(null) }
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') { event.stopPropagation(); return }
+              if (event.key !== 'Enter') return
+              event.preventDefault()
+              void runSearch()
+            }}
           />
+          <button
+            type="button"
+            className={styles['drawerSearchGo']}
+            data-talkmap-drawer-search-run=""
+            onClick={() => { void runSearch() }}
+          >
+            {t('global.searchRun')}
+          </button>
           {searching ? <span className={styles['drawerSearchState']}>{t('stack.searching')}</span> : null}
           {searchError !== null
             ? (

@@ -24,10 +24,11 @@ import type { Card, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
-import { closeMapPanel, connectionApi, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
+import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
+import { setTitleResolver } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
-import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions } from './rpc.ts'
+import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
 import { draftWatch } from './draft-watch.ts'
@@ -1330,6 +1331,29 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /** Every card of a folder (shown and folded), in the folder's own order. */
+  /**
+   * Search inside ONE workspace: the folder's cwd is passed to the Host as a
+   * corpus filter, so results cannot leak in from other workspaces.
+   */
+  const searchInWorkspace = async (groupId: string, query: string): Promise<DrawerSearchHit[]> => {
+    const cwd = workspaces.items.find(item => item.workspaceId === groupId)?.path
+    const found = await searchSessions(query, cwd)
+    return found.slice(0, 12).map(toHitView)
+  }
+
+  const toHitView = (hit: ContentHit): DrawerSearchHit => ({
+    sessionId: hit.sessionId,
+    title: renamedTitles[hit.sessionId] ?? sessions.byId[hit.sessionId]?.displayTitle ?? hit.sessionId,
+    blocks: hit.blocks,
+    seqs: hit.seqs,
+    agent: hit.agent,
+    depth: hit.depth,
+  })
+  // Publish the board's title lookup for the header's global search panel.
+  useEffect(() => {
+    setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle)
+    return () => { setTitleResolver(undefined) }
+  }, [renamedTitles, sessions])
   const drawerItems = (groupId: string): StackEntry[] => {
     const layout = folderLayouts[groupId]
     const ids = layout === undefined ? [] : [...layout.shown, ...layout.folded]
@@ -2007,22 +2031,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               onCardMenu={(cardId, event) => { openMenu(event, 'card', cardId) }}
               // Full-text search runs on the Host (session/search), so it also
               // finds conversations that are not on this map at all.
-              onSearchContent={async (query) => {
-                // searchSessions() tries the Host's generated endpoint first and
-                // falls back to our own Host route, so this cannot degrade to
-                // title-only matching.
-                const found = await searchSessions(query)
-                return found.slice(0, 12).map(hit => ({
-                  sessionId: hit.sessionId,
-                  title: renamedTitles[hit.sessionId]
-                    ?? sessions.byId[hit.sessionId]?.displayTitle
-                    ?? hit.sessionId,
-                  blocks: hit.blocks,
-                  seqs: hit.seqs,
-                  agent: hit.agent,
-                  depth: hit.depth,
-                }))
-              }}
+              // Scope: this folder's workspace only. The header search is the
+              // global one (see GlobalSearch).
+              onSearchContent={async (query) => searchInWorkspace(drawer.groupId, query)}
               onOpenSession={(sessionId) => { openSession(sessionId) }}
               // Hover asks for that one hit's passage (an on-demand log read).
               onFetchContext={(sessionId, seq, query) => fetchSearchContext(sessionId, seq, query)}

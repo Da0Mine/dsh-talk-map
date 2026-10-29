@@ -205,6 +205,31 @@ try {
   check('点两次「减」→ 每项字号 −1', smallerFont === baseFont - 1, String(baseFont) + ' → ' + String(smallerFont))
   check('点「默认」→ 回到原始字号', resetFont === baseFont, String(baseFont) + ' → ' + String(resetFont))
 
+  // ---- 0c. global search lives in the header ---------------------------
+  const globalBox = await box('[data-talkmap-global-search]')
+  check('右上角有全局搜索框（在字体按钮左边）', globalBox !== null, JSON.stringify(globalBox))
+  const callsBeforeTyping = await page.evaluate(() => window.__harness.searchRouteCalls().length)
+  await page.fill('[data-talkmap-global-search]', '物理')
+  await page.waitForTimeout(500)
+  const callsAfterTyping = await page.evaluate(() => window.__harness.searchRouteCalls().length)
+  check('打字不触发搜索（只在回车或点按钮时）',
+    callsAfterTyping === callsBeforeTyping, `${callsBeforeTyping} → ${callsAfterTyping}`)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(900)
+  const globalPanel = await page.evaluate(() => ({
+    open: document.querySelector('[class*="globalSearchPanel"]') !== null,
+    hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+  }))
+  check('回车后弹出全局搜索面板并列出结果',
+    globalPanel.open && globalPanel.hits >= 1, JSON.stringify(globalPanel))
+  const globalScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
+  check('全局搜索不带工作区限定（cwd 为空）', globalScope === '', String(globalScope))
+  await page.screenshot({ path: path.join(shots, 'probe-global-search.png') })
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(350)
+  const globalPanelClosed = await page.evaluate(() => document.querySelector('[class*="globalSearchPanel"]') === null)
+  check('Esc 关闭全局搜索面板', globalPanelClosed === true, String(globalPanelClosed))
+
   // ---- 1. header -------------------------------------------------------
   const header = await page.evaluate(() => {
     const read = (el) => {
@@ -1206,7 +1231,7 @@ try {
   if (searchBoxPoint !== null) {
     await page.mouse.click(searchBoxPoint.x, searchBoxPoint.y)
     await page.keyboard.type('地图')
-    await page.waitForTimeout(400)
+    await page.keyboard.press('Enter')
     const titleFiltered = await page.evaluate(() => ({
       rows: [...document.querySelectorAll('[data-stack-card]')].map(node => node.textContent),
       hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
@@ -1214,9 +1239,13 @@ try {
     check('按标题筛选抽屉里的对话',
       titleFiltered.rows.length === 1 && (titleFiltered.rows[0] ?? '').includes('地图'),
       JSON.stringify(titleFiltered))
+    const drawerScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
+    check('抽屉搜索只搜本工作区（带 cwd 过滤）',
+      typeof drawerScope === 'string' && drawerScope !== '', String(drawerScope))
     // now a term that only exists in conversation CONTENT (harness: s3)
     await page.fill('[data-talkmap-drawer-search]', '')
     await page.keyboard.type('物理')
+    await page.keyboard.press('Enter')
     await page.waitForTimeout(900)
     const contentHits = await page.evaluate(() => {
       const hits = [...document.querySelectorAll('[data-talkmap-search-hit]')]
@@ -1328,6 +1357,7 @@ try {
     await page.evaluate(() => window.__harness.failSearchRpc(true))
     await page.fill('[data-talkmap-drawer-search]', '')
     await page.keyboard.type('索引关闭测试词乙')
+    await page.keyboard.press('Enter')
     await page.waitForTimeout(900)
     const fallbackHits = await page.evaluate(() => ({
       hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
@@ -1340,6 +1370,7 @@ try {
     await page.evaluate(() => { window.__harness.failSearchRpc(true); window.__harness.failSearchRoute(true) })
     await page.fill('[data-talkmap-drawer-search]', '')
     await page.keyboard.type('没有缓存的新词丙')
+    await page.keyboard.press('Enter')
     await page.waitForTimeout(900)
     const searchFailure = await page.evaluate(() => {
       const node = document.querySelector('[class*="drawerSearchError"]')
@@ -1358,6 +1389,7 @@ try {
     })
     await page.fill('[data-talkmap-drawer-search]', '')
     await page.keyboard.type('没有缓存的新词丁')
+    await page.keyboard.press('Enter')
     await page.waitForTimeout(900)
     const disabledLabel = await page.evaluate(() => {
       const node = document.querySelector('[class*="drawerSearchError"]')

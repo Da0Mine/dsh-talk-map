@@ -13,7 +13,8 @@ import { useEffect, useSyncExternalStore } from 'react'
 import type { RootSlotStandardProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { fontScale } from './font-scale.ts'
-import { closeMapPanel, hideSidebarForMap, mapUi, restoreSidebarAfterMap } from './map-state.ts'
+import { GlobalSearch } from './GlobalSearch.tsx'
+import { closeMapPanel, hideSidebarForMap, mapUi, openSessionInUi, restoreSidebarAfterMap } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
 
@@ -131,6 +132,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
           <span>{t('map.back')}</span>
         </button>
         <span className={styles['headerSpace']} />
+        <GlobalSearch onOpenSession={(sessionId) => { openSessionInUi(sessionId) }} />
         <FontSizeButtons />
         <button
           type="button"

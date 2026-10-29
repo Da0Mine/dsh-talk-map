@@ -331,3 +331,27 @@ export function forkSessionInUi(sessionId: string): Promise<string> {
   if (typeof current.sessions.fork === 'function') return current.sessions.fork({ sessionId, increaseTitle: true })
   return Promise.reject(new Error('dsh-talk-map: this DSH build exposes no fork API'))
 }
+
+/**
+ * The board knows the live titles (renamed or not); surfaces outside it — the
+ * header's global search panel — ask through this.
+ */
+let titleResolver: ((sessionId: string) => string | undefined) | undefined
+
+export function setTitleResolver(resolver: ((sessionId: string) => string | undefined) | undefined): void {
+  titleResolver = resolver
+}
+
+/** One-shot title for a session id (search results outside the board use it). */
+export function sessionTitle(sessionId: string): string | undefined {
+  const resolved = titleResolver?.(sessionId)
+  if (resolved !== undefined && resolved !== '') return resolved
+  const services = getServices()
+  if (services === undefined) return undefined
+  try {
+    const snapshot = services.sessions.list().getSnapshot()
+    return snapshot.byId[sessionId]?.displayTitle
+  } catch {
+    return undefined
+  }
+}

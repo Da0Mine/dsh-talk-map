@@ -80,16 +80,16 @@ export interface ContentHit {
  * the RPC surface is missing — and the failure of the first one is logged so it
  * can be diagnosed instead of guessed at.
  */
-export async function searchSessions(query: string): Promise<ContentHit[]> {
-  const key = query.trim().toLowerCase()
+export async function searchSessions(query: string, cwd?: string): Promise<ContentHit[]> {
+  const key = (cwd ?? '') + '|' + query.trim().toLowerCase()
   const remembered = searchCache.get(key)
   if (remembered !== undefined && Date.now() - remembered.at < SEARCH_CACHE_MS) return remembered.hits
-  const hits = await searchSessionsUncached(query)
+  const hits = await searchSessionsUncached(query, cwd)
   searchCache.set(key, { at: Date.now(), hits })
   return hits
 }
 
-async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
+async function searchSessionsUncached(query: string, cwd?: string): Promise<ContentHit[]> {
   const clean = (lines: readonly unknown[]): string[] =>
     lines.filter((line): line is string => typeof line === 'string' && line.trim() !== '')
   const normalize = (
@@ -140,7 +140,7 @@ async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
   // SessionQueryError when the plugin asks, so it is only the fallback.
   let routeError: Error | undefined
   try {
-    const page = await talkMapApi.searchSessions(query)
+    const page = await talkMapApi.searchSessions(query, cwd)
     return normalize(page.items)
   } catch (error) {
     routeError = error as Error

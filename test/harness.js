@@ -187,6 +187,7 @@
   /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
   const searchRouteCalls = []
   const searchContextCalls = []
+  const searchRouteScopes = []
   const searchSessionCalls = []
   let searchRpcFails = false
   let searchRouteFails = false
@@ -242,6 +243,7 @@
     if (path.indexOf('/talk-map/search') >= 0) {
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
+      searchRouteScopes.push(String(body?.cwd ?? ''))
       const query = String(body?.query ?? '')
       // Grouped shape: one conversation, two matched lines.
       // Two conversations: one spawned by an agent, one yours.
@@ -280,6 +282,7 @@
     if (path.indexOf('/talk-map/search') >= 0) {
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
+      searchRouteScopes.push(String(body?.cwd ?? ''))
       const query = String(body?.query ?? '')
       // Grouped shape: one conversation, two matched lines.
       const items = query.includes('物理') || query.includes('Matter')
@@ -648,6 +651,10 @@
     },
     searchRouteCalls() {
       return searchRouteCalls.slice()
+    },
+    /** The cwd scope of each search request ('' = global). */
+    searchRouteScopes() {
+      return searchRouteScopes.slice()
     },
     /** Which hits asked for their passage (hover), and when. */
     searchContextCalls() {
