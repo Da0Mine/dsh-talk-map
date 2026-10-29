@@ -190,6 +190,7 @@
   const searchRouteScopes = []
   const searchSessionCalls = []
   let searchRpcFails = false
+  let searchDelayMs = 0
   let searchRouteFails = false
   let searchRouteMessage = 'host search route down'
   const posts = []
@@ -249,10 +250,15 @@
       // Two conversations: one spawned by an agent, one yours.
       const items = query.includes('物理') || query.includes('Matter')
         ? [
-          { sessionId: 's3', blocks: [['用 **物理参数** 换算，见 `PX_PER_M` 与 [文档](https://x)']], seqs: [42] },
+          { sessionId: 's3', blocks: [['用 **物理参数** 换算，见 \u0060PX_PER_M\u0060 与 [文档](https://x)']], seqs: [42] },
           { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7] },
         ]
         : []
+      if (searchDelayMs > 0) {
+        return new Promise((resolve) => {
+          setTimeout(() => { resolve(new Response(JSON.stringify({ items, hasMore: false }), { status: 200, headers: { 'content-type': 'application/json' } })) }, searchDelayMs)
+        })
+      }
       return json({ items, hasMore: false })
     }
     // The card body is the user's last message now, not an LLM digest.
@@ -641,6 +647,9 @@
     /** Make the connection RPC path fail, forcing the Host-route fallback. */
     failSearchRpc(fail) {
       searchRpcFails = fail === true
+    },
+    slowSearch(ms) {
+      searchDelayMs = Number(ms) || 0
     },
     failSearchRoute(fail) {
       searchRouteFails = fail === true

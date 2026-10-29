@@ -1294,6 +1294,25 @@ try {
     // for it up front (that is what made a search take 12 seconds).
     const moreCallsBefore = await page.evaluate(() => window.__harness.searchSessionCalls().length)
     check('搜索阶段不去翻每条会话的其它命中', moreCallsBefore === 0, String(moreCallsBefore))
+    // Loading state: a thin bar + placeholder rows while the corpus query runs.
+    await page.evaluate(() => window.__harness.slowSearch(600))
+    await page.fill('[data-talkmap-drawer-search]', '物理加载测试')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(220)
+    const loadingVisible = await page.evaluate(() => ({
+      bar: document.querySelector('[data-talkmap-search-loading]') !== null,
+      skeleton: document.querySelectorAll('[class*="searchSkeletonRow"]').length,
+      calls: window.__harness.searchRouteCalls().length,
+    }))
+    check('搜索时出现加载动画（细进度条 + 骨架行）',
+      loadingVisible.bar === true && loadingVisible.skeleton >= 1, JSON.stringify(loadingVisible))
+    await page.waitForTimeout(900)
+    await page.evaluate(() => window.__harness.slowSearch(0))
+    // Back to the plain query the hover checks below rely on.
+    await page.fill('[data-talkmap-drawer-search]', '物理')
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(700)
+    await page.waitForTimeout(700)
     await page.evaluate(() => {
       const button = document.querySelector('[data-talkmap-search-more]')
       if (button !== null) button.click()
@@ -1316,6 +1335,7 @@ try {
         code: line.querySelectorAll('code').length,
         stars: (line.textContent ?? '').includes('**'),
         html: (line.innerHTML ?? '').slice(0, 240),
+        text: JSON.stringify(line.textContent ?? ''),
       }
     })
     check('片段的 Markdown 被渲染（不再是 ** 源码）',
@@ -1674,6 +1694,61 @@ try {
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)
 
+  // ---- 7d. the drop must KEEP the yield it previewed ---------------------
+  const orderBefore = await page.evaluate(() => window.__harness.state().cards)
+  const pair = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return [...document.querySelectorAll('.react-flow__node')]
+      .map((node) => {
+        const card = state.cards[node.getAttribute('data-id')]
+        if (card === undefined) return null
+        const r = node.getBoundingClientRect()
+        return { cardId: node.getAttribute('data-id'), sessionId: card.sessionId, x: Math.round(r.x), y: Math.round(r.y) }
+      })
+      .filter(entry => entry !== null)
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .slice(0, 2)
+  })
+  const readingBefore = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return Object.entries(state.cards)
+      .map(([id, card]) => ({ id, x: card.x, y: card.y }))
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .map(entry => entry.id)
+  })
+  if (pair.length === 2) {
+    const [first, second] = pair
+    const grab = await page.evaluate((cardId) => {
+      const node = document.querySelector(`[data-id="${cardId}"]`)
+      const r = node.getBoundingClientRect()
+      return { x: Math.round(r.x + 50), y: Math.round(r.y + 14) }
+    }, first.cardId)
+    await page.mouse.move(grab.x, grab.y)
+    await page.mouse.down()
+    await page.mouse.move(second.x + 40, grab.y, { steps: 10 })
+    await page.waitForTimeout(280)
+    await page.mouse.up()
+    await page.waitForTimeout(700)
+    await page.evaluate((cardId) => {
+      const node = document.querySelector(`[data-id="${cardId}"]`)
+      const r = node.getBoundingClientRect()
+      return { x: Math.round(r.x), y: Math.round(r.y) }
+    }, first.cardId)
+    const readingAfter = await page.evaluate(() => {
+      const state = window.__harness.state()
+      return Object.entries(state.cards)
+        .map(([id, card]) => ({ id, x: card.x, y: card.y }))
+        .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+        .map(entry => entry.id)
+    })
+    const indexBefore = readingBefore.indexOf(first.cardId)
+    const indexAfter = readingAfter.indexOf(first.cardId)
+    check('松手后保留让位结果（不再弹回原位）', indexAfter > indexBefore,
+      `${first.sessionId}: 第 ${indexBefore + 1} → 第 ${indexAfter + 1}`)
+  } else {
+    check('松手后保留让位结果（不再弹回原位）', false, '没有两张可拖的卡片')
+  }
+
   // ---- 15. no runtime errors ------------------------------------------
   const pluginErrors = consoleErrors.filter(text => !text.includes('favicon') && !text.includes('client bundle evaluated'))
   check('无 JS 异常', pluginErrors.length === 0, pluginErrors.slice(0, 2).join(' | '))
@@ -1689,9 +1764,11 @@ try {
 
 const failed = results.filter(entry => !entry.passed)
 failures += failed.length
+
 console.log(`\n${results.length - failed.length}/${results.length} checks passed`)
 if (failed.length > 0) {
   console.log('failed:')
   for (const entry of failed) console.log(`  - ${entry.name}: ${entry.detail ?? ''}`)
 }
 process.exit(failures === 0 ? 0 : 1)
+

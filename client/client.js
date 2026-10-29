@@ -1276,9 +1276,39 @@ var import_react2 = require("react");
 // src/client/SearchResults.tsx
 var import_react = require("react");
 
+// src/client/snippet-text.ts
+var NOISE_MARKER = /\[(?:tool\/result|assistant\/message|user\/message|system\/message|developer\/message|dsh-[a-z-]+)[^\]]*\]/gi;
+var JSON_KEY = /"[A-Za-z0-9_$]+"\s*:\s*/g;
+function unescape(value) {
+  return value.replace(/\\r\\n|\\n|\\r/g, " ").replace(/\\t/g, " ").replace(/\\"/g, '"').replace(/\\\\/g, "\\");
+}
+function punctuationRatio(value) {
+  if (value === "") return 0;
+  const noisy = value.replace(/[^\s"{}[\],:]/g, "").length;
+  return noisy / value.length;
+}
+function cleanSnippet(raw, query) {
+  let text = unescape(String(raw ?? ""));
+  text = text.replace(NOISE_MARKER, " ");
+  text = text.replace(JSON_KEY, " ");
+  text = text.replace(/[{}\[\]]/g, " ");
+  text = text.replace(/"{2,}/g, " ");
+  text = text.replace(/^[\s"',;:]+|[\s"',;:]+$/g, "");
+  text = text.replace(/\s{2,}/g, " ").trim();
+  if (punctuationRatio(text) > 0.28) {
+    const needle = query.trim().toLowerCase();
+    const at = needle === "" ? 0 : text.toLowerCase().indexOf(needle);
+    const start2 = Math.max(0, at - 60);
+    const end = Math.min(text.length, at + 90);
+    const window2 = text.slice(start2, end).replace(/[{}[\]]/g, " ").replace(/\s{2,}/g, " ").trim();
+    text = (start2 > 0 ? "…" : "") + window2 + (end < text.length ? "…" : "");
+  }
+  return text === "" ? String(raw ?? "").trim() : text;
+}
+
 // dsh-css: dsh-css:src/client/talk-map.module.css
 var __tagId = "dsh-talk-map/talk-map.module.css";
-var __css = `.tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_globalSearch { position: relative; display: flex; align-items: center; gap: 6px; margin-right: 8px; } .tm_globalSearchInput { width: 200px; font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 9px; outline: none; } .tm_globalSearchInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_globalSearchButton { font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_globalSearchButton:hover { color: var(--dsw-alias-label-primary); } .tm_globalSearchBackdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-start; justify-content: center; padding-top: 9vh; } .tm_globalSearchPanel { width: min(980px, 92vw); max-height: 76vh; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5); overflow: hidden; } .tm_globalSearchHead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_globalSearchTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_globalSearchBody { padding: 0 16px 14px; overflow-y: auto; overscroll-behavior: contain; } .tm_drawerScrollSensor { width: 100%; height: 1px; opacity: 0; } .tm_fontGroup { display: flex; align-items: center; gap: 4px; margin-right: 6px; } .tm_fontButton { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 46px; height: 28px; padding: 0 8px; line-height: 1; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_fontButton:hover:not(:disabled) { color: var(--dsw-alias-label-primary); border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_fontButton:disabled { opacity: 0.4; cursor: default; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { display: inline-block; width: calc(9px + 0px); text-align: center; line-height: 1; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_fontSign { display: inline-block; font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1; transform: translateY(-3px); } .tm_fontReset { min-width: 50px; } .tm_fontReset { min-width: 44px; } .tm_headerSpace { flex: 1; } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: calc(9px + var(--tm-font-step, 0px)); font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { position: relative; width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: calc(12px + var(--tm-font-step, 0px)); } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardChip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); font-weight: 600; white-space: nowrap; border: 1px solid transparent; } .tm_cardChipRunning { color: #ffffff; background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); } .tm_cardChipWaiting { color: rgb(245, 178, 46); background: rgba(245, 178, 46, 0.14); border-color: rgba(245, 178, 46, 0.42); } .tm_cardChipDone { color: rgb(52, 199, 89); background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.42); } .tm_cardChipError { color: rgb(242, 78, 78); background: rgba(242, 78, 78, 0.14); border-color: rgba(242, 78, 78, 0.45); } .tm_cardChipDraft { color: rgb(255, 197, 61); background: rgba(255, 197, 61, 0.18); border-color: rgba(255, 197, 61, 0.5); } .tm_cardChipInterrupted { color: rgb(214, 158, 92); background: rgba(214, 158, 92, 0.14); border-color: rgba(214, 158, 92, 0.42); } .tm_cardSummary { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 0 16px 2px rgba(255, 255, 255, 0.2), 0 0 40px 9px rgba(255, 255, 255, 0.1); } .tm_renameBackdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.42); display: flex; align-items: flex-start; justify-content: center; padding-top: 22vh; } .tm_renameDialog { width: min(420px, 90vw); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42); padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; } .tm_renameHeading { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_renameInput { width: 100%; box-sizing: border-box; font: inherit; font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 8px 10px; outline: none; } .tm_renameInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.35)); } .tm_renameError { font-size: calc(12px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_renameActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_renameButton { font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 12px; cursor: pointer; } .tm_renameButton:hover { color: var(--dsw-alias-label-primary); } .tm_renamePrimary { color: #0b0b0c; background: rgb(255, 214, 106); border-color: rgb(255, 214, 106); } .tm_renamePrimary:disabled { opacity: 0.5; cursor: default; } .tm_cardPin { display: inline-flex; align-items: center; flex: none; color: rgb(255, 214, 106); filter: drop-shadow(0 0 5px rgba(255, 214, 106, 0.85)); animation: tm_talkmap-pin-glow 2.6s ease-in-out infinite; } @keyframes tm_talkmap-pin-glow { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.6)); opacity: 0.92; } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 106, 1)); opacity: 1; } } .tm_cardReticle { position: absolute; inset: -5px; pointer-events: none; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45)); } .tm_cardReticle i { position: absolute; width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.9); } .tm_cardReticle i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; } .tm_cardReticle i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; } .tm_cardReticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; } .tm_cardReticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; } .tm_cardQuiet { opacity: 0.62; transition: opacity 140ms ease; } .tm_cardQuiet:hover { opacity: 1; } .tm_stackBadgeBusy { color: rgb(255, 197, 61); border-color: rgba(255, 197, 61, 0.5); } @property --tm-ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; } .tm_cardLampRunning::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; padding: 2px; background: conic-gradient( from var(--tm-ring-angle), rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0) 190deg, rgba(255, 255, 255, 0.18) 250deg, rgba(255, 255, 255, 0.55) 292deg, rgba(255, 255, 255, 1) 325deg, rgba(255, 255, 255, 0.4) 352deg, rgba(255, 255, 255, 0) 360deg ); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: tm_talkmap-ring-sweep 1.8s linear infinite; pointer-events: none; } @keyframes tm_talkmap-ring-sweep { to { --tm-ring-angle: 360deg; } } .tm_cardLampDone { animation: tm_talkmap-lamp-green 2.8s ease-in-out infinite; } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameBlocked { border-color: rgb(242, 78, 78) !important; box-shadow: 0 0 0 1px rgba(242, 78, 78, 0.45) inset; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: calc(12px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; z-index: 5; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_menu { position: absolute; z-index: 60; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); font-family: inherit; } .tm_menuHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuIcon { flex: none; width: 14px; height: 14px; color: var(--dsw-alias-label-secondary); } .tm_menuItemDanger { color: rgb(242, 78, 78); } .tm_menuItemDanger .tm_menuIcon { color: rgb(242, 78, 78); } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: calc(11px + var(--tm-font-step, 0px)); font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(1120px, 94%); max-height: 84%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(16px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } @keyframes tm_tmFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes tm_tmFadeOut { from { opacity: 1; } to { opacity: 0; } } @keyframes tm_tmRiseIn { from { opacity: 0; transform: translateY(16px) scale(0.975); } to { opacity: 1; transform: none; } } @keyframes tm_tmRiseOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.985); } } @keyframes tm_tmPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } } @keyframes tm_tmCardIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } } .tm_drawerBackdrop { animation: tm_tmFadeIn 140ms ease-out both; } .tm_drawerBackdropOut { animation: tm_tmFadeOut 130ms ease-in both; } .tm_drawer { animation: tm_tmRiseIn 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_drawerOut { animation: tm_tmRiseOut 130ms cubic-bezier(0.4, 0, 1, 1) both; } .tm_globalSearchBackdrop { animation: tm_tmFadeIn 130ms ease-out both; } .tm_globalSearchPanel { animation: tm_tmRiseIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_menu { animation: tm_tmPopIn 120ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_card { transition: transform 120ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out; } .tm_card:hover { transform: translateY(-1px); } .tm_reactFlowNodeEnter { animation: tm_tmCardIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_stackCell { transition: transform 120ms ease-out, box-shadow 160ms ease-out; } .tm_stackCell:hover { transform: translateY(-2px); } .tm_wsFrameLabel { transition: color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out; } .tm_wsFrameLabel:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } .tm_toast { animation: tm_tmRiseIn 160ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_snippetCode { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.94em; padding: 0 3px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); } .tm_snippetLink { color: var(--dsw-alias-brand-primary); } @media (prefers-reduced-motion: reduce) { .tm_drawerBackdrop, .tm_drawerBackdropOut, .tm_drawer, .tm_drawerOut, .tm_globalSearchBackdrop, .tm_globalSearchPanel, .tm_menu, .tm_toast, .tm_reactFlowNodeEnter { animation: none; } .tm_card, .tm_stackCell, .tm_wsFrameLabel { transition: none; } .tm_card:hover, .tm_stackCell:hover { transform: none; } } .tm_drawerSearchRow { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; } .tm_drawerSearch { flex: 1; min-width: 0; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 10px; outline: none; } .tm_drawerSearch:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerSearchGo { flex: none; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_drawerSearchGo:hover { color: var(--dsw-alias-label-primary); } .tm_drawerSearchState { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); flex: none; } .tm_drawerSearchError { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_drawerEmpty { grid-column: 1 / -1; padding: 10px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_drawerHits { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2); } .tm_drawerHitsHead { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); letter-spacing: 0.04em; } .tm_drawerHit { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; } .tm_drawerHit:hover { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_hitMark { color: #0b0b0c; background: rgb(255, 214, 106); border-radius: 3px; padding: 0 2px; } .tm_drawerHitHead { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_drawerAgentChip { flex: none; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1.5; color: var(--dsw-alias-label-secondary); letter-spacing: 0.02em; } .tm_drawerAgentChipSub { color: rgb(255, 214, 106); border-color: rgba(255, 214, 106, 0.5); background: rgba(255, 214, 106, 0.1); } .tm_drawerHitTitle { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); background: transparent; border: none; padding: 0 0 2px; cursor: pointer; } .tm_drawerHitTitle:hover { color: var(--dsw-alias-brand-primary); } .tm_peek { position: fixed; z-index: 80; width: min(500px, 88vw); max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); } .tm_peekTitle { font-size: calc(11.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_peekLine { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.55; color: var(--dsw-alias-label-primary); white-space: pre-wrap; word-break: break-word; } .tm_peekHint { margin-top: 6px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); opacity: 0.7; } .tm_drawerHitMore { align-self: flex-start; margin-top: 2px; font: inherit; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; cursor: pointer; } .tm_drawerHitMore:hover { color: var(--dsw-alias-brand-primary); } .tm_drawerHitBlock { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; padding-left: 2px; } .tm_drawerHitLine { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; border-left: 2px solid var(--dsw-alias-border-l2); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tm_drawerHitLine:hover { color: var(--dsw-alias-label-primary); border-left-color: var(--dsw-alias-brand-primary); } .tm_drawerScroll { overscroll-behavior: contain; scroll-behavior: auto; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: grid; grid-template-columns: repeat(auto-fill, 224px); justify-content: center; align-content: start; gap: 12px; padding: 16px; } .tm_drawerCard { width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.5; } .tm_wsFrameResize:hover { opacity: 1; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResizeN { cursor: ns-resize; border-top: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 14px 0 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeW { cursor: ew-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 0 0 14px; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeNw, .tm_wsFrameResizeNe, .tm_wsFrameResizeSw, .tm_wsFrameResizeSe { width: 26px; height: 26px; z-index: 3; } .tm_wsFrameResizeNw { cursor: nwse-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-left-radius: 14px; } .tm_wsFrameResizeNe { cursor: nesw-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-right-radius: 14px; } .tm_wsFrameResizeSw { cursor: nesw-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-left-radius: 14px; } .tm_wsFrameResizeSe { cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_batchBar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2); } .tm_batchCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); white-space: nowrap; } .tm_batchSpace { width: 6px; } .tm_batchAction { padding: 5px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_batchAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_batchAction:disabled { opacity: 0.5; cursor: default; } .tm_batchDanger { color: var(--dsw-alias-state-error-primary); } .tm_pickBox { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--dsw-alias-border-l3); border-radius: 4px; background: var(--dsw-alias-bg-base); color: transparent; font-size: calc(11px + var(--tm-font-step, 0px)); line-height: 1; pointer-events: none; } .tm_pickBoxChecked { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-brand-primary); color: #fff; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-2); } .tm_colorToolbarLabel { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); margin-right: 2px; white-space: nowrap; } .tm_colorSwatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1; } .tm_colorSwatchClear:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }`;
+var __css = `.tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_globalSearch { position: relative; display: flex; align-items: center; gap: 6px; margin-right: 8px; } .tm_globalSearchInput { width: 200px; font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 9px; outline: none; } .tm_globalSearchInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_globalSearchButton { font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_globalSearchButton:hover { color: var(--dsw-alias-label-primary); } .tm_globalSearchBackdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-start; justify-content: center; padding-top: 9vh; } .tm_globalSearchPanel { width: min(980px, 92vw); max-height: 76vh; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5); overflow: hidden; } .tm_globalSearchHead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_globalSearchTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_globalSearchBody { padding: 0 16px 14px; overflow-y: auto; overscroll-behavior: contain; } .tm_drawerScrollSensor { width: 100%; height: 1px; opacity: 0; } .tm_fontGroup { display: flex; align-items: center; gap: 4px; margin-right: 6px; } .tm_fontButton { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 46px; height: 28px; padding: 0 8px; line-height: 1; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_fontButton:hover:not(:disabled) { color: var(--dsw-alias-label-primary); border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_fontButton:disabled { opacity: 0.4; cursor: default; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { display: inline-block; width: calc(9px + 0px); text-align: center; line-height: 1; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_fontSign { display: inline-block; font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1; transform: translateY(-3px); } .tm_fontReset { min-width: 50px; } .tm_fontReset { min-width: 44px; } .tm_headerSpace { flex: 1; } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: calc(9px + var(--tm-font-step, 0px)); font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { position: relative; width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: calc(12px + var(--tm-font-step, 0px)); } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardChip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); font-weight: 600; white-space: nowrap; border: 1px solid transparent; } .tm_cardChipRunning { color: #ffffff; background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); } .tm_cardChipWaiting { color: rgb(245, 178, 46); background: rgba(245, 178, 46, 0.14); border-color: rgba(245, 178, 46, 0.42); } .tm_cardChipDone { color: rgb(52, 199, 89); background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.42); } .tm_cardChipError { color: rgb(242, 78, 78); background: rgba(242, 78, 78, 0.14); border-color: rgba(242, 78, 78, 0.45); } .tm_cardChipDraft { color: rgb(255, 197, 61); background: rgba(255, 197, 61, 0.18); border-color: rgba(255, 197, 61, 0.5); } .tm_cardChipInterrupted { color: rgb(214, 158, 92); background: rgba(214, 158, 92, 0.14); border-color: rgba(214, 158, 92, 0.42); } .tm_cardSummary { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 0 16px 2px rgba(255, 255, 255, 0.2), 0 0 40px 9px rgba(255, 255, 255, 0.1); } .tm_renameBackdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.42); display: flex; align-items: flex-start; justify-content: center; padding-top: 22vh; } .tm_renameDialog { width: min(420px, 90vw); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42); padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; } .tm_renameHeading { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_renameInput { width: 100%; box-sizing: border-box; font: inherit; font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 8px 10px; outline: none; } .tm_renameInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.35)); } .tm_renameError { font-size: calc(12px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_renameActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_renameButton { font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 12px; cursor: pointer; } .tm_renameButton:hover { color: var(--dsw-alias-label-primary); } .tm_renamePrimary { color: #0b0b0c; background: rgb(255, 214, 106); border-color: rgb(255, 214, 106); } .tm_renamePrimary:disabled { opacity: 0.5; cursor: default; } .tm_cardPin { display: inline-flex; align-items: center; flex: none; color: rgb(255, 214, 106); filter: drop-shadow(0 0 5px rgba(255, 214, 106, 0.85)); animation: tm_talkmap-pin-glow 2.6s ease-in-out infinite; } @keyframes tm_talkmap-pin-glow { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.6)); opacity: 0.92; } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 106, 1)); opacity: 1; } } .tm_cardReticle { position: absolute; inset: -5px; pointer-events: none; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45)); } .tm_cardReticle i { position: absolute; width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.9); } .tm_cardReticle i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; } .tm_cardReticle i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; } .tm_cardReticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; } .tm_cardReticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; } .tm_cardQuiet { opacity: 0.62; transition: opacity 140ms ease; } .tm_cardQuiet:hover { opacity: 1; } .tm_stackBadgeBusy { color: rgb(255, 197, 61); border-color: rgba(255, 197, 61, 0.5); } @property --tm-ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; } .tm_cardLampRunning::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; padding: 2px; background: conic-gradient( from var(--tm-ring-angle), rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0) 190deg, rgba(255, 255, 255, 0.18) 250deg, rgba(255, 255, 255, 0.55) 292deg, rgba(255, 255, 255, 1) 325deg, rgba(255, 255, 255, 0.4) 352deg, rgba(255, 255, 255, 0) 360deg ); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: tm_talkmap-ring-sweep 1.8s linear infinite; pointer-events: none; } @keyframes tm_talkmap-ring-sweep { to { --tm-ring-angle: 360deg; } } .tm_cardLampDone { animation: tm_talkmap-lamp-green 2.8s ease-in-out infinite; } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameBlocked { border-color: rgb(242, 78, 78) !important; box-shadow: 0 0 0 1px rgba(242, 78, 78, 0.45) inset; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: calc(12px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; z-index: 5; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_menu { position: absolute; z-index: 60; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); font-family: inherit; } .tm_menuHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuIcon { flex: none; width: 14px; height: 14px; color: var(--dsw-alias-label-secondary); } .tm_menuItemDanger { color: rgb(242, 78, 78); } .tm_menuItemDanger .tm_menuIcon { color: rgb(242, 78, 78); } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: calc(11px + var(--tm-font-step, 0px)); font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(1120px, 94%); max-height: 84%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(16px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerHits > .tm_drawerHit { animation: tm_tmPopIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerHits > .tm_drawerHit:nth-child(1) { animation-delay: 20ms; } .tm_drawerHits > .tm_drawerHit:nth-child(2) { animation-delay: 34ms; } .tm_drawerHits > .tm_drawerHit:nth-child(3) { animation-delay: 48ms; } .tm_drawerHits > .tm_drawerHit:nth-child(4) { animation-delay: 62ms; } .tm_drawerHits > .tm_drawerHit:nth-child(5) { animation-delay: 76ms; } .tm_drawerHits > .tm_drawerHit:nth-child(n+6) { animation-delay: 90ms; } .tm_searchLoading { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 2px; } .tm_searchLoadingBar { position: relative; height: 2px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.07); } .tm_searchLoadingBar > i { position: absolute; inset: 0 auto 0 0; width: 34%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--dsw-alias-brand-primary), transparent); animation: tm_tmSlideBar 1150ms cubic-bezier(0.4, 0, 0.2, 1) infinite; } @keyframes tm_tmSlideBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } } .tm_searchSkeletonRow { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; } .tm_searchSkeletonTitle, .tm_searchSkeletonLine { display: block; height: 9px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05)); background-size: 220% 100%; animation: tm_tmShimmer 1300ms ease-in-out infinite; } .tm_searchSkeletonTitle { width: 38%; } .tm_searchSkeletonLine { width: 78%; } @keyframes tm_tmShimmer { 0% { background-position: 120% 0; } 100% { background-position: -60% 0; } } @media (prefers-reduced-motion: reduce) { .tm_drawerHits > .tm_drawerHit, .tm_searchLoadingBar > i, .tm_searchSkeletonTitle, .tm_searchSkeletonLine { animation: none; } } @keyframes tm_tmFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes tm_tmFadeOut { from { opacity: 1; } to { opacity: 0; } } @keyframes tm_tmRiseIn { from { opacity: 0; transform: translateY(26px) scale(0.94); } 60% { opacity: 1; } to { opacity: 1; transform: none; } } @keyframes tm_tmRiseOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.985); } } @keyframes tm_tmPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } } @keyframes tm_tmCardIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } } .tm_drawerBackdrop { animation: tm_tmFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerBackdropOut { animation: tm_tmFadeOut 130ms ease-in both; } .tm_drawer { animation: tm_tmRiseIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_drawerOut { animation: tm_tmRiseOut 150ms cubic-bezier(0.4, 0, 0.7, 0.2) both; } .tm_globalSearchBackdrop { animation: tm_tmFadeIn 130ms ease-out both; } .tm_globalSearchPanel { animation: tm_tmRiseIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_menu { animation: tm_tmPopIn 120ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_card { transition: transform 120ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out; } .tm_card:hover { transform: translateY(-1px); } .tm_reactFlowNodeEnter { animation: tm_tmCardIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_stackCell { transition: transform 120ms ease-out, box-shadow 160ms ease-out; } .tm_stackCell:hover { transform: translateY(-2px); } .tm_wsFrameLabel { transition: color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out; } .tm_wsFrameLabel:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } .tm_toast { animation: tm_tmRiseIn 160ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_snippetCode { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.94em; padding: 0 3px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); } .tm_snippetLink { color: var(--dsw-alias-brand-primary); } @media (prefers-reduced-motion: reduce) { .tm_drawerBackdrop, .tm_drawerBackdropOut, .tm_drawer, .tm_drawerOut, .tm_globalSearchBackdrop, .tm_globalSearchPanel, .tm_menu, .tm_toast, .tm_reactFlowNodeEnter { animation: none; } .tm_card, .tm_stackCell, .tm_wsFrameLabel { transition: none; } .tm_card:hover, .tm_stackCell:hover { transform: none; } } .tm_drawerSearchRow { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; } .tm_drawerSearch { flex: 1; min-width: 0; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 10px; outline: none; } .tm_drawerSearch:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerSearchGo { flex: none; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_drawerSearchGo:hover { color: var(--dsw-alias-label-primary); } .tm_drawerSearchState { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); flex: none; } .tm_drawerSearchError { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_drawerEmpty { grid-column: 1 / -1; padding: 10px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_drawerHits { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2); } .tm_drawerHitsHead { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); letter-spacing: 0.04em; } .tm_drawerHit { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; } .tm_drawerHit:hover { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_hitMark { color: #0b0b0c; background: rgb(255, 214, 106); border-radius: 3px; padding: 0 2px; } .tm_drawerHitHead { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_drawerAgentChip { flex: none; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1.5; color: var(--dsw-alias-label-secondary); letter-spacing: 0.02em; } .tm_drawerAgentChipSub { color: rgb(255, 214, 106); border-color: rgba(255, 214, 106, 0.5); background: rgba(255, 214, 106, 0.1); } .tm_drawerHitTitle { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); background: transparent; border: none; padding: 0 0 2px; cursor: pointer; } .tm_drawerHitTitle:hover { color: var(--dsw-alias-brand-primary); } .tm_peek { position: fixed; z-index: 80; width: min(500px, 88vw); max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); } .tm_peekTitle { font-size: calc(11.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_peekLine { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.55; color: var(--dsw-alias-label-primary); white-space: pre-wrap; word-break: break-word; } .tm_peekHint { margin-top: 6px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); opacity: 0.7; } .tm_drawerHitMore { align-self: flex-start; margin-top: 2px; font: inherit; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; cursor: pointer; } .tm_drawerHitMore:hover { color: var(--dsw-alias-brand-primary); } .tm_drawerHitBlock { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; padding-left: 2px; } .tm_drawerHitLine { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; border-left: 2px solid var(--dsw-alias-border-l2); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tm_drawerHitLine:hover { color: var(--dsw-alias-label-primary); border-left-color: var(--dsw-alias-brand-primary); } .tm_drawerScroll { overscroll-behavior: contain; scroll-behavior: auto; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: grid; grid-template-columns: repeat(auto-fill, 224px); justify-content: center; align-content: start; gap: 12px; padding: 16px; } .tm_drawerCard { width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.5; } .tm_wsFrameResize:hover { opacity: 1; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResizeN { cursor: ns-resize; border-top: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 14px 0 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeW { cursor: ew-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 0 0 14px; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeNw, .tm_wsFrameResizeNe, .tm_wsFrameResizeSw, .tm_wsFrameResizeSe { width: 26px; height: 26px; z-index: 3; } .tm_wsFrameResizeNw { cursor: nwse-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-left-radius: 14px; } .tm_wsFrameResizeNe { cursor: nesw-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-right-radius: 14px; } .tm_wsFrameResizeSw { cursor: nesw-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-left-radius: 14px; } .tm_wsFrameResizeSe { cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_batchBar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2); } .tm_batchCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); white-space: nowrap; } .tm_batchSpace { width: 6px; } .tm_batchAction { padding: 5px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_batchAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_batchAction:disabled { opacity: 0.5; cursor: default; } .tm_batchDanger { color: var(--dsw-alias-state-error-primary); } .tm_pickBox { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--dsw-alias-border-l3); border-radius: 4px; background: var(--dsw-alias-bg-base); color: transparent; font-size: calc(11px + var(--tm-font-step, 0px)); line-height: 1; pointer-events: none; } .tm_pickBoxChecked { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-brand-primary); color: #fff; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-2); } .tm_colorToolbarLabel { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); margin-right: 2px; white-space: nowrap; } .tm_colorSwatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1; } .tm_colorSwatchClear:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); }`;
 if (typeof document !== "undefined") {
   const __selector = "style[data-plugin-css=" + JSON.stringify(__tagId) + "]";
   if (document.querySelector(__selector) === null) {
@@ -1289,7 +1319,7 @@ if (typeof document !== "undefined") {
     document.head.appendChild(__tag);
   }
 }
-var talk_map_default = { "backButton": "tm_backButton", "batchAction": "tm_batchAction", "batchBar": "tm_batchBar", "batchCount": "tm_batchCount", "batchDanger": "tm_batchDanger", "batchSpace": "tm_batchSpace", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardChip": "tm_cardChip", "cardChipDone": "tm_cardChipDone", "cardChipDraft": "tm_cardChipDraft", "cardChipError": "tm_cardChipError", "cardChipInterrupted": "tm_cardChipInterrupted", "cardChipRunning": "tm_cardChipRunning", "cardChipWaiting": "tm_cardChipWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardPin": "tm_cardPin", "cardQuiet": "tm_cardQuiet", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardReticle": "tm_cardReticle", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "drawer": "tm_drawer", "drawerAgentChip": "tm_drawerAgentChip", "drawerAgentChipSub": "tm_drawerAgentChipSub", "drawerBackdrop": "tm_drawerBackdrop", "drawerBackdropOut": "tm_drawerBackdropOut", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerEmpty": "tm_drawerEmpty", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerHit": "tm_drawerHit", "drawerHitBlock": "tm_drawerHitBlock", "drawerHitHead": "tm_drawerHitHead", "drawerHitLine": "tm_drawerHitLine", "drawerHitMore": "tm_drawerHitMore", "drawerHitTitle": "tm_drawerHitTitle", "drawerHits": "tm_drawerHits", "drawerHitsHead": "tm_drawerHitsHead", "drawerOut": "tm_drawerOut", "drawerScroll": "tm_drawerScroll", "drawerScrollSensor": "tm_drawerScrollSensor", "drawerSearch": "tm_drawerSearch", "drawerSearchError": "tm_drawerSearchError", "drawerSearchGo": "tm_drawerSearchGo", "drawerSearchRow": "tm_drawerSearchRow", "drawerSearchState": "tm_drawerSearchState", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "emptyHint": "tm_emptyHint", "fontButton": "tm_fontButton", "fontGlyphLarge": "tm_fontGlyphLarge", "fontGlyphSmall": "tm_fontGlyphSmall", "fontGroup": "tm_fontGroup", "fontReset": "tm_fontReset", "fontSign": "tm_fontSign", "globalSearch": "tm_globalSearch", "globalSearchBackdrop": "tm_globalSearchBackdrop", "globalSearchBody": "tm_globalSearchBody", "globalSearchButton": "tm_globalSearchButton", "globalSearchHead": "tm_globalSearchHead", "globalSearchInput": "tm_globalSearchInput", "globalSearchPanel": "tm_globalSearchPanel", "globalSearchTitle": "tm_globalSearchTitle", "header": "tm_header", "headerSpace": "tm_headerSpace", "hitMark": "tm_hitMark", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuIcon": "tm_menuIcon", "menuItem": "tm_menuItem", "menuItemDanger": "tm_menuItemDanger", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "panel": "tm_panel", "peek": "tm_peek", "peekHint": "tm_peekHint", "peekLine": "tm_peekLine", "peekTitle": "tm_peekTitle", "pickBox": "tm_pickBox", "pickBoxChecked": "tm_pickBoxChecked", "reactFlowNodeEnter": "tm_reactFlowNodeEnter", "renameActions": "tm_renameActions", "renameBackdrop": "tm_renameBackdrop", "renameButton": "tm_renameButton", "renameDialog": "tm_renameDialog", "renameError": "tm_renameError", "renameHeading": "tm_renameHeading", "renameInput": "tm_renameInput", "renamePrimary": "tm_renamePrimary", "runningDot": "tm_runningDot", "snippetCode": "tm_snippetCode", "snippetLink": "tm_snippetLink", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackBadgeBusy": "tm_stackBadgeBusy", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameBlocked": "tm_wsFrameBlocked", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeN": "tm_wsFrameResizeN", "wsFrameResizeNe": "tm_wsFrameResizeNe", "wsFrameResizeNw": "tm_wsFrameResizeNw", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameResizeSe": "tm_wsFrameResizeSe", "wsFrameResizeSw": "tm_wsFrameResizeSw", "wsFrameResizeW": "tm_wsFrameResizeW", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
+var talk_map_default = { "backButton": "tm_backButton", "batchAction": "tm_batchAction", "batchBar": "tm_batchBar", "batchCount": "tm_batchCount", "batchDanger": "tm_batchDanger", "batchSpace": "tm_batchSpace", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardChip": "tm_cardChip", "cardChipDone": "tm_cardChipDone", "cardChipDraft": "tm_cardChipDraft", "cardChipError": "tm_cardChipError", "cardChipInterrupted": "tm_cardChipInterrupted", "cardChipRunning": "tm_cardChipRunning", "cardChipWaiting": "tm_cardChipWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardPin": "tm_cardPin", "cardQuiet": "tm_cardQuiet", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardReticle": "tm_cardReticle", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "drawer": "tm_drawer", "drawerAgentChip": "tm_drawerAgentChip", "drawerAgentChipSub": "tm_drawerAgentChipSub", "drawerBackdrop": "tm_drawerBackdrop", "drawerBackdropOut": "tm_drawerBackdropOut", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerEmpty": "tm_drawerEmpty", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerHit": "tm_drawerHit", "drawerHitBlock": "tm_drawerHitBlock", "drawerHitHead": "tm_drawerHitHead", "drawerHitLine": "tm_drawerHitLine", "drawerHitMore": "tm_drawerHitMore", "drawerHitTitle": "tm_drawerHitTitle", "drawerHits": "tm_drawerHits", "drawerHitsHead": "tm_drawerHitsHead", "drawerOut": "tm_drawerOut", "drawerScroll": "tm_drawerScroll", "drawerScrollSensor": "tm_drawerScrollSensor", "drawerSearch": "tm_drawerSearch", "drawerSearchError": "tm_drawerSearchError", "drawerSearchGo": "tm_drawerSearchGo", "drawerSearchRow": "tm_drawerSearchRow", "drawerSearchState": "tm_drawerSearchState", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "emptyHint": "tm_emptyHint", "fontButton": "tm_fontButton", "fontGlyphLarge": "tm_fontGlyphLarge", "fontGlyphSmall": "tm_fontGlyphSmall", "fontGroup": "tm_fontGroup", "fontReset": "tm_fontReset", "fontSign": "tm_fontSign", "globalSearch": "tm_globalSearch", "globalSearchBackdrop": "tm_globalSearchBackdrop", "globalSearchBody": "tm_globalSearchBody", "globalSearchButton": "tm_globalSearchButton", "globalSearchHead": "tm_globalSearchHead", "globalSearchInput": "tm_globalSearchInput", "globalSearchPanel": "tm_globalSearchPanel", "globalSearchTitle": "tm_globalSearchTitle", "header": "tm_header", "headerSpace": "tm_headerSpace", "hitMark": "tm_hitMark", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuIcon": "tm_menuIcon", "menuItem": "tm_menuItem", "menuItemDanger": "tm_menuItemDanger", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "panel": "tm_panel", "peek": "tm_peek", "peekHint": "tm_peekHint", "peekLine": "tm_peekLine", "peekTitle": "tm_peekTitle", "pickBox": "tm_pickBox", "pickBoxChecked": "tm_pickBoxChecked", "reactFlowNodeEnter": "tm_reactFlowNodeEnter", "renameActions": "tm_renameActions", "renameBackdrop": "tm_renameBackdrop", "renameButton": "tm_renameButton", "renameDialog": "tm_renameDialog", "renameError": "tm_renameError", "renameHeading": "tm_renameHeading", "renameInput": "tm_renameInput", "renamePrimary": "tm_renamePrimary", "runningDot": "tm_runningDot", "searchLoading": "tm_searchLoading", "searchLoadingBar": "tm_searchLoadingBar", "searchSkeletonLine": "tm_searchSkeletonLine", "searchSkeletonRow": "tm_searchSkeletonRow", "searchSkeletonTitle": "tm_searchSkeletonTitle", "snippetCode": "tm_snippetCode", "snippetLink": "tm_snippetLink", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackBadgeBusy": "tm_stackBadgeBusy", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameBlocked": "tm_wsFrameBlocked", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeN": "tm_wsFrameResizeN", "wsFrameResizeNe": "tm_wsFrameResizeNe", "wsFrameResizeNw": "tm_wsFrameResizeNw", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameResizeSe": "tm_wsFrameResizeSe", "wsFrameResizeSw": "tm_wsFrameResizeSw", "wsFrameResizeW": "tm_wsFrameResizeW", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
 
 // src/client/markdown-inline.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
@@ -1319,7 +1349,7 @@ function highlight(text, query, keyPrefix) {
 }
 var INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(__[^_]+__)|(\*[^*]+\*)|(_[^_]+_)|(~~[^~]+~~)|(\[[^\]]+\]\([^)]+\))/g;
 function renderMarkdownInline(raw, query) {
-  const text = stripBlockMarkers(raw);
+  const text = stripBlockMarkers(cleanSnippet(raw, query));
   const nodes = [];
   let plain = "";
   let cursor = 0;
@@ -1360,8 +1390,21 @@ function renderMarkdownInline(raw, query) {
   return { nodes, plain };
 }
 
-// src/client/SearchResults.tsx
+// src/client/SearchLoading.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
+function SearchLoading(props) {
+  const rows = props.rows ?? 2;
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["searchLoading"], "data-talkmap-search-loading": "", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["searchLoadingBar"], children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("i", {}) }),
+    Array.from({ length: rows }, (_, index2) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["searchSkeletonRow"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["searchSkeletonTitle"] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["searchSkeletonLine"] })
+    ] }, index2))
+  ] });
+}
+
+// src/client/SearchResults.tsx
+var import_jsx_runtime3 = require("react/jsx-runtime");
 function highlight2(text, query) {
   const needle = query.trim().toLowerCase();
   if (needle === "") return [text];
@@ -1376,7 +1419,7 @@ function highlight2(text, query) {
       break;
     }
     if (at > cursor) parts.push(text.slice(cursor, at));
-    parts.push(/* @__PURE__ */ (0, import_jsx_runtime2.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
+    parts.push(/* @__PURE__ */ (0, import_jsx_runtime3.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
     cursor = at + needle.length;
   }
   return parts;
@@ -1435,17 +1478,15 @@ function SearchResults(props) {
       setLoadingMore(null);
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHitsHead"], children: [
-      props.heading,
-      props.searching ? " · " + t("stack.searching") : ""
-    ] }),
-    props.error !== null ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerSearchError"], title: props.error, children: isIndexDisabled(props.error) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (props.error.length > 70 ? props.error.slice(0, 70) + "…" : props.error) }) : null,
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: props.searching ? t("stack.searching") : props.heading }),
+    props.searching ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SearchLoading, { rows: 2 }) : null,
+    props.error !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerSearchError"], title: props.error, children: isIndexDisabled(props.error) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (props.error.length > 70 ? props.error.slice(0, 70) + "…" : props.error) }) : null,
     props.hits.map((hit) => {
       const blocks = more[hit.sessionId]?.blocks ?? hit.blocks;
       const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? [];
-      return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+      return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
           "button",
           {
             type: "button",
@@ -1458,7 +1499,7 @@ function SearchResults(props) {
         ),
         blocks.map((block, index2) => {
           const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
-          return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          return /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
             "button",
             {
               type: "button",
@@ -1480,7 +1521,7 @@ function SearchResults(props) {
             index2
           );
         }),
-        props.onFetchSessionHits !== void 0 && more[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        props.onFetchSessionHits !== void 0 && more[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
           "button",
           {
             type: "button",
@@ -1494,7 +1535,7 @@ function SearchResults(props) {
         ) : null
       ] }, hit.sessionId);
     }),
-    peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(
+    peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
       "div",
       {
         className: talk_map_default["peek"],
@@ -1508,13 +1549,13 @@ function SearchResults(props) {
         },
         onMouseLeave: cancelPeek,
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
-          peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["peekLine"], children: renderMarkdownInline(line, props.query).nodes }, index2)),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
+          peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekLine"], children: renderMarkdownInline(line, props.query).nodes }, index2)),
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
         ]
       }
     ) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       "div",
       {
         className: talk_map_default["drawerScrollSensor"],
@@ -1628,7 +1669,7 @@ async function fetchSessionHits(sessionId, query) {
 }
 
 // src/client/GlobalSearch.tsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
+var import_jsx_runtime4 = require("react/jsx-runtime");
 function GlobalSearch(props) {
   const [query, setQuery] = (0, import_react2.useState)("");
   const [submitted, setSubmitted] = (0, import_react2.useState)("");
@@ -1676,8 +1717,8 @@ function GlobalSearch(props) {
       setSearching(false);
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearch"], children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearch"], children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "input",
       {
         className: talk_map_default["globalSearchInput"],
@@ -1695,7 +1736,7 @@ function GlobalSearch(props) {
         }
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "button",
       {
         type: "button",
@@ -1709,23 +1750,23 @@ function GlobalSearch(props) {
         children: t("global.searchRun")
       }
     ),
-    submitted !== "" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+    submitted !== "" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
       "div",
       {
         className: talk_map_default["globalSearchBackdrop"],
         onMouseDown: (event) => {
           if (event.target === event.currentTarget) setSubmitted("");
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearchPanel"], role: "dialog", "aria-label": t("global.searchTitle"), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearchHead"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: talk_map_default["globalSearchTitle"], children: [
+        children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearchPanel"], role: "dialog", "aria-label": t("global.searchTitle"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearchHead"], children: [
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: talk_map_default["globalSearchTitle"], children: [
               t("global.searchTitle"),
               "「",
               submitted,
               "」"
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["drawerSpace"] }),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
               "button",
               {
                 type: "button",
@@ -1739,7 +1780,7 @@ function GlobalSearch(props) {
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["globalSearchBody"], children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["globalSearchBody"], children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
             SearchResults,
             {
               query: submitted,
@@ -1765,7 +1806,7 @@ function GlobalSearch(props) {
 var import_react11 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 var import_react4 = require("react");
 
 // node_modules/classcat/index.js
@@ -7590,15 +7631,15 @@ var ariaLiveSelector = (s) => s.ariaLiveMessage;
 var ariaLabelConfigSelector = (s) => s.ariaLabelConfig;
 function AriaLiveMessage({ rfId }) {
   const ariaLiveMessage = useStore(ariaLiveSelector);
-  return (0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_LIVE_MESSAGE}-${rfId}`, "aria-live": "assertive", "aria-atomic": "true", style: ariaLiveStyle, children: ariaLiveMessage });
+  return (0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_LIVE_MESSAGE}-${rfId}`, "aria-live": "assertive", "aria-atomic": "true", style: ariaLiveStyle, children: ariaLiveMessage });
 }
 function A11yDescriptions({ rfId, disableKeyboardA11y }) {
   const ariaLabelConfig = useStore(ariaLabelConfigSelector);
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_NODE_DESC_KEY}-${rfId}`, style, children: disableKeyboardA11y ? ariaLabelConfig["node.a11yDescription.default"] : ariaLabelConfig["node.a11yDescription.keyboardDisabled"] }), (0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_EDGE_DESC_KEY}-${rfId}`, style, children: ariaLabelConfig["edge.a11yDescription.default"] }), !disableKeyboardA11y && (0, import_jsx_runtime4.jsx)(AriaLiveMessage, { rfId })] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_NODE_DESC_KEY}-${rfId}`, style, children: disableKeyboardA11y ? ariaLabelConfig["node.a11yDescription.default"] : ariaLabelConfig["node.a11yDescription.keyboardDisabled"] }), (0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_EDGE_DESC_KEY}-${rfId}`, style, children: ariaLabelConfig["edge.a11yDescription.default"] }), !disableKeyboardA11y && (0, import_jsx_runtime5.jsx)(AriaLiveMessage, { rfId })] });
 }
 var Panel = (0, import_react4.forwardRef)(({ position = "top-left", children: children2, className, style: style2, ...rest }, ref) => {
   const positionClasses = `${position}`.split("-");
-  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__panel", className, ...positionClasses]), style: style2, ref, ...rest, children: children2 });
+  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__panel", className, ...positionClasses]), style: style2, ref, ...rest, children: children2 });
 });
 Panel.displayName = "Panel";
 var link = `https://reactflow.dev${true ? "?utm_source=attribution" : "/attribution"}`;
@@ -7612,7 +7653,7 @@ function Attribution({ proOptions, position = "bottom-right" }) {
   if (proOptions?.hideAttribution) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)(Panel, { position, className: "react-flow__attribution", "data-message": `Please only hide this attribution when you are subscribed to React Flow Pro: ${link}`, children: (0, import_jsx_runtime4.jsx)("a", { href: link, target: "_blank", rel: "noopener noreferrer", "aria-label": "React Flow attribution", children: "React Flow" }) });
+  return (0, import_jsx_runtime5.jsx)(Panel, { position, className: "react-flow__attribution", "data-message": `Please only hide this attribution when you are subscribed to React Flow Pro: ${link}`, children: (0, import_jsx_runtime5.jsx)("a", { href: link, target: "_blank", rel: "noopener noreferrer", "aria-label": "React Flow attribution", children: "React Flow" }) });
 }
 var selector$l = (s) => {
   const selectedNodes = [];
@@ -7647,7 +7688,7 @@ var changeSelector = (s) => !!s.onSelectionChangeHandlers;
 function SelectionListener({ onSelectionChange }) {
   const storeHasSelectionChangeHandlers = useStore(changeSelector);
   if (onSelectionChange || storeHasSelectionChangeHandlers) {
-    return (0, import_jsx_runtime4.jsx)(SelectionListenerInner, { onSelectionChange });
+    return (0, import_jsx_runtime5.jsx)(SelectionListenerInner, { onSelectionChange });
   }
   return null;
 }
@@ -8183,7 +8224,7 @@ function BatchProvider({ children: children2 }) {
   }, []);
   const edgeQueue = useQueue(edgeQueueHandler);
   const value = (0, import_react4.useMemo)(() => ({ nodeQueue, edgeQueue }), []);
-  return (0, import_jsx_runtime4.jsx)(BatchContext.Provider, { value, children: children2 });
+  return (0, import_jsx_runtime5.jsx)(BatchContext.Provider, { value, children: children2 });
 }
 function useBatchContext() {
   const batchContext = (0, import_react4.useContext)(BatchContext);
@@ -8512,7 +8553,7 @@ function ZoomPane({ onPaneContextMenu, zoomOnScroll = true, zoomOnPinch = true, 
     selectionOnDrag,
     paneClickDistance
   ]);
-  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__renderer", ref: zoomPane, style: containerStyle, children: children2 });
+  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__renderer", ref: zoomPane, style: containerStyle, children: children2 });
 }
 var selector$h = (s) => ({
   userSelectionActive: s.userSelectionActive,
@@ -8524,7 +8565,7 @@ function UserSelection() {
   if (!isActive) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__selection react-flow__container", style: {
+  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__selection react-flow__container", style: {
     width: userSelectionRect.width,
     height: userSelectionRect.height,
     transform: `translate(${userSelectionRect.x}px, ${userSelectionRect.y}px)`
@@ -8739,7 +8780,7 @@ function Pane({ isSelecting, selectionKeyPressed, selectionMode = SelectionMode.
     cleanupAutoPan();
   };
   const draggable = panOnDrag === true || Array.isArray(panOnDrag) && panOnDrag.includes(0);
-  return (0, import_jsx_runtime4.jsxs)("div", { className: cc(["react-flow__pane", { draggable, dragging, selection: isSelecting }]), onClick: isSelectionEnabled ? void 0 : wrapHandler(onClick, container), onContextMenu: wrapHandler(onContextMenu, container), onWheel: wrapHandler(onWheel, container), onPointerEnter: isSelectionEnabled ? void 0 : onPaneMouseEnter, onPointerMove: isSelectionEnabled ? onPointerMove : onPaneMouseMove, onPointerUp, onPointerCancel: isSelectionEnabled ? onPointerCancel : void 0, onPointerDownCapture: isSelectionEnabled ? onPointerDownCapture : void 0, onClickCapture: isSelectionEnabled ? onClickCapture : void 0, onPointerLeave: onPaneMouseLeave, ref: container, style: containerStyle, children: [children2, (0, import_jsx_runtime4.jsx)(UserSelection, {})] });
+  return (0, import_jsx_runtime5.jsxs)("div", { className: cc(["react-flow__pane", { draggable, dragging, selection: isSelecting }]), onClick: isSelectionEnabled ? void 0 : wrapHandler(onClick, container), onContextMenu: wrapHandler(onContextMenu, container), onWheel: wrapHandler(onWheel, container), onPointerEnter: isSelectionEnabled ? void 0 : onPaneMouseEnter, onPointerMove: isSelectionEnabled ? onPointerMove : onPaneMouseMove, onPointerUp, onPointerCancel: isSelectionEnabled ? onPointerCancel : void 0, onPointerDownCapture: isSelectionEnabled ? onPointerDownCapture : void 0, onClickCapture: isSelectionEnabled ? onClickCapture : void 0, onPointerLeave: onPaneMouseLeave, ref: container, style: containerStyle, children: [children2, (0, import_jsx_runtime5.jsx)(UserSelection, {})] });
 }
 function handleNodeClick({ id: id2, store, unselect = false, nodeRef }) {
   const { addSelectedNodes, unselectNodesAndEdges, multiSelectionActive, nodeLookup, onError } = store.getState();
@@ -8853,7 +8894,7 @@ var selector$f = (s) => ({
 var HandleConfigContext = (0, import_react4.createContext)(null);
 function HandleConfigProvider({ children: children2 }) {
   const config = useStore(selector$f, shallow$1);
-  return (0, import_jsx_runtime4.jsx)(HandleConfigContext.Provider, { value: config, children: children2 });
+  return (0, import_jsx_runtime5.jsx)(HandleConfigContext.Provider, { value: config, children: children2 });
 }
 function useHandleConfig() {
   const config = (0, import_react4.useContext)(HandleConfigContext);
@@ -8986,7 +9027,7 @@ function HandleComponent({ type = "source", position = Position.Top, isValidConn
     onClickConnectEnd?.(event, connectionClone);
     store.setState({ connectionClickStartHandle: null });
   };
-  return (0, import_jsx_runtime4.jsx)("div", { "data-handleid": handleId, "data-nodeid": nodeId, "data-handlepos": position, "data-id": `${rfId}-${nodeId}-${handleId}-${type}`, className: cc([
+  return (0, import_jsx_runtime5.jsx)("div", { "data-handleid": handleId, "data-nodeid": nodeId, "data-handlepos": position, "data-id": `${rfId}-${nodeId}-${handleId}-${type}`, className: cc([
     "react-flow__handle",
     `react-flow__handle-${position}`,
     "nodrag",
@@ -9012,16 +9053,16 @@ function HandleComponent({ type = "source", position = Position.Top, isValidConn
 }
 var Handle = (0, import_react4.memo)(fixedForwardRef(HandleComponent));
 function InputNode({ data, isConnectable, sourcePosition = Position.Bottom }) {
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [data?.label, (0, import_jsx_runtime4.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [data?.label, (0, import_jsx_runtime5.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
 }
 function DefaultNode({ data, isConnectable, targetPosition = Position.Top, sourcePosition = Position.Bottom }) {
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label, (0, import_jsx_runtime4.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label, (0, import_jsx_runtime5.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
 }
 function GroupNode() {
   return null;
 }
 function OutputNode({ data, isConnectable, targetPosition = Position.Top }) {
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label] });
 }
 var arrowKeyDiffs = {
   ArrowUp: { x: 0, y: -1 },
@@ -9091,9 +9132,9 @@ function NodesSelection({ onSelectionContextMenu, noPanClassName, disableKeyboar
       });
     }
   };
-  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__nodesselection", "react-flow__container", noPanClassName]), style: {
+  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__nodesselection", "react-flow__container", noPanClassName]), style: {
     transform: transformString
-  }, children: (0, import_jsx_runtime4.jsx)("div", { ref: nodeRef, className: "react-flow__nodesselection-rect", onContextMenu, tabIndex: disableKeyboardA11y ? void 0 : -1, onKeyDown: disableKeyboardA11y ? void 0 : onKeyDown, style: {
+  }, children: (0, import_jsx_runtime5.jsx)("div", { ref: nodeRef, className: "react-flow__nodesselection-rect", onContextMenu, tabIndex: disableKeyboardA11y ? void 0 : -1, onKeyDown: disableKeyboardA11y ? void 0 : onKeyDown, style: {
     width,
     height
   } }) });
@@ -9111,7 +9152,7 @@ function FlowRendererComponent({ children: children2, onPaneClick, onPaneMouseEn
   const _selectionOnDrag = selectionOnDrag && panOnDrag !== true;
   const isSelecting = selectionKeyPressed || userSelectionActive || _selectionOnDrag;
   useGlobalKeyHandler({ deleteKeyCode, multiSelectionKeyCode });
-  return (0, import_jsx_runtime4.jsx)(ZoomPane, { onPaneContextMenu, elementsSelectable, zoomOnScroll, zoomOnPinch, panOnScroll, panActivationKeyPressed, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag: !selectionKeyPressed && panOnDrag, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, zoomActivationKeyCode, preventScrolling, noWheelClassName, noPanClassName, onViewportChange, isControlledViewport, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: (0, import_jsx_runtime4.jsxs)(Pane, { onSelectionStart, onSelectionEnd, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, panOnDrag, autoPanOnSelection, isSelecting: !!isSelecting, selectionMode, selectionKeyPressed, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: [children2, nodesSelectionActive && (0, import_jsx_runtime4.jsx)(NodesSelection, { onSelectionContextMenu, noPanClassName, disableKeyboardA11y })] }) });
+  return (0, import_jsx_runtime5.jsx)(ZoomPane, { onPaneContextMenu, elementsSelectable, zoomOnScroll, zoomOnPinch, panOnScroll, panActivationKeyPressed, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag: !selectionKeyPressed && panOnDrag, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, zoomActivationKeyCode, preventScrolling, noWheelClassName, noPanClassName, onViewportChange, isControlledViewport, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: (0, import_jsx_runtime5.jsxs)(Pane, { onSelectionStart, onSelectionEnd, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, panOnDrag, autoPanOnSelection, isSelecting: !!isSelecting, selectionMode, selectionKeyPressed, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: [children2, nodesSelectionActive && (0, import_jsx_runtime5.jsx)(NodesSelection, { onSelectionContextMenu, noPanClassName, disableKeyboardA11y })] }) });
 }
 FlowRendererComponent.displayName = "FlowRenderer";
 var FlowRenderer = (0, import_react4.memo)(FlowRendererComponent);
@@ -9290,7 +9331,7 @@ function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave
       });
     }
   };
-  return (0, import_jsx_runtime4.jsx)("div", { className: cc([
+  return (0, import_jsx_runtime5.jsx)("div", { className: cc([
     "react-flow__node",
     `react-flow__node-${nodeType}`,
     {
@@ -9312,7 +9353,7 @@ function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave
     visibility: hasDimensions ? "visible" : "hidden",
     ...node.style,
     ...inlineDimensions
-  }, "data-id": id2, "data-testid": `rf__node-${id2}`, onMouseEnter: onMouseEnterHandler, onMouseMove: onMouseMoveHandler, onMouseLeave: onMouseLeaveHandler, onContextMenu: onContextMenuHandler, onClick: onSelectNodeHandler, onDoubleClick: onDoubleClickHandler, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, onFocus: isFocusable ? onFocus : void 0, role: node.ariaRole ?? (isFocusable ? "group" : void 0), "aria-roledescription": "node", "aria-describedby": disableKeyboardA11y ? void 0 : `${ARIA_NODE_DESC_KEY}-${rfId}`, "aria-label": node.ariaLabel, ...node.domAttributes, children: (0, import_jsx_runtime4.jsx)(Provider, { value: id2, children: (0, import_jsx_runtime4.jsx)(NodeComponent, { id: id2, data: node.data, type: nodeType, positionAbsoluteX: internals.positionAbsolute.x, positionAbsoluteY: internals.positionAbsolute.y, selected: node.selected ?? false, selectable: isSelectable, draggable: isDraggable, deletable: node.deletable ?? true, isConnectable, sourcePosition: node.sourcePosition, targetPosition: node.targetPosition, dragging, dragHandle: node.dragHandle, zIndex: internals.z, parentId: node.parentId, ...nodeDimensions }) }) });
+  }, "data-id": id2, "data-testid": `rf__node-${id2}`, onMouseEnter: onMouseEnterHandler, onMouseMove: onMouseMoveHandler, onMouseLeave: onMouseLeaveHandler, onContextMenu: onContextMenuHandler, onClick: onSelectNodeHandler, onDoubleClick: onDoubleClickHandler, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, onFocus: isFocusable ? onFocus : void 0, role: node.ariaRole ?? (isFocusable ? "group" : void 0), "aria-roledescription": "node", "aria-describedby": disableKeyboardA11y ? void 0 : `${ARIA_NODE_DESC_KEY}-${rfId}`, "aria-label": node.ariaLabel, ...node.domAttributes, children: (0, import_jsx_runtime5.jsx)(Provider, { value: id2, children: (0, import_jsx_runtime5.jsx)(NodeComponent, { id: id2, data: node.data, type: nodeType, positionAbsoluteX: internals.positionAbsolute.x, positionAbsoluteY: internals.positionAbsolute.y, selected: node.selected ?? false, selectable: isSelectable, draggable: isDraggable, deletable: node.deletable ?? true, isConnectable, sourcePosition: node.sourcePosition, targetPosition: node.targetPosition, dragging, dragHandle: node.dragHandle, zIndex: internals.z, parentId: node.parentId, ...nodeDimensions }) }) });
 }
 var NodeWrapper$1 = (0, import_react4.memo)(NodeWrapper);
 var selector$a = (s) => ({
@@ -9325,7 +9366,7 @@ function NodeRendererComponent(props) {
   const { nodesConnectable, nodesFocusable, elementsSelectable, onError } = useStore(selector$a, shallow$1);
   const nodeIds = useVisibleNodeIds(props.onlyRenderVisibleElements);
   const resizeObserver = useResizeObserver();
-  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__nodes", style: containerStyle, children: nodeIds.map((nodeId) => {
+  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__nodes", style: containerStyle, children: nodeIds.map((nodeId) => {
     return (
       /*
        * The split of responsibilities between NodeRenderer and
@@ -9352,7 +9393,7 @@ function NodeRendererComponent(props) {
        *   memorized – so if `NodeRenderer` *has* to rerender, it only
        *   needs to regenerate the list of nodes, nothing else.
        */
-      (0, import_jsx_runtime4.jsx)(NodeWrapper$1, { id: nodeId, nodeTypes: props.nodeTypes, nodeExtent: props.nodeExtent, onClick: props.onNodeClick, onMouseEnter: props.onNodeMouseEnter, onMouseMove: props.onNodeMouseMove, onMouseLeave: props.onNodeMouseLeave, onContextMenu: props.onNodeContextMenu, onDoubleClick: props.onNodeDoubleClick, noDragClassName: props.noDragClassName, noPanClassName: props.noPanClassName, rfId: props.rfId, disableKeyboardA11y: props.disableKeyboardA11y, resizeObserver, nodesDraggable: props.nodesDraggable ?? true, nodesConnectable, nodesFocusable, elementsSelectable, nodeClickDistance: props.nodeClickDistance, onError }, nodeId)
+      (0, import_jsx_runtime5.jsx)(NodeWrapper$1, { id: nodeId, nodeTypes: props.nodeTypes, nodeExtent: props.nodeExtent, onClick: props.onNodeClick, onMouseEnter: props.onNodeMouseEnter, onMouseMove: props.onNodeMouseMove, onMouseLeave: props.onNodeMouseLeave, onContextMenu: props.onNodeContextMenu, onDoubleClick: props.onNodeDoubleClick, noDragClassName: props.noDragClassName, noPanClassName: props.noPanClassName, rfId: props.rfId, disableKeyboardA11y: props.disableKeyboardA11y, resizeObserver, nodesDraggable: props.nodesDraggable ?? true, nodesConnectable, nodesFocusable, elementsSelectable, nodeClickDistance: props.nodeClickDistance, onError }, nodeId)
     );
   }) });
 }
@@ -9388,14 +9429,14 @@ var ArrowSymbol = ({ color: color2 = "none", strokeWidth = 1 }) => {
     strokeWidth,
     ...color2 && { stroke: color2 }
   };
-  return (0, import_jsx_runtime4.jsx)("polyline", { className: "arrow", style: style2, strokeLinecap: "round", fill: "none", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4" });
+  return (0, import_jsx_runtime5.jsx)("polyline", { className: "arrow", style: style2, strokeLinecap: "round", fill: "none", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4" });
 };
 var ArrowClosedSymbol = ({ color: color2 = "none", strokeWidth = 1 }) => {
   const style2 = {
     strokeWidth,
     ...color2 && { stroke: color2, fill: color2 }
   };
-  return (0, import_jsx_runtime4.jsx)("polyline", { className: "arrowclosed", style: style2, strokeLinecap: "round", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4 -5,-4" });
+  return (0, import_jsx_runtime5.jsx)("polyline", { className: "arrowclosed", style: style2, strokeLinecap: "round", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4 -5,-4" });
 };
 var MarkerSymbols = {
   [MarkerType.Arrow]: ArrowSymbol,
@@ -9418,7 +9459,7 @@ var Marker = ({ id: id2, type, color: color2, width = 12.5, height = 12.5, marke
   if (!Symbol2) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)("marker", { className: "react-flow__arrowhead", id: id2, markerWidth: `${width}`, markerHeight: `${height}`, viewBox: "-10 -10 20 20", markerUnits, orient, refX: "0", refY: "0", children: (0, import_jsx_runtime4.jsx)(Symbol2, { color: color2, strokeWidth }) });
+  return (0, import_jsx_runtime5.jsx)("marker", { className: "react-flow__arrowhead", id: id2, markerWidth: `${width}`, markerHeight: `${height}`, viewBox: "-10 -10 20 20", markerUnits, orient, refX: "0", refY: "0", children: (0, import_jsx_runtime5.jsx)(Symbol2, { color: color2, strokeWidth }) });
 };
 var MarkerDefinitions = ({ defaultColor, rfId }) => {
   const edges = useStore((s) => s.edges);
@@ -9435,7 +9476,7 @@ var MarkerDefinitions = ({ defaultColor, rfId }) => {
   if (!markers.length) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)("svg", { className: "react-flow__marker", "aria-hidden": "true", children: (0, import_jsx_runtime4.jsx)("defs", { children: markers.map((marker) => (0, import_jsx_runtime4.jsx)(Marker, { id: marker.id, type: marker.type, color: marker.color, width: marker.width, height: marker.height, markerUnits: marker.markerUnits, strokeWidth: marker.strokeWidth, orient: marker.orient }, marker.id)) }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { className: "react-flow__marker", "aria-hidden": "true", children: (0, import_jsx_runtime5.jsx)("defs", { children: markers.map((marker) => (0, import_jsx_runtime5.jsx)(Marker, { id: marker.id, type: marker.type, color: marker.color, width: marker.width, height: marker.height, markerUnits: marker.markerUnits, strokeWidth: marker.strokeWidth, orient: marker.orient }, marker.id)) }) });
 };
 MarkerDefinitions.displayName = "MarkerDefinitions";
 var MarkerDefinitions$1 = (0, import_react4.memo)(MarkerDefinitions);
@@ -9457,12 +9498,12 @@ function EdgeTextComponent({ x, y, label, labelStyle, labelShowBg = true, labelB
   if (!label) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsxs)("g", { transform: `translate(${x - edgeTextBbox.width / 2} ${y - edgeTextBbox.height / 2})`, className: edgeTextClasses, visibility: edgeTextBbox.width ? "visible" : "hidden", ...rest, children: [labelShowBg && (0, import_jsx_runtime4.jsx)("rect", { width: edgeTextBbox.width + 2 * labelBgPadding[0], x: -labelBgPadding[0], y: -labelBgPadding[1], height: edgeTextBbox.height + 2 * labelBgPadding[1], className: "react-flow__edge-textbg", style: labelBgStyle, rx: labelBgBorderRadius, ry: labelBgBorderRadius }), (0, import_jsx_runtime4.jsx)("text", { className: "react-flow__edge-text", y: edgeTextBbox.height / 2, dy: "0.3em", ref: edgeTextRef, style: labelStyle, children: label }), children2] });
+  return (0, import_jsx_runtime5.jsxs)("g", { transform: `translate(${x - edgeTextBbox.width / 2} ${y - edgeTextBbox.height / 2})`, className: edgeTextClasses, visibility: edgeTextBbox.width ? "visible" : "hidden", ...rest, children: [labelShowBg && (0, import_jsx_runtime5.jsx)("rect", { width: edgeTextBbox.width + 2 * labelBgPadding[0], x: -labelBgPadding[0], y: -labelBgPadding[1], height: edgeTextBbox.height + 2 * labelBgPadding[1], className: "react-flow__edge-textbg", style: labelBgStyle, rx: labelBgBorderRadius, ry: labelBgBorderRadius }), (0, import_jsx_runtime5.jsx)("text", { className: "react-flow__edge-text", y: edgeTextBbox.height / 2, dy: "0.3em", ref: edgeTextRef, style: labelStyle, children: label }), children2] });
 }
 EdgeTextComponent.displayName = "EdgeText";
 var EdgeText = (0, import_react4.memo)(EdgeTextComponent);
 function BaseEdge({ path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, interactionWidth = 20, ...props }) {
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)("path", { ...props, d: path, fill: "none", className: cc(["react-flow__edge-path", props.className]) }), interactionWidth ? (0, import_jsx_runtime4.jsx)("path", { d: path, fill: "none", strokeOpacity: 0, strokeWidth: interactionWidth, className: "react-flow__edge-interaction" }) : null, label && isNumeric(labelX) && isNumeric(labelY) ? (0, import_jsx_runtime4.jsx)(EdgeText, { x: labelX, y: labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius }) : null] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)("path", { ...props, d: path, fill: "none", className: cc(["react-flow__edge-path", props.className]) }), interactionWidth ? (0, import_jsx_runtime5.jsx)("path", { d: path, fill: "none", strokeOpacity: 0, strokeWidth: interactionWidth, className: "react-flow__edge-interaction" }) : null, label && isNumeric(labelX) && isNumeric(labelY) ? (0, import_jsx_runtime5.jsx)(EdgeText, { x: labelX, y: labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius }) : null] });
 }
 function getControl({ pos, x1, y1, x2, y2 }) {
   if (pos === Position.Left || pos === Position.Right) {
@@ -9514,7 +9555,7 @@ function createSimpleBezierEdge(params) {
       targetPosition
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var SimpleBezierEdge = createSimpleBezierEdge({ isInternal: false });
@@ -9535,7 +9576,7 @@ function createSmoothStepEdge(params) {
       stepPosition: pathOptions?.stepPosition
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var SmoothStepEdge = createSmoothStepEdge({ isInternal: false });
@@ -9545,7 +9586,7 @@ SmoothStepEdgeInternal.displayName = "SmoothStepEdgeInternal";
 function createStepEdge(params) {
   return (0, import_react4.memo)(({ id: id2, ...props }) => {
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime4.jsx)(SmoothStepEdge, { ...props, id: _id, pathOptions: (0, import_react4.useMemo)(() => ({ borderRadius: 0, offset: props.pathOptions?.offset }), [props.pathOptions?.offset]) });
+    return (0, import_jsx_runtime5.jsx)(SmoothStepEdge, { ...props, id: _id, pathOptions: (0, import_react4.useMemo)(() => ({ borderRadius: 0, offset: props.pathOptions?.offset }), [props.pathOptions?.offset]) });
   });
 }
 var StepEdge = createStepEdge({ isInternal: false });
@@ -9556,7 +9597,7 @@ function createStraightEdge(params) {
   return (0, import_react4.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth }) => {
     const [path, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var StraightEdge = createStraightEdge({ isInternal: false });
@@ -9575,7 +9616,7 @@ function createBezierEdge(params) {
       curvature: pathOptions?.curvature
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var BezierEdge = createBezierEdge({ isInternal: false });
@@ -9614,7 +9655,7 @@ var shiftY = (y, shift, position) => {
 };
 var EdgeUpdaterClassName = "react-flow__edgeupdater";
 function EdgeAnchor({ position, centerX, centerY, radius = 10, onMouseDown, onMouseEnter, onMouseOut, type }) {
-  return (0, import_jsx_runtime4.jsx)("circle", { onMouseDown, onMouseEnter, onMouseOut, className: cc([EdgeUpdaterClassName, `${EdgeUpdaterClassName}-${type}`]), cx: shiftX(centerX, radius, position), cy: shiftY(centerY, radius, position), r: radius, stroke: "transparent", fill: "transparent" });
+  return (0, import_jsx_runtime5.jsx)("circle", { onMouseDown, onMouseEnter, onMouseOut, className: cc([EdgeUpdaterClassName, `${EdgeUpdaterClassName}-${type}`]), cx: shiftX(centerX, radius, position), cy: shiftY(centerY, radius, position), r: radius, stroke: "transparent", fill: "transparent" });
 }
 function EdgeUpdateAnchors({ isReconnectable, reconnectRadius, edge, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, onReconnect, onReconnectStart, onReconnectEnd, setReconnecting, setUpdateHover }) {
   const store = useStoreApi();
@@ -9664,7 +9705,7 @@ function EdgeUpdateAnchors({ isReconnectable, reconnectRadius, edge, sourceX, so
   const onReconnectTargetMouseDown = (event) => handleEdgeUpdater(event, { nodeId: edge.source, id: edge.sourceHandle ?? null, type: "source" });
   const onReconnectMouseEnter = () => setUpdateHover(true);
   const onReconnectMouseOut = () => setUpdateHover(false);
-  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(isReconnectable === true || isReconnectable === "source") && (0, import_jsx_runtime4.jsx)(EdgeAnchor, { position: sourcePosition, centerX: sourceX, centerY: sourceY, radius: reconnectRadius, onMouseDown: onReconnectSourceMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "source" }), (isReconnectable === true || isReconnectable === "target") && (0, import_jsx_runtime4.jsx)(EdgeAnchor, { position: targetPosition, centerX: targetX, centerY: targetY, radius: reconnectRadius, onMouseDown: onReconnectTargetMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "target" })] });
+  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(isReconnectable === true || isReconnectable === "source") && (0, import_jsx_runtime5.jsx)(EdgeAnchor, { position: sourcePosition, centerX: sourceX, centerY: sourceY, radius: reconnectRadius, onMouseDown: onReconnectSourceMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "source" }), (isReconnectable === true || isReconnectable === "target") && (0, import_jsx_runtime5.jsx)(EdgeAnchor, { position: targetPosition, centerX: targetX, centerY: targetY, radius: reconnectRadius, onMouseDown: onReconnectTargetMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "target" })] });
 }
 function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, onClick, onDoubleClick, onContextMenu, onMouseEnter, onMouseMove, onMouseLeave, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, rfId, edgeTypes, noPanClassName, onError, disableKeyboardA11y }) {
   let edge = useStore((s) => s.edgeLookup.get(id2));
@@ -9759,7 +9800,7 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
       }
     }
   };
-  return (0, import_jsx_runtime4.jsx)("svg", { style: { zIndex }, children: (0, import_jsx_runtime4.jsxs)("g", { className: cc([
+  return (0, import_jsx_runtime5.jsx)("svg", { style: { zIndex }, children: (0, import_jsx_runtime5.jsxs)("g", { className: cc([
     "react-flow__edge",
     `react-flow__edge-${edgeType}`,
     edge.className,
@@ -9771,7 +9812,7 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
       updating: updateHover,
       selectable: isSelectable
     }
-  ]), onClick: onEdgeClick, onDoubleClick: onEdgeDoubleClick, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, role: edge.ariaRole ?? (isFocusable ? "group" : "img"), "aria-roledescription": "edge", "data-id": id2, "data-testid": `rf__edge-${id2}`, "aria-label": edge.ariaLabel === null ? void 0 : edge.ariaLabel || `Edge from ${edge.source} to ${edge.target}`, "aria-describedby": isFocusable ? `${ARIA_EDGE_DESC_KEY}-${rfId}` : void 0, ref: edgeRef, ...edge.domAttributes, children: [!reconnecting && (0, import_jsx_runtime4.jsx)(EdgeComponent, { id: id2, source: edge.source, target: edge.target, type: edge.type, selected: edge.selected, animated: edge.animated, selectable: isSelectable, deletable: edge.deletable ?? true, label: edge.label, labelStyle: edge.labelStyle, labelShowBg: edge.labelShowBg, labelBgStyle: edge.labelBgStyle, labelBgPadding: edge.labelBgPadding, labelBgBorderRadius: edge.labelBgBorderRadius, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data: edge.data, style: edge.style, sourceHandleId: edge.sourceHandle, targetHandleId: edge.targetHandle, markerStart: markerStartUrl, markerEnd: markerEndUrl, pathOptions: "pathOptions" in edge ? edge.pathOptions : void 0, interactionWidth: edge.interactionWidth }), isReconnectable && (0, import_jsx_runtime4.jsx)(EdgeUpdateAnchors, { edge, isReconnectable, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, setUpdateHover, setReconnecting })] }) });
+  ]), onClick: onEdgeClick, onDoubleClick: onEdgeDoubleClick, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, role: edge.ariaRole ?? (isFocusable ? "group" : "img"), "aria-roledescription": "edge", "data-id": id2, "data-testid": `rf__edge-${id2}`, "aria-label": edge.ariaLabel === null ? void 0 : edge.ariaLabel || `Edge from ${edge.source} to ${edge.target}`, "aria-describedby": isFocusable ? `${ARIA_EDGE_DESC_KEY}-${rfId}` : void 0, ref: edgeRef, ...edge.domAttributes, children: [!reconnecting && (0, import_jsx_runtime5.jsx)(EdgeComponent, { id: id2, source: edge.source, target: edge.target, type: edge.type, selected: edge.selected, animated: edge.animated, selectable: isSelectable, deletable: edge.deletable ?? true, label: edge.label, labelStyle: edge.labelStyle, labelShowBg: edge.labelShowBg, labelBgStyle: edge.labelBgStyle, labelBgPadding: edge.labelBgPadding, labelBgBorderRadius: edge.labelBgBorderRadius, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data: edge.data, style: edge.style, sourceHandleId: edge.sourceHandle, targetHandleId: edge.targetHandle, markerStart: markerStartUrl, markerEnd: markerEndUrl, pathOptions: "pathOptions" in edge ? edge.pathOptions : void 0, interactionWidth: edge.interactionWidth }), isReconnectable && (0, import_jsx_runtime5.jsx)(EdgeUpdateAnchors, { edge, isReconnectable, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, setUpdateHover, setReconnecting })] }) });
 }
 var EdgeWrapper$1 = (0, import_react4.memo)(EdgeWrapper);
 var selector$9 = (s) => ({
@@ -9784,8 +9825,8 @@ var selector$9 = (s) => ({
 function EdgeRendererComponent({ defaultMarkerColor, onlyRenderVisibleElements, rfId, edgeTypes, noPanClassName, onReconnect, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, onEdgeClick, reconnectRadius, onEdgeDoubleClick, onReconnectStart, onReconnectEnd, disableKeyboardA11y }) {
   const { edgesFocusable, edgesReconnectable, elementsSelectable, onError } = useStore(selector$9, shallow$1);
   const edgeIds = useVisibleEdgeIds(onlyRenderVisibleElements);
-  return (0, import_jsx_runtime4.jsxs)("div", { className: "react-flow__edges", children: [(0, import_jsx_runtime4.jsx)(MarkerDefinitions$1, { defaultColor: defaultMarkerColor, rfId }), edgeIds.map((id2) => {
-    return (0, import_jsx_runtime4.jsx)(EdgeWrapper$1, { id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, noPanClassName, onReconnect, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onClick: onEdgeClick, reconnectRadius, onDoubleClick: onEdgeDoubleClick, onReconnectStart, onReconnectEnd, rfId, onError, edgeTypes, disableKeyboardA11y }, id2);
+  return (0, import_jsx_runtime5.jsxs)("div", { className: "react-flow__edges", children: [(0, import_jsx_runtime5.jsx)(MarkerDefinitions$1, { defaultColor: defaultMarkerColor, rfId }), edgeIds.map((id2) => {
+    return (0, import_jsx_runtime5.jsx)(EdgeWrapper$1, { id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, noPanClassName, onReconnect, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onClick: onEdgeClick, reconnectRadius, onDoubleClick: onEdgeDoubleClick, onReconnectStart, onReconnectEnd, rfId, onError, edgeTypes, disableKeyboardA11y }, id2);
   })] });
 }
 EdgeRendererComponent.displayName = "EdgeRenderer";
@@ -9810,7 +9851,7 @@ function Viewport({ children: children2 }) {
     applyTransform();
     return store.subscribe(applyTransform);
   }, [store]);
-  return (0, import_jsx_runtime4.jsx)("div", { ref: viewportRef, className: "react-flow__viewport xyflow__viewport react-flow__container", style: { transform: toTransformString(initialTransform) }, children: children2 });
+  return (0, import_jsx_runtime5.jsx)("div", { ref: viewportRef, className: "react-flow__viewport xyflow__viewport react-flow__container", style: { transform: toTransformString(initialTransform) }, children: children2 });
 }
 function useOnInitHandler(onInit) {
   const rfInstance = useReactFlow();
@@ -9864,7 +9905,7 @@ function ConnectionLineWrapper({ containerStyle: containerStyle2, style: style2,
   if (!renderConnection) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)("svg", { style: containerStyle2, width, height, className: "react-flow__connectionline react-flow__container", children: (0, import_jsx_runtime4.jsx)("g", { className: cc(["react-flow__connection", getConnectionStatus(isValid)]), children: (0, import_jsx_runtime4.jsx)(ConnectionLine, { style: style2, type, CustomComponent: component, isValid }) }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { style: containerStyle2, width, height, className: "react-flow__connectionline react-flow__container", children: (0, import_jsx_runtime5.jsx)("g", { className: cc(["react-flow__connection", getConnectionStatus(isValid)]), children: (0, import_jsx_runtime5.jsx)(ConnectionLine, { style: style2, type, CustomComponent: component, isValid }) }) });
 }
 var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomComponent, isValid }) => {
   const { inProgress, from, fromNode, fromHandle, fromPosition, to, toNode, toHandle, toPosition, pointer } = useConnection();
@@ -9872,7 +9913,7 @@ var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomC
     return;
   }
   if (CustomComponent) {
-    return (0, import_jsx_runtime4.jsx)(CustomComponent, { connectionLineType: type, connectionLineStyle: style2, fromNode, fromHandle, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, fromPosition, toPosition, connectionStatus: getConnectionStatus(isValid), toNode, toHandle, pointer });
+    return (0, import_jsx_runtime5.jsx)(CustomComponent, { connectionLineType: type, connectionLineStyle: style2, fromNode, fromHandle, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, fromPosition, toPosition, connectionStatus: getConnectionStatus(isValid), toNode, toHandle, pointer });
   }
   let path = "";
   const pathParams = {
@@ -9902,7 +9943,7 @@ var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomC
     default:
       [path] = getStraightPath(pathParams);
   }
-  return (0, import_jsx_runtime4.jsx)("path", { d: path, fill: "none", className: "react-flow__connection-path", style: style2 });
+  return (0, import_jsx_runtime5.jsx)("path", { d: path, fill: "none", className: "react-flow__connection-path", style: style2 });
 };
 ConnectionLine.displayName = "ConnectionLine";
 var emptyTypes = {};
@@ -9943,7 +9984,7 @@ function GraphViewComponent({ nodeTypes: nodeTypes2, edgeTypes, onInit, onNodeCl
   useStylesLoadedWarning();
   useOnInitHandler(onInit);
   useViewportSync(viewport);
-  return (0, import_jsx_runtime4.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime4.jsxs)(Viewport, { children: [(0, import_jsx_runtime4.jsx)(EdgeRenderer, { edgeTypes, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime4.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime4.jsx)(NodeRenderer, { nodeTypes: nodeTypes2, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
+  return (0, import_jsx_runtime5.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime5.jsxs)(Viewport, { children: [(0, import_jsx_runtime5.jsx)(EdgeRenderer, { edgeTypes, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime5.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime5.jsx)(NodeRenderer, { nodeTypes: nodeTypes2, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
 }
 GraphViewComponent.displayName = "GraphView";
 var GraphView = (0, import_react4.memo)(GraphViewComponent);
@@ -10353,14 +10394,14 @@ function ReactFlowProvider({ initialNodes: nodes, initialEdges: edges, defaultNo
     nodeExtent,
     zIndexMode
   }));
-  return (0, import_jsx_runtime4.jsx)(Provider$1, { value: store, children: (0, import_jsx_runtime4.jsx)(BatchProvider, { children: (0, import_jsx_runtime4.jsx)(HandleConfigProvider, { children: children2 }) }) });
+  return (0, import_jsx_runtime5.jsx)(Provider$1, { value: store, children: (0, import_jsx_runtime5.jsx)(BatchProvider, { children: (0, import_jsx_runtime5.jsx)(HandleConfigProvider, { children: children2 }) }) });
 }
 function Wrapper({ children: children2, nodes, edges, defaultNodes, defaultEdges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode }) {
   const isWrapped = (0, import_react4.useContext)(StoreContext);
   if (isWrapped) {
-    return (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: children2 });
+    return (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: children2 });
   }
-  return (0, import_jsx_runtime4.jsx)(ReactFlowProvider, { initialNodes: nodes, initialEdges: edges, defaultNodes, defaultEdges, initialWidth: width, initialHeight: height, fitView, initialFitViewOptions: fitViewOptions, initialMinZoom: minZoom, initialMaxZoom: maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: children2 });
+  return (0, import_jsx_runtime5.jsx)(ReactFlowProvider, { initialNodes: nodes, initialEdges: edges, defaultNodes, defaultEdges, initialWidth: width, initialHeight: height, fitView, initialFitViewOptions: fitViewOptions, initialMinZoom: minZoom, initialMaxZoom: maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: children2 });
 }
 var wrapperStyle = {
   width: "100%",
@@ -10376,15 +10417,15 @@ function ReactFlow({ nodes, edges, defaultNodes, defaultEdges, className, nodeTy
     e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "instant" });
     onScroll?.(e);
   }, [onScroll]);
-  return (0, import_jsx_runtime4.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime4.jsxs)(Wrapper, { nodes, edges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime4.jsx)(StoreUpdater, { nodes, edges, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime4.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime4.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime4.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime4.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
+  return (0, import_jsx_runtime5.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime5.jsxs)(Wrapper, { nodes, edges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime5.jsx)(StoreUpdater, { nodes, edges, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime5.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime5.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime5.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime5.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
 }
 var index = fixedForwardRef(ReactFlow);
 var error014 = errorMessages["error014"]();
 function LinePattern({ dimensions, lineWidth, variant, className }) {
-  return (0, import_jsx_runtime4.jsx)("path", { strokeWidth: lineWidth, d: `M${dimensions[0] / 2} 0 V${dimensions[1]} M0 ${dimensions[1] / 2} H${dimensions[0]}`, className: cc(["react-flow__background-pattern", variant, className]) });
+  return (0, import_jsx_runtime5.jsx)("path", { strokeWidth: lineWidth, d: `M${dimensions[0] / 2} 0 V${dimensions[1]} M0 ${dimensions[1] / 2} H${dimensions[0]}`, className: cc(["react-flow__background-pattern", variant, className]) });
 }
 function DotPattern({ radius, className }) {
-  return (0, import_jsx_runtime4.jsx)("circle", { cx: radius, cy: radius, r: radius, className: cc(["react-flow__background-pattern", "dots", className]) });
+  return (0, import_jsx_runtime5.jsx)("circle", { cx: radius, cy: radius, r: radius, className: cc(["react-flow__background-pattern", "dots", className]) });
 }
 var BackgroundVariant;
 (function(BackgroundVariant2) {
@@ -10428,32 +10469,32 @@ function BackgroundComponent({
     offsetXY[1] * transform2[2] + patternDimensions[1] / 2
   ];
   const _patternId = `${patternId}${id2 ? id2 : ""}`;
-  return (0, import_jsx_runtime4.jsxs)("svg", { className: cc(["react-flow__background", className]), style: {
+  return (0, import_jsx_runtime5.jsxs)("svg", { className: cc(["react-flow__background", className]), style: {
     ...style2,
     ...containerStyle,
     "--xy-background-color-props": bgColor,
     "--xy-background-pattern-color-props": color2
-  }, ref, "data-testid": "rf__background", children: [(0, import_jsx_runtime4.jsx)("pattern", { id: _patternId, x: transform2[0] % scaledGap[0], y: transform2[1] % scaledGap[1], width: scaledGap[0], height: scaledGap[1], patternUnits: "userSpaceOnUse", patternTransform: `translate(-${scaledOffset[0]},-${scaledOffset[1]})`, children: isDots ? (0, import_jsx_runtime4.jsx)(DotPattern, { radius: scaledSize / 2, className: patternClassName }) : (0, import_jsx_runtime4.jsx)(LinePattern, { dimensions: patternDimensions, lineWidth, variant, className: patternClassName }) }), (0, import_jsx_runtime4.jsx)("rect", { x: "0", y: "0", width: "100%", height: "100%", fill: `url(#${_patternId})` })] });
+  }, ref, "data-testid": "rf__background", children: [(0, import_jsx_runtime5.jsx)("pattern", { id: _patternId, x: transform2[0] % scaledGap[0], y: transform2[1] % scaledGap[1], width: scaledGap[0], height: scaledGap[1], patternUnits: "userSpaceOnUse", patternTransform: `translate(-${scaledOffset[0]},-${scaledOffset[1]})`, children: isDots ? (0, import_jsx_runtime5.jsx)(DotPattern, { radius: scaledSize / 2, className: patternClassName }) : (0, import_jsx_runtime5.jsx)(LinePattern, { dimensions: patternDimensions, lineWidth, variant, className: patternClassName }) }), (0, import_jsx_runtime5.jsx)("rect", { x: "0", y: "0", width: "100%", height: "100%", fill: `url(#${_patternId})` })] });
 }
 BackgroundComponent.displayName = "Background";
 var Background = (0, import_react4.memo)(BackgroundComponent);
 function PlusIcon() {
-  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z" }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z" }) });
 }
 function MinusIcon() {
-  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 5", children: (0, import_jsx_runtime4.jsx)("path", { d: "M0 0h32v4.2H0z" }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 5", children: (0, import_jsx_runtime5.jsx)("path", { d: "M0 0h32v4.2H0z" }) });
 }
 function FitViewIcon() {
-  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 30", children: (0, import_jsx_runtime4.jsx)("path", { d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 30", children: (0, import_jsx_runtime5.jsx)("path", { d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" }) });
 }
 function LockIcon() {
-  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z" }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z" }) });
 }
 function UnlockIcon() {
-  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z" }) });
+  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z" }) });
 }
 function ControlButton({ children: children2, className, ...rest }) {
-  return (0, import_jsx_runtime4.jsx)("button", { type: "button", className: cc(["react-flow__controls-button", className]), ...rest, children: children2 });
+  return (0, import_jsx_runtime5.jsx)("button", { type: "button", className: cc(["react-flow__controls-button", className]), ...rest, children: children2 });
 }
 var selector$2 = (s) => ({
   isInteractive: s.nodesDraggable || s.nodesConnectable || s.elementsSelectable,
@@ -10486,14 +10527,14 @@ function ControlsComponent({ style: style2, showZoom = true, showFitView = true,
     onInteractiveChange?.(!isInteractive);
   };
   const orientationClass = orientation === "horizontal" ? "horizontal" : "vertical";
-  return (0, import_jsx_runtime4.jsxs)(Panel, { className: cc(["react-flow__controls", orientationClass, className]), position, style: style2, "data-testid": "rf__controls", "aria-label": ariaLabel ?? ariaLabelConfig["controls.ariaLabel"], children: [showZoom && (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(ControlButton, { onClick: onZoomInHandler, className: "react-flow__controls-zoomin", title: ariaLabelConfig["controls.zoomIn.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomIn.ariaLabel"], disabled: maxZoomReached, children: (0, import_jsx_runtime4.jsx)(PlusIcon, {}) }), (0, import_jsx_runtime4.jsx)(ControlButton, { onClick: onZoomOutHandler, className: "react-flow__controls-zoomout", title: ariaLabelConfig["controls.zoomOut.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomOut.ariaLabel"], disabled: minZoomReached, children: (0, import_jsx_runtime4.jsx)(MinusIcon, {}) })] }), showFitView && (0, import_jsx_runtime4.jsx)(ControlButton, { className: "react-flow__controls-fitview", onClick: onFitViewHandler, title: ariaLabelConfig["controls.fitView.ariaLabel"], "aria-label": ariaLabelConfig["controls.fitView.ariaLabel"], children: (0, import_jsx_runtime4.jsx)(FitViewIcon, {}) }), showInteractive && (0, import_jsx_runtime4.jsx)(ControlButton, { className: "react-flow__controls-interactive", onClick: onToggleInteractivity, title: ariaLabelConfig["controls.interactive.ariaLabel"], "aria-label": ariaLabelConfig["controls.interactive.ariaLabel"], children: isInteractive ? (0, import_jsx_runtime4.jsx)(UnlockIcon, {}) : (0, import_jsx_runtime4.jsx)(LockIcon, {}) }), children2] });
+  return (0, import_jsx_runtime5.jsxs)(Panel, { className: cc(["react-flow__controls", orientationClass, className]), position, style: style2, "data-testid": "rf__controls", "aria-label": ariaLabel ?? ariaLabelConfig["controls.ariaLabel"], children: [showZoom && (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(ControlButton, { onClick: onZoomInHandler, className: "react-flow__controls-zoomin", title: ariaLabelConfig["controls.zoomIn.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomIn.ariaLabel"], disabled: maxZoomReached, children: (0, import_jsx_runtime5.jsx)(PlusIcon, {}) }), (0, import_jsx_runtime5.jsx)(ControlButton, { onClick: onZoomOutHandler, className: "react-flow__controls-zoomout", title: ariaLabelConfig["controls.zoomOut.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomOut.ariaLabel"], disabled: minZoomReached, children: (0, import_jsx_runtime5.jsx)(MinusIcon, {}) })] }), showFitView && (0, import_jsx_runtime5.jsx)(ControlButton, { className: "react-flow__controls-fitview", onClick: onFitViewHandler, title: ariaLabelConfig["controls.fitView.ariaLabel"], "aria-label": ariaLabelConfig["controls.fitView.ariaLabel"], children: (0, import_jsx_runtime5.jsx)(FitViewIcon, {}) }), showInteractive && (0, import_jsx_runtime5.jsx)(ControlButton, { className: "react-flow__controls-interactive", onClick: onToggleInteractivity, title: ariaLabelConfig["controls.interactive.ariaLabel"], "aria-label": ariaLabelConfig["controls.interactive.ariaLabel"], children: isInteractive ? (0, import_jsx_runtime5.jsx)(UnlockIcon, {}) : (0, import_jsx_runtime5.jsx)(LockIcon, {}) }), children2] });
 }
 ControlsComponent.displayName = "Controls";
 var Controls = (0, import_react4.memo)(ControlsComponent);
 function MiniMapNodeComponent({ id: id2, x, y, width, height, style: style2, color: color2, strokeColor, strokeWidth, className, borderRadius, shapeRendering, selected: selected2, onClick }) {
   const { background, backgroundColor } = style2 || {};
   const fill = color2 || background || backgroundColor;
-  return (0, import_jsx_runtime4.jsx)("rect", { className: cc(["react-flow__minimap-node", { selected: selected2 }, className]), x, y, rx: borderRadius, ry: borderRadius, width, height, style: {
+  return (0, import_jsx_runtime5.jsx)("rect", { className: cc(["react-flow__minimap-node", { selected: selected2 }, className]), x, y, rx: borderRadius, ry: borderRadius, width, height, style: {
     fill,
     stroke: strokeColor,
     strokeWidth
@@ -10520,7 +10561,7 @@ function MiniMapNodes({
   const nodeStrokeColorFunc = getAttrFunction(nodeStrokeColor);
   const nodeClassNameFunc = getAttrFunction(nodeClassName);
   const shapeRendering = typeof window === "undefined" || !!window.chrome ? "crispEdges" : "geometricPrecision";
-  return (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: nodeIds.map((nodeId) => (
+  return (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: nodeIds.map((nodeId) => (
     /*
      * The split of responsibilities between MiniMapNodes and
      * NodeComponentWrapper may appear weird. However, it’s designed to
@@ -10528,7 +10569,7 @@ function MiniMapNodes({
      *
      * For more details, see a similar commit in `NodeRenderer/index.tsx`.
      */
-    (0, import_jsx_runtime4.jsx)(NodeComponentWrapper, { id: nodeId, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, NodeComponent, onClick, shapeRendering }, nodeId)
+    (0, import_jsx_runtime5.jsx)(NodeComponentWrapper, { id: nodeId, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, NodeComponent, onClick, shapeRendering }, nodeId)
   )) });
 }
 function NodeComponentWrapperInner({ id: id2, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, shapeRendering, NodeComponent, onClick }) {
@@ -10551,7 +10592,7 @@ function NodeComponentWrapperInner({ id: id2, nodeColorFunc, nodeStrokeColorFunc
   if (!node || node.hidden || !nodeHasDimensions(node)) {
     return null;
   }
-  return (0, import_jsx_runtime4.jsx)(NodeComponent, { x, y, width, height, style: node.style, selected: !!node.selected, className: nodeClassNameFunc(node), color: nodeColorFunc(node), borderRadius: nodeBorderRadius, strokeColor: nodeStrokeColorFunc(node), strokeWidth: nodeStrokeWidth, shapeRendering, onClick, id: node.id });
+  return (0, import_jsx_runtime5.jsx)(NodeComponent, { x, y, width, height, style: node.style, selected: !!node.selected, className: nodeClassNameFunc(node), color: nodeColorFunc(node), borderRadius: nodeBorderRadius, strokeColor: nodeStrokeColorFunc(node), strokeWidth: nodeStrokeWidth, shapeRendering, onClick, id: node.id });
 }
 var NodeComponentWrapper = (0, import_react4.memo)(NodeComponentWrapperInner);
 var MiniMapNodes$1 = (0, import_react4.memo)(MiniMapNodes);
@@ -10667,7 +10708,7 @@ function MiniMapComponent({
   }, [onNodeClick]);
   const onSvgNodeClick = onNodeClick ? nodeClickHandler : void 0;
   const _ariaLabel = ariaLabel ?? ariaLabelConfig["minimap.ariaLabel"];
-  return (0, import_jsx_runtime4.jsx)(Panel, { position, style: {
+  return (0, import_jsx_runtime5.jsx)(Panel, { position, style: {
     ...style2,
     "--xy-minimap-background-color-props": typeof bgColor === "string" ? bgColor : void 0,
     "--xy-minimap-mask-background-color-props": typeof maskColor === "string" ? maskColor : void 0,
@@ -10676,7 +10717,7 @@ function MiniMapComponent({
     "--xy-minimap-node-background-color-props": typeof nodeColor === "string" ? nodeColor : void 0,
     "--xy-minimap-node-stroke-color-props": typeof nodeStrokeColor === "string" ? nodeStrokeColor : void 0,
     "--xy-minimap-node-stroke-width-props": typeof nodeStrokeWidth === "number" ? nodeStrokeWidth : void 0
-  }, className: cc(["react-flow__minimap", className]), "data-testid": "rf__minimap", children: (0, import_jsx_runtime4.jsxs)("svg", { width: elementWidth, height: elementHeight, viewBox: `${x} ${y} ${width} ${height}`, className: "react-flow__minimap-svg", role: "img", "aria-labelledby": labelledBy, ref: svg, onClick: onSvgClick, children: [_ariaLabel && (0, import_jsx_runtime4.jsx)("title", { id: labelledBy, children: _ariaLabel }), (0, import_jsx_runtime4.jsx)(MiniMapNodes$1, { onClick: onSvgNodeClick, nodeColor, nodeStrokeColor, nodeBorderRadius, nodeClassName, nodeStrokeWidth, nodeComponent }), (0, import_jsx_runtime4.jsx)("path", { className: "react-flow__minimap-mask", d: `M${x - offset},${y - offset}h${width + offset * 2}v${height + offset * 2}h${-width - offset * 2}z
+  }, className: cc(["react-flow__minimap", className]), "data-testid": "rf__minimap", children: (0, import_jsx_runtime5.jsxs)("svg", { width: elementWidth, height: elementHeight, viewBox: `${x} ${y} ${width} ${height}`, className: "react-flow__minimap-svg", role: "img", "aria-labelledby": labelledBy, ref: svg, onClick: onSvgClick, children: [_ariaLabel && (0, import_jsx_runtime5.jsx)("title", { id: labelledBy, children: _ariaLabel }), (0, import_jsx_runtime5.jsx)(MiniMapNodes$1, { onClick: onSvgNodeClick, nodeColor, nodeStrokeColor, nodeBorderRadius, nodeClassName, nodeStrokeWidth, nodeComponent }), (0, import_jsx_runtime5.jsx)("path", { className: "react-flow__minimap-mask", d: `M${x - offset},${y - offset}h${width + offset * 2}v${height + offset * 2}h${-width - offset * 2}z
         M${viewBB.x},${viewBB.y}h${viewBB.width}v${viewBB.height}h${-viewBB.width}z`, fillRule: "evenodd", pointerEvents: "none" })] }) });
 }
 MiniMapComponent.displayName = "MiniMap";
@@ -10816,7 +10857,7 @@ function ResizeControl({ nodeId, position, variant = ResizeControlVariant.Handle
     shouldResize
   ]);
   const positionClassNames = controlPosition.split("-");
-  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__resize-control", "nodrag", ...positionClassNames, variant, className]), ref: resizeControlRef, style: {
+  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__resize-control", "nodrag", ...positionClassNames, variant, className]), ref: resizeControlRef, style: {
     ...style2,
     scale,
     ...color2 && { [isHandleControl ? "backgroundColor" : "borderColor"]: color2 }
@@ -11402,48 +11443,48 @@ function putPreview(sessionId, text, stamp) {
 var import_react5 = require("react");
 
 // src/client/MenuIcons.tsx
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 var PATHS = {
-  pin: /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
-  unpin: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "currentColor", opacity: "0.4", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "currentColor", d: "M3.6 2.4 2.4 3.6l18 18 1.2-1.2z" })
+  pin: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
+  unpin: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", opacity: "0.4", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", d: "M3.6 2.4 2.4 3.6l18 18 1.2-1.2z" })
   ] }),
-  rename: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M14.9 3.5a2 2 0 0 1 2.9 2.9L7.4 16.8 3.4 18l1.2-4z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M13.2 5.2 16.6 8.6" })
+  rename: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M14.9 3.5a2 2 0 0 1 2.9 2.9L7.4 16.8 3.4 18l1.2-4z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M13.2 5.2 16.6 8.6" })
   ] }),
-  unread: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("circle", { cx: "12", cy: "12", r: "8.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("circle", { cx: "12", cy: "12", r: "3.2", fill: "currentColor" })
+  unread: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("circle", { cx: "12", cy: "12", r: "8.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("circle", { cx: "12", cy: "12", r: "3.2", fill: "currentColor" })
   ] }),
-  archive: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "3.2", y: "4", width: "17.6", height: "4.6", rx: "1.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M5.2 8.6v9.1c0 .8.6 1.4 1.4 1.4h10.8c.8 0 1.4-.6 1.4-1.4V8.6M10 12.6h4" })
+  archive: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.2", y: "4", width: "17.6", height: "4.6", rx: "1.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M5.2 8.6v9.1c0 .8.6 1.4 1.4 1.4h10.8c.8 0 1.4-.6 1.4-1.4V8.6M10 12.6h4" })
   ] }),
-  delete: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M4 6.3h16M9.5 6.3V4.1h5v2.2" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M6.3 6.3 7.5 20h9l1.2-13.7M10.3 9.9v6.4M13.7 9.9v6.4" })
+  delete: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M4 6.3h16M9.5 6.3V4.1h5v2.2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M6.3 6.3 7.5 20h9l1.2-13.7M10.3 9.9v6.4M13.7 9.9v6.4" })
   ] }),
-  batch: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "3.6", y: "3.6", width: "8.2", height: "8.2", rx: "1.6", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "10.6", y: "10.6", width: "9.8", height: "9.8", rx: "1.8", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeDasharray: "3 2" })
+  batch: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.6", y: "3.6", width: "8.2", height: "8.2", rx: "1.6", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "10.6", y: "10.6", width: "9.8", height: "9.8", rx: "1.8", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeDasharray: "3 2" })
   ] }),
-  open: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M13.6 4.6h5.8v5.8M19.4 4.6 11.2 12.8" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M18 14.5v4c0 .8-.6 1.4-1.4 1.4H5.4c-.8 0-1.4-.6-1.4-1.4V7.3c0-.8.6-1.4 1.4-1.4h4" })
+  open: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M13.6 4.6h5.8v5.8M19.4 4.6 11.2 12.8" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M18 14.5v4c0 .8-.6 1.4-1.4 1.4H5.4c-.8 0-1.4-.6-1.4-1.4V7.3c0-.8.6-1.4 1.4-1.4h4" })
   ] }),
-  group: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("rect", { x: "3.4", y: "4", width: "17.2", height: "16", rx: "2.4", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M3.4 9.2h17.2" })
+  group: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.4", y: "4", width: "17.2", height: "16", rx: "2.4", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M3.4 9.2h17.2" })
   ] })
 };
 function MenuIcon(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("svg", { className: talk_map_default["menuIcon"], viewBox: "0 0 24 24", width: "14", height: "14", "aria-hidden": "true", children: PATHS[props.name] });
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("svg", { className: talk_map_default["menuIcon"], viewBox: "0 0 24 24", width: "14", height: "14", "aria-hidden": "true", children: PATHS[props.name] });
 }
 
 // src/client/ContextMenu.tsx
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_jsx_runtime7 = require("react/jsx-runtime");
 function ContextMenu(props) {
   const { menu } = props;
   const [query, setQuery] = (0, import_react5.useState)("");
@@ -11481,7 +11522,7 @@ function ContextMenu(props) {
   }, [menu.searchable, menu.prompt]);
   const normalized = query.trim().toLowerCase();
   const visible = normalized === "" ? menu.items : menu.items.filter((item) => item.label.toLowerCase().includes(normalized));
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       className: talk_map_default["menu"],
@@ -11497,9 +11538,9 @@ function ContextMenu(props) {
         event.preventDefault();
       },
       children: [
-        menu.title !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["menuTitle"], children: menu.title }) : null,
-        menu.prompt !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        menu.title !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuTitle"], children: menu.title }) : null,
+        menu.prompt !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             "input",
             {
               ref: inputRef,
@@ -11517,9 +11558,9 @@ function ContextMenu(props) {
               }
             }
           ),
-          menu.prompt.preview !== void 0 && query.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["menuPreview"], children: menu.prompt.preview(query.trim()) }) : null,
-          error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          menu.prompt.preview !== void 0 && query.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuPreview"], children: menu.prompt.preview(query.trim()) }) : null,
+          error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             "button",
             {
               type: "button",
@@ -11532,7 +11573,7 @@ function ContextMenu(props) {
             }
           )
         ] }) : null,
-        menu.searchable === true ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        menu.searchable === true ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "input",
           {
             ref: inputRef,
@@ -11544,7 +11585,7 @@ function ContextMenu(props) {
             }
           }
         ) : null,
-        menu.prompt !== void 0 ? null : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["menuEmpty"], children: t("menu.empty") }) : visible.map((item) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(
+        menu.prompt !== void 0 ? null : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuEmpty"], children: t("menu.empty") }) : visible.map((item) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "button",
           {
             type: "button",
@@ -11555,9 +11596,9 @@ function ContextMenu(props) {
               item.onPick();
             },
             children: [
-              item.icon !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(MenuIcon, { name: item.icon }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["menuIcon"] }),
+              item.icon !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(MenuIcon, { name: item.icon }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["menuIcon"] }),
               item.label,
-              item.hint !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("span", { className: talk_map_default["menuHint"], children: [
+              item.hint !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: talk_map_default["menuHint"], children: [
                 " ",
                 item.hint
               ] }) : null
@@ -11572,7 +11613,7 @@ function ContextMenu(props) {
 
 // src/client/RenameDialog.tsx
 var import_react6 = require("react");
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_jsx_runtime8 = require("react/jsx-runtime");
 function RenameDialog(props) {
   const [value, setValue] = (0, import_react6.useState)(props.target.title);
   const [busy, setBusy] = (0, import_react6.useState)(false);
@@ -11626,9 +11667,9 @@ function RenameDialog(props) {
       setBusy(false);
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["renameBackdrop"], onClick: () => {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameBackdrop"], onClick: () => {
     props.onDone(null);
-  }, children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
+  }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
     "div",
     {
       className: talk_map_default["renameDialog"],
@@ -11638,8 +11679,8 @@ function RenameDialog(props) {
       role: "dialog",
       "aria-label": t("rename.title"),
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "input",
           {
             ref: inputRef,
@@ -11657,12 +11698,12 @@ function RenameDialog(props) {
             }
           }
         ),
-        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["renameError"], children: error }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: talk_map_default["renameActions"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { type: "button", className: talk_map_default["renameButton"], onClick: () => {
+        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameError"], children: error }) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["renameActions"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: talk_map_default["renameButton"], onClick: () => {
             props.onDone(null);
           }, children: t("rename.cancel") }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             "button",
             {
               type: "button",
@@ -11681,7 +11722,7 @@ function RenameDialog(props) {
 }
 
 // src/client/SessionCard.tsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime9 = require("react/jsx-runtime");
 var LAMP_CLASS = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -11697,13 +11738,13 @@ var LAMP_CHIP = {
 function statusChip(glow, running) {
   const spec = glow !== void 0 ? LAMP_CHIP[glow] : running ? LAMP_CHIP.running : void 0;
   if (spec === void 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "span",
     {
       className: `${talk_map_default["cardChip"]} ${talk_map_default[spec.className]}`,
       "data-talkmap-chip": glow ?? "running",
       children: [
-        spec.dot ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+        spec.dot ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
         t(spec.key)
       ]
     }
@@ -11728,7 +11769,7 @@ function SessionCardNode(props) {
   if (data.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS[data.glow]] ?? "");
   const quiet = data.current !== true && data.pinned !== true && data.glow === void 0 && data.pendingDraft !== true && data.interrupted !== true;
   if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "div",
     {
       className: classNames.filter(Boolean).join(" "),
@@ -11740,16 +11781,16 @@ function SessionCardNode(props) {
       style: data.onPick !== void 0 ? { cursor: "pointer" } : void 0,
       "data-talkmap-session": data.sessionId,
       children: [
-        data.current === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["cardReticle"], "aria-hidden": "true", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("i", {})
+        data.current === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: talk_map_default["cardReticle"], "aria-hidden": "true", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {})
         ] }) : null,
         "      ",
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
-        data.onPick !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
+        data.onPick !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "span",
           {
             className: `${talk_map_default["pickBox"]}${selected2 === true ? ` ${talk_map_default["pickBoxChecked"]}` : ""}`,
@@ -11759,11 +11800,11 @@ function SessionCardNode(props) {
             children: selected2 === true ? "✓" : ""
           }
         ) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-          data.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "aria-label": t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+          data.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "aria-label": t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title })
         ] }),
-        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "button",
           {
             type: "button",
@@ -11773,10 +11814,10 @@ function SessionCardNode(props) {
             },
             children: t("card.remove")
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(import_jsx_runtime8.Fragment, { children: data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
-          data.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        ) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_jsx_runtime9.Fragment, { children: data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
+          data.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
             "span",
             {
               className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
@@ -11785,7 +11826,7 @@ function SessionCardNode(props) {
               children: t("card.draft")
             }
           ) : null,
-          data.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          data.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
             "span",
             {
               className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
@@ -11796,8 +11837,8 @@ function SessionCardNode(props) {
           ) : null,
           statusChip(data.glow, data.running === true)
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
       ]
     }
   );
@@ -11805,7 +11846,7 @@ function SessionCardNode(props) {
 
 // src/client/SpawnPreview.tsx
 var import_react8 = require("react");
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function SpawnPreview(props) {
   const { pending } = props;
   const digest = canvas.get().digests[pending.parent.sessionId];
@@ -11900,15 +11941,15 @@ function SpawnPreview(props) {
     { id: "digest", label: t("spawn.mode.digest") },
     { id: "full", label: t("spawn.mode.full") }
   ];
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
       t("spawn.from"),
       "「",
       pending.parent.title,
       "」"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
       "button",
       {
         type: "button",
@@ -11920,9 +11961,9 @@ function SpawnPreview(props) {
       },
       entry.id
     )) }),
-    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -11933,9 +11974,9 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -11953,10 +11994,10 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
-    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
+    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
           type: "button",
@@ -11966,7 +12007,7 @@ function SpawnPreview(props) {
           children: t("spawn.cancel")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
           type: "button",
@@ -11983,7 +12024,7 @@ function SpawnPreview(props) {
 }
 
 // src/client/WsFrame.tsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 var EDGE = 10;
 var CORNER = 26;
 var EDGE_HANDLES = [
@@ -12006,7 +12047,7 @@ function WsFrameNode(props) {
     event.stopPropagation();
     data.onResizeStart?.(axis, event);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
     "div",
     {
       className: `${talk_map_default["wsFrame"]}${selected2 === true ? ` ${talk_map_default["wsFrameSelected"]}` : ""}${data.blocked === true ? ` ${talk_map_default["wsFrameBlocked"]}` : ""}`,
@@ -12020,22 +12061,22 @@ function WsFrameNode(props) {
       "data-talkmap-frame": "",
       "data-talkmap-workspace": data.workspaceId,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
           "div",
           {
             className: talk_map_default["wsFrameLabel"],
             style: color2 !== void 0 ? { borderColor: color2.border, backgroundImage: `linear-gradient(${color2.fill}, ${color2.fill})` } : {},
             children: [
               data.title,
-              /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
-        [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
+        [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           "div",
           {
             className: `${talk_map_default["wsFrameResize"]} ${talk_map_default[handle.className] ?? ""}`,
@@ -12115,7 +12156,7 @@ function clamp2(value, min, max) {
 
 // src/client/StackDrawer.tsx
 var import_react9 = require("react");
-var import_jsx_runtime11 = require("react/jsx-runtime");
+var import_jsx_runtime12 = require("react/jsx-runtime");
 var LAMP_CLASS2 = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -12136,7 +12177,7 @@ function highlight3(text, query) {
       break;
     }
     if (at > cursor) parts.push(text.slice(cursor, at));
-    parts.push(/* @__PURE__ */ (0, import_jsx_runtime11.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
+    parts.push(/* @__PURE__ */ (0, import_jsx_runtime12.jsx)("mark", { className: talk_map_default["hitMark"], children: text.slice(at, at + needle.length) }, key++));
     cursor = at + needle.length;
   }
   return parts;
@@ -12252,7 +12293,7 @@ function StackDrawer(props) {
     if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current);
   }, []);
   const scrollSaveTimer = (0, import_react9.useRef)(null);
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
     "div",
     {
       className: `${talk_map_default["drawerBackdrop"]}${leaving ? ` ${talk_map_default["drawerBackdropOut"]}` : ""}`,
@@ -12262,19 +12303,19 @@ function StackDrawer(props) {
       onClick: (event) => {
         if (event.target === event.currentTarget) requestClose();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
         "div",
         {
           className: `${talk_map_default["drawer"]}${leaving ? ` ${talk_map_default["drawerOut"]}` : ""}`,
           role: "dialog",
           "aria-label": props.workspaceTitle,
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerSpace"] }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "button",
                 {
                   type: "button",
@@ -12286,8 +12327,8 @@ function StackDrawer(props) {
                 }
               )
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["drawerSearchRow"], children: [
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerSearchRow"], children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "input",
                 {
                   className: talk_map_default["drawerSearch"],
@@ -12313,7 +12354,7 @@ function StackDrawer(props) {
                   }
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "button",
                 {
                   type: "button",
@@ -12325,10 +12366,11 @@ function StackDrawer(props) {
                   children: t("global.searchRun")
                 }
               ),
-              searching ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
-              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled2(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
+              searching ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
+              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled2(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+            searching ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(SearchLoading, { rows: 2 }) : null,
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
               "div",
               {
                 className: talk_map_default["drawerScroll"],
@@ -12349,7 +12391,7 @@ function StackDrawer(props) {
                     const quiet = item.glow === void 0 && item.pendingDraft !== true && item.interrupted !== true && item.pinned !== true;
                     if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
                     if (item.selected === true) classNames.push(talk_map_default["cardSelected"] ?? "");
-                    return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+                    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
                       "button",
                       {
                         type: "button",
@@ -12365,20 +12407,20 @@ function StackDrawer(props) {
                           props.onCardMenu?.(item.cardId, event);
                         },
                         children: [
-                          item.current === true ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: talk_map_default["cardReticle"], children: [
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("i", {})
+                          item.current === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: talk_map_default["cardReticle"], children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {})
                           ] }) : null,
-                          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-                            item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
+                          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+                            item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
                           ] }),
-                          item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
-                          /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-                            /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
-                            item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                          item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
+                          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
+                            item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
@@ -12387,7 +12429,7 @@ function StackDrawer(props) {
                                 children: t("card.draft")
                               }
                             ) : null,
-                            item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                            item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
@@ -12396,13 +12438,13 @@ function StackDrawer(props) {
                                 children: t("card.interrupted")
                               }
                             ) : null,
-                            item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+                            item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`,
                                 "data-talkmap-chip": item.glow,
                                 children: [
-                                  item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                                  item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
                                   t(LAMP_CHIP[item.glow].key)
                                 ]
                               }
@@ -12413,15 +12455,15 @@ function StackDrawer(props) {
                       item.cardId
                     );
                   }),
-                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: t("stack.contentHits", { n: String(hits.length) }) }),
-                    hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: t("stack.contentHits", { n: String(hits.length) }) }),
+                    hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
                       "div",
                       {
                         className: talk_map_default["drawerHit"],
                         "data-talkmap-search-hit": hit.sessionId,
                         children: [
-                          /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                             "button",
                             {
                               type: "button",
@@ -12435,7 +12477,7 @@ function StackDrawer(props) {
                           (moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
                             const matched = block.find((line) => line.toLowerCase().includes(needle)) ?? block[0] ?? "";
                             const seqs = moreHits[hit.sessionId]?.seqs ?? hit.seqs ?? [];
-                            return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                            return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                               "button",
                               {
                                 type: "button",
@@ -12457,7 +12499,7 @@ function StackDrawer(props) {
                               blockIndex
                             );
                           }),
-                          props.onFetchSessionHits !== void 0 && moreHits[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+                          props.onFetchSessionHits !== void 0 && moreHits[hit.sessionId] === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                             "button",
                             {
                               type: "button",
@@ -12474,11 +12516,11 @@ function StackDrawer(props) {
                       hit.sessionId
                     ))
                   ] }) : null,
-                  needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
+                  needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
                 ]
               }
             ),
-            peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
+            peek !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
               "div",
               {
                 className: talk_map_default["peek"],
@@ -12489,9 +12531,9 @@ function StackDrawer(props) {
                 },
                 onMouseLeave: cancelPeek,
                 children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
-                  peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["peekLine"], children: highlight3(line, query) }, index2)),
-                  /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
+                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
+                  peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekLine"], children: highlight3(line, query) }, index2)),
+                  /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
                 ]
               }
             ) : null
@@ -12503,13 +12545,13 @@ function StackDrawer(props) {
 }
 
 // src/client/StackNode.tsx
-var import_jsx_runtime12 = require("react/jsx-runtime");
+var import_jsx_runtime13 = require("react/jsx-runtime");
 function StackNode(props) {
   const { data } = props;
   const open = () => {
     data.onOpen();
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
     "div",
     {
       className: [talk_map_default["stackCell"], talk_map_default["cardQuiet"] ?? ""].filter(Boolean).join(" "),
@@ -12527,11 +12569,11 @@ function StackNode(props) {
         open();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["stackFace"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: [talk_map_default["stackBadge"], data.busy === true ? talk_map_default["stackBadgeBusy"] ?? "" : ""].filter(Boolean).join(" "), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["stackFace"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: [talk_map_default["stackBadge"], data.busy === true ? talk_map_default["stackBadgeBusy"] ?? "" : ""].filter(Boolean).join(" "), children: [
             "+",
             data.count
           ] })
@@ -12562,7 +12604,7 @@ function useDsDarkTheme() {
 }
 
 // src/client/MapCanvas.tsx
-var import_jsx_runtime13 = require("react/jsx-runtime");
+var import_jsx_runtime14 = require("react/jsx-runtime");
 var nodeTypes = {
   sessionCard: SessionCardNode,
   wsFrame: WsFrameNode,
@@ -13323,8 +13365,16 @@ function CanvasInner(props) {
         } else if (change.dragging === false) {
           setDraggingCardId(null);
           setDragCenter(null);
-          const landing = cardLayout[change.id];
-          if (landing !== void 0) canvas.moveCard(change.id, landing.x, landing.y);
+          const droppedGroupId = sessionWs.get(visibleCards[change.id]?.sessionId ?? "");
+          const droppedLayout = droppedGroupId === void 0 ? void 0 : folderLayouts[droppedGroupId];
+          const droppedRect = droppedGroupId === void 0 ? void 0 : frameRects[droppedGroupId] ?? wsFrames[droppedGroupId];
+          if (droppedLayout !== void 0 && droppedRect !== void 0) {
+            const cols = colsForWidth(droppedRect.width);
+            droppedLayout.ordered.forEach((cardId, index2) => {
+              const point = slotPoint(droppedRect, index2, cols);
+              canvas.moveCard(cardId, point.x, point.y);
+            });
+          }
         } else if (change.dragging === true) {
           setDraggingCardId(change.id);
           setDragCenter({ x: change.position.x + CARD_W / 2, y: change.position.y + CARD_H / 2 });
@@ -13946,7 +13996,7 @@ function CanvasInner(props) {
   }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, pinnedSessions, locale]);
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID);
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
     "div",
     {
       ref: wrapperRef,
@@ -13970,7 +14020,7 @@ function CanvasInner(props) {
         if (menu !== null) setMenu(null);
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           index,
           {
             nodes,
@@ -14037,14 +14087,14 @@ function CanvasInner(props) {
             proOptions: { hideAttribution: true },
             ...savedCamera !== void 0 ? { defaultViewport: savedCamera } : { fitView: hasContent },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
                 void zoomTo(1, { duration: 200 });
-              }, children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
+              }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
             ]
           }
         ),
-        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           BatchBar,
           {
             count: selectedCardIds.length,
@@ -14061,15 +14111,15 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        !batchMode && selectedFrameWs.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(FrameColorToolbar, { workspaceIds: selectedFrameWs }) : null,
-        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(ContextMenu, { menu: menuState, onClose: () => {
+        !batchMode && selectedFrameWs.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(FrameColorToolbar, { workspaceIds: selectedFrameWs }) : null,
+        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
+        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,
-        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
+        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
           setPendingSpawn(null);
         } }) : null,
-        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           RenameDialog,
           {
             target: renameTarget,
@@ -14086,7 +14136,7 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           StackDrawer,
           {
             workspaceTitle: renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
@@ -14107,7 +14157,7 @@ function CanvasInner(props) {
             onClose: closeDrawer
           }
         ) : null,
-        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
+        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
       ]
     }
   );
@@ -14116,9 +14166,9 @@ function FrameColorToolbar(props) {
   const apply2 = (colorTag) => {
     for (const workspaceId of props.workspaceIds) canvas.setWorkspaceColor(workspaceId, colorTag);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
-    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
+    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14132,7 +14182,7 @@ function FrameColorToolbar(props) {
       },
       tag.id
     )),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14148,10 +14198,10 @@ function FrameColorToolbar(props) {
   ] });
 }
 function BatchBar(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["batchSpace"] }),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["batchSpace"] }),
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14161,7 +14211,7 @@ function BatchBar(props) {
         children: t("batch.archive")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14171,7 +14221,7 @@ function BatchBar(props) {
         children: t("batch.delete")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14191,11 +14241,11 @@ function MapCanvas(props) {
     return canvas.connect();
   }, []);
   if (canvasState.phase === "error") {
-    return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
       t("map.loadError"),
       " ",
       canvasState.error,
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
         "button",
         {
           type: "button",
@@ -14210,17 +14260,17 @@ function MapCanvas(props) {
     ] }) });
   }
   if (canvasState.phase !== "ready") {
-    return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(CanvasInner, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(CanvasInner, { ...props }) });
 }
 
 // src/client/MapOverlay.tsx
-var import_jsx_runtime14 = require("react/jsx-runtime");
+var import_jsx_runtime15 = require("react/jsx-runtime");
 function FontSizeButtons() {
   const step2 = (0, import_react13.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
       "button",
       {
         type: "button",
@@ -14232,12 +14282,12 @@ function FontSizeButtons() {
           fontScale.decrease();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
       "button",
       {
         type: "button",
@@ -14249,12 +14299,12 @@ function FontSizeButtons() {
           fontScale.increase();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
       "button",
       {
         type: "button",
@@ -14271,10 +14321,10 @@ function FontSizeButtons() {
   ] });
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
 function CloseIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
   (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
@@ -14299,7 +14349,7 @@ function MapOverlay(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
     "div",
     {
       className: talk_map_default["panel"],
@@ -14308,8 +14358,8 @@ function MapOverlay(props) {
       "aria-label": t("map.title"),
       style: { "--tm-font-step": `${fontStep}px` },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["header"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["header"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
             "button",
             {
               type: "button",
@@ -14318,17 +14368,17 @@ function MapOverlay(props) {
               "aria-label": t("map.back"),
               onClick: closeMapPanel,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(BackIcon, {}),
-                /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: t("map.back") })
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(BackIcon, {}),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { children: t("map.back") })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["headerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["headerSpace"] }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
             openSessionInUi(sessionId);
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(FontSizeButtons, {}),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FontSizeButtons, {}),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
             "button",
             {
               type: "button",
@@ -14336,11 +14386,11 @@ function MapOverlay(props) {
               title: t("map.close"),
               "aria-label": t("map.close"),
               onClick: closeMapPanel,
-              children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(CloseIcon, {})
+              children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(CloseIcon, {})
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(MapCanvas, { ...props })
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MapCanvas, { ...props })
       ]
     }
   );
@@ -14348,12 +14398,12 @@ function MapOverlay(props) {
 
 // src/client/MapToggleButton.tsx
 var import_react14 = require("react");
-var import_jsx_runtime15 = require("react/jsx-runtime");
+var import_jsx_runtime16 = require("react/jsx-runtime");
 function MapIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M9 4v14" }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M15 6v14" })
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M9 4v14" }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M15 6v14" })
   ] });
 }
 function MapToggleButton(props) {
@@ -14365,7 +14415,7 @@ function MapToggleButton(props) {
   }, [wide]);
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
     "button",
     {
       type: "button",
@@ -14378,8 +14428,8 @@ function MapToggleButton(props) {
         mapUi.toggle();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MapIcon, {}),
-        wide ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(MapIcon, {}),
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
       ]
     }
   );

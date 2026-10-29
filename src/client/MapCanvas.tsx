@@ -43,7 +43,7 @@ import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { talkMapApi, type ApiError } from './api.ts'
 import {
   CARD_H, CARD_W, FRAME_LABEL_H, FRAME_PAD, GAP_X, GAP_Y, MIN_FRAME_HEIGHT, MIN_FRAME_WIDTH,
-  capacityFor, frameRect, layoutFor, readingOrder, slotIndexAt, slotPoint, visibleCount, type PlacedCard,
+  capacityFor, colsForWidth, frameRect, layoutFor, readingOrder, slotIndexAt, slotPoint, visibleCount, type PlacedCard,
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
@@ -1095,10 +1095,20 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           // from, and nothing else has to move.
           setDraggingCardId(null)
           setDragCenter(null)
-          // Persist the insertion the folder was previewing: the card lands on
-          // that slot, so the derived reading order keeps the new arrangement.
-          const landing = cardLayout[change.id]
-          if (landing !== undefined) canvas.moveCard(change.id, landing.x, landing.y)
+          // Persist the order the folder was PREVIEWING — every card, not just the
+          // dragged one. Writing only the dragged card left two cards sharing one
+          // slot's coordinates, so the re-derived reading order fell back to the
+          // old arrangement and the whole group snapped back on release.
+          const droppedGroupId = sessionWs.get(visibleCards[change.id]?.sessionId ?? '')
+          const droppedLayout = droppedGroupId === undefined ? undefined : folderLayouts[droppedGroupId]
+          const droppedRect = droppedGroupId === undefined ? undefined : (frameRects[droppedGroupId] ?? wsFrames[droppedGroupId])
+          if (droppedLayout !== undefined && droppedRect !== undefined) {
+            const cols = colsForWidth(droppedRect.width)
+            droppedLayout.ordered.forEach((cardId, index) => {
+              const point = slotPoint(droppedRect, index, cols)
+              canvas.moveCard(cardId, point.x, point.y)
+            })
+          }
         } else if (change.dragging === true) {
           // Live drag — this card is the only one that ignores its slot.
           setDraggingCardId(change.id)

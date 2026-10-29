@@ -7,6 +7,7 @@
  * line height stable, while the searched word stays highlighted inside whatever
  * formatting the text already had.
  */
+import { cleanSnippet } from './snippet-text.ts'
 import styles from './talk-map.module.css'
 
 /** Block markers that should not show up as literal text in a snippet. */
@@ -54,7 +55,7 @@ export interface RenderedSnippet {
 
 /** Render one snippet line with its inline Markdown and the search term marked. */
 export function renderMarkdownInline(raw: string, query: string): RenderedSnippet {
-  const text = stripBlockMarkers(raw)
+  const text = stripBlockMarkers(cleanSnippet(raw, query))
   const nodes: React.ReactNode[] = []
   let plain = ''
   let cursor = 0

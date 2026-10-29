@@ -1330,6 +1330,84 @@
 }
 
 /* Multi-column grid of 224px cards; one wheel notch = one row. */
+/* Rows settle in one after another: 14ms apart, capped, so a long list still
+ * feels immediate. */
+.drawerHits > .drawerHit {
+  animation: tmPopIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.drawerHits > .drawerHit:nth-child(1) { animation-delay: 20ms; }
+.drawerHits > .drawerHit:nth-child(2) { animation-delay: 34ms; }
+.drawerHits > .drawerHit:nth-child(3) { animation-delay: 48ms; }
+.drawerHits > .drawerHit:nth-child(4) { animation-delay: 62ms; }
+.drawerHits > .drawerHit:nth-child(5) { animation-delay: 76ms; }
+.drawerHits > .drawerHit:nth-child(n+6) { animation-delay: 90ms; }
+
+/* ---- search loading ------------------------------------------------------ */
+.searchLoading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 0 2px;
+}
+
+.searchLoadingBar {
+  position: relative;
+  height: 2px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.searchLoadingBar > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 34%;
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, var(--dsw-alias-brand-primary), transparent);
+  animation: tmSlideBar 1150ms cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes tmSlideBar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+
+.searchSkeletonRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-radius: 9px;
+}
+
+.searchSkeletonTitle,
+.searchSkeletonLine {
+  display: block;
+  height: 9px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+  background-size: 220% 100%;
+  animation: tmShimmer 1300ms ease-in-out infinite;
+}
+
+.searchSkeletonTitle { width: 38%; }
+.searchSkeletonLine { width: 78%; }
+
+@keyframes tmShimmer {
+  0% { background-position: 120% 0; }
+  100% { background-position: -60% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawerHits > .drawerHit,
+  .searchLoadingBar > i,
+  .searchSkeletonTitle,
+  .searchSkeletonLine {
+    animation: none;
+  }
+}
 /* ---- motion ---------------------------------------------------------------
  * One vocabulary for the whole map: short, eased, no bounce. Everything here is
  * optional decoration — every rule is disabled under prefers-reduced-motion.
@@ -1345,7 +1423,8 @@
 }
 
 @keyframes tmRiseIn {
-  from { opacity: 0; transform: translateY(16px) scale(0.975); }
+  from { opacity: 0; transform: translateY(26px) scale(0.94); }
+  60% { opacity: 1; }
   to { opacity: 1; transform: none; }
 }
 
@@ -1366,7 +1445,7 @@
 
 /* Drawer: fast, smooth, and it leaves the same way it arrived. */
 .drawerBackdrop {
-  animation: tmFadeIn 140ms ease-out both;
+  animation: tmFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .drawerBackdropOut {
@@ -1374,11 +1453,13 @@
 }
 
 .drawer {
-  animation: tmRiseIn 180ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  /* Spring-ish: quick out of the gate, long soft settle, no bounce. */
+  animation: tmRiseIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
 }
 
 .drawerOut {
-  animation: tmRiseOut 130ms cubic-bezier(0.4, 0, 1, 1) both;
+  animation: tmRiseOut 150ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
 }
 
 /* The global search panel shares the vocab. */
@@ -1387,7 +1468,8 @@
 }
 
 .globalSearchPanel {
-  animation: tmRiseIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+  animation: tmRiseIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
 }
 
 /* Context menu pops from its corner. */

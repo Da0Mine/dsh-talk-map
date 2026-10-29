@@ -11,6 +11,7 @@ import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
 import { renderMarkdownInline } from './markdown-inline.tsx'
+import { SearchLoading } from './SearchLoading.tsx'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -321,6 +322,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
               )
             : null}
         </div>
+        {searching ? <SearchLoading rows={2} /> : null}
         <div
           className={styles['drawerScroll']}
           ref={scrollerRef}

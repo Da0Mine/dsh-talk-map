@@ -1,0 +1,54 @@
+  // ---- 7d. the drop must KEEP the yield it previewed ---------------------
+  const orderBefore = await page.evaluate(() => window.__harness.state().cards)
+  const pair = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return [...document.querySelectorAll('.react-flow__node')]
+      .map((node) => {
+        const card = state.cards[node.getAttribute('data-id')]
+        if (card === undefined) return null
+        const r = node.getBoundingClientRect()
+        return { cardId: node.getAttribute('data-id'), sessionId: card.sessionId, x: Math.round(r.x), y: Math.round(r.y) }
+      })
+      .filter(entry => entry !== null)
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .slice(0, 2)
+  })
+  const readingBefore = await page.evaluate(() => {
+    const state = window.__harness.state()
+    return Object.entries(state.cards)
+      .map(([id, card]) => ({ id, x: card.x, y: card.y }))
+      .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+      .map(entry => entry.id)
+  })
+  if (pair.length === 2) {
+    const [first, second] = pair
+    const grab = await page.evaluate((cardId) => {
+      const node = document.querySelector(`[data-id="${cardId}"]`)
+      const r = node.getBoundingClientRect()
+      return { x: Math.round(r.x + 50), y: Math.round(r.y + 14) }
+    }, first.cardId)
+    await page.mouse.move(grab.x, grab.y)
+    await page.mouse.down()
+    await page.mouse.move(second.x + 40, grab.y, { steps: 10 })
+    await page.waitForTimeout(280)
+    await page.mouse.up()
+    await page.waitForTimeout(700)
+    await page.evaluate((cardId) => {
+      const node = document.querySelector(`[data-id="${cardId}"]`)
+      const r = node.getBoundingClientRect()
+      return { x: Math.round(r.x), y: Math.round(r.y) }
+    }, first.cardId)
+    const readingAfter = await page.evaluate(() => {
+      const state = window.__harness.state()
+      return Object.entries(state.cards)
+        .map(([id, card]) => ({ id, x: card.x, y: card.y }))
+        .sort((a, b) => (a.y - b.y) || (a.x - b.x))
+        .map(entry => entry.id)
+    })
+    const indexBefore = readingBefore.indexOf(first.cardId)
+    const indexAfter = readingAfter.indexOf(first.cardId)
+    check('松手后保留让位结果（不再弹回原位）', indexAfter > indexBefore,
+      `${first.sessionId}: 第 ${indexBefore + 1} → 第 ${indexAfter + 1}`)
+  } else {
+    check('松手后保留让位结果（不再弹回原位）', false, '没有两张可拖的卡片')
+  }

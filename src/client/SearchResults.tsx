@@ -10,6 +10,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import { renderMarkdownInline } from './markdown-inline.tsx'
+import { SearchLoading } from './SearchLoading.tsx'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
 
@@ -117,9 +118,9 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
   return (
     <div className={styles['drawerHits']}>
       <div className={styles['drawerHitsHead']}>
-        {props.heading}
-        {props.searching ? ' · ' + t('stack.searching') : ''}
+        {props.searching ? t('stack.searching') : props.heading}
       </div>
+      {props.searching ? <SearchLoading rows={2} /> : null}
       {props.error !== null
         ? (
             <div className={styles['drawerSearchError']} title={props.error}>
