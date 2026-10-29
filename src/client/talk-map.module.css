@@ -1390,6 +1390,23 @@
   opacity: 0.7;
 }
 
+/* "More hits in this conversation" — the heavy part is behind this button. */
+.drawerHitMore {
+  align-self: flex-start;
+  margin-top: 2px;
+  font: inherit;
+  font-size: calc(11px + var(--tm-font-step, 0px));
+  color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: none;
+  padding: 2px 0 2px 10px;
+  cursor: pointer;
+}
+
+.drawerHitMore:hover {
+  color: var(--dsw-alias-brand-primary);
+}
+
 /* One match, as a group of context lines. */
 .drawerHitBlock {
   display: flex;

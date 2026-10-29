@@ -187,6 +187,7 @@
   /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
   const searchRouteCalls = []
   const searchContextCalls = []
+  const searchSessionCalls = []
   let searchRpcFails = false
   let searchRouteFails = false
   let searchRouteMessage = 'host search route down'
@@ -225,6 +226,14 @@
       }
       // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
+    // Extra hits inside one conversation (asked for with the ＋ button).
+    if (path.indexOf('/talk-map/search-session') >= 0) {
+      searchSessionCalls.push({ sessionId: body?.sessionId, query: body?.query })
+      return json({
+        blocks: [['…按 SI 单位换算 Matter.js 的物理参数…'], ['…物理量单位统一走 PX_PER_M…']],
+        seqs: [42, 43],
+      })
+    }
     // Lazy passage for one hit (hover).
     if (path.indexOf('/talk-map/search-context') >= 0) {
       searchContextCalls.push({ sessionId: body?.sessionId, seq: body?.seq })
@@ -236,14 +245,7 @@
       const query = String(body?.query ?? '')
       // Grouped shape: one conversation, two matched lines.
       const items = query.includes('物理') || query.includes('Matter')
-        ? [{
-          sessionId: 's3',
-          blocks: [
-            ['…按 SI 单位换算 Matter.js 的物理参数…'],
-            ['…物理量单位统一走 PX_PER_M…'],
-          ],
-          seqs: [42, 43],
-        }]
+        ? [{ sessionId: 's3', blocks: [['…按 SI 单位换算 Matter.js 的物理参数…']], seqs: [42] }]
         : []
       return json({ items, hasMore: false })
     }
@@ -646,6 +648,10 @@
     /** Which hits asked for their passage (hover), and when. */
     searchContextCalls() {
       return searchContextCalls.slice()
+    },
+    /** Which conversations asked for their extra hits (the ＋ button). */
+    searchSessionCalls() {
+      return searchSessionCalls.slice()
     },
     nodeBoxes() {
       const out = { cards: {}, frames: {} }

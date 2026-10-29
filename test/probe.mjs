@@ -1248,12 +1248,25 @@ try {
           : [...first.querySelectorAll('mark')].map(node => node.textContent),
       }
     })
-    check('同一会话的多个命中归到一个栏目里',
-      groupedHits.blocks === 1 && groupedHits.lines === 2,
+    check('一个会话只占一个栏目（先给最匹配的一行）',
+      groupedHits.blocks === 1 && groupedHits.lines === 1,
       JSON.stringify(groupedHits))
-    check('每条命中先只占一行，完整上下文留给悬停框',
-      groupedHits.lines === 2, JSON.stringify(groupedHits))
-    check('结果里的搜索词高亮', groupedHits.marks >= 2
+    // The rest of that conversation is one click away: searching must not pay
+    // for it up front (that is what made a search take 12 seconds).
+    const moreCallsBefore = await page.evaluate(() => window.__harness.searchSessionCalls().length)
+    check('搜索阶段不去翻每条会话的其它命中', moreCallsBefore === 0, String(moreCallsBefore))
+    await page.evaluate(() => {
+      const button = document.querySelector('[data-talkmap-search-more]')
+      if (button !== null) button.click()
+    })
+    await page.waitForTimeout(600)
+    const afterMore = await page.evaluate(() => ({
+      calls: window.__harness.searchSessionCalls().length,
+      lines: document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length,
+    }))
+    check('点「更多命中」才去查这条会话（并且多出行来）',
+      afterMore.calls === 1 && afterMore.lines >= 2, JSON.stringify(afterMore))
+    check('结果里的搜索词高亮', groupedHits.marks >= 1
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
     // The passage must NOT be fetched with the search: only when the pointer
@@ -1306,7 +1319,7 @@ try {
     // When the connection RPC cannot answer, the Host route must take over.
     await page.evaluate(() => window.__harness.failSearchRpc(true))
     await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('物理')
+    await page.keyboard.type('索引关闭测试词乙')
     await page.waitForTimeout(900)
     const fallbackHits = await page.evaluate(() => ({
       hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
@@ -1318,7 +1331,7 @@ try {
     // Both paths down: the drawer must NAME the failure (never a bare i18n key).
     await page.evaluate(() => { window.__harness.failSearchRpc(true); window.__harness.failSearchRoute(true) })
     await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('物理')
+    await page.keyboard.type('没有缓存的新词丙')
     await page.waitForTimeout(900)
     const searchFailure = await page.evaluate(() => {
       const node = document.querySelector('[class*="drawerSearchError"]')
@@ -1336,7 +1349,7 @@ try {
       window.__harness.failSearchRoute(true)
     })
     await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('物理')
+    await page.keyboard.type('没有缓存的新词丁')
     await page.waitForTimeout(900)
     const disabledLabel = await page.evaluate(() => {
       const node = document.querySelector('[class*="drawerSearchError"]')

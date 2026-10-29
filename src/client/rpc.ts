@@ -20,6 +20,9 @@ import { talkMapApi } from './api.ts'
 import { connectionService } from './map-state.ts'
 import { t } from './i18n.ts'
 
+/** Repeating the same query inside a minute should not hit the corpus again. */
+const searchCache = new Map<string, { at: number; hits: ContentHit[] }>()
+const SEARCH_CACHE_MS = 60_000
 export interface RpcFailure {
   code?: string
   message?: string
@@ -74,6 +77,15 @@ export interface ContentHit {
  * can be diagnosed instead of guessed at.
  */
 export async function searchSessions(query: string): Promise<ContentHit[]> {
+  const key = query.trim().toLowerCase()
+  const remembered = searchCache.get(key)
+  if (remembered !== undefined && Date.now() - remembered.at < SEARCH_CACHE_MS) return remembered.hits
+  const hits = await searchSessionsUncached(query)
+  searchCache.set(key, { at: Date.now(), hits })
+  return hits
+}
+
+async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
   const clean = (lines: readonly unknown[]): string[] =>
     lines.filter((line): line is string => typeof line === 'string' && line.trim() !== '')
   const normalize = (
@@ -143,5 +155,21 @@ export async function fetchSearchContext(sessionId: string, seq: number, query: 
   } catch (error) {
     reportToHost({ phase: 'search-context-failed', sessionId, seq, message: String((error as Error)?.message ?? error) })
     return []
+  }
+}
+
+
+/** Extra hits inside one conversation, loaded when the user asks for them. */
+export async function fetchSessionHits(
+  sessionId: string,
+  query: string,
+): Promise<{ blocks: string[][]; seqs: (number | null)[] }> {
+  try {
+    const page = await talkMapApi.searchSessionHits(sessionId, query)
+    const blocks = (page.blocks ?? []).filter(block => Array.isArray(block) && block.length > 0)
+    return { blocks, seqs: blocks.map((_, index) => (typeof page.seqs?.[index] === 'number' ? page.seqs[index] : null)) }
+  } catch (error) {
+    reportToHost({ phase: 'search-session-failed', sessionId, message: String((error as Error)?.message ?? error) })
+    return { blocks: [], seqs: [] }
   }
 }

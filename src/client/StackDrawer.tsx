@@ -99,6 +99,11 @@ export interface StackDrawerProps {
   onSearchContent?: (query: string) => Promise<DrawerSearchHit[]>
   /** Open a session found by the content search (it may live in another folder). */
   onOpenSession?: (sessionId: string) => void
+  /** Every extra hit inside one conversation, loaded on demand. */
+  onFetchSessionHits?: (sessionId: string, query: string) => Promise<{
+    blocks: string[][]
+    seqs: (number | null)[]
+  }>
   /** The passage around one hit — fetched on hover, not with the search. */
   onFetchContext?: (sessionId: string, seq: number, query: string) => Promise<string[]>
   onClose: () => void
@@ -113,6 +118,21 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   /** The passage under the pointer, in a floating box (null = nothing). */
   const [peek, setPeek] = useState<{ title: string; lines: string[]; x: number; y: number } | null>(null)
   const peekTimer = useRef<number | null>(null)
+  /** Extra hits per conversation, fetched only when asked for. */
+  const [moreHits, setMoreHits] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>({})
+  const [loadingMore, setLoadingMore] = useState<string | null>(null)
+
+  const expandHits = async (hit: DrawerSearchHit): Promise<void> => {
+    if (props.onFetchSessionHits === undefined || loadingMore !== null) return
+    setLoadingMore(hit.sessionId)
+    try {
+      const page = await props.onFetchSessionHits(hit.sessionId, query)
+      if (page.blocks.length > 0) setMoreHits(previous => ({ ...previous, [hit.sessionId]: page }))
+      else setMoreHits(previous => ({ ...previous, [hit.sessionId]: { blocks: hit.blocks, seqs: hit.seqs ?? [] } }))
+    } finally {
+      setLoadingMore(null)
+    }
+  }
 
   const cancelPeek = (): void => {
     if (peekTimer.current !== null) {
@@ -126,24 +146,24 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const peekCache = useRef(new Map<string, string[]>())
 
   /** Wait a beat before showing it: a fast pass over the list stays quiet. */
-  const schedulePeek = (hit: DrawerSearchHit, index: number, event: React.MouseEvent): void => {
+  const schedulePeek = (hit: DrawerSearchHit, index: number, event: React.MouseEvent, seq?: number | null): void => {
     // Moving the list under the pointer is not a hover.
     if (Date.now() - lastScrollAt.current < 220) return
     if (peekTimer.current !== null) window.clearTimeout(peekTimer.current)
     const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
     const fallback = hit.blocks[index] ?? []
-    const seq = hit.seqs?.[index]
+    const eventSeq = seq === undefined ? hit.seqs?.[index] : seq
     peekTimer.current = window.setTimeout(() => {
       peekTimer.current = null
       setPeek({ title: hit.title, lines: fallback, x: rect.left, y: rect.bottom + 6 })
-      if (typeof seq !== 'number' || props.onFetchContext === undefined) return
-      const key = hit.sessionId + ':' + String(seq)
+      if (typeof eventSeq !== 'number' || props.onFetchContext === undefined) return
+      const key = hit.sessionId + ':' + String(eventSeq)
       const cached = peekCache.current.get(key)
       if (cached !== undefined) {
         setPeek(current => (current === null ? current : { ...current, lines: cached }))
         return
       }
-      void props.onFetchContext(hit.sessionId, seq, query).then((lines) => {
+      void props.onFetchContext(hit.sessionId, eventSeq, query).then((lines) => {
         if (lines.length === 0) return
         peekCache.current.set(key, lines)
         setPeek(current => (current === null ? current : { ...current, lines }))
@@ -366,11 +386,12 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                       >
                         {highlight(hit.title, query)}
                       </button>
-                      {hit.blocks.map((block, blockIndex) => {
+                      {(moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
                         // Inline: only the matched line. The rest of the passage
                         // is one hover away (a floating box), so the list stays
                         // scannable instead of turning into walls of text.
                         const matched = block.find(line => line.toLowerCase().includes(needle)) ?? block[0] ?? ''
+                        const seqs = moreHits[hit.sessionId]?.seqs ?? hit.seqs ?? []
                         return (
                           <button
                             key={blockIndex}
@@ -378,15 +399,27 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                             className={styles['drawerHitLine']}
                             data-talkmap-search-line={hit.sessionId}
                             onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                            onMouseEnter={(event) => { schedulePeek(hit, blockIndex, event) }}
+                            onMouseEnter={(event) => { schedulePeek(hit, blockIndex, event, seqs[blockIndex] ?? null) }}
                             onMouseLeave={cancelPeek}
-                            onFocus={(event) => { schedulePeek(hit, blockIndex, event as unknown as React.MouseEvent) }}
+                            onFocus={(event) => { schedulePeek(hit, blockIndex, event as unknown as React.MouseEvent, seqs[blockIndex] ?? null) }}
                             onBlur={cancelPeek}
                           >
                             {highlight(matched, query)}
                           </button>
                         )
                       })}
+                      {props.onFetchSessionHits !== undefined && moreHits[hit.sessionId] === undefined
+                        ? (
+                            <button
+                              type="button"
+                              className={styles['drawerHitMore']}
+                              data-talkmap-search-more={hit.sessionId}
+                              onClick={() => { void expandHits(hit) }}
+                            >
+                              {loadingMore === hit.sessionId ? t('stack.moreLoading') : t('stack.moreHits')}
+                            </button>
+                          )
+                        : null}
                     </div>
                   ))}
                 </div>

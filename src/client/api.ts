@@ -92,6 +92,13 @@ export const talkMapApi = {
   }> {
     return postJson('/talk-map/search', { query })
   },
+  /** Every extra hit inside ONE conversation (asked for explicitly). */
+  searchSessionHits(sessionId: string, query: string): Promise<{
+    blocks: string[][]
+    seqs: (number | null)[]
+  }> {
+    return postJson('/talk-map/search-session', { sessionId, query })
+  },
   /** The passage around one hit — fetched only when the pointer rests on it. */
   searchContext(sessionId: string, seq: number, query: string): Promise<{ lines: string[] }> {
     return postJson('/talk-map/search-context', { sessionId, seq, query })
