@@ -10,6 +10,7 @@ import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
+import { renderMarkdownInline } from './markdown-inline.tsx'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -216,7 +217,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
       event.stopPropagation()
-      props.onClose()
+      requestClose()
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
     return () => {
@@ -232,16 +233,40 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   // Peeking is suppressed while the list is moving, otherwise every row that
   // slides under the pointer would schedule a popover.
   const lastScrollAt = useRef(0)
+  /** Play the leave animation before the panel is unmounted. */
+  const [leaving, setLeaving] = useState(false)
+  const leaveTimer = useRef<number | null>(null)
+  const requestClose = (): void => {
+    if (leaving) return
+    setLeaving(true)
+    leaveTimer.current = window.setTimeout(() => {
+      leaveTimer.current = null
+      props.onClose()
+    }, 130)
+  }
+  useEffect(() => () => {
+    if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current)
+  }, [])
   const scrollSaveTimer = useRef<number | null>(null)
 
   return (
     <div
-      className={styles['drawerBackdrop']}
+      className={`${styles['drawerBackdrop']}${leaving ? ` ${styles['drawerBackdropOut']}` : ''}`}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) props.onClose()
+        if (event.target === event.currentTarget) requestClose()
+      }}
+      // Also on click: a programmatic click (tests, keyboard-triggered close)
+      // never sends mousedown, and a drawer that stays open eats every later
+      // click on the board.
+      onClick={(event) => {
+        if (event.target === event.currentTarget) requestClose()
       }}
     >
-      <div className={styles['drawer']} role="dialog" aria-label={props.workspaceTitle}>
+      <div
+        className={`${styles['drawer']}${leaving ? ` ${styles['drawerOut']}` : ''}`}
+        role="dialog"
+        aria-label={props.workspaceTitle}
+      >
         <div className={styles['drawerHead']}>
           <span className={styles['drawerTitle']}>{props.workspaceTitle}</span>
           <span className={styles['drawerCount']}>{t('stack.total', { n: String(props.items.length) })}</span>
@@ -252,7 +277,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             className={styles['drawerClose']}
             title={t('stack.close')}
             aria-label={t('stack.close')}
-            onClick={props.onClose}
+            onClick={requestClose}
           >
             ×
           </button>
@@ -421,7 +446,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                             onFocus={(event) => { schedulePeek(hit, blockIndex, event as unknown as React.MouseEvent, seqs[blockIndex] ?? null) }}
                             onBlur={cancelPeek}
                           >
-                            {highlight(matched, query)}
+                            {renderMarkdownInline(matched, query).nodes}
                           </button>
                         )
                       })}

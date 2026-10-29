@@ -9,6 +9,7 @@
  * single corpus query).
  */
 import { useEffect, useRef, useState } from 'react'
+import { renderMarkdownInline } from './markdown-inline.tsx'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
 
@@ -154,7 +155,7 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
                   onFocus={(event) => { schedulePeek(hit, block, event as unknown as React.MouseEvent, seqs[index] ?? null) }}
                   onBlur={cancelPeek}
                 >
-                  {highlight(matched, props.query)}
+                  {renderMarkdownInline(matched, props.query).nodes}
                 </button>
               )
             })}
@@ -187,7 +188,7 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
             >
               <div className={styles['peekTitle']}>{peek.title}</div>
               {peek.lines.map((line, index) => (
-                <div key={index} className={styles['peekLine']}>{highlight(line, props.query)}</div>
+                <div key={index} className={styles['peekLine']}>{renderMarkdownInline(line, props.query).nodes}</div>
               ))}
               <div className={styles['peekHint']}>{t('stack.peekHint')}</div>
             </div>

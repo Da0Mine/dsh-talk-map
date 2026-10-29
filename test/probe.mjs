@@ -1176,6 +1176,15 @@ try {
     }
   })
   check('堆叠抽屉可以打开', drawerOpenClick === true && drawerBefore.open === true, JSON.stringify(drawerBefore))
+  const drawerMotion = await page.evaluate(() => {
+    const panel = document.querySelector('[class~="tm_drawer"]')
+    const backdrop = document.querySelector('[class~="tm_drawerBackdrop"]')
+    if (panel === null || backdrop === null) return null
+    const style = getComputedStyle(panel)
+    return { panelAnimation: style.animationName, panelDuration: style.animationDuration, backdropAnimation: getComputedStyle(backdrop).animationName }
+  })
+  check('抽屉弹出有过渡动画',
+    drawerMotion !== null && drawerMotion.panelAnimation !== 'none', JSON.stringify(drawerMotion))
   await page.evaluate(() => {
     const row = document.querySelector('[data-stack-card]')
     if (row !== null) { const r = row.getBoundingClientRect(); window.__rowPoint = { x: Math.round(r.x + 60), y: Math.round(r.y + 30) } }
@@ -1262,7 +1271,7 @@ try {
     check('显示全部对话里的内容命中（可以不在本文件夹）',
       contentHits.count === 2 && contentHits.sessionIds.includes('s3') && contentHits.sessionIds.includes('s1'),
       JSON.stringify(contentHits))
-    check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
+    check('命中项带出处片段', String(contentHits.snippet ?? '').includes('PX_PER_M'), String(contentHits.snippet))
     // Same conversation, several matches → ONE block with several lines, and the
     // searched word is marked inside them.
     const groupedHits = await page.evaluate(() => {
@@ -1299,6 +1308,20 @@ try {
     check('结果里的搜索词高亮', groupedHits.marks >= 1
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
+    const snippetMarkdown = await page.evaluate(() => {
+      const line = document.querySelector('[data-talkmap-search-line]')
+      if (line === null) return null
+      return {
+        strong: line.querySelectorAll('strong').length,
+        code: line.querySelectorAll('code').length,
+        stars: (line.textContent ?? '').includes('**'),
+        html: (line.innerHTML ?? '').slice(0, 240),
+      }
+    })
+    check('片段的 Markdown 被渲染（不再是 ** 源码）',
+      snippetMarkdown !== null && snippetMarkdown.strong >= 1
+        && snippetMarkdown.code >= 1 && snippetMarkdown.stars === false,
+      JSON.stringify(snippetMarkdown))
     const agentChips = await page.evaluate(() => ({
       main: document.querySelectorAll('[data-talkmap-agent="main"]').length,
       sub: document.querySelectorAll('[data-talkmap-agent="subagent"]').length,

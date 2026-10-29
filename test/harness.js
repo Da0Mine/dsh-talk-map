@@ -231,7 +231,7 @@
     if (path.indexOf('/talk-map/search-session') >= 0) {
       searchSessionCalls.push({ sessionId: body?.sessionId, query: body?.query })
       return json({
-        blocks: [['…按 SI 单位换算 Matter.js 的物理参数…'], ['…物理量单位统一走 PX_PER_M…']],
+        blocks: [['用 **物理参数** 换算，见 `PX_PER_M`'], ['第二条：*物理量* 走 PX_PER_M']],
         seqs: [42, 43],
       })
     }
@@ -249,8 +249,8 @@
       // Two conversations: one spawned by an agent, one yours.
       const items = query.includes('物理') || query.includes('Matter')
         ? [
-          { sessionId: 's3', blocks: [['…按 SI 单位换算 Matter.js 的物理参数…']], seqs: [42], agent: 'subagent', depth: 1 },
-          { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7], agent: 'main', depth: 0 },
+          { sessionId: 's3', blocks: [['用 **物理参数** 换算，见 `PX_PER_M` 与 [文档](https://x)']], seqs: [42] },
+          { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7] },
         ]
         : []
       return json({ items, hasMore: false })
@@ -359,7 +359,7 @@
             log('rpc.search', { query })
             // Fixture: the word appears in a conversation that is NOT on the map.
             const hits = query.includes('物理') || query.includes('Matter')
-              ? [{ sessionId: 's3', blocks: [['单位换算第一条', '…按 SI 单位换算 Matter.js 的物理参数…', '换算完再写进图表']] }]
+              ? [{ sessionId: 's3', blocks: [['用 **物理参数** 换算']] }]
               : []
             return Promise.resolve({ ok: true, value: { items: hits, hasMore: false } })
           }
