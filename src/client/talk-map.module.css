@@ -1349,6 +1349,47 @@
   color: var(--dsw-alias-brand-primary);
 }
 
+/* Hover "peek": the whole matched passage, floating above the list. */
+.peek {
+  position: fixed;
+  z-index: 80;
+  width: min(500px, 88vw);
+  max-height: 42vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  background: var(--dsw-alias-bg-layer-1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+}
+
+.peekTitle {
+  font-size: calc(11.5px + var(--tm-font-step, 0px));
+  font-weight: 600;
+  color: var(--dsw-alias-label-secondary);
+  padding-bottom: 4px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--dsw-alias-border-l2);
+}
+
+.peekLine {
+  font-size: calc(12px + var(--tm-font-step, 0px));
+  line-height: 1.55;
+  color: var(--dsw-alias-label-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.peekHint {
+  margin-top: 6px;
+  font-size: calc(10.5px + var(--tm-font-step, 0px));
+  color: var(--dsw-alias-label-secondary);
+  opacity: 0.7;
+}
+
 /* One match, as a group of context lines. */
 .drawerHitBlock {
   display: flex;

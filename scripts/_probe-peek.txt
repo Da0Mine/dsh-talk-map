@@ -1,0 +1,28 @@
+    // Hovering a hit reveals the whole passage in a floating box; the inline row
+    // stays a single line so the list remains scannable.
+    const inlineLines = await page.evaluate(() =>
+      document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length)
+    const hitPoint = await page.evaluate(() => {
+      const row = document.querySelector('[data-talkmap-search-hit] [data-talkmap-search-line]')
+      if (row === null) return null
+      const r = row.getBoundingClientRect()
+      return { x: Math.round(r.x + Math.min(120, r.width / 2)), y: Math.round(r.y + r.height / 2) }
+    })
+    if (hitPoint !== null) {
+      await page.mouse.move(hitPoint.x, hitPoint.y)
+      await page.waitForTimeout(450)
+    }
+    const peekBox = await page.evaluate(() => {
+      const node = document.querySelector('[data-talkmap-search-peek]')
+      if (node === null) return null
+      const lines = [...node.querySelectorAll('[class*="peekLine"]')]
+      return { lines: lines.length, text: node.textContent, marks: node.querySelectorAll('mark').length }
+    })
+    check('命中行只占一行（不再内联铺开三行）', inlineLines >= 1, String(inlineLines))
+    check('悬停后弹出框显示更多上下文',
+      peekBox !== null && peekBox.lines >= 2, JSON.stringify(peekBox))
+    check('弹出框里也高亮搜索词', (peekBox?.marks ?? 0) >= 1, JSON.stringify(peekBox))
+    await page.mouse.move(4, 4)
+    await page.waitForTimeout(250)
+    const peekGone = await page.evaluate(() => document.querySelector('[data-talkmap-search-peek]') === null)
+    check('移开鼠标后弹出框消失', peekGone === true, String(peekGone))
