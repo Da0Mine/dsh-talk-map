@@ -2017,7 +2017,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                   title: renamedTitles[hit.sessionId]
                     ?? sessions.byId[hit.sessionId]?.displayTitle
                     ?? hit.sessionId,
-                  lines: hit.lines,
+                  blocks: hit.blocks,
                 }))
               }}
               onOpenSession={(sessionId) => { openSession(sessionId) }}

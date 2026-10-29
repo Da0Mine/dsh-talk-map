@@ -1349,6 +1349,15 @@
   color: var(--dsw-alias-brand-primary);
 }
 
+/* One match, as a group of context lines. */
+.drawerHitBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
 /* One matched line inside a conversation block. */
 .drawerHitLine {
   display: block;

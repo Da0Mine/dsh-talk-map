@@ -86,7 +86,7 @@ export const talkMapApi = {
    * fallback when the shared connection's RPC surface is unavailable, so the
    * drawer's search never silently degrades to title-only matching.
    */
-  searchSessions(query: string): Promise<{ items: { sessionId: string; lines?: string[]; snippet?: string }[]; hasMore?: boolean }> {
+  searchSessions(query: string): Promise<{ items: { sessionId: string; blocks?: string[][]; lines?: string[]; snippet?: string }[]; hasMore?: boolean }> {
     return postJson('/talk-map/search', { query })
   },
   ensureDir(path: string): Promise<{ ok: true; path: string }> {

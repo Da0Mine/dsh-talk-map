@@ -1241,14 +1241,18 @@ try {
       return {
         blocks: blocks.length,
         lines: first === undefined ? 0 : first.querySelectorAll('[data-talkmap-search-line]').length,
+        contextBlocks: first === undefined ? 0 : first.querySelectorAll('[class*="drawerHitBlock"]').length,
         marks: first === undefined ? 0 : first.querySelectorAll('mark').length,
         markText: first === undefined
           ? null
           : [...first.querySelectorAll('mark')].map(node => node.textContent),
       }
     })
-    check('同一会话的多个命中归到一个栏目里', groupedHits.blocks === 1 && groupedHits.lines === 2,
+    check('同一会话的多个命中归到一个栏目里',
+      groupedHits.blocks === 1 && groupedHits.contextBlocks === 2,
       JSON.stringify(groupedHits))
+    check('每条命中显示三行原文（上/本/下）',
+      groupedHits.blocks === 1 && groupedHits.lines === 6, JSON.stringify(groupedHits))
     check('结果里的搜索词高亮', groupedHits.marks >= 2
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))

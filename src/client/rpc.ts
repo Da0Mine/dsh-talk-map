@@ -58,8 +58,11 @@ export function reportToHost(payload: Record<string, unknown>): void {
 
 export interface ContentHit {
   sessionId: string
-  /** Every matched line inside that conversation (grouped per session). */
-  lines: string[]
+  /**
+   * One entry per match, each holding the matched line together with the line
+   * above and below it — a bare snippet is too little to recognise.
+   */
+  blocks: string[][]
 }
 
 /**
@@ -72,17 +75,31 @@ export interface ContentHit {
  * can be diagnosed instead of guessed at.
  */
 export async function searchSessions(query: string): Promise<ContentHit[]> {
+  const clean = (lines: readonly unknown[]): string[] =>
+    lines.filter((line): line is string => typeof line === 'string' && line.trim() !== '')
   const normalize = (
-    items: readonly { sessionId?: string; lines?: string[]; snippet?: string }[] | undefined,
+    items: readonly { sessionId?: string; blocks?: string[][]; lines?: string[]; snippet?: string }[] | undefined,
   ): ContentHit[] =>
     (items ?? [])
-      .filter((item): item is { sessionId: string; lines?: string[]; snippet?: string } => typeof item.sessionId === 'string')
+      .filter((item): item is { sessionId: string; blocks?: string[][]; lines?: string[]; snippet?: string } =>
+        typeof item.sessionId === 'string')
       .map((item) => {
-        const lines = Array.isArray(item.lines) ? item.lines.filter(line => typeof line === 'string' && line !== '') : []
-        if (lines.length === 0 && typeof item.snippet === 'string' && item.snippet !== '') lines.push(item.snippet)
-        return { sessionId: item.sessionId, lines }
+        // New shape: blocks of context lines. Older shapes are wrapped so the
+        // drawer renders the same way whatever the Host answers.
+        if (Array.isArray(item.blocks)) {
+          const blocks = item.blocks.map(clean).filter(block => block.length > 0)
+          if (blocks.length > 0) return { sessionId: item.sessionId, blocks }
+        }
+        if (Array.isArray(item.lines)) {
+          const lines = clean(item.lines)
+          if (lines.length > 0) return { sessionId: item.sessionId, blocks: lines.map(line => [line]) }
+        }
+        if (typeof item.snippet === 'string' && item.snippet.trim() !== '') {
+          return { sessionId: item.sessionId, blocks: [[item.snippet.trim()]] }
+        }
+        return { sessionId: item.sessionId, blocks: [] }
       })
-      .filter(hit => hit.lines.length > 0)
+      .filter(hit => hit.blocks.length > 0)
 
   // Our own Host route first: it runs on the corpus query service, which is the
   // entry point that actually works from inside the Host. The API-domain
@@ -97,7 +114,7 @@ export async function searchSessions(query: string): Promise<ContentHit[]> {
     reportToHost({ phase: 'search-host-failed', query, message: String(routeError?.message ?? error) })
   }
   try {
-    const page = await callRpc<{ items?: { sessionId: string; lines?: string[]; snippet?: string }[] }>('session/search', { query })
+    const page = await callRpc<{ items?: { sessionId: string; blocks?: string[][]; lines?: string[]; snippet?: string }[] }>('session/search', { query })
     return normalize(page.items)
   } catch (error) {
     reportToHost({ phase: 'search-rpc-failed', query, message: String((error as Error)?.message ?? error) })

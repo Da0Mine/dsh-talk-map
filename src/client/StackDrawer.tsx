@@ -56,13 +56,14 @@ function isIndexDisabled(message: string): boolean {
 }
 
 /**
- * One conversation that matched: every matched line lives inside it, so a
- * session with five hits is ONE block with five lines, not five blocks.
+ * One conversation that matched. Each match is a small block of context
+ * lines (one above / the match / one below), so a session with several hits
+ * is ONE section with several blocks.
  */
 export interface DrawerSearchHit {
   sessionId: string
   title: string
-  lines: string[]
+  blocks: string[][]
 }
 
 export interface StackEntry {
@@ -315,16 +316,20 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                       >
                         {highlight(hit.title, query)}
                       </button>
-                      {hit.lines.map((line, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          className={styles['drawerHitLine']}
-                          data-talkmap-search-line={hit.sessionId}
-                          onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                        >
-                          {highlight(line, query)}
-                        </button>
+                      {hit.blocks.map((block, blockIndex) => (
+                        <div key={blockIndex} className={styles['drawerHitBlock']}>
+                          {block.map((line, lineIndex) => (
+                            <button
+                              key={lineIndex}
+                              type="button"
+                              className={styles['drawerHitLine']}
+                              data-talkmap-search-line={hit.sessionId}
+                              onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                            >
+                              {highlight(line, query)}
+                            </button>
+                          ))}
+                        </div>
                       ))}
                     </div>
                   ))}
