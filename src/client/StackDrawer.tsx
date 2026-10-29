@@ -10,6 +10,7 @@ import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
 import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
+import { loadSearch, saveSearch } from './search-store.ts'
 import { SearchResults } from './SearchResults.tsx'
 import { SearchLoading } from './SearchLoading.tsx'
 import styles from './talk-map.module.css'
@@ -92,6 +93,8 @@ export interface StackEntry {
 }
 
 export interface StackDrawerProps {
+  /** Storage scope of this folder's search. */
+  groupId: string
   workspaceTitle: string
   items: readonly StackEntry[]
   onOpenCard: (cardId: string) => void
@@ -116,8 +119,9 @@ export interface StackDrawerProps {
 
 export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
-  const [query, setQuery] = useState('')
-  const [hits, setHits] = useState<DrawerSearchHit[]>([])
+  const remembered = loadSearch<DrawerSearchHit>('drawer:' + props.groupId)
+  const [query, setQuery] = useState(remembered?.query ?? '')
+  const [hits, setHits] = useState<DrawerSearchHit[]>(remembered?.hits ?? [])
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
   /** The passage under the pointer, in a floating box (null = nothing). */
@@ -136,6 +140,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     try {
       const found = await props.onSearchContent(trimmed)
       setHits(found)
+      saveSearch('drawer:' + props.groupId, { query: trimmed, hits: found })
       setSearchError(null)
     } catch (cause) {
       console.warn('[dsh-talk-map] content search failed:', cause)

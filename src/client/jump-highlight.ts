@@ -1,11 +1,11 @@
 /**
- * After jumping into a conversation from a search hit, put the matched text on
- * screen: scroll to it and flash it for a few seconds.
+ * After jumping into a conversation from a search hit, put the *matched record*
+ * on screen: scroll the transcript until that text appears, then flash it.
  *
- * The transcript is rendered by the shell, so this walks its text nodes rather
- * than asking React: find the first occurrence, wrap it in a <mark> we own, jump
- * to it, and put the DOM back afterwards. Purely transient — a re-render simply
- * drops the wrapper.
+ * The shell renders the transcript, so this walks text nodes. Opening a session
+ * always lands at the newest message, and the match is usually further up —
+ * hence the scan: step the scroller upwards, checking after each step, and fall
+ * back to scanning downwards from the top.
  */
 const MARK_CLASS = 'tm_search_flash'
 const STYLE_ID = 'tm-search-flash-style'
@@ -29,34 +29,48 @@ function ensureStyle(): void {
   document.head.appendChild(style)
 }
 
-/** Where the shell renders messages: skip our own panel and the sidebar. */
-function isTranscriptNode(node: Text, query: string): boolean {
-  if (node.nodeValue === null || !node.nodeValue.toLowerCase().includes(query)) return false
+/** Our own panel, the sidebar and the composer are not the transcript. */
+function isTranscriptNode(node: Text, needle: string): boolean {
+  const value = node.nodeValue
+  if (value === null || !value.toLowerCase().includes(needle)) return false
   const parent = node.parentElement
   if (parent === null) return false
   if (parent.closest('[class*="tm_"]') !== null) return false
-  if (parent.closest('nav, aside, header') !== null) return false
+  if (parent.closest('nav, aside, header, footer, textarea') !== null) return false
   return true
 }
 
-function findNode(query: string): Text | null {
+function findNode(needle: string): Text | null {
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   let current = walker.nextNode()
   while (current !== null) {
     const text = current as Text
-    if (isTranscriptNode(text, query)) return text
+    if (isTranscriptNode(text, needle)) return text
     current = walker.nextNode()
   }
   return null
 }
 
-function markNode(node: Text, query: string): HTMLElement | null {
+/** The tallest scrollable box that is probably the message list. */
+function transcriptScroller(): HTMLElement | null {
+  let best: HTMLElement | null = null
+  for (const element of document.querySelectorAll<HTMLElement>('div, main, section')) {
+    if (element.scrollHeight <= element.clientHeight + 60) continue
+    if (element.closest('[class*="tm_"]') !== null) continue
+    const overflow = getComputedStyle(element).overflowY
+    if (overflow !== 'auto' && overflow !== 'scroll') continue
+    if (best === null || element.scrollHeight > best.scrollHeight) best = element
+  }
+  return best
+}
+
+function markNode(node: Text, needle: string): HTMLElement | null {
   const value = node.nodeValue ?? ''
-  const at = value.toLowerCase().indexOf(query)
+  const at = value.toLowerCase().indexOf(needle)
   if (at < 0) return null
   const range = document.createRange()
   range.setStart(node, at)
-  range.setEnd(node, at + query.length)
+  range.setEnd(node, at + needle.length)
   const mark = document.createElement('mark')
   mark.className = MARK_CLASS
   try {
@@ -67,31 +81,57 @@ function markNode(node: Text, query: string): HTMLElement | null {
   return mark
 }
 
-/** Wait for the transcript, then flash the term; cleans up after itself. */
+function flash(mark: HTMLElement): void {
+  mark.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  window.setTimeout(() => {
+    mark.classList.add('tm_search_flash_out')
+    window.setTimeout(() => {
+      const parent = mark.parentNode
+      if (parent === null) return
+      while (mark.firstChild !== null) parent.insertBefore(mark.firstChild, mark)
+      parent.removeChild(mark)
+    }, 700)
+  }, 4500)
+}
+
+/** Wait for the transcript, scan to the record, flash it, then clean up. */
 export function flashInTranscript(query: string): void {
   const needle = query.trim().toLowerCase()
   if (needle.length < 2) return
   ensureStyle()
-  const deadline = Date.now() + 6000
+
+  let steps = 0
+  let direction: 'up' | 'down' = 'up'
+  let atTop = false
+  const maxSteps = 26
+
   const tick = (): void => {
     const node = findNode(needle)
     if (node !== null) {
       const mark = markNode(node, needle)
       if (mark !== null) {
-        mark.scrollIntoView({ block: 'center', behavior: 'smooth' })
-        window.setTimeout(() => {
-          mark.classList.add('tm_search_flash_out')
-          window.setTimeout(() => {
-            const parent = mark.parentNode
-            if (parent === null) return
-            while (mark.firstChild !== null) parent.insertBefore(mark.firstChild, mark)
-            parent.removeChild(mark)
-          }, 700)
-        }, 4500)
+        flash(mark)
         return
       }
     }
-    if (Date.now() < deadline) window.setTimeout(tick, 200)
+    steps += 1
+    if (steps > maxSteps) return
+    const scroller = transcriptScroller()
+    if (scroller !== null) {
+      const step = Math.max(240, Math.round(scroller.clientHeight * 0.8))
+      if (direction === 'up') {
+        if (scroller.scrollTop <= 2 && atTop) {
+          direction = 'down'
+          scroller.scrollTop = 0
+        } else {
+          if (scroller.scrollTop <= 2) atTop = true
+          scroller.scrollTop = Math.max(0, scroller.scrollTop - step)
+        }
+      } else {
+        scroller.scrollTop = Math.min(scroller.scrollHeight, scroller.scrollTop + step)
+      }
+    }
+    window.setTimeout(tick, 140)
   }
-  window.setTimeout(tick, 120)
+  window.setTimeout(tick, 160)
 }

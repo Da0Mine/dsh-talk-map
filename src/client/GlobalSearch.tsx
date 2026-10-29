@@ -4,13 +4,20 @@ import { SearchResults, type SearchHitView } from './SearchResults.tsx'
 import { fetchSearchContext, fetchSessionHits, searchSessions } from './rpc.ts'
 import { t } from './i18n.ts'
 import { mapUi, sessionTitle } from './map-state.ts'
+import { clearSearch, loadSearch, saveSearch } from './search-store.ts'
 import styles from './talk-map.module.css'
 
+/** Storage scope of the header search. */
+const GLOBAL_SCOPE = 'global'
+
 export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: string) => void }): React.JSX.Element {
-  const [query, setQuery] = useState('')
+  // Restored from the last session: jumping into a conversation closes this
+  // panel, and coming back should show the same search again.
+  const remembered = loadSearch<SearchHitView>(GLOBAL_SCOPE)
+  const [query, setQuery] = useState(remembered?.query ?? '')
   /** The query the visible results belong to (empty = panel closed). */
   const [submitted, setSubmitted] = useState('')
-  const [hits, setHits] = useState<SearchHitView[]>([])
+  const [hits, setHits] = useState<SearchHitView[]>(remembered?.hits ?? [])
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,7 +27,7 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
       event.stopPropagation()
-      setSubmitted('')
+      dismiss()
       release()
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
@@ -29,6 +36,14 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
       release()
     }
   }, [submitted])
+
+  /** Manual close: forget the search, otherwise the panel could never be shut. */
+  const dismiss = (): void => {
+    setSubmitted('')
+    setHits([])
+    setQuery('')
+    clearSearch(GLOBAL_SCOPE)
+  }
 
   const run = async (value: string): Promise<void> => {
     const trimmed = value.trim()
@@ -41,14 +56,16 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
     setError(null)
     try {
       const found = await searchSessions(trimmed)
-      setHits(found.map(hit => ({
+      const views = found.map(hit => ({
         sessionId: hit.sessionId,
         title: sessionTitle(hit.sessionId) ?? hit.sessionId,
         blocks: hit.blocks,
         seqs: hit.seqs,
         agent: hit.agent,
         depth: hit.depth,
-      })))
+      }))
+      setHits(views)
+      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: views })
     } catch (cause) {
       setHits([])
       setError(String((cause as Error)?.message ?? cause))
@@ -82,11 +99,11 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
       >
         {t('global.searchRun')}
       </button>
-      {submitted !== ''
+      {(submitted !== '' || hits.length > 0)
         ? (
             <div
               className={styles['globalSearchBackdrop']}
-              onMouseDown={(event) => { if (event.target === event.currentTarget) setSubmitted('') }}
+              onMouseDown={(event) => { if (event.target === event.currentTarget) dismiss() }}
             >
               <div className={styles['globalSearchPanel']} role="dialog" aria-label={t('global.searchTitle')}>
                 <div className={styles['globalSearchHead']}>
@@ -99,20 +116,19 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
                     className={styles['drawerClose']}
                     title={t('stack.close')}
                     aria-label={t('stack.close')}
-                    onClick={() => { setSubmitted('') }}
+                    onClick={dismiss}
                   >
                     ×
                   </button>
                 </div>
                 <div className={styles['globalSearchBody']}>
                   <SearchResults
-                    query={submitted}
+                    query={submitted === '' ? query : submitted}
                     hits={hits}
                     searching={searching}
                     error={error}
                     heading={t('stack.contentHits', { n: String(hits.length) })}
                     onOpenSession={(sessionId, q) => {
-                      setSubmitted('')
                       props.onOpenSession(sessionId, q)
                     }}
                     onFetchContext={(sessionId, seq, text) => fetchSearchContext(sessionId, seq, text)}

@@ -52,6 +52,8 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
   const peekTimer = useRef<number | null>(null)
   const cache = useRef(new Map<string, string[]>())
   const [more, setMore] = useState<Record<string, { blocks: string[][]; seqs: (number | null)[] }>>({})
+  /** Sessions whose extra hits are still being fetched. */
+  const [pending, setPending] = useState<Record<string, true>>({})
 
   const cancelPeek = (): void => {
     if (peekTimer.current !== null) {
@@ -68,10 +70,21 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
     let alive = true
     for (const hit of props.hits.slice(0, 5)) {
       if (more[hit.sessionId] !== undefined) continue
+      setPending(previous => (previous[hit.sessionId] === true ? previous : { ...previous, [hit.sessionId]: true }))
       void props.onFetchSessionHits(hit.sessionId, props.query).then((page) => {
-        if (!alive || page.blocks.length <= 1) return
-        setMore(previous => (previous[hit.sessionId] === undefined ? { ...previous, [hit.sessionId]: page } : previous))
-      }).catch(() => {})
+        if (!alive) return
+        if (page.blocks.length > 1) {
+          setMore(previous => (previous[hit.sessionId] === undefined ? { ...previous, [hit.sessionId]: page } : previous))
+        }
+      }).catch(() => {}).finally(() => {
+        if (!alive) return
+        setPending(previous => {
+          if (previous[hit.sessionId] !== true) return previous
+          const next = { ...previous }
+          delete next[hit.sessionId]
+          return next
+        })
+      })
     }
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -138,6 +151,13 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
                 {renderMarkdownInline(hit.title, props.query).nodes}
               </button>
             </div>
+            {pending[hit.sessionId] === true
+              ? (
+                  <div className={styles['searchInlineLoading']} data-talkmap-search-pending={hit.sessionId}>
+                    <span className={styles['searchSkeletonLine']} />
+                  </div>
+                )
+              : null}
             {blocks.map((block, index) => {
               const needle = props.query.trim().toLowerCase()
               const line = block.find(entry => entry.toLowerCase().includes(needle)) ?? block[0] ?? ''

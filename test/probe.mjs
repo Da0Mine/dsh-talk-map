@@ -1298,6 +1298,21 @@ try {
     check('每条对话的全部命中自动补上（不再有按钮）',
       autoHits.buttons === 0 && autoHits.lines >= 3 && autoHits.sessionCalls >= 1,
       JSON.stringify(autoHits))
+    // Reopening the drawer must bring the search back (progress is kept).
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
+    await page.waitForTimeout(600)
+    const restoredSearch = await page.evaluate(() => {
+      const input = document.querySelector('[data-talkmap-drawer-search]')
+      return {
+        value: input === null ? null : input.value,
+        hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+      }
+    })
+    check('重新打开抽屉时保留上次的搜索',
+      restoredSearch.value === '物理' && restoredSearch.hits >= 1,
+      JSON.stringify(restoredSearch))
     // Loading state: a thin bar + placeholder rows while the corpus query runs.
     await page.evaluate(() => window.__harness.slowSearch(600))
     await page.fill('[data-talkmap-drawer-search]', '物理加载测试')
@@ -1669,6 +1684,15 @@ try {
   if ((await page.evaluate(() => window.__harness.panelState())).selectedPanel !== 'talk-map') await openMap()
   await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
   await page.waitForTimeout(500)
+  // The drawer restores its last search; clear it so every card is listed.
+  await page.evaluate(() => {
+    const input = document.querySelector('[data-talkmap-drawer-search]')
+    if (input === null) return
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set
+    if (setter !== undefined) setter.call(input, '')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await page.waitForTimeout(400)
   const restored = await page.evaluate(() => {
     const out = { chips: {}, interrupted: [], draft: [] }
     for (const root of document.querySelectorAll('[data-talkmap-session]')) {
