@@ -250,8 +250,8 @@
       // Two conversations: one spawned by an agent, one yours.
       const items = query.includes('物理') || query.includes('Matter')
         ? [
-          { sessionId: 's3', blocks: [['用 **物理参数** 换算，见 \u0060PX_PER_M\u0060 与 [文档](https://x)']], seqs: [42] },
-          { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7] },
+          { sessionId: 's3', blocks: [['用 **物理参数** 换算，见 \u0060PX_PER_M\u0060 与 [文档](https://x)']], seqs: [42], roles: ['user'] },
+          { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7], roles: ['agent'] },
         ]
         : []
       if (searchDelayMs > 0) {

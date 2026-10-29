@@ -21,6 +21,8 @@ export interface SearchHitView {
   title: string
   blocks: string[][]
   seqs?: (number | null)[]
+  /** Author of each match: your message or the agent's answer. */
+  roles?: (string | null)[]
   /** Sub-agent sessions are labelled; ordinary ones are not. */
   agent?: 'main' | 'subagent'
   depth?: number
@@ -146,6 +148,7 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
       {props.hits.map(hit => {
         const blocks = more[hit.sessionId]?.blocks ?? hit.blocks
         const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? []
+        const roles = hit.roles ?? []
         return (
           <div key={hit.sessionId} className={styles['drawerHit']} data-talkmap-search-hit={hit.sessionId}>
             <div className={styles['drawerHitHead']}>
@@ -190,6 +193,12 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
                   onFocus={(event) => { schedulePeek(hit, block, event as unknown as React.MouseEvent, seqs[index] ?? null) }}
                   onBlur={cancelPeek}
                 >
+                  <span
+                    className={styles['drawerRoleChip']}
+                    data-talkmap-role={roles[index] ?? 'agent'}
+                  >
+                    {roles[index] === 'user' ? t('stack.roleUser') : t('stack.roleAgent')}
+                  </span>
                   {renderMarkdownInline(line, props.query).nodes}
                 </button>
               )

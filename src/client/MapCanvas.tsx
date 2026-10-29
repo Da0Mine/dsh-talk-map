@@ -1371,6 +1371,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     title: renamedTitles[hit.sessionId] ?? sessions.byId[hit.sessionId]?.displayTitle ?? hit.sessionId,
     blocks: hit.blocks,
     seqs: hit.seqs,
+    roles: hit.roles,
     agent: hit.agent,
     depth: hit.depth,
   })

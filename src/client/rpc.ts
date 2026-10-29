@@ -65,6 +65,8 @@ export interface ContentHit {
   blocks: string[][]
   /** Event seq per match, so the passage can be pulled on demand. */
   seqs: (number | null)[]
+  /** Per-match author: your message or the agent's answer. */
+  roles: (string | null)[]
   /** Whose session this is: the conversation you had, or one an agent spawned. */
   agent: 'main' | 'subagent'
   /** How deep in the delegation chain a sub-agent session sits. */
@@ -110,12 +112,14 @@ async function searchSessionsUncached(query: string, cwd?: string): Promise<Cont
         // New shape: blocks of context lines. Older shapes are wrapped so the
         // drawer renders the same way whatever the Host answers.
         const seqs = Array.isArray(item.seqs) ? item.seqs : []
+        const roles = Array.isArray(item.roles) ? item.roles : []
         const agent: 'main' | 'subagent' = item.agent === 'subagent' ? 'subagent' : 'main'
         const depth = typeof item.depth === 'number' ? item.depth : 0
         const withSeqs = (blocks: string[][]): ContentHit => ({
           sessionId: item.sessionId,
           blocks,
           seqs: blocks.map((_, index) => (typeof seqs[index] === 'number' ? seqs[index] : null)),
+          roles: blocks.map((_, index) => (typeof roles[index] === 'string' ? roles[index] : null)),
           agent,
           depth,
         })
@@ -130,7 +134,7 @@ async function searchSessionsUncached(query: string, cwd?: string): Promise<Cont
         if (typeof item.snippet === 'string' && item.snippet.trim() !== '') {
           return withSeqs([[item.snippet.trim()]])
         }
-        return { sessionId: item.sessionId, blocks: [], seqs: [], agent, depth }
+        return { sessionId: item.sessionId, blocks: [], seqs: [], roles: [], agent, depth }
       })
       .filter(hit => hit.blocks.length > 0)
 

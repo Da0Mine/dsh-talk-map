@@ -1342,6 +1342,12 @@ try {
     check('结果里的搜索词高亮', groupedHits.marks >= 1
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
+    const roleChips = await page.evaluate(() => ({
+      user: document.querySelectorAll('[data-talkmap-role="user"]').length,
+      agent: document.querySelectorAll('[data-talkmap-role="agent"]').length,
+    }))
+    check('命中行标注是「你」还是「AI」',
+      roleChips.user >= 1 && roleChips.agent >= 1, JSON.stringify(roleChips))
     const snippetMarkdown = await page.evaluate(() => {
       const line = document.querySelector('[data-talkmap-search-line]')
       if (line === null) return null

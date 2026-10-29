@@ -69,6 +69,8 @@ export interface DrawerSearchHit {
   blocks: string[][]
   /** Event seq per block, when the Host supplied one. */
   seqs?: (number | null)[]
+  /** Per-match author: your message or the agent's answer. */
+  roles?: (string | null)[]
   /** Main conversation, or one an agent spawned. */
   agent?: 'main' | 'subagent'
   depth?: number

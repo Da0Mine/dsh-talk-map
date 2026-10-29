@@ -69,5 +69,19 @@ export function cleanSnippet(raw: string, query: string): string {
     text = (start > 0 ? '…' : '') + window + (end < text.length ? '…' : '')
   }
 
+  // Lines that are pure scaffolding: an identifier, a key: value pair, a hash.
+  text = text
+    .split(/\s{2,}|…/)
+    .filter((part) => {
+      const value = part.trim()
+      if (value === '') return false
+      if (/^[A-Za-z0-9_$.-]{1,40}$/.test(value)) return false
+      if (/^[A-Za-z0-9_$]{6,}\s*:/.test(value) && value.length < 60) return false
+      if (/^[0-9a-f]{16,}$/i.test(value)) return false
+      return true
+    })
+    .join(' ')
+    .trim()
+
   return text === '' ? String(raw ?? '').trim() : text
 }

@@ -1658,6 +1658,23 @@
   border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3));
 }
 
+/* Who said it:你的消息 / agent 的回答 */
+.drawerRoleChip {
+  flex: none;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: calc(9.5px + var(--tm-font-step, 0px));
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.drawerRoleChip[data-talkmap-role="user"] {
+  color: rgba(160, 210, 255, 0.95);
+  background: rgba(90, 160, 255, 0.14);
+}
+
 /* Search term inside a result line. */
 .hitMark {
   color: #0b0b0c;
