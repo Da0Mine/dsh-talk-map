@@ -32,16 +32,37 @@ function rowStep(scroller: HTMLElement): number {
   return first.offsetHeight + 12
 }
 
+/** Split `text` around every occurrence of `query` and mark the matches. */
+function highlight(text: string, query: string): React.ReactNode[] {
+  const needle = query.trim().toLowerCase()
+  if (needle === '') return [text]
+  const haystack = text.toLowerCase()
+  const parts: React.ReactNode[] = []
+  let cursor = 0
+  let key = 0
+  while (cursor < text.length) {
+    const at = haystack.indexOf(needle, cursor)
+    if (at < 0) { parts.push(text.slice(cursor)); break }
+    if (at > cursor) parts.push(text.slice(cursor, at))
+    parts.push(<mark key={key++} className={styles['hitMark']}>{text.slice(at, at + needle.length)}</mark>)
+    cursor = at + needle.length
+  }
+  return parts
+}
+
 /** The Host answers this when the deployment turned the session index off. */
 function isIndexDisabled(message: string): boolean {
   return message.includes('search is disabled') || message.includes('SESSION_QUERY_SEARCH_DISABLED')
 }
 
-/** One full-text hit: which conversation, its title, and where it matched. */
+/**
+ * One conversation that matched: every matched line lives inside it, so a
+ * session with five hits is ONE block with five lines, not five blocks.
+ */
 export interface DrawerSearchHit {
   sessionId: string
   title: string
-  snippet: string
+  lines: string[]
 }
 
 export interface StackEntry {
@@ -282,16 +303,30 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                     {t('stack.contentHits', { n: String(hits.length) })}
                   </div>
                   {hits.map(hit => (
-                    <button
+                    <div
                       key={hit.sessionId}
-                      type="button"
                       className={styles['drawerHit']}
                       data-talkmap-search-hit={hit.sessionId}
-                      onClick={() => { props.onOpenSession?.(hit.sessionId) }}
                     >
-                      <span className={styles['drawerHitTitle']}>{hit.title}</span>
-                      <span className={styles['drawerHitSnippet']}>{hit.snippet}</span>
-                    </button>
+                      <button
+                        type="button"
+                        className={styles['drawerHitTitle']}
+                        onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                      >
+                        {highlight(hit.title, query)}
+                      </button>
+                      {hit.lines.map((line, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          className={styles['drawerHitLine']}
+                          data-talkmap-search-line={hit.sessionId}
+                          onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                        >
+                          {highlight(line, query)}
+                        </button>
+                      ))}
+                    </div>
                   ))}
                 </div>
               )

@@ -228,8 +228,15 @@
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
+      // Grouped shape: one conversation, two matched lines.
       const items = query.includes('物理') || query.includes('Matter')
-        ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+        ? [{
+          sessionId: 's3',
+          lines: [
+            '…按 SI 单位换算 Matter.js 的物理参数…',
+            '…物理量单位统一走 PX_PER_M…',
+          ],
+        }]
         : []
       return json({ items, hasMore: false })
     }
@@ -256,8 +263,15 @@
       if (searchRouteFails) return Promise.resolve(new Response(JSON.stringify({ error: searchRouteMessage }), { status: 500, headers: { 'content-type': 'application/json' } }))
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
+      // Grouped shape: one conversation, two matched lines.
       const items = query.includes('物理') || query.includes('Matter')
-        ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+        ? [{
+          sessionId: 's3',
+          lines: [
+            '…按 SI 单位换算 Matter.js 的物理参数…',
+            '…物理量单位统一走 PX_PER_M…',
+          ],
+        }]
         : []
       return json({ items, hasMore: false })
     }
@@ -323,7 +337,7 @@
             log('rpc.search', { query })
             // Fixture: the word appears in a conversation that is NOT on the map.
             const hits = query.includes('物理') || query.includes('Matter')
-              ? [{ sessionId: 's3', snippet: '…按 SI 单位换算 Matter.js 的物理参数…' }]
+              ? [{ sessionId: 's3', lines: ['…按 SI 单位换算 Matter.js 的物理参数…', '…物理量单位统一走 PX_PER_M…'] }]
               : []
             return Promise.resolve({ ok: true, value: { items: hits, hasMore: false } })
           }

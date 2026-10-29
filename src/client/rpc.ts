@@ -58,7 +58,8 @@ export function reportToHost(payload: Record<string, unknown>): void {
 
 export interface ContentHit {
   sessionId: string
-  snippet: string
+  /** Every matched line inside that conversation (grouped per session). */
+  lines: string[]
 }
 
 /**
@@ -71,10 +72,17 @@ export interface ContentHit {
  * can be diagnosed instead of guessed at.
  */
 export async function searchSessions(query: string): Promise<ContentHit[]> {
-  const normalize = (items: readonly { sessionId?: string; snippet?: string }[] | undefined): ContentHit[] =>
+  const normalize = (
+    items: readonly { sessionId?: string; lines?: string[]; snippet?: string }[] | undefined,
+  ): ContentHit[] =>
     (items ?? [])
-      .filter((item): item is { sessionId: string; snippet?: string } => typeof item.sessionId === 'string')
-      .map(item => ({ sessionId: item.sessionId, snippet: item.snippet ?? '' }))
+      .filter((item): item is { sessionId: string; lines?: string[]; snippet?: string } => typeof item.sessionId === 'string')
+      .map((item) => {
+        const lines = Array.isArray(item.lines) ? item.lines.filter(line => typeof line === 'string' && line !== '') : []
+        if (lines.length === 0 && typeof item.snippet === 'string' && item.snippet !== '') lines.push(item.snippet)
+        return { sessionId: item.sessionId, lines }
+      })
+      .filter(hit => hit.lines.length > 0)
 
   // Our own Host route first: it runs on the corpus query service, which is the
   // entry point that actually works from inside the Host. The API-domain
@@ -89,7 +97,7 @@ export async function searchSessions(query: string): Promise<ContentHit[]> {
     reportToHost({ phase: 'search-host-failed', query, message: String(routeError?.message ?? error) })
   }
   try {
-    const page = await callRpc<{ items?: { sessionId: string; snippet?: string }[] }>('session/search', { query })
+    const page = await callRpc<{ items?: { sessionId: string; lines?: string[]; snippet?: string }[] }>('session/search', { query })
     return normalize(page.items)
   } catch (error) {
     reportToHost({ phase: 'search-rpc-failed', query, message: String((error as Error)?.message ?? error) })

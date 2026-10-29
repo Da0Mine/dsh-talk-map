@@ -2012,12 +2012,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                 // falls back to our own Host route, so this cannot degrade to
                 // title-only matching.
                 const found = await searchSessions(query)
-                return found.slice(0, 20).map(hit => ({
+                return found.slice(0, 12).map(hit => ({
                   sessionId: hit.sessionId,
                   title: renamedTitles[hit.sessionId]
                     ?? sessions.byId[hit.sessionId]?.displayTitle
                     ?? hit.sessionId,
-                  snippet: hit.snippet,
+                  lines: hit.lines,
                 }))
               }}
               onOpenSession={(sessionId) => { openSession(sessionId) }}

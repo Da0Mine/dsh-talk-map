@@ -1233,6 +1233,26 @@ try {
     check('显示全部对话里的内容命中（可以不在本文件夹）',
       contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
     check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
+    // Same conversation, several matches → ONE block with several lines, and the
+    // searched word is marked inside them.
+    const groupedHits = await page.evaluate(() => {
+      const blocks = [...document.querySelectorAll('[data-talkmap-search-hit]')]
+      const first = blocks.find(node => node.getAttribute('data-talkmap-search-hit') === 's3')
+      return {
+        blocks: blocks.length,
+        lines: first === undefined ? 0 : first.querySelectorAll('[data-talkmap-search-line]').length,
+        marks: first === undefined ? 0 : first.querySelectorAll('mark').length,
+        markText: first === undefined
+          ? null
+          : [...first.querySelectorAll('mark')].map(node => node.textContent),
+      }
+    })
+    check('同一会话的多个命中归到一个栏目里', groupedHits.blocks === 1 && groupedHits.lines === 2,
+      JSON.stringify(groupedHits))
+    check('结果里的搜索词高亮', groupedHits.marks >= 2
+      && (groupedHits.markText ?? []).every(text => text === '物理'),
+      JSON.stringify(groupedHits.markText))
+    await page.screenshot({ path: path.join(shots, 'probe-search.png') })
     // When the connection RPC cannot answer, the Host route must take over.
     await page.evaluate(() => window.__harness.failSearchRpc(true))
     await page.fill('[data-talkmap-drawer-search]', '')

@@ -1322,17 +1322,54 @@
   border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3));
 }
 
-.drawerHitTitle {
-  font-size: calc(12.5px + var(--tm-font-step, 0px));
-  font-weight: 600;
+/* Search term inside a result line. */
+.hitMark {
+  color: #0b0b0c;
+  background: rgb(255, 214, 106);
+  border-radius: 3px;
+  padding: 0 2px;
 }
 
-.drawerHitSnippet {
+.drawerHitTitle {
+  /* It is a <button> (click = open that conversation), so reset the furniture. */
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: calc(12.5px + var(--tm-font-step, 0px));
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+  background: transparent;
+  border: none;
+  padding: 0 0 2px;
+  cursor: pointer;
+}
+
+.drawerHitTitle:hover {
+  color: var(--dsw-alias-brand-primary);
+}
+
+/* One matched line inside a conversation block. */
+.drawerHitLine {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: inherit;
   font-size: calc(11.5px + var(--tm-font-step, 0px));
   color: var(--dsw-alias-label-secondary);
+  background: transparent;
+  border: none;
+  padding: 2px 0 2px 10px;
+  border-left: 2px solid var(--dsw-alias-border-l2);
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.drawerHitLine:hover {
+  color: var(--dsw-alias-label-primary);
+  border-left-color: var(--dsw-alias-brand-primary);
 }
 
 .drawerScroll {
