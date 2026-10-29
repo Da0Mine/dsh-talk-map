@@ -66,6 +66,9 @@ export interface DrawerSearchHit {
   blocks: string[][]
   /** Event seq per block, when the Host supplied one. */
   seqs?: (number | null)[]
+  /** Main conversation, or one an agent spawned. */
+  agent?: 'main' | 'subagent'
+  depth?: number
 }
 
 export interface StackEntry {
@@ -379,13 +382,24 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                       className={styles['drawerHit']}
                       data-talkmap-search-hit={hit.sessionId}
                     >
-                      <button
-                        type="button"
-                        className={styles['drawerHitTitle']}
-                        onClick={() => { props.onOpenSession?.(hit.sessionId) }}
-                      >
-                        {highlight(hit.title, query)}
-                      </button>
+                      <div className={styles['drawerHitHead']}>
+                        <span
+                          className={`${styles['drawerAgentChip']} ${hit.agent === 'subagent' ? styles['drawerAgentChipSub'] : ''}`}
+                          data-talkmap-agent={hit.agent ?? 'main'}
+                          title={hit.agent === 'subagent' ? t('stack.agentSubHint') : t('stack.agentMainHint')}
+                        >
+                          {hit.agent === 'subagent'
+                            ? t('stack.agentSub')
+                            : t('stack.agentMain')}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles['drawerHitTitle']}
+                          onClick={() => { props.onOpenSession?.(hit.sessionId) }}
+                        >
+                          {highlight(hit.title, query)}
+                        </button>
+                      </div>
                       {(moreHits[hit.sessionId]?.blocks ?? hit.blocks).map((block, blockIndex) => {
                         // Inline: only the matched line. The rest of the passage
                         // is one hover away (a floating box), so the list stays

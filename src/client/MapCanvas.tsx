@@ -2019,6 +2019,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                     ?? hit.sessionId,
                   blocks: hit.blocks,
                   seqs: hit.seqs,
+                  agent: hit.agent,
+                  depth: hit.depth,
                 }))
               }}
               onOpenSession={(sessionId) => { openSession(sessionId) }}

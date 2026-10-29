@@ -65,6 +65,10 @@ export interface ContentHit {
   blocks: string[][]
   /** Event seq per match, so the passage can be pulled on demand. */
   seqs: (number | null)[]
+  /** Whose session this is: the conversation you had, or one an agent spawned. */
+  agent: 'main' | 'subagent'
+  /** How deep in the delegation chain a sub-agent session sits. */
+  depth: number
 }
 
 /**
@@ -93,6 +97,8 @@ async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
       sessionId?: string
       blocks?: string[][]
       seqs?: (number | null)[]
+      agent?: string
+      depth?: number
       lines?: string[]
       snippet?: string
     }[] | undefined,
@@ -104,10 +110,14 @@ async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
         // New shape: blocks of context lines. Older shapes are wrapped so the
         // drawer renders the same way whatever the Host answers.
         const seqs = Array.isArray(item.seqs) ? item.seqs : []
+        const agent: 'main' | 'subagent' = item.agent === 'subagent' ? 'subagent' : 'main'
+        const depth = typeof item.depth === 'number' ? item.depth : 0
         const withSeqs = (blocks: string[][]): ContentHit => ({
           sessionId: item.sessionId,
           blocks,
           seqs: blocks.map((_, index) => (typeof seqs[index] === 'number' ? seqs[index] : null)),
+          agent,
+          depth,
         })
         if (Array.isArray(item.blocks)) {
           const blocks = item.blocks.map(clean).filter(block => block.length > 0)
@@ -120,7 +130,7 @@ async function searchSessionsUncached(query: string): Promise<ContentHit[]> {
         if (typeof item.snippet === 'string' && item.snippet.trim() !== '') {
           return withSeqs([[item.snippet.trim()]])
         }
-        return { sessionId: item.sessionId, blocks: [], seqs: [] }
+        return { sessionId: item.sessionId, blocks: [], seqs: [], agent, depth }
       })
       .filter(hit => hit.blocks.length > 0)
 

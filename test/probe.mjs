@@ -1231,7 +1231,8 @@ try {
     check('唤起了宿主全文搜索（/talk-map/search）',
       Array.isArray(routeCalls) && routeCalls.includes('物理'), JSON.stringify(routeCalls))
     check('显示全部对话里的内容命中（可以不在本文件夹）',
-      contentHits.count === 1 && contentHits.sessionIds[0] === 's3', JSON.stringify(contentHits))
+      contentHits.count === 2 && contentHits.sessionIds.includes('s3') && contentHits.sessionIds.includes('s1'),
+      JSON.stringify(contentHits))
     check('命中项带出处片段', String(contentHits.snippet ?? '').includes('Matter.js'), String(contentHits.snippet))
     // Same conversation, several matches → ONE block with several lines, and the
     // searched word is marked inside them.
@@ -1249,7 +1250,7 @@ try {
       }
     })
     check('一个会话只占一个栏目（先给最匹配的一行）',
-      groupedHits.blocks === 1 && groupedHits.lines === 1,
+      groupedHits.blocks === 2 && groupedHits.lines === 1,
       JSON.stringify(groupedHits))
     // The rest of that conversation is one click away: searching must not pay
     // for it up front (that is what made a search take 12 seconds).
@@ -1265,10 +1266,17 @@ try {
       lines: document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length,
     }))
     check('点「更多命中」才去查这条会话（并且多出行来）',
-      afterMore.calls === 1 && afterMore.lines >= 2, JSON.stringify(afterMore))
+      afterMore.calls === 1 && afterMore.lines >= 3, JSON.stringify(afterMore))
     check('结果里的搜索词高亮', groupedHits.marks >= 1
       && (groupedHits.markText ?? []).every(text => text === '物理'),
       JSON.stringify(groupedHits.markText))
+    const agentChips = await page.evaluate(() => ({
+      main: document.querySelectorAll('[data-talkmap-agent="main"]').length,
+      sub: document.querySelectorAll('[data-talkmap-agent="subagent"]').length,
+      labels: [...document.querySelectorAll('[data-talkmap-agent]')].map(node => node.textContent.trim()),
+    }))
+    check('每条结果标注主/子智能体',
+      agentChips.main >= 1 && agentChips.sub >= 1, JSON.stringify(agentChips))
     // The passage must NOT be fetched with the search: only when the pointer
     // rests on one hit (that is what made searching take seconds).
     const contextCallsAfterSearch = await page.evaluate(() => window.__harness.searchContextCalls().length)

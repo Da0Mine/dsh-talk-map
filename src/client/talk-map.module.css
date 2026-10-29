@@ -1330,6 +1330,32 @@
   padding: 0 2px;
 }
 
+/* Agent badge next to a hit's title. */
+.drawerHitHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.drawerAgentChip {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  font-size: calc(10px + var(--tm-font-step, 0px));
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+  letter-spacing: 0.02em;
+}
+
+/* Sub-agent sessions are easy to mistake for your own conversation: tint it. */
+.drawerAgentChipSub {
+  color: rgb(255, 214, 106);
+  border-color: rgba(255, 214, 106, 0.5);
+  background: rgba(255, 214, 106, 0.1);
+}
+
 .drawerHitTitle {
   /* It is a <button> (click = open that conversation), so reset the furniture. */
   display: block;

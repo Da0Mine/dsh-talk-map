@@ -87,7 +87,7 @@ export const talkMapApi = {
    * drawer's search never silently degrades to title-only matching.
    */
   searchSessions(query: string): Promise<{
-    items: { sessionId: string; blocks?: string[][]; seqs?: (number | null)[]; lines?: string[]; snippet?: string }[]
+    items: { sessionId: string; blocks?: string[][]; seqs?: (number | null)[]; agent?: string; depth?: number; lines?: string[]; snippet?: string }[]
     hasMore?: boolean
   }> {
     return postJson('/talk-map/search', { query })

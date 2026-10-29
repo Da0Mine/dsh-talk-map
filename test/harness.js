@@ -244,8 +244,12 @@
       searchRouteCalls.push(String(body?.query ?? ''))
       const query = String(body?.query ?? '')
       // Grouped shape: one conversation, two matched lines.
+      // Two conversations: one spawned by an agent, one yours.
       const items = query.includes('物理') || query.includes('Matter')
-        ? [{ sessionId: 's3', blocks: [['…按 SI 单位换算 Matter.js 的物理参数…']], seqs: [42] }]
+        ? [
+          { sessionId: 's3', blocks: [['…按 SI 单位换算 Matter.js 的物理参数…']], seqs: [42], agent: 'subagent', depth: 1 },
+          { sessionId: 's1', blocks: [['…物理引擎参数换算…']], seqs: [7], agent: 'main', depth: 0 },
+        ]
         : []
       return json({ items, hasMore: false })
     }
