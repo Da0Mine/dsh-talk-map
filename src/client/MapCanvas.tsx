@@ -1104,8 +1104,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         type: 'smoothstep',
         // Selectable on purpose: right-clicking it must answer "what is this",
         // and offer to hide it. It used to be un-clickable mystery wiring.
-        className: `tmEdge tmEdge-${lineageSync}`
-          + (lineageSync === 'idle' ? ' tmEdge-lineage' : ''),
+        // Structural marker, never conditional: a lineage line must look like a
+        // lineage line in every state — only its colour changes.
+        className: `tmEdge tmEdge-${lineageSync} tmEdge-lineage`,
         data: { fromCardId: parentCardId, toCardId: cardId },
         style: { strokeDasharray: '6 4', opacity: 0.5 },
       })
@@ -1348,6 +1349,33 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /** The pipe: push the source's latest digest into the target's inbox. */
+  /**
+   * Give a derived pair a real edge so it can carry per-edge settings
+   * (auto push, handles). The lineage line yields automatically: the canvas
+   * already skips a derived line when a stored edge covers that pair.
+   */
+  const materialiseEdge = (fromCardId: string, toCardId: string): string | undefined => {
+    const fromCard = canvasState.cards[fromCardId]
+    const toCard = canvasState.cards[toCardId]
+    if (fromCard === undefined || toCard === undefined) return undefined
+    const geometry = sideHandles(fromCard, toCard)
+    const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle
+    const edgeId = `edge-${crypto.randomUUID()}`
+    canvas.addEdges({
+      [edgeId]: {
+        boardId: INBOX_BOARD_ID,
+        fromCardId,
+        toCardId,
+        injection: { kind: 'digest' },
+        fromHandle: geometry.fromHandle,
+        toHandle: geometry.toHandle,
+        ...(fromTitle !== undefined ? { fromTitle } : {}),
+        createdAt: Date.now(),
+      },
+    })
+    return edgeId
+  }
+
   const pushAlongEdge = async (fromCardId: string, toCardId: string): Promise<void> => {
     const fromCard = canvasState.cards[fromCardId]
     const toCard = canvasState.cards[toCardId]
@@ -2025,47 +2053,55 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       title = `${fromTitle} → ${toTitle}`
       const digest = fromCard !== undefined ? canvasState.digests[fromCard.sessionId] : undefined
       const noDigest = digest === undefined || digestIsEmpty(digest)
-      if (stored === undefined) {
-        // A derived lineage line: nothing to push along, nothing to delete.
+      const lineage = stored === undefined
+      // Say what this line is, whichever kind it is.
+      if (lineage) {
         items.push({
           key: 'lineage-info',
           label: t('edge.lineageTitle'),
           hint: t('edge.lineageHint'),
           disabled: true,
         })
-        items.push({
-          key: 'hide-lineage',
-          label: t('edge.hideLineage'),
-          onPick: () => {
-            close()
-            setLineageHidden(true)
-          },
-        })
       }
       items.push({
         key: 'push',
         label: t('edge.push'),
-        ...(stored === undefined ? { hint: t('edge.lineageHint') } : {}),
         ...(noDigest ? { hint: t('edge.pushNoDigest'), disabled: true } : {}),
         onPick: () => {
           close()
           void pushAlongEdge(edgeFrom, edgeTo)
         },
       })
-      if (stored !== undefined) {
-        const auto = stored.injection.autoPush === true
-        items.push({
-          key: 'auto-push',
-          label: auto ? t('edge.autoPushOff') : t('edge.autoPushOn'),
-          ...(auto ? {} : { hint: t('edge.autoPushHint') }),
-          onPick: () => {
-            close()
+      // Same switch on both kinds: a lineage line materialises a real edge first
+      // (its derived line then yields), so the control is never missing.
+      const auto = stored?.injection.autoPush === true
+      items.push({
+        key: 'auto-push',
+        label: auto ? t('edge.autoPushOff') : t('edge.autoPushOn'),
+        ...(auto ? {} : { hint: t('edge.autoPushHint') }),
+        onPick: () => {
+          close()
+          if (stored !== undefined) {
             canvas.addEdges({
               [edgeId]: {
                 ...stored,
                 injection: { ...stored.injection, autoPush: !auto },
               },
             })
+            return
+          }
+          const created = materialiseEdge(edgeFrom, edgeTo)
+          if (created === undefined) return
+          showToast(t('edge.lineageMaterialised'))
+        },
+      })
+      if (lineage) {
+        items.push({
+          key: 'hide-lineage',
+          label: t('edge.hideLineage'),
+          onPick: () => {
+            close()
+            setLineageHidden(true)
           },
         })
       }

@@ -49,4 +49,9 @@ assert.match(bundle, /edge\.showLineage/, 'the canvas menu must offer bringing i
 assert.match(bundle, /lineage-hidden\.v1/, 'the choice must be remembered')
 assert.match(bundle, /if \(!lineageHidden\)/, 'hidden lineage lines must not be painted')
 
-console.log('edge-flow: 19 checks passed')
+// 10. one menu for both kinds of line — and the lineage class never disappears
+assert.match(bundle, /tmEdge-\$\{lineageSync\} tmEdge-lineage/, 'the lineage class must be unconditional')
+assert.match(bundle, /materialiseEdge/, 'a lineage line must be able to become a real edge')
+assert.match(bundle, /const lineage = stored === void 0/, 'the edge menu must branch on lineage, not skip items')
+
+console.log('edge-flow: 22 checks passed')

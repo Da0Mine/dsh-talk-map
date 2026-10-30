@@ -463,6 +463,7 @@ var zh = {
   "edge.lineageHint": "这条线不是画的，是会话自己记录的来源：它会一直指向父会话，推送不影响它",
   "edge.lineageTitle": "这是血缘线（自动生成）",
   "edge.hideLineage": "隐藏所有血缘线",
+  "edge.lineageMaterialised": "已为这条血缘线建立连线，可以自动推送了",
   "edge.showLineage": "显示所有血缘线",
   "edge.pushNoDigest": "来源还没有摘要",
   "edge.delete": "删除连线",
@@ -613,12 +614,12 @@ var en = {
   "menu.renameWorkspace": "Rename workspace",
   "menu.removeCard": "Remove from map",
   "edge.push": "Push latest digest",
-  "edge.lineageHint": "This is a lineage line: pushing injects the digest into the child, the line itself is unchanged",
   "edge.pushNoDigest": "source has no digest yet",
   "edge.delete": "Delete edge",
   "edge.lineageHint": "Not drawn by hand: the session records where it came from. It keeps pointing at the parent; pushing does not change it.",
   "edge.lineageTitle": "Lineage line (generated)",
   "edge.hideLineage": "Hide all lineage lines",
+  "edge.lineageMaterialised": "Created a real edge for this lineage line — pushing works the same from now on",
   "edge.showLineage": "Show all lineage lines",
   "edge.autoPushOn": "Turn on auto push",
   "edge.autoPushOff": "Turn off auto push",
@@ -13400,7 +13401,9 @@ function CanvasInner(props) {
           type: "smoothstep",
           // Selectable on purpose: right-clicking it must answer "what is this",
           // and offer to hide it. It used to be un-clickable mystery wiring.
-          className: `tmEdge tmEdge-${lineageSync}` + (lineageSync === "idle" ? " tmEdge-lineage" : ""),
+          // Structural marker, never conditional: a lineage line must look like a
+          // lineage line in every state — only its colour changes.
+          className: `tmEdge tmEdge-${lineageSync} tmEdge-lineage`,
           data: { fromCardId: parentCardId, toCardId: cardId },
           style: { strokeDasharray: "6 4", opacity: 0.5 }
         });
@@ -13579,6 +13582,27 @@ function CanvasInner(props) {
       fromHandle: connection.sourceHandle,
       toHandle: connection.targetHandle
     });
+  };
+  const materialiseEdge = (fromCardId, toCardId) => {
+    const fromCard = canvasState.cards[fromCardId];
+    const toCard = canvasState.cards[toCardId];
+    if (fromCard === void 0 || toCard === void 0) return void 0;
+    const geometry = sideHandles(fromCard, toCard);
+    const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle;
+    const edgeId = `edge-${crypto.randomUUID()}`;
+    canvas.addEdges({
+      [edgeId]: {
+        boardId: INBOX_BOARD_ID,
+        fromCardId,
+        toCardId,
+        injection: { kind: "digest" },
+        fromHandle: geometry.fromHandle,
+        toHandle: geometry.toHandle,
+        ...fromTitle !== void 0 ? { fromTitle } : {},
+        createdAt: Date.now()
+      }
+    });
+    return edgeId;
   };
   const pushAlongEdge = async (fromCardId, toCardId) => {
     const fromCard = canvasState.cards[fromCardId];
@@ -14118,46 +14142,52 @@ function CanvasInner(props) {
       title = `${fromTitle} → ${toTitle}`;
       const digest = fromCard !== void 0 ? canvasState.digests[fromCard.sessionId] : void 0;
       const noDigest = digest === void 0 || digestIsEmpty2(digest);
-      if (stored === void 0) {
+      const lineage = stored === void 0;
+      if (lineage) {
         items.push({
           key: "lineage-info",
           label: t("edge.lineageTitle"),
           hint: t("edge.lineageHint"),
           disabled: true
         });
-        items.push({
-          key: "hide-lineage",
-          label: t("edge.hideLineage"),
-          onPick: () => {
-            close();
-            setLineageHidden(true);
-          }
-        });
       }
       items.push({
         key: "push",
         label: t("edge.push"),
-        ...stored === void 0 ? { hint: t("edge.lineageHint") } : {},
         ...noDigest ? { hint: t("edge.pushNoDigest"), disabled: true } : {},
         onPick: () => {
           close();
           void pushAlongEdge(edgeFrom, edgeTo);
         }
       });
-      if (stored !== void 0) {
-        const auto = stored.injection.autoPush === true;
-        items.push({
-          key: "auto-push",
-          label: auto ? t("edge.autoPushOff") : t("edge.autoPushOn"),
-          ...auto ? {} : { hint: t("edge.autoPushHint") },
-          onPick: () => {
-            close();
+      const auto = stored?.injection.autoPush === true;
+      items.push({
+        key: "auto-push",
+        label: auto ? t("edge.autoPushOff") : t("edge.autoPushOn"),
+        ...auto ? {} : { hint: t("edge.autoPushHint") },
+        onPick: () => {
+          close();
+          if (stored !== void 0) {
             canvas.addEdges({
               [edgeId]: {
                 ...stored,
                 injection: { ...stored.injection, autoPush: !auto }
               }
             });
+            return;
+          }
+          const created = materialiseEdge(edgeFrom, edgeTo);
+          if (created === void 0) return;
+          showToast(t("edge.lineageMaterialised"));
+        }
+      });
+      if (lineage) {
+        items.push({
+          key: "hide-lineage",
+          label: t("edge.hideLineage"),
+          onPick: () => {
+            close();
+            setLineageHidden(true);
           }
         });
       }
