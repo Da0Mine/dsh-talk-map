@@ -28,7 +28,6 @@ import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, u
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { allSessionTitles, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
-import { flashInTranscript } from './jump-highlight.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
@@ -1349,11 +1348,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (openSessionInUi(sessionId)) closeMapPanel()
   }
 
-  /** Every card of a folder (shown and folded), in the folder's own order. */
-  /** Open a conversation found by a search, then flash the searched text in it. */
-  const openSearchHit = (sessionId: string, query?: string): void => {
+  /**
+   * Open a conversation found by a search.
+   *
+   * No attempt to scroll to the matched record: the transcript exposes no
+   * per-message anchor (no data-seq / id) and only the messages near the
+   * viewport are mounted, so a plugin cannot place the view precisely. The
+   * reference plugin in the market (dsh-find-all) does the same — it opens the
+   * session and leaves the scroll position to the shell.
+   */
+  const openSearchHit = (sessionId: string): void => {
     openSession(sessionId)
-    if (query !== undefined && query.trim() !== '') flashInTranscript(query)
   }
 
   /**
@@ -2080,7 +2085,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               // Scope: this folder's workspace only. The header search is the
               // global one (see GlobalSearch).
               onSearchContent={async (query) => searchInWorkspace(drawer.groupId, query)}
-              onOpenSession={(sessionId, q) => { openSearchHit(sessionId, q) }}
+              onOpenSession={(sessionId) => { openSearchHit(sessionId) }}
               // Hover asks for that one hit's passage (an on-demand log read).
               onFetchContext={(sessionId, seq, query) => fetchSearchContext(sessionId, seq, query)}
               onFetchSessionHits={(sessionId, query) => fetchSessionHits(sessionId, query)}

@@ -11113,172 +11113,6 @@ var drawerState = {
   }
 };
 
-// src/client/jump-highlight.ts
-var MARK_CLASS = "tm_search_flash";
-var trace = {
-  query: "",
-  panelGone: null,
-  findAttempts: 0,
-  found: false,
-  insidePanel: null,
-  matched: null,
-  findAvailable: false
-};
-function report() {
-  try {
-    void fetch("/talk-map/client-boot", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phase: "jump-debug", ...trace })
-    }).catch(() => {
-    });
-  } catch {
-  }
-}
-var STYLE_ID = "tm-search-flash-style";
-function ensureStyle() {
-  if (document.getElementById(STYLE_ID) !== null) return;
-  const style2 = document.createElement("style");
-  style2.id = STYLE_ID;
-  style2.textContent = `
-    .${MARK_CLASS} {
-      background: rgba(255, 214, 106, 0.45);
-      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0.45);
-      border-radius: 3px;
-      transition: background 600ms ease-out, box-shadow 600ms ease-out;
-    }
-    .${MARK_CLASS}.tm_search_flash_out {
-      background: rgba(255, 214, 106, 0);
-      box-shadow: 0 0 0 2px rgba(255, 214, 106, 0);
-    }
-  `;
-  document.head.appendChild(style2);
-}
-function isTranscriptNode(node, needle) {
-  const value = node.nodeValue;
-  if (value === null || !value.toLowerCase().includes(needle)) return false;
-  const parent = node.parentElement;
-  if (parent === null) return false;
-  if (parent.closest('[class*="tm_"]') !== null) return false;
-  if (parent.closest("nav, aside, header, footer, textarea") !== null) return false;
-  return true;
-}
-function findNode(needle) {
-  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-  let current = walker.nextNode();
-  while (current !== null) {
-    const text = current;
-    if (isTranscriptNode(text, needle)) return text;
-    current = walker.nextNode();
-  }
-  return null;
-}
-function flash(mark) {
-  mark.scrollIntoView({ block: "center", behavior: "smooth" });
-  window.setTimeout(() => {
-    mark.classList.add("tm_search_flash_out");
-    window.setTimeout(() => {
-      const parent = mark.parentNode;
-      if (parent === null) return;
-      while (mark.firstChild !== null) parent.insertBefore(mark.firstChild, mark);
-      parent.removeChild(mark);
-    }, 700);
-  }, 4500);
-}
-function markSelection() {
-  const selection2 = window.getSelection();
-  if (selection2 === null || selection2.rangeCount === 0) return null;
-  const range = selection2.getRangeAt(0);
-  if (range.collapsed) return null;
-  const mark = document.createElement("mark");
-  mark.className = MARK_CLASS;
-  try {
-    range.surroundContents(mark);
-  } catch {
-    return null;
-  }
-  selection2.removeAllRanges();
-  return mark;
-}
-function insideOurPanel() {
-  const selection2 = window.getSelection();
-  const node = selection2?.anchorNode ?? null;
-  const element = node === null ? null : node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
-  return element !== null && element.closest('[class*="tm_"]') !== null;
-}
-function findInTranscript(needle) {
-  const finder = window.find;
-  if (typeof finder !== "function") return null;
-  trace.findAvailable = typeof finder === "function";
-  for (let attempt = 0; attempt < 12; attempt += 1) {
-    trace.findAttempts += 1;
-    const found = finder.call(window, needle, false, false, true, false, false, false);
-    if (found !== true) return null;
-    const selection2 = window.getSelection();
-    trace.insidePanel = insideOurPanel();
-    trace.matched = selection2 === null ? null : String(selection2).slice(0, 60);
-    if (insideOurPanel()) continue;
-    return markSelection();
-  }
-  return null;
-}
-function flashInTranscript2(query) {
-  const needle = query.trim().toLowerCase();
-  if (needle.length < 2) return;
-  trace.query = needle;
-  trace.findAttempts = 0;
-  trace.found = false;
-  trace.insidePanel = null;
-  trace.matched = null;
-  ensureStyle();
-  let waited = 0;
-  const deadline = 7e3;
-  const attempt = () => {
-    const viaFind = findInTranscript(needle);
-    if (viaFind !== null) {
-      trace.found = true;
-      report();
-      flash(viaFind);
-      return;
-    }
-    const node = findNode(needle);
-    if (node !== null) {
-      const value = node.nodeValue ?? "";
-      const at = value.toLowerCase().indexOf(needle);
-      if (at >= 0) {
-        const range = document.createRange();
-        range.setStart(node, at);
-        range.setEnd(node, at + needle.length);
-        const mark = document.createElement("mark");
-        mark.className = MARK_CLASS;
-        try {
-          range.surroundContents(mark);
-          flash(mark);
-          return;
-        } catch {
-        }
-      }
-    }
-    waited += 200;
-    if (waited > deadline) {
-      report();
-      return;
-    }
-    window.setTimeout(attempt, 200);
-  };
-  const waitPanel = () => {
-    trace.panelGone = document.querySelector('[class*="tm_panel"]') === null;
-    if (document.querySelector('[class*="tm_panel"]') !== null && waited < 2e3) {
-      waited += 60;
-      window.setTimeout(waitPanel, 60);
-      return;
-    }
-    waited = 0;
-    window.setTimeout(attempt, 120);
-  };
-  window.setTimeout(waitPanel, 60);
-}
-
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
 var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
@@ -13692,9 +13526,8 @@ function CanvasInner(props) {
     sessionActivity.acknowledge(sessionId);
     if (openSessionInUi(sessionId)) closeMapPanel();
   };
-  const openSearchHit = (sessionId, query) => {
+  const openSearchHit = (sessionId) => {
     openSession(sessionId);
-    if (query !== void 0 && query.trim() !== "") flashInTranscript2(query);
   };
   const searchInWorkspace = async (groupId, query) => {
     const cwd = workspaces.items.find((item) => item.workspaceId === groupId)?.path;
@@ -14316,8 +14149,8 @@ function CanvasInner(props) {
               openMenu(event, "card", cardId);
             },
             onSearchContent: async (query) => searchInWorkspace(drawer.groupId, query),
-            onOpenSession: (sessionId, q) => {
-              openSearchHit(sessionId, q);
+            onOpenSession: (sessionId) => {
+              openSearchHit(sessionId);
             },
             onFetchContext: (sessionId, seq, query) => fetchSearchContext(sessionId, seq, query),
             onFetchSessionHits: (sessionId, query) => fetchSessionHits(sessionId, query),
@@ -14541,15 +14374,9 @@ function MapOverlay(props) {
             }
           ),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["headerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-            GlobalSearch,
-            {
-              onOpenSession: (sessionId, q) => {
-                openSessionInUi(sessionId);
-                if (q !== void 0 && q.trim() !== "") flashInTranscript(q);
-              }
-            }
-          ),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
+            openSessionInUi(sessionId);
+          } }),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FontSizeButtons, {}),
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
             "button",

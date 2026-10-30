@@ -132,12 +132,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
           <span>{t('map.back')}</span>
         </button>
         <span className={styles['headerSpace']} />
-        <GlobalSearch
-          onOpenSession={(sessionId, q) => {
-            openSessionInUi(sessionId)
-            if (q !== undefined && q.trim() !== '') flashInTranscript(q)
-          }}
-        />
+        <GlobalSearch onOpenSession={(sessionId) => { openSessionInUi(sessionId) }} />
         <FontSizeButtons />
         <button
           type="button"
