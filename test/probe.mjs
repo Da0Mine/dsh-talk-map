@@ -1270,6 +1270,51 @@ try {
     JSON.stringify({ before: drawerBefore, after: drawerAfter }))
   check('抽屉里的内容也没丢', drawerAfter.rows === drawerBefore.rows,
     String(drawerBefore.rows) + ' → ' + String(drawerAfter.rows))
+  // Connections between cards of this folder are spelled out inside the drawer.
+  const drawerLinks = await page.evaluate(() => ({
+    chips: document.querySelectorAll('[data-talkmap-card-links] [data-talkmap-link]').length,
+    text: [...document.querySelectorAll('[data-talkmap-card-links] [data-talkmap-link]')].map(n => n.textContent.trim()),
+  }))
+  check('抽屉里显示同一文件夹内卡片之间的连线',
+    drawerLinks.chips >= 1, JSON.stringify(drawerLinks))
+
+  // Drag the second card onto the first: the order must change and stay.
+  const beforeOrder = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-stack-card]')].map(n => n.getAttribute('data-talkmap-session')))
+  // Drive the drag in steps: React has to commit the dragstart state before
+  // the dragover handler will accept a drop.
+  await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    if (cards.length < 2) return
+    window.__dragData = new DataTransfer()
+    cards[1].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: window.__dragData }))
+  })
+  await page.waitForTimeout(350)
+  await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    if (cards.length < 2) return
+    const box = cards[0].getBoundingClientRect()
+    cards[0].dispatchEvent(new DragEvent('dragover', {
+      bubbles: true, cancelable: true, dataTransfer: window.__dragData,
+      clientX: box.x + box.width / 2, clientY: box.y + box.height / 2,
+    }))
+  })
+  await page.waitForTimeout(350)
+  await page.evaluate(() => {
+    const cards = [...document.querySelectorAll('[data-stack-card]')]
+    if (cards.length < 2) return
+    const box = cards[0].getBoundingClientRect()
+    cards[0].dispatchEvent(new DragEvent('drop', {
+      bubbles: true, cancelable: true, dataTransfer: window.__dragData,
+      clientX: box.x + box.width / 2, clientY: box.y + box.height / 2,
+    }))
+  })
+  await page.waitForTimeout(900)
+  const afterOrder = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-stack-card]')].map(n => n.getAttribute('data-talkmap-session')))
+  check('抽屉里拖动卡片可以改变排序并保留',
+    beforeOrder.length >= 2 && beforeOrder.join() !== afterOrder.join(),
+    JSON.stringify({ before: beforeOrder, after: afterOrder }))
   // The row we just came back from is the map's current conversation: the
   // drawer marks it with the same corner brackets the grid card wears.
   const drawerCurrent = await page.evaluate(() => {

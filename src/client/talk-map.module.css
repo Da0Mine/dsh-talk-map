@@ -1918,6 +1918,43 @@
   padding: 16px;
 }
 
+/* Drag-to-reorder inside the drawer: the card under the pointer is lifted. */
+.drawerCard[draggable="true"] {
+  cursor: grab;
+}
+
+.drawerCard[data-talkmap-drag="1"] {
+  cursor: grabbing;
+  opacity: 0.55;
+  transform: scale(0.98);
+}
+
+/* Connections from this card to other cards in the same folder. */
+.cardLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 2px 0 4px;
+}
+
+.cardLinkChip {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: calc(9.5px + var(--tm-font-step, 0px));
+  line-height: 1.7;
+  color: var(--dsw-alias-label-secondary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cardLinkChip[data-talkmap-link="out"] {
+  color: rgba(255, 214, 106, 0.9);
+  background: rgba(255, 214, 106, 0.12);
+}
+
 /* Cards render at 1:1 — 224px wide, exactly what the map shows at 100%. */
 .drawerCard {
   width: 224px;

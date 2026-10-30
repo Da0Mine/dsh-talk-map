@@ -93,6 +93,8 @@ export interface StackEntry {
   interrupted?: boolean
   /** Pinned in the sidebar. */
   pinned?: boolean
+  /** Connections to other cards of the same folder (injection direction). */
+  links?: { toCardId: string; title: string; kind: string; outgoing: boolean }[]
 }
 
 export interface StackDrawerProps {
@@ -117,6 +119,8 @@ export interface StackDrawerProps {
   }>
   /** The passage around one hit — fetched on hover, not with the search. */
   onFetchContext?: (sessionId: string, seq: number, query: string) => Promise<string[]>
+  /** A drag inside the drawer landed: `cardId` now sits at `index`. */
+  onReorder?: (cardId: string, index: number) => void
   onClose: () => void
 }
 
@@ -126,6 +130,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const [query, setQuery] = useState(remembered?.query ?? '')
   const [hits, setHits] = useState<DrawerSearchHit[]>(remembered?.hits ?? [])
   const [searching, setSearching] = useState(false)
+  /** The card being dragged inside the drawer, and where it would land. */
+  const [dragId, setDragId] = useState<string | null>(null)
+  const [dropIndex, setDropIndex] = useState<number | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   /** The passage under the pointer, in a floating box (null = nothing). */
 
@@ -201,6 +208,33 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current)
   }, [])
   const scrollSaveTimer = useRef<number | null>(null)
+
+  /** Which slot the pointer is over, among the cards currently rendered. */
+  const slotUnder = (clientX: number, clientY: number): number | null => {
+    const scroller = scrollerRef.current
+    if (scroller === null) return null
+    const cards = [...scroller.querySelectorAll('[data-stack-card]')] as HTMLElement[]
+    if (cards.length === 0) return null
+    let best = 0
+    let bestDistance = Number.POSITIVE_INFINITY
+    cards.forEach((card, index) => {
+      const box = card.getBoundingClientRect()
+      const dx = clientX - (box.x + box.width / 2)
+      const dy = clientY - (box.y + box.height / 2)
+      // Rows matter more than columns: weight the vertical distance.
+      const distance = dx * dx + dy * dy * 3
+      if (distance < bestDistance) {
+        bestDistance = distance
+        best = index
+      }
+    })
+    return best
+  }
+
+  const endDrag = (): void => {
+    setDragId(null)
+    setDropIndex(null)
+  }
 
   return (
     <div
@@ -307,6 +341,30 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 data-stack-card=""
                 data-talkmap-session={item.sessionId}
                 className={classNames.filter(Boolean).join(' ')}
+                draggable
+                data-talkmap-drag={dragId === item.cardId ? "1" : undefined}
+                onDragStart={(event) => {
+                  setDragId(item.cardId)
+                  event.dataTransfer.effectAllowed = 'move'
+                  // Firefox refuses to start a drag without payload.
+                  event.dataTransfer.setData('text/plain', item.cardId)
+                }}
+                onDragOver={(event) => {
+                  if (dragId === null) return
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  const index = slotUnder(event.clientX, event.clientY)
+                  if (index !== null && index !== dropIndex) setDropIndex(index)
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  const index = dropIndex
+                  const moving = dragId
+                  endDrag()
+                  if (moving === null || index === null) return
+                  props.onReorder?.(moving, index)
+                }}
+                onDragEnd={endDrag}
                 onClick={() => { props.onOpenCard(item.cardId) }}
                 onContextMenu={(event) => {
                   event.preventDefault()
@@ -323,6 +381,22 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 </div>
                 {item.preview !== undefined && item.preview !== ''
                   ? <div className={styles['cardSummary']}>{item.preview}</div>
+                  : null}
+                {item.links !== undefined && item.links.length > 0
+                  ? (
+                      <div className={styles['cardLinks']} data-talkmap-card-links={item.links.length}>
+                        {item.links.slice(0, 3).map(link => (
+                          <span
+                            key={(link.outgoing ? 'out-' : 'in-') + link.toCardId}
+                            className={styles['cardLinkChip']}
+                            data-talkmap-link={link.outgoing ? 'out' : 'in'}
+                            title={link.kind}
+                          >
+                            {link.outgoing ? '→ ' : '← '}{link.title}
+                          </span>
+                        ))}
+                      </div>
+                    )
                   : null}
                 <div className={styles['cardFooter']}>
                   <span className={styles['cardTime']}>{relativeTime(item.updatedAt)}</span>

@@ -1420,6 +1420,27 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     })).filter(entry => entry.title !== ''))
     return () => { setTitleResolver(undefined) }
   }, [renamedTitles, sessions])
+  /** Edges that start or end at `cardId` and stay inside the same folder. */
+  const folderLinks = (groupId: string, cardId: string): NonNullable<StackEntry['links']> => {
+    const out: NonNullable<StackEntry['links']> = []
+    for (const edge of Object.values(canvasState.edges)) {
+      const other = edge.fromCardId === cardId
+        ? edge.toCardId
+        : edge.toCardId === cardId ? edge.fromCardId : undefined
+      if (other === undefined) continue
+      const otherSessionId = visibleCards[other]?.sessionId
+      if (otherSessionId === undefined) continue
+      if (sessionWs.get(otherSessionId) !== groupId) continue
+      out.push({
+        toCardId: other,
+        title: renamedTitles[otherSessionId] ?? sessions.byId[otherSessionId]?.displayTitle ?? otherSessionId,
+        kind: edge.injection?.kind ?? 'link',
+        outgoing: edge.fromCardId === cardId,
+      })
+    }
+    return out
+  }
+
   const drawerItems = (groupId: string): StackEntry[] => {
     const layout = folderLayouts[groupId]
     const ids = layout === undefined ? [] : [...layout.shown, ...layout.folded]
@@ -1445,6 +1466,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         // and marks the conversation the map was opened from.
         selected: batchMode ? batchPicks.has(cardId) : liveSelectedIds.has(cardId),
         current: currentSessionId() === card.sessionId,
+        // The grid draws these as lines; inside the drawer they have to be
+        // spelled out, otherwise a pushed digest looks like it came from nowhere.
+        links: folderLinks(groupId, cardId),
       })
     }
     return items
@@ -1484,6 +1508,29 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     } finally {
       setBatchBusy(false)
     }
+  }
+
+  /**
+   * A drag inside the stack drawer landed. The drawer shows the folder's
+   * reading order, which is derived from canvas positions — so the new
+   * arrangement is written back as slot coordinates, exactly like a canvas
+   * drop. Nothing is stored twice, so grid and drawer cannot disagree.
+   */
+  const reorderInDrawer = (groupId: string, cardId: string, index: number): void => {
+    const layout = folderLayouts[groupId]
+    const rect = frameRects[groupId] ?? wsFrames[groupId]
+    if (layout === undefined || rect === undefined) return
+    const ids = [...layout.ordered]
+    const from = ids.indexOf(cardId)
+    if (from < 0) return
+    ids.splice(from, 1)
+    const at = Math.min(Math.max(0, index), ids.length)
+    ids.splice(at, 0, cardId)
+    const cols = colsForWidth(rect.width)
+    ids.forEach((id, position) => {
+      const point = slotPoint(rect, position, cols)
+      canvas.moveCard(id, point.x, point.y)
+    })
   }
 
   /** Cards picked in batch mode (a plain click on a card toggles it). */
@@ -2146,6 +2193,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               // global one (see GlobalSearch).
               onSearchContent={async (query) => searchInWorkspace(drawer.groupId, query)}
               onOpenSession={(sessionId) => { openSearchHit(sessionId) }}
+              onReorder={(cardId, index) => { reorderInDrawer(drawer.groupId, cardId, index) }}
               // Hover asks for that one hit's passage (an on-demand log read).
               onFetchContext={(sessionId, seq, query) => fetchSearchContext(sessionId, seq, query)}
               onFetchSessionHits={(sessionId, query) => fetchSessionHits(sessionId, query)}
