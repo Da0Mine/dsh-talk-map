@@ -2,13 +2,16 @@
  * One edge renderer for the whole map.
  *
  * 未同步 → 灰白静态虚线。
- * 同步中 → 灰白静态实线，一枚**彗星**沿路径跑：亮头在前，尾巴沿渐变淡掉，
- * 外圈一层柔光。头圆尾细、整组随切线转动，并且被**裁剪在线身之内**——所以它
- * 不会在拐角处戳出线外，读起来就是"光在管子里流"，不是"色块平移"。
+ * 同步中 → 灰白静态实线，一层光沿着线扫过去。
  *
- * 为什么不用 stroke-dasharray：等宽 dash 无论怎么模糊都是一条亮度均匀的带子，
- * 没有形状变化。这里用形状（尾形 + 亮头 + 光晕）+ 沿长轴渐变来造光，用
- * animateMotion + rotate=auto 让它贴着曲线走，再用一个把路径描粗的 mask 兜底。
+ * 这层光直接**复用卡片运行光环的剖面**：卡片用的是 conic gradient
+ *   190° 0 → 250° 0.18 → 292° 0.55 → 325° 1.0 → 352° 0.4 → 360° 0
+ * 一条 47% 宽的软带（大半圈是暗的、缓慢爬升、末段一个亮尖、然后急落），以
+ * 恒定速度扫过。线上没有极坐标，于是把同一条剖面做成**一扇渐变的窗口**，
+ * 沿线的长轴平移：窗口外遮罩全黑，所以任意时刻只有一处亮，不会出现
+ * dash 在接缝处"复制"成两段的问题。
+ *
+ * 线本身是 SVG path，所以窗口扫过时，光自然被裁在线身里、拐角也是圆的。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
 
@@ -18,13 +21,23 @@ export interface TalkMapEdgeData {
   sync?: 'synced' | 'idle'
 }
 
-/** One full traversal of the line, in seconds. */
-const FLOW_S = 2.8
+/** One sweep across the line, in seconds (the card ring takes 1.8s per lap). */
+const SWEEP_S = 3.6
 
-/** How wide the corridor is that the light is clipped into. */
-const CORRIDOR = 16
+/**
+ * The card ring's gradient, as fractions of the band → opacity.
+ * Straight from `.cardLampRunning::after` in the stylesheet.
+ */
+const AURA_PROFILE: [number, number][] = [
+  [0, 0],
+  [0.35, 0.18],
+  [0.6, 0.55],
+  [0.79, 1],
+  [0.95, 0.4],
+  [1, 0],
+]
 
-/** Stable hash → per-edge phase, so parallel lines don't fly in lockstep. */
+/** Stable hash → per-edge phase, so parallel lines don't sweep in lockstep. */
 function hashOf(value: string): number {
   let hash = 0
   for (let index = 0; index < value.length; index += 1) {
@@ -41,7 +54,6 @@ function prefersReducedMotion(): boolean {
   }
 }
 
-/** SVG ids must be unique per edge and safe inside url(#…). */
 function safeId(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, '_')
 }
@@ -59,48 +71,29 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   })
 
   const uid = safeId(props.id ?? 'edge')
-  const routeId = 'tmr' + uid
   const rampId = 'tmp' + uid
-  const bloomId = 'tmb' + uid
   const clipId = 'tmc' + uid
-  const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * FLOW_S
+  const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * SWEEP_S
   const flying = synced && !prefersReducedMotion()
 
-  // A smoothstep path never leaves the box spanned by its endpoints, so the
-  // corridor mask only has to cover that box plus the corner radius.
-  const boxX = Math.min(props.sourceX, props.targetX) - 40
-  const boxY = Math.min(props.sourceY, props.targetY) - 40
-  const boxW = Math.abs(props.sourceX - props.targetX) + 80
-  const boxH = Math.abs(props.sourceY - props.targetY) + 80
+  // Sweep along the dominant axis. A smoothstep path runs horizontally and
+  // vertically, so whichever axis is longer is the direction the light travels.
+  const dx = Math.abs(props.targetX - props.sourceX)
+  const dy = Math.abs(props.targetY - props.sourceY)
+  const horizontal = dx >= dy
+  const span = Math.max(1, horizontal ? dx : dy)
+  /** Width of the lit band ≈ the card's 47%, with sane bounds for tiny edges. */
+  const band = Math.max(120, Math.min(420, span * 0.47))
+  const origin = horizontal
+    ? Math.min(props.sourceX, props.targetX)
+    : Math.min(props.sourceY, props.targetY)
 
-  /** Ride the path nose-first, fading in on departure and out on arrival. */
-  const ride = (suffix: string): React.JSX.Element => (
-    <>
-      <animateMotion
-        key={'m' + suffix}
-        dur={`${FLOW_S}s`}
-        begin={`${phase}s`}
-        repeatCount="indefinite"
-        rotate="auto"
-        calcMode="spline"
-        keyTimes="0;1"
-        keyPoints="0;1"
-        keySplines="0.4 0 0.55 1"
-      >
-        {/* Both spellings: SMIL mpath historically honoured only xlink:href. */}
-        <mpath href={`#${routeId}`} xlinkHref={`#${routeId}`} />
-      </animateMotion>
-      <animate
-        key={'o' + suffix}
-        attributeName="opacity"
-        dur={`${FLOW_S}s`}
-        begin={`${phase}s`}
-        repeatCount="indefinite"
-        values="0;1;1;0"
-        keyTimes="0;0.08;0.9;1"
-      />
-    </>
-  )
+  const pad = 80
+  const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0)
+  const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band)
+  const maskW = dx + pad * 2 + (horizontal ? band * 2 : 0)
+  const maskH = dy + pad * 2 + (horizontal ? 0 : band * 2)
+  const travel = span + band
 
   return (
     <>
@@ -121,61 +114,72 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         ? (
             <>
               <defs>
-                {/* Along-the-body ramp: clear at the tail, white at the head. */}
-                <linearGradient id={rampId} x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor="rgba(186, 210, 255, 0)" />
-                  <stop offset="38%" stopColor="rgba(198, 220, 255, 0.22)" />
-                  <stop offset="72%" stopColor="rgba(230, 240, 255, 0.62)" />
-                  <stop offset="100%" stopColor="rgba(255, 255, 255, 0.96)" />
+                {/* The aura's profile, as a window gradient. */}
+                <linearGradient
+                  id={rampId}
+                  x1="0"
+                  y1="0"
+                  x2={horizontal ? '1' : '0'}
+                  y2={horizontal ? '0' : '1'}
+                >
+                  {AURA_PROFILE.map(([at, opacity]) => (
+                    <stop
+                      key={at}
+                      offset={`${(at * 100).toFixed(1)}%`}
+                      stopColor="#fff"
+                      stopOpacity={opacity}
+                    />
+                  ))}
                 </linearGradient>
-                <radialGradient id={bloomId}>
-                  <stop offset="0%" stopColor="rgba(224, 238, 255, 0.55)" />
-                  <stop offset="55%" stopColor="rgba(196, 218, 255, 0.18)" />
-                  <stop offset="100%" stopColor="rgba(190, 214, 255, 0)" />
-                </radialGradient>
-                {/* The corridor: everything outside the line is cut away, which is
-                    what keeps the tail from poking off a corner. */}
+                {/* One window: outside it the mask is black, so only one place
+                    on the line is ever lit. */}
                 <mask
                   id={clipId}
                   maskUnits="userSpaceOnUse"
-                  x={boxX}
-                  y={boxY}
-                  width={boxW}
-                  height={boxH}
+                  x={minX}
+                  y={minY}
+                  width={maskW}
+                  height={maskH}
                 >
-                  <path
-                    d={path}
-                    fill="none"
-                    stroke="#fff"
-                    strokeWidth={CORRIDOR}
-                    strokeLinecap="round"
-                  />
+                  <g>
+                    <animateTransform
+                      attributeName="transform"
+                      type="translate"
+                      from={horizontal ? `${-band} 0` : `0 ${-band}`}
+                      to={horizontal ? `${travel} 0` : `0 ${travel}`}
+                      dur={`${SWEEP_S}s`}
+                      begin={`${phase}s`}
+                      repeatCount="indefinite"
+                    />
+                    <rect
+                      x={horizontal ? origin : minX}
+                      y={horizontal ? minY : origin}
+                      width={horizontal ? band : maskW}
+                      height={horizontal ? maskH : band}
+                      fill={`url(#${rampId})`}
+                    />
+                  </g>
                 </mask>
               </defs>
 
-              {/* Motion route: invisible, only geometry. */}
-              <path id={routeId} d={path} fill="none" stroke="none" />
-
-              <g mask={`url(#${clipId})`}>
-                {/* The light itself: tail + body + head, all nose-first. */}
-                <g style={{ filter: 'blur(0.8px)', pointerEvents: 'none' }}>
-                  {ride('body')}
-                  <path
-                    d="M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z"
-                    fill={`url(#${rampId})`}
-                    opacity={0.75}
-                  />
-                  <ellipse rx={34} ry={3.4} fill={`url(#${rampId})`} opacity={0.9} />
-                  <ellipse rx={10} ry={4.2} fill="rgba(255, 255, 255, 0.5)" />
-                  <ellipse rx={5.5} ry={3.4} fill="rgba(255, 255, 255, 0.98)" />
-                </g>
-
-                {/* Bloom: wider and softer, centred on the head. */}
-                <g style={{ filter: 'blur(6px)', pointerEvents: 'none' }}>
-                  {ride('bloom')}
-                  <ellipse rx={22} ry={12} fill={`url(#${bloomId})`} />
-                  <ellipse cx={-40} rx={26} ry={7} fill={`url(#${bloomId})`} opacity={0.55} />
-                </g>
+              <g mask={`url(#${clipId})`} style={{ pointerEvents: 'none' }}>
+                {/* Glow first, then the crisp line of light on top. */}
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="rgba(190, 214, 255, 0.7)"
+                  strokeWidth={10}
+                  strokeLinecap="round"
+                  style={{ filter: 'blur(5px)' }}
+                />
+                <path
+                  d={path}
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.95)"
+                  strokeWidth={2.2}
+                  strokeLinecap="round"
+                  style={{ filter: 'blur(0.7px)' }}
+                />
               </g>
             </>
           )

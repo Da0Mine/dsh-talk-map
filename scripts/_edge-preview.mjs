@@ -1,6 +1,14 @@
 /**
- * Render three candidate "light" treatments side by side so one can be picked
- * before any more plugin code is written.
+ * Preview the edge light built from the CARD AURA's own gradient profile.
+ *
+ * The card ring uses a conic gradient with these stops (0 = invisible):
+ *   190° 0 → 250° 0.18 → 292° 0.55 → 325° 1.0 → 352° 0.4 → 360° 0
+ * i.e. a 47%-wide band: long dark ramp, bright peak, quick fall-off, moving at a
+ * constant speed (the ring animation is `linear`).
+ *
+ * On a path the same profile is built as N adjacent slices — each slice is one
+ * dash whose opacity comes from that profile. Adjacent slices tile exactly, so
+ * there is no beading, and because they ride the path the corners are exact.
  *
  *   node scripts/_edge-preview.mjs
  */
@@ -17,50 +25,69 @@ const EDGE = [
 
 const D = 'M60 0 H300 Q320 0 320 20 V60 Q320 80 340 80 H640 Q660 80 660 60 V20 Q660 0 680 0 H840'
 
-/** Exactly what TalkMapEdge renders (same numbers), so the shot is faithful. */
-const edgeSvg = `
-  <path id="r1" d="${D}" fill="none" stroke="rgba(226,232,242,0.6)" stroke-width="1.6" stroke-linecap="round"/>
-  <defs>
-    <linearGradient id="ramp" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%" stop-color="rgba(186,210,255,0)"/>
-      <stop offset="38%" stop-color="rgba(198,220,255,0.22)"/>
-      <stop offset="72%" stop-color="rgba(230,240,255,0.62)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0.96)"/>
-    </linearGradient>
-    <radialGradient id="bloom">
-      <stop offset="0%" stop-color="rgba(224,238,255,0.55)"/>
-      <stop offset="55%" stop-color="rgba(196,218,255,0.18)"/>
-      <stop offset="100%" stop-color="rgba(190,214,255,0)"/>
-    </radialGradient>
-  </defs>
-  <mask id="onpath" maskUnits="userSpaceOnUse" x="-200" y="-400" width="1400" height="900"><path d="${D}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/></mask>
-  <g mask="url(#onpath)">
-  <g style="filter:blur(0.8px)">
-    <animateMotion dur="2.8s" repeatCount="indefinite" rotate="auto" calcMode="spline"
-      keyTimes="0;1" keyPoints="0;1" keySplines="0.4 0 0.55 1"><mpath href="#r1"/></animateMotion>
-    <animate attributeName="opacity" dur="2.8s" repeatCount="indefinite"
-      values="0;1;1;0" keyTimes="0;0.08;0.9;1"/>
-    <path d="M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z"
-          fill="url(#ramp)" opacity="0.75"/>
-    <ellipse rx="34" ry="3.4" fill="url(#ramp)" opacity="0.9"/>
-    <ellipse rx="10" ry="4.2" fill="rgba(255,255,255,0.5)"/>
-    <ellipse rx="5.5" ry="3.4" fill="rgba(255,255,255,0.98)"/>
-  </g>
-  <g style="filter:blur(6px)">
-    <animateMotion dur="2.8s" repeatCount="indefinite" rotate="auto" calcMode="spline"
-      keyTimes="0;1" keyPoints="0;1" keySplines="0.4 0 0.55 1"><mpath href="#r1"/></animateMotion>
-    <animate attributeName="opacity" dur="2.8s" repeatCount="indefinite"
-      values="0;1;1;0" keyTimes="0;0.08;0.9;1"/>
-    <ellipse rx="22" ry="12" fill="url(#bloom)"/>
-    <ellipse cx="-40" rx="26" ry="7" fill="url(#bloom)" opacity="0.55"/>
-  </g>`
+/** The card ring's stops, as fractions of the band plus their opacity. */
+const PROFILE = [
+  [0, 0],
+  [0.35, 0.18],
+  [0.6, 0.55],
+  [0.79, 1],
+  [0.95, 0.4],
+  [1, 0],
+]
+
+function opacityAt(f) {
+  for (let index = 1; index < PROFILE.length; index += 1) {
+    const [f1, o1] = PROFILE[index]
+    const [f0, o0] = PROFILE[index - 1]
+    if (f <= f1) {
+      const t = f1 === f0 ? 0 : (f - f0) / (f1 - f0)
+      return o0 + (o1 - o0) * t
+    }
+  }
+  return 0
+}
+
+const BAND = 320      // px of the line the light occupies (the window width)
+const LINE_X0 = 60
+const LINE_X1 = 840
+const DUR = 3.6
+
+/** 卡片光环的剖面，换算成遮罩里的白色不透明度。 */
+function rampStops() {
+  return PROFILE.map(([f, o]) => `<stop offset="${(f * 100).toFixed(1)}%" stop-color="#fff" stop-opacity="${o}"/>`).join('')
+}
 
 const html = `<!doctype html>
 <meta charset="utf-8" />
 <body style="margin:0;background:#16181d;font-family:system-ui">
-<svg width="920" height="200" viewBox="0 0 920 200">
-  <text x="60" y="140" fill="#8b93a3" font-size="12">同步中：彗星（亮头 + 渐弱长尾 + 光晕），贴着曲线走</text>
-  <g transform="translate(0,40)">${edgeSvg}</g>
+<svg width="960" height="320" viewBox="0 0 960 320">
+  <defs>
+    <linearGradient id="ramp" x1="0" y1="0" x2="1" y2="0">${rampStops()}</linearGradient>
+    <!-- 一扇窗口：只有窗口内有光，所以任意时刻只有一处亮 -->
+    <mask id="win" maskUnits="userSpaceOnUse" x="-400" y="-200" width="1700" height="600">
+      <g>
+        <animateTransform attributeName="transform" type="translate"
+          from="0 0" to="${LINE_X1 - LINE_X0 + BAND} 0" dur="${DUR}s" repeatCount="indefinite"/>
+        <rect x="${LINE_X0 - BAND}" y="-200" width="${BAND}" height="600" fill="url(#ramp)"/>
+      </g>
+    </mask>
+  </defs>
+
+  <text x="60" y="30" fill="#8b93a3" font-size="12">复用卡片光环的剖面：一扇渐变的窗口沿线路扫过</text>
+
+  <g transform="translate(0,70)">
+    <path d="${D}" fill="none" stroke="rgba(226,232,242,0.6)" stroke-width="1.6" stroke-linecap="round"/>
+    <g mask="url(#win)">
+      <path d="${D}" fill="none" stroke="rgba(190,214,255,0.75)" stroke-width="10" style="filter:blur(5px)"/>
+      <path d="${D}" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2.2" style="filter:blur(0.7px)"/>
+    </g>
+  </g>
+
+  <g transform="translate(0,240)">
+    <path d="${D}" fill="none" stroke="rgba(200,206,216,0.34)" stroke-width="1.6"
+          stroke-dasharray="6 5" stroke-linecap="round"/>
+    <text x="60" y="46" fill="#8b93a3" font-size="11">未同步：灰白静态虚线</text>
+  </g>
 </svg>
 </body>`
 const profileDir = path.join(os.tmpdir(), 'talkmap-edge-preview')
@@ -73,7 +100,7 @@ const edge = spawn(EDGE, [
   `--remote-debugging-port=${CDP}`,
   `--user-data-dir=${profileDir}`,
   '--no-first-run', '--no-default-browser-check', '--disable-extensions',
-  '--window-size=920,440', '--headless=new', 'about:blank',
+  '--window-size=960,340', '--headless=new', 'about:blank',
 ], { stdio: 'ignore' })
 
 async function waitForCdp(timeoutMs = 20000) {
@@ -92,13 +119,13 @@ await waitForCdp()
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP}`)
 const context = browser.contexts()[0] ?? await browser.newContext()
 const page = context.pages()[0] ?? await context.newPage()
-await page.setViewportSize({ width: 920, height: 420 })
+await page.setViewportSize({ width: 960, height: 340 })
 await page.goto('file:///' + pageFile.replace(/\\/g, '/'))
-await page.waitForTimeout(500)
+await page.waitForTimeout(400)
 
 const outDir = path.join('test', 'shots')
 fs.mkdirSync(outDir, { recursive: true })
-for (const [index, delay] of [500, 900, 900].entries()) {
+for (const [index, delay] of [500, 850, 850, 850].entries()) {
   await page.waitForTimeout(delay)
   const file = path.join(outDir, `edge-preview-${index + 1}.png`)
   await page.screenshot({ path: file })

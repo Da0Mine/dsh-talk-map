@@ -1035,6 +1035,7 @@ try {
     document.querySelector('[data-talkmap-workspace="ws-daily"] [class*="wsFrameLabel"]')?.textContent ?? null)
   check('文件夹标题跟着改', (wsLabelNow ?? '').includes('改过的工作区'), String(wsLabelNow))
 
+
   // ---- 11. pin / archive / delete / batch -----------------------------
   const pinPoint = await cardPoint('s7')
   await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })

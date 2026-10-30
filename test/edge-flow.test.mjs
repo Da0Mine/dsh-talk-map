@@ -3,9 +3,12 @@
  *
  * Exactly TWO looks:
  *   未同步 = 灰白静态虚线
- *   同步中 = 灰白静态实线 + 一枚彗星沿路径跑（亮头 + 渐弱长尾 + 光晕），
- *            并且被裁剪在线身之内 —— 拐角处不会戳出去。
- * Everything is drawn by TalkMapEdge; the stylesheet carries no edge look at all.
+ *   同步中 = 灰白静态实线 + 一层光沿线路扫过
+ *
+ * The light reuses the CARD RUNNING RING's gradient profile verbatim
+ *   (190° 0 → 250° 0.18 → 292° 0.55 → 325° 1.0 → 352° 0.4 → 360° 0)
+ * as a moving mask window, so only one place on the line is lit at a time.
+ * Everything is drawn by TalkMapEdge; CSS carries no edge look.
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -20,31 +23,30 @@ assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be 
 // 2. unsynced is the only dashed line
 assert.match(bundle, /synced \? \{\} : \{ strokeDasharray/, 'only the unsynced line is dashed')
 
-// 3. the comet has a shape: tapered tail path + rounded head
-assert.match(bundle, /M0 -1\.4 C -30 -3\.6/, 'the tapered tail path must exist')
-assert.match(bundle, /rx: 34/, 'the body ellipse must exist')
-assert.match(bundle, /rx: 5\.5/, 'the bright head must exist')
+// 3. the light IS the card ring's profile, stop for stop
+assert.match(bundle, /0\.35, 0\.18/, 'the aura ramp must start at 0.18')
+assert.match(bundle, /0\.6, 0\.55/, 'the aura ramp mid stop must be 0.55')
+assert.match(bundle, /0\.79, 1/, 'the aura peak must be at 79%')
+assert.match(bundle, /0\.95, 0\.4/, 'the aura ramp must fall to 0.4')
+assert.match(bundle, /AURA_PROFILE/, 'the profile must be a named constant')
 
-// 4. it follows the curve, nose first
-assert.match(bundle, /rotate: "auto"/, 'the comet must orient along the tangent')
-assert.match(bundle, /animateMotion/, 'the comet must ride the path')
-assert.match(bundle, /keySplines/, 'the ride must be eased')
+// 4. one moving window, so the light never duplicates across the seam
+assert.match(bundle, /maskUnits: "userSpaceOnUse"/, 'the window must be user-space')
+assert.match(bundle, /animateTransform/, 'the window must translate')
+assert.match(bundle, /type: "translate"/, 'the window must translate, not rotate')
+assert.match(bundle, /SWEEP_S = 3\.6/, 'the sweep duration must be defined')
 
-// 5. clipped into the line, so a corner cannot be overrun
-assert.match(bundle, /maskUnits: "userSpaceOnUse"/, 'the corridor mask must be user-space')
-assert.match(bundle, /CORRIDOR = 16/, 'the corridor width must be defined')
+// 5. the sweep follows the dominant axis, so vertical edges work too
+assert.match(bundle, /horizontal \?/, 'the sweep must pick its axis')
 
-// 6. per-edge phase so parallel lines do not fly together
-assert.match(bundle, /begin: `\$\{phase\}s`|begin: phase/, 'each edge needs its own phase')
-
-// 7. grey-white base line, not gold
+// 6. grey-white base line, not gold
 assert.match(bundle, /226, 232, 242/, 'the synced line must be grey-white')
 assert.match(bundle, /200, 206, 216/, 'the unsynced line must be grey-white')
 
-// 8. reduced motion removes the flying light entirely
+// 7. reduced motion removes the light entirely
 assert.match(bundle, /prefersReducedMotion/, 'the component must respect reduced motion')
 
-// 9. no leftover looks in the stylesheet
+// 8. no leftover looks in the stylesheet
 for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmEdgeBloom', 'tmEdgeFlow', 'tmEdgeSweep']) {
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }

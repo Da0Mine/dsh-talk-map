@@ -11698,8 +11698,15 @@ function ContextMenu(props) {
 
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
-var FLOW_S = 2.8;
-var CORRIDOR = 16;
+var SWEEP_S = 3.6;
+var AURA_PROFILE = [
+  [0, 0],
+  [0.35, 0.18],
+  [0.6, 0.55],
+  [0.79, 1],
+  [0.95, 0.4],
+  [1, 0]
+];
 function hashOf(value) {
   let hash = 0;
   for (let index2 = 0; index2 < value.length; index2 += 1) {
@@ -11729,45 +11736,22 @@ function TalkMapEdge(props) {
     targetPosition: props.targetPosition
   });
   const uid = safeId(props.id ?? "edge");
-  const routeId = "tmr" + uid;
   const rampId = "tmp" + uid;
-  const bloomId = "tmb" + uid;
   const clipId = "tmc" + uid;
-  const phase = -(hashOf(props.id ?? "") % 1e3 / 1e3) * FLOW_S;
+  const phase = -(hashOf(props.id ?? "") % 1e3 / 1e3) * SWEEP_S;
   const flying = synced && !prefersReducedMotion();
-  const boxX = Math.min(props.sourceX, props.targetX) - 40;
-  const boxY = Math.min(props.sourceY, props.targetY) - 40;
-  const boxW = Math.abs(props.sourceX - props.targetX) + 80;
-  const boxH = Math.abs(props.sourceY - props.targetY) + 80;
-  const ride = (suffix) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-      "animateMotion",
-      {
-        dur: `${FLOW_S}s`,
-        begin: `${phase}s`,
-        repeatCount: "indefinite",
-        rotate: "auto",
-        calcMode: "spline",
-        keyTimes: "0;1",
-        keyPoints: "0;1",
-        keySplines: "0.4 0 0.55 1",
-        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("mpath", { href: `#${routeId}`, xlinkHref: `#${routeId}` })
-      },
-      "m" + suffix
-    ),
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-      "animate",
-      {
-        attributeName: "opacity",
-        dur: `${FLOW_S}s`,
-        begin: `${phase}s`,
-        repeatCount: "indefinite",
-        values: "0;1;1;0",
-        keyTimes: "0;0.08;0.9;1"
-      },
-      "o" + suffix
-    )
-  ] });
+  const dx = Math.abs(props.targetX - props.sourceX);
+  const dy = Math.abs(props.targetY - props.sourceY);
+  const horizontal = dx >= dy;
+  const span = Math.max(1, horizontal ? dx : dy);
+  const band = Math.max(120, Math.min(420, span * 0.47));
+  const origin = horizontal ? Math.min(props.sourceX, props.targetX) : Math.min(props.sourceY, props.targetY);
+  const pad = 80;
+  const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0);
+  const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band);
+  const maskW = dx + pad * 2 + (horizontal ? band * 2 : 0);
+  const maskH = dy + pad * 2 + (horizontal ? 0 : band * 2);
+  const travel = span + band;
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       BaseEdge,
@@ -11786,60 +11770,84 @@ function TalkMapEdge(props) {
     ),
     flying ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("defs", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("linearGradient", { id: rampId, x1: "0", y1: "0", x2: "1", y2: "0", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(186, 210, 255, 0)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "38%", stopColor: "rgba(198, 220, 255, 0.22)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "72%", stopColor: "rgba(230, 240, 255, 0.62)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(255, 255, 255, 0.96)" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("radialGradient", { id: bloomId, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(224, 238, 255, 0.55)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "55%", stopColor: "rgba(196, 218, 255, 0.18)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(190, 214, 255, 0)" })
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "linearGradient",
+          {
+            id: rampId,
+            x1: "0",
+            y1: "0",
+            x2: horizontal ? "1" : "0",
+            y2: horizontal ? "0" : "1",
+            children: AURA_PROFILE.map(([at, opacity]) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+              "stop",
+              {
+                offset: `${(at * 100).toFixed(1)}%`,
+                stopColor: "#fff",
+                stopOpacity: opacity
+              },
+              at
+            ))
+          }
+        ),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "mask",
           {
             id: clipId,
             maskUnits: "userSpaceOnUse",
-            x: boxX,
-            y: boxY,
-            width: boxW,
-            height: boxH,
-            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-              "path",
-              {
-                d: path,
-                fill: "none",
-                stroke: "#fff",
-                strokeWidth: CORRIDOR,
-                strokeLinecap: "round"
-              }
-            )
+            x: minX,
+            y: minY,
+            width: maskW,
+            height: maskH,
+            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "animateTransform",
+                {
+                  attributeName: "transform",
+                  type: "translate",
+                  from: horizontal ? `${-band} 0` : `0 ${-band}`,
+                  to: horizontal ? `${travel} 0` : `0 ${travel}`,
+                  dur: `${SWEEP_S}s`,
+                  begin: `${phase}s`,
+                  repeatCount: "indefinite"
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+                "rect",
+                {
+                  x: horizontal ? origin : minX,
+                  y: horizontal ? minY : origin,
+                  width: horizontal ? band : maskW,
+                  height: horizontal ? maskH : band,
+                  fill: `url(#${rampId})`
+                }
+              )
+            ] })
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { id: routeId, d: path, fill: "none", stroke: "none" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { mask: `url(#${clipId})`, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { style: { filter: "blur(0.8px)", pointerEvents: "none" }, children: [
-          ride("body"),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-            "path",
-            {
-              d: "M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z",
-              fill: `url(#${rampId})`,
-              opacity: 0.75
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 34, ry: 3.4, fill: `url(#${rampId})`, opacity: 0.9 }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 10, ry: 4.2, fill: "rgba(255, 255, 255, 0.5)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 5.5, ry: 3.4, fill: "rgba(255, 255, 255, 0.98)" })
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { style: { filter: "blur(6px)", pointerEvents: "none" }, children: [
-          ride("bloom"),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 22, ry: 12, fill: `url(#${bloomId})` }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { cx: -40, rx: 26, ry: 7, fill: `url(#${bloomId})`, opacity: 0.55 })
-        ] })
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { mask: `url(#${clipId})`, style: { pointerEvents: "none" }, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "path",
+          {
+            d: path,
+            fill: "none",
+            stroke: "rgba(190, 214, 255, 0.7)",
+            strokeWidth: 10,
+            strokeLinecap: "round",
+            style: { filter: "blur(5px)" }
+          }
+        ),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "path",
+          {
+            d: path,
+            fill: "none",
+            stroke: "rgba(255, 255, 255, 0.95)",
+            strokeWidth: 2.2,
+            strokeLinecap: "round",
+            style: { filter: "blur(0.7px)" }
+          }
+        )
       ] })
     ] }) : null
   ] });
