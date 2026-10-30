@@ -11699,12 +11699,13 @@ function ContextMenu(props) {
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
 var SWEEP_S = 3.6;
-var AURA_PROFILE = [
+var LIGHT_PROFILE = [
   [0, 0],
-  [0.35, 0.18],
-  [0.6, 0.55],
-  [0.79, 1],
-  [0.95, 0.4],
+  [0.16, 0.1],
+  [0.34, 0.38],
+  [0.5, 0.92],
+  [0.66, 0.38],
+  [0.84, 0.1],
   [1, 0]
 ];
 function hashOf(value) {
@@ -11744,7 +11745,7 @@ function TalkMapEdge(props) {
   const dy = Math.abs(props.targetY - props.sourceY);
   const horizontal = dx >= dy;
   const span = Math.max(1, horizontal ? dx : dy);
-  const band = Math.max(120, Math.min(420, span * 0.47));
+  const band = Math.max(140, Math.min(460, span * 0.5));
   const origin = horizontal ? Math.min(props.sourceX, props.targetX) : Math.min(props.sourceY, props.targetY);
   const pad = 80;
   const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0);
@@ -11778,7 +11779,7 @@ function TalkMapEdge(props) {
             y1: "0",
             x2: horizontal ? "1" : "0",
             y2: horizontal ? "0" : "1",
-            children: AURA_PROFILE.map(([at, opacity]) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            children: LIGHT_PROFILE.map(([at, opacity]) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
               "stop",
               {
                 offset: `${(at * 100).toFixed(1)}%`,

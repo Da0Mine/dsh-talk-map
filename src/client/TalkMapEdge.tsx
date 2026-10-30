@@ -25,15 +25,21 @@ export interface TalkMapEdgeData {
 const SWEEP_S = 3.6
 
 /**
- * The card ring's gradient, as fractions of the band → opacity.
- * Straight from `.cardLampRunning::after` in the stylesheet.
+ * Brightness profile across the band, as fractions → opacity.
+ *
+ * Symmetric on purpose. The card ring is a CLOSED loop, so its gradient can ramp
+ * up to a sharp peak and cut — there is no "head", the dark side simply joins the
+ * bright side again. A line is open, so that same profile reads as a comet with a
+ * nose. Fading at BOTH ends keeps the card's look: a soft mass of light sliding
+ * along, brightest in the middle, nothing that looks like a nose.
  */
-const AURA_PROFILE: [number, number][] = [
+const LIGHT_PROFILE: [number, number][] = [
   [0, 0],
-  [0.35, 0.18],
-  [0.6, 0.55],
-  [0.79, 1],
-  [0.95, 0.4],
+  [0.16, 0.1],
+  [0.34, 0.38],
+  [0.5, 0.92],
+  [0.66, 0.38],
+  [0.84, 0.1],
   [1, 0],
 ]
 
@@ -83,7 +89,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const horizontal = dx >= dy
   const span = Math.max(1, horizontal ? dx : dy)
   /** Width of the lit band ≈ the card's 47%, with sane bounds for tiny edges. */
-  const band = Math.max(120, Math.min(420, span * 0.47))
+  const band = Math.max(140, Math.min(460, span * 0.5))
   const origin = horizontal
     ? Math.min(props.sourceX, props.targetX)
     : Math.min(props.sourceY, props.targetY)
@@ -122,7 +128,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
                   x2={horizontal ? '1' : '0'}
                   y2={horizontal ? '0' : '1'}
                 >
-                  {AURA_PROFILE.map(([at, opacity]) => (
+                  {LIGHT_PROFILE.map(([at, opacity]) => (
                     <stop
                       key={at}
                       offset={`${(at * 100).toFixed(1)}%`}

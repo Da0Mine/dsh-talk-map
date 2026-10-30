@@ -52,6 +52,28 @@ const LINE_X0 = 60
 const LINE_X1 = 840
 const DUR = 3.6
 
+/**
+ * 对称剖面：中间最亮、两端都渐隐。卡片光环是闭环，所以它本来就没有"头"；
+ * 线是开环，只给亮头就会读成彗星。这里两端一起淡，光就是一个滑过去的光团。
+ */
+const PROFILE = [
+  [0, 0],
+  [0.18, 0.14],
+  [0.36, 0.42],
+  [0.5, 0.92],
+  [0.64, 0.42],
+  [0.82, 0.14],
+  [1, 0],
+]
+
+function rampStops() {
+  return PROFILE.map(([f, o]) => `<stop offset="${(f * 100).toFixed(1)}%" stop-color="#fff" stop-opacity="${o}"/>`).join('')
+}
+
+const BAND = 300
+const LINE_X0 = 60
+const LINE_X1 = 840const DUR = 3.6
+
 /** 卡片光环的剖面，换算成遮罩里的白色不透明度。 */
 function rampStops() {
   return PROFILE.map(([f, o]) => `<stop offset="${(f * 100).toFixed(1)}%" stop-color="#fff" stop-opacity="${o}"/>`).join('')

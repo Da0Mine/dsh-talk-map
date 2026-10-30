@@ -24,11 +24,13 @@ assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be 
 assert.match(bundle, /synced \? \{\} : \{ strokeDasharray/, 'only the unsynced line is dashed')
 
 // 3. the light IS the card ring's profile, stop for stop
-assert.match(bundle, /0\.35, 0\.18/, 'the aura ramp must start at 0.18')
-assert.match(bundle, /0\.6, 0\.55/, 'the aura ramp mid stop must be 0.55')
-assert.match(bundle, /0\.79, 1/, 'the aura peak must be at 79%')
-assert.match(bundle, /0\.95, 0\.4/, 'the aura ramp must fall to 0.4')
-assert.match(bundle, /AURA_PROFILE/, 'the profile must be a named constant')
+assert.match(bundle, /0\.16, 0\.1/, 'the band must fade in at its leading edge')
+assert.match(bundle, /0\.84, 0\.1/, 'the band must fade out symmetrically')
+assert.match(bundle, /0\.5, 0\.92/, 'the peak must sit in the middle of the band')
+assert.match(bundle, /0\.66, 0\.38/, 'the ramp must come back down after the peak')
+assert.match(bundle, /LIGHT_PROFILE/, 'the profile must be a named constant')
+// symmetric, not a comet: no single bright nose
+assert.ok(!bundle.includes('0.95, 0.4'), 'the old asymmetric aura ramp must be gone')
 
 // 4. one moving window, so the light never duplicates across the seam
 assert.match(bundle, /maskUnits: "userSpaceOnUse"/, 'the window must be user-space')
