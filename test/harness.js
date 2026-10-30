@@ -633,6 +633,31 @@
      * the sidebar): the shell marks the completion read and clears the status
      * bit — the map must stop showing its own 待查看 mark.
      */
+    /**
+     * The shell flags a completion as unread (what a real deployment does when a
+     * run ends while the conversation is not on screen).
+     */
+    hostUnread(sessionId) {
+      const next = new Map(statusById)
+      const fact = { ...(next.get(sessionId) ?? {}) }
+      fact.completionUnread = true
+      next.set(sessionId, fact)
+      statusById = next
+      sync()
+    },
+    /**
+     * The shell reports the completion as "not unread" WITHOUT ever flagging it —
+     * what a real deployment does when the conversation is still the main view
+     * (the map is covering it). This used to kill our lamp.
+     */
+    hostNotUnread(sessionId) {
+      const next = new Map(statusById)
+      const fact = { ...(next.get(sessionId) ?? {}) }
+      fact.completionUnread = false
+      next.set(sessionId, fact)
+      statusById = next
+      sync()
+    },
     notificationJump(sessionId) {
       const next = new Map(statusById)
       const fact = { ...(next.get(sessionId) ?? {}) }

@@ -742,7 +742,21 @@ try {
       return chip === null ? null : chip.getAttribute('data-talkmap-chip')
     }, notifySession)
     check('地图开着时跑完 → 亮起待查看', beforeRead === 'done', String(beforeRead))
-    // the notification click: shell marks it read
+    // The shell may report "not unread" simply because it never flagged it (the
+    // conversation is still the main view behind the map). The lamp must stay.
+    await page.evaluate((id) => window.__harness.hostNotUnread(id), notifySession)
+    await page.waitForTimeout(450)
+    const afterNotUnread = await page.evaluate((id) => {
+      const card = document.querySelector('[data-talkmap-session="' + id + '"]')
+      const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
+      return chip === null ? null : chip.getAttribute('data-talkmap-chip')
+    }, notifySession)
+    check('宿主说“未标记未读”时，被地图挡住的完成仍然亮着',
+      afterNotUnread === 'done', String(afterNotUnread))
+    // The shell flags it unread, then the notification click marks it read — the
+    // true→false transition is what releases our mark.
+    await page.evaluate((id) => window.__harness.hostUnread(id), notifySession)
+    await page.waitForTimeout(450)
     await page.evaluate((id) => window.__harness.notificationJump(id), notifySession)
     await page.waitForTimeout(600)
     const afterRead = await page.evaluate((id) => {

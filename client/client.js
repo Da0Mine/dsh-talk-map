@@ -11180,6 +11180,9 @@ var finished = /* @__PURE__ */ new Set();
 var interrupted = /* @__PURE__ */ new Set();
 var hydrated = /* @__PURE__ */ new Set();
 var needsBaseline = true;
+var panelEpoch = 0;
+var markedEpoch = /* @__PURE__ */ new Map();
+var lastUnread = /* @__PURE__ */ new Map();
 var snapshot3 = /* @__PURE__ */ new Set();
 var interruptedSnapshot = /* @__PURE__ */ new Set();
 var listenerSet = /* @__PURE__ */ new Set();
@@ -11243,6 +11246,7 @@ var sessionActivity = {
    */
   beginPanelSession() {
     needsBaseline = true;
+    panelEpoch += 1;
   },
   observe(status, summaries) {
     let changed = false;
@@ -11271,6 +11275,7 @@ var sessionActivity = {
       }
       if (wasRunning === true && !finished.has(sessionId)) {
         finished.add(sessionId);
+        markedEpoch.set(sessionId, panelEpoch);
         changed = true;
       }
       if (hydrated.has(sessionId) && (row?.retainedBy?.mainView ?? 0) > 0) {
@@ -11278,9 +11283,17 @@ var sessionActivity = {
         if (finished.delete(sessionId)) changed = true;
         if (interrupted.delete(sessionId)) changed = true;
       }
-      if (finished.has(sessionId) && fact?.completionUnread === false) {
-        finished.delete(sessionId);
-        changed = true;
+      const unread = fact?.completionUnread;
+      const previousUnread = lastUnread.get(sessionId);
+      if (typeof unread === "boolean") lastUnread.set(sessionId, unread);
+      if (finished.has(sessionId)) {
+        const readElsewhere = previousUnread === true && unread === false;
+        const cameBackToIt = (row?.retainedBy?.mainView ?? 0) > 0 && (markedEpoch.get(sessionId) ?? panelEpoch) < panelEpoch;
+        if (readElsewhere || cameBackToIt) {
+          finished.delete(sessionId);
+          markedEpoch.delete(sessionId);
+          changed = true;
+        }
       }
     }
     if (changed) {

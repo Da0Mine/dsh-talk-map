@@ -31,6 +31,11 @@ const interrupted = new Set<string>()
 const hydrated = new Set<string>()
 /** Set when the panel mounts; the first observation then re-establishes the baseline. */
 let needsBaseline = true
+/** Bumped every time the map panel mounts: marks carry the epoch they were made in. */
+let panelEpoch = 0
+const markedEpoch = new Map<string, number>()
+/** Last completionUnread we saw per session, to detect a real transition. */
+const lastUnread = new Map<string, boolean | undefined>()
 let snapshot: ReadonlySet<string> = new Set()
 let interruptedSnapshot: ReadonlySet<string> = new Set()
 const listenerSet = new Set<() => void>()
@@ -99,6 +104,7 @@ export const sessionActivity = {
    */
   beginPanelSession(): void {
     needsBaseline = true
+    panelEpoch += 1
   },
   observe(
     status: ReadonlyMap<string, SessionStatusFact>,
@@ -132,6 +138,7 @@ export const sessionActivity = {
       }
       if (wasRunning === true && !finished.has(sessionId)) {
         finished.add(sessionId)
+        markedEpoch.set(sessionId, panelEpoch)
         changed = true
       }
       // A mark restored from storage is dropped as soon as the session is on
@@ -143,13 +150,25 @@ export const sessionActivity = {
         if (finished.delete(sessionId)) changed = true
         if (interrupted.delete(sessionId)) changed = true
       }
-      // The shell itself says this completion has been read — you opened it from
-      // a desktop notification, the sidebar, anywhere that is not this map. Our
-      // mark only covers the case where the shell stays quiet about a run it
-      // could not see finished, so once the shell says "read", drop it.
-      if (finished.has(sessionId) && fact?.completionUnread === false) {
-        finished.delete(sessionId)
-        changed = true
+      // Two ways a mark can be released, and only two:
+      //  1. the shell flips completionUnread from true to false — somebody read
+      //     it (notification, sidebar, anywhere not this map);
+      //  2. you left the map and came back, and the session is now the one on
+      //     screen (markedEpoch < panelEpoch) — you were looking at it. Main-view
+      //     retention alone is NOT enough: while the map is open the session you
+      //     came from stays "main view" even though the map is covering it.
+      const unread = fact?.completionUnread
+      const previousUnread = lastUnread.get(sessionId)
+      if (typeof unread === 'boolean') lastUnread.set(sessionId, unread)
+      if (finished.has(sessionId)) {
+        const readElsewhere = previousUnread === true && unread === false
+        const cameBackToIt = (row?.retainedBy?.mainView ?? 0) > 0
+          && (markedEpoch.get(sessionId) ?? panelEpoch) < panelEpoch
+        if (readElsewhere || cameBackToIt) {
+          finished.delete(sessionId)
+          markedEpoch.delete(sessionId)
+          changed = true
+        }
       }
     }
     if (changed) {
