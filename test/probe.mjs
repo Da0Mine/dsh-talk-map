@@ -1178,6 +1178,7 @@ try {
   const trashCall = await page.evaluate(() => window.__harness.recycleCalls().at(-1))
   check('删除走 dsh-recycle-bin 的 trash 接口', trashCall?.action === 'trash' && trashCall?.sessionId === 's9', JSON.stringify(trashCall))
 
+
   // Batch mode: every card wears a tick box, and picking one ticks it.
   const batchPoint = await cardPoint('s6')
   await page.mouse.click(batchPoint.x, batchPoint.y, { button: 'right' })
@@ -1539,6 +1540,7 @@ try {
       (spawnCalls.error ?? '').includes('初始化') === false, String(spawnCalls.error))
 
   }
+
   // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).
   // All three live in localStorage, so a reload must bring them back — the
   // harness rebuilds its status map from scratch, exactly like a restart.
@@ -1639,6 +1641,33 @@ try {
       `${first.sessionId}: 第 ${indexBefore + 1} → 第 ${indexAfter + 1}`)
   } else {
     check('松手后保留让位结果（不再弹回原位）', false, '没有两张可拖的卡片')
+  }
+
+  // A session that still has work must be stopped, then moved — not refused.
+  if ((await page.evaluate(() => window.__harness.panelState())).selectedPanel !== 'talk-map') await openMap()
+  await page.waitForTimeout(600)
+  await page.evaluate(() => window.__harness.recycleBusy(true, 1))
+  // Pick whichever card is on the board right now (this runs after a reload).
+  const busySessionId = await page.evaluate(() => {
+    const node = document.querySelector('[data-talkmap-session]')
+    return node === null ? null : node.getAttribute('data-talkmap-session')
+  })
+  const busyPoint = busySessionId === null ? null : await cardPoint(busySessionId)
+  if (busyPoint === null) {
+    check('会话还在跑时删除：先停止工作再重试删除', false, 'no card on the board')
+  } else {
+  await page.mouse.click(busyPoint.x, busyPoint.y, { button: 'right' })
+  await page.waitForTimeout(400)
+  await clickMenuItem('删除会话')
+  await page.waitForTimeout(3000)
+  const busyDelete = await page.evaluate((sid) => ({
+    stopCalls: window.__harness.log.filter(entry => entry.kind === 'ui.archiveSession' && entry.detail?.options?.stopActivity === true).length,
+    recycleCalls: window.__harness.recycleCalls().length,
+    stillThere: [...document.querySelectorAll('[data-talkmap-session]')].some(node => node.getAttribute('data-talkmap-session') === sid),
+  }), busySessionId)
+  check('会话还在跑时删除：先停止工作再重试删除',
+    busyDelete.stopCalls >= 1 && busyDelete.stillThere === false,
+    JSON.stringify(busyDelete))
   }
 
   // ---- 15. no runtime errors ------------------------------------------

@@ -1476,7 +1476,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     setBatchBusy(true)
     try {
       if (kind === 'archive') await archiveSessions(sessionIds)
-      else await trashSessions(sessionIds)
+      else await trashSessions(sessionIds, () => { showToast(t('toast.stopping')) })
       for (const cardId of cardIds) canvas.removeCard(cardId)
       showToast(t(kind === 'archive' ? 'toast.archived' : 'toast.deleted', { n: String(sessionIds.length) }))
     } catch (error) {

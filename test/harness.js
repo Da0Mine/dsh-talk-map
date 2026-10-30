@@ -211,6 +211,9 @@
   const posts = []
   /** Every POST the map makes to dsh-recycle-bin's route. */
   const recycleCalls = []
+  /** Simulate the host refusing a move because the session still has work. */
+  let recycleBusyFlag = false
+  let recycleBusyLeft = 0
   function json(body, status) {
     return Promise.resolve(new Response(JSON.stringify(body), {
       status: status || 200,
@@ -223,6 +226,16 @@
       let body = null
       try { body = JSON.parse(init?.body ?? 'null') } catch { body = null }
       recycleCalls.push(body)
+      // Refuse the first move while the flag is on — the host's `session-open`
+      // answer for a session that still has work.
+      if (recycleBusyFlag && recycleBusyLeft > 0) {
+        recycleBusyLeft -= 1
+        return json({
+          ok: false,
+          code: 'session-open',
+          message: 'the session still has work in this Harness process: the Agent is running or has queued input',
+        }, 409)
+      }
       const count = Array.isArray(body?.sessionIds) ? body.sessionIds.length : 1
       return json({ ok: true, trashedCount: count, archivedCount: count, failedCount: 0 })
     }
@@ -574,6 +587,11 @@
     panelState: () => ({ selectedPanel }),
     /** Every dsh-recycle-bin POST the map made (delete path). */
     recycleCalls: () => recycleCalls.slice(),
+    /** Refuse the next N moves with session-open (1 = only the first). */
+    recycleBusy(on, times = 1) {
+      recycleBusyFlag = on
+      recycleBusyLeft = on ? times : 0
+    },
     pinned: () => pinnedSessionIds.slice(),
     /** What the fake shell's sidebar looks like right now. */
     sidebarState: () => ({

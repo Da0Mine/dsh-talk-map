@@ -432,6 +432,7 @@ var zh = {
   "toast.archived": "已归档 {n} 个会话",
   "toast.deleted": "已把 {n} 个会话移入回收站",
   "toast.archiveFailed": "归档失败：",
+  "toast.stopping": "这条会话还在跑，正在停止它再删除…",
   "toast.deleteFailed": "删除失败：",
   "toast.needUiWorkspace": "界面服务还没就绪，稍等一下再试",
   "menu.importWs": "导入工作区",
@@ -587,6 +588,7 @@ var en = {
   "toast.archived": "Archived {n} conversation(s)",
   "toast.deleted": "Moved {n} conversation(s) into the recycle bin",
   "toast.archiveFailed": "Archive failed: ",
+  "toast.stopping": "This conversation is still running — stopping it before deleting…",
   "toast.deleteFailed": "Delete failed: ",
   "toast.needUiWorkspace": "The UI services are still starting up — try again in a moment",
   "menu.importWs": "Import workspace",
@@ -10877,11 +10879,45 @@ async function postRecycleBin(body) {
   if (payload.ok !== true) throw new Error(payload.message ?? `回收站拒绝了请求（HTTP ${response.status}）`);
   return payload;
 }
-async function trashSessions(sessionIds) {
+var STOP_RETRIES = 10;
+var STOP_RETRY_DELAY_MS = 400;
+function isBusyRefusal(error) {
+  const message = String(error?.message ?? error);
+  return message.includes("still has work") || message.includes("session-open") || message.includes("still active");
+}
+async function stopWork(sessionIds) {
+  const ui = uiWorkspaceService();
+  if (ui === void 0 || typeof ui.archiveSession !== "function") return;
+  for (const sessionId of sessionIds) {
+    await ui.archiveSession(sessionId, { stopActivity: true }).catch(() => {
+    });
+  }
+}
+async function trashSessions(sessionIds, onStopping) {
   const ids = [...sessionIds];
   if (ids.length === 0) return 0;
-  const reply = ids.length === 1 ? await postRecycleBin({ action: "trash", sessionId: ids[0] }) : await postRecycleBin({ action: "trashMany", sessionIds: ids });
-  return reply.trashedCount ?? ids.length;
+  const attempt = async () => {
+    const reply = ids.length === 1 ? await postRecycleBin({ action: "trash", sessionId: ids[0] }) : await postRecycleBin({ action: "trashMany", sessionIds: ids });
+    return reply.trashedCount ?? ids.length;
+  };
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!isBusyRefusal(error)) throw error;
+    onStopping?.();
+    await stopWork(ids);
+    let last = error;
+    for (let round = 0; round < STOP_RETRIES; round += 1) {
+      await new Promise((resolve) => setTimeout(resolve, STOP_RETRY_DELAY_MS));
+      try {
+        return await attempt();
+      } catch (retryError) {
+        last = retryError;
+        if (!isBusyRefusal(retryError)) throw retryError;
+      }
+    }
+    throw last;
+  }
 }
 async function archiveSessions(sessionIds) {
   const ui = uiWorkspaceService();
@@ -13514,7 +13550,9 @@ function CanvasInner(props) {
     setBatchBusy(true);
     try {
       if (kind === "archive") await archiveSessions(sessionIds);
-      else await trashSessions(sessionIds);
+      else await trashSessions(sessionIds, () => {
+        showToast(t("toast.stopping"));
+      });
       for (const cardId of cardIds) canvas.removeCard(cardId);
       showToast(t(kind === "archive" ? "toast.archived" : "toast.deleted", { n: String(sessionIds.length) }));
     } catch (error) {

@@ -39,14 +39,66 @@ async function postRecycleBin(body: Record<string, unknown>): Promise<RecycleBin
   return payload
 }
 
-/** Move sessions into the recycle bin (via dsh-recycle-bin). Returns how many. */
-export async function trashSessions(sessionIds: readonly string[]): Promise<number> {
+/** How many attempts (and how long apart) to let the stops settle. */
+const STOP_RETRIES = 10
+const STOP_RETRY_DELAY_MS = 400
+
+/** True when the bin refused because the session still holds work. */
+function isBusyRefusal(error: unknown): boolean {
+  const message = String((error as Error | undefined)?.message ?? error)
+  return message.includes('still has work')
+    || message.includes('session-open')
+    || message.includes('still active')
+}
+
+/** Ask the shell to stop a session's work (turn, jobs, subagents, schedules). */
+async function stopWork(sessionIds: readonly string[]): Promise<void> {
+  const ui = uiWorkspaceService()
+  if (ui === undefined || typeof ui.archiveSession !== 'function') return
+  for (const sessionId of sessionIds) {
+    // stopActivity asks the host to cancel the running work instead of refusing;
+    // the archive write lands immediately and the stops settle in the background.
+    await ui.archiveSession(sessionId, { stopActivity: true }).catch(() => {})
+  }
+}
+
+/**
+ * Move sessions into the recycle bin (via dsh-recycle-bin). Returns how many.
+ *
+ * A session that is still running is stopped first and then moved — the card's
+ * 删除 means "get rid of this", not "tell me it is busy".
+ */
+export async function trashSessions(
+  sessionIds: readonly string[],
+  /** Called once when the move was refused and work is being stopped first. */
+  onStopping?: () => void,
+): Promise<number> {
   const ids = [...sessionIds]
   if (ids.length === 0) return 0
-  const reply = ids.length === 1
-    ? await postRecycleBin({ action: 'trash', sessionId: ids[0] })
-    : await postRecycleBin({ action: 'trashMany', sessionIds: ids })
-  return reply.trashedCount ?? ids.length
+  const attempt = async (): Promise<number> => {
+    const reply = ids.length === 1
+      ? await postRecycleBin({ action: 'trash', sessionId: ids[0] })
+      : await postRecycleBin({ action: 'trashMany', sessionIds: ids })
+    return reply.trashedCount ?? ids.length
+  }
+  try {
+    return await attempt()
+  } catch (error) {
+    if (!isBusyRefusal(error)) throw error
+    onStopping?.()
+    await stopWork(ids)
+    let last = error
+    for (let round = 0; round < STOP_RETRIES; round += 1) {
+      await new Promise(resolve => setTimeout(resolve, STOP_RETRY_DELAY_MS))
+      try {
+        return await attempt()
+      } catch (retryError) {
+        last = retryError
+        if (!isBusyRefusal(retryError)) throw retryError
+      }
+    }
+    throw last
+  }
 }
 
 /** Archive sessions through the shipped workspace service. Returns how many. */
