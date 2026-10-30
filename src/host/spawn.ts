@@ -75,8 +75,7 @@ export class Spawner {
         role: 'user',
         content: [{ type: 'text', text: guarded }],
         source: {
-          kind: 'plugin',
-          plugin: 'dsh-talk-map',
+          kind: 'plugin:dsh-talk-map',
           form: 'notice',
           summary: `Context injected from session ${parent.sessionId}`,
         },
@@ -130,8 +129,7 @@ export class Spawner {
         role: 'user',
         content: [{ type: 'text', text: parent.text }],
         source: {
-          kind: 'plugin',
-          plugin: 'dsh-talk-map',
+          kind: 'plugin:dsh-talk-map',
           form: 'notice',
           summary: `Context injected from session ${parent.sessionId}`,
         },
