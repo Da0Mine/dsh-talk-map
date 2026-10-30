@@ -24,7 +24,7 @@ import type { Card, Digest, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
-import { edgeSyncState } from './edge-sync.ts'
+import { edgeSyncState, lineageSyncState } from './edge-sync.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
@@ -1047,6 +1047,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const parentCardId = sessionIdToCardId.get(parentSessionId)
       if (parentCardId === undefined) continue
       if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue
+      // Provenance, not a channel: the child inherited the history and has
+      // to be judged by its own timestamps.
+      const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? '']
+      const childSession = sessions.byId[card.sessionId]
+      const lineageSync = lineageSyncState({
+        ...(parentSession?.updatedAt !== undefined ? { parentUpdatedAt: parentSession.updatedAt } : {}),
+        ...(childSession?.updatedAt !== undefined ? { childUpdatedAt: childSession.updatedAt } : {}),
+      })
       out.push({
         id: `lineage-${parentCardId}-${cardId}`,
         source: parentCardId,
@@ -1055,6 +1063,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         targetHandle: 'l',
         type: 'smoothstep',
         selectable: false,
+        className: `tmEdge tmEdge-${lineageSync}`
+          + (lineageSync === 'idle' ? ' tmEdge-lineage' : ''),
         data: { fromCardId: parentCardId, toCardId: cardId },
         style: { strokeDasharray: '6 4', opacity: 0.5 },
       })

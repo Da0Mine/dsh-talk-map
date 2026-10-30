@@ -33,4 +33,8 @@ assert.match(bundle, /242, 78, 78/, 'the far arrow must be red')
 // 6. a push stamps the edge, which is what the animation reads
 assert.match(bundle, /lastPushAt: pushedAt/, 'a manual push must stamp the edge')
 
-console.log('edge-flow: 9 checks passed')
+// 7. lineage lines get a state class too, and never animate the packet
+assert.match(bundle, /tmEdge-\$\{lineageSync\}/, 'lineage edges must carry a state class')
+assert.match(css, /tmEdge-lineage[\s\S]{0,200}animation: none/, 'lineage lines must not run the packet')
+
+console.log('edge-flow: 11 checks passed')

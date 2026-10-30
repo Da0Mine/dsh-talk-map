@@ -49,3 +49,21 @@ export function edgeSyncState(input: EdgeSyncInput): EdgeSyncState {
   const now = Number(input.now ?? Date.now())
   return now - lastPushAt >= FAR_BEHIND_MS ? 'far' : 'stale'
 }
+
+/**
+ * Freshness of a lineage line (parent session → forked/subagent child).
+ * Nothing is pushed along it; this only says whether the child has kept up.
+ */
+export function lineageSyncState(input: {
+  parentUpdatedAt?: number
+  childUpdatedAt?: number
+  now?: number
+}): EdgeSyncState {
+  const parent = Number(input.parentUpdatedAt)
+  const child = Number(input.childUpdatedAt)
+  if (!Number.isFinite(parent) || !Number.isFinite(child)) return 'idle'
+  // The child was written to at or after the parent: it has the latest state.
+  if (child + SAME_MOMENT_MS >= parent) return 'synced'
+  const now = Number(input.now ?? Date.now())
+  return now - child >= FAR_BEHIND_MS ? 'far' : 'stale'
+}

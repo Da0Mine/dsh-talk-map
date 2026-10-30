@@ -6,7 +6,7 @@
  * them backwards would make the map lie about its data.
  */
 import assert from 'node:assert/strict'
-import { FAR_BEHIND_MS, edgeSyncState } from '../src/client/edge-sync.ts'
+import { FAR_BEHIND_MS, edgeSyncState, lineageSyncState } from '../src/client/edge-sync.ts'
 
 const NOW = 1_700_000_000_000
 const HOUR = 60 * 60 * 1000
@@ -49,4 +49,21 @@ assert.equal(FAR_BEHIND_MS, 12 * HOUR, 'the "far behind" threshold is 12 hours')
 assert.equal(edgeSyncState({ kind: 'digest', now: NOW }), 'idle')
 assert.equal(edgeSyncState({ kind: 'digest', lastPushAt: NOW, now: NOW }), 'idle')
 
-console.log('edge-sync: 10 checks passed')
+// ---- lineage lines: provenance, judged by the two timestamps -----------
+assert.equal(
+  lineageSyncState({ parentUpdatedAt: NOW - HOUR, childUpdatedAt: NOW, now: NOW }),
+  'synced',
+  'a child written after its parent is current',
+)
+assert.equal(
+  lineageSyncState({ parentUpdatedAt: NOW, childUpdatedAt: NOW - HOUR, now: NOW }),
+  'stale',
+  'a parent that moved after the child leaves the child behind',
+)
+assert.equal(
+  lineageSyncState({ parentUpdatedAt: NOW, childUpdatedAt: NOW - FAR_BEHIND_MS - 1, now: NOW }),
+  'far',
+)
+assert.equal(lineageSyncState({ now: NOW }), 'idle', 'unknown timestamps stay neutral')
+
+console.log('edge-sync: 14 checks passed')

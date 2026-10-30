@@ -374,6 +374,22 @@
   animation: tmBreathe 1.4s ease-in-out infinite;
 }
 
+/* 血缘线（派生，不是通道）：颜色沿用同一套状态，但线型保持虚线，且光流
+   不跑 —— 这里没有东西在传，只有"新不新"。 */
+.canvas :global(.tmEdge-lineage path.react-flow__edge-path) {
+  opacity: 0.5;
+  stroke-dasharray: 6 4;
+  animation: none;
+}
+
+.canvas :global(.tmEdge-lineage.tmEdge-stale path.react-flow__edge-path) {
+  opacity: 0.8;
+}
+
+.canvas :global(.tmEdge-lineage.tmEdge-far path.react-flow__edge-path) {
+  opacity: 0.9;
+}
+
 @keyframes tmBreathe {
   0%, 100% { opacity: 0.75; }
   50% { opacity: 1; }
