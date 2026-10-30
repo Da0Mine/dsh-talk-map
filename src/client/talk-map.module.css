@@ -336,6 +336,57 @@
 
 /* Slot layout: a card that gets pushed aside or fills a gap glides to its new
  * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
+/* ---- edge sync: a packet runs along a line that is still in sync ------- */
+.canvas :global(.react-flow__edge-path) {
+  transition: stroke 260ms ease-out, filter 260ms ease-out;
+}
+
+.canvas :global(.tmEdge path.react-flow__edge-path) {
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+/* 同步中：线本身轻描 + 一道光沿路径跑过去 */
+.canvas :global(.tmEdge-synced path.react-flow__edge-path) {
+  stroke: rgba(255, 214, 106, 0.5);
+  stroke-dasharray: 5 9;
+  animation: tmFlow 1.05s linear infinite;
+}
+
+@keyframes tmFlow {
+  from { stroke-dashoffset: 28; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* 落后：不流动，整条线发黄光 */
+.canvas :global(.tmEdge-stale path.react-flow__edge-path) {
+  stroke: rgba(255, 214, 106, 0.95);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.55));
+  animation: tmBreathe 2.4s ease-in-out infinite;
+}
+
+/* 落后很多：红光 */
+.canvas :global(.tmEdge-far path.react-flow__edge-path) {
+  stroke: rgba(242, 78, 78, 0.95);
+  stroke-width: 2.2;
+  filter: drop-shadow(0 0 5px rgba(242, 78, 78, 0.6));
+  animation: tmBreathe 1.4s ease-in-out infinite;
+}
+
+@keyframes tmBreathe {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas :global(.tmEdge-synced path.react-flow__edge-path),
+  .canvas :global(.tmEdge-stale path.react-flow__edge-path),
+  .canvas :global(.tmEdge-far path.react-flow__edge-path) {
+    animation: none;
+  }
+}
+
 .canvas :global(.react-flow__node) {
   transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1);
 }

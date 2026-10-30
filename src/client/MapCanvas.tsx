@@ -24,6 +24,7 @@ import type { Card, Digest, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
+import { edgeSyncState } from './edge-sync.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
@@ -969,6 +970,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return index
   }, [visibleCards])
 
+  /** `updatedAt` of the session behind a card (undefined when it is gone). */
+  const sourceCardUpdatedAt = (cardId: string): number | undefined => {
+    const card = canvasState.cards[cardId]
+    if (card === undefined) return undefined
+    return sessions.byId[card.sessionId]?.updatedAt
+  }
+
   const liveEdges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
     // A folded card is not painted, so its edges must not be either (an edge to
@@ -984,7 +992,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       explicitPairs.add(`${edge.toCardId}->${edge.fromCardId}`)
       if (!present.has(edge.fromCardId) || !present.has(edge.toCardId)) continue
       const kind = edge.injection.kind
+      // Does this line still carry the source's latest context?
+      const sync = edgeSyncState({
+        kind,
+        ...(typeof edge.lastPushAt === 'number' ? { lastPushAt: edge.lastPushAt } : {}),
+        ...(sourceCardUpdatedAt(edge.fromCardId) !== undefined
+          ? { sourceUpdatedAt: sourceCardUpdatedAt(edge.fromCardId) }
+          : {}),
+      })
       out.push({
+        // Read by the stylesheet: flow while synced, amber when behind, red
+        // when far behind. Classes beat inline styles for keyframes.
+        className: `tmEdge tmEdge-${sync}`,
         id: edgeId,
         source: edge.fromCardId,
         target: edge.toCardId,
@@ -1002,7 +1021,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           type: MarkerType.ArrowClosed,
           width: kind === 'link' ? 13 : 16,
           height: kind === 'link' ? 13 : 16,
-          color: kind === 'link' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 214, 106, 0.85)',
+          color: sync === 'far'
+            ? 'rgba(242, 78, 78, 0.9)'
+            : sync === 'stale'
+              ? 'rgba(255, 214, 106, 0.95)'
+              : kind === 'link' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 214, 106, 0.85)',
         },
         // Pure association lines: no label, lighter than injection edges.
         ...(kind === 'link'
@@ -1291,6 +1314,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       await talkMapApi.injectContext(toCard.sessionId, [
         { sessionId: fromCard.sessionId, text: buildPushText(fromTitle, digest) },
       ])
+      // Remember when this line last delivered: "synced" is decided from it.
+      const pushedAt = Date.now()
+      for (const [id, edge] of Object.entries(canvasState.edges)) {
+        const same = (edge.fromCardId === fromCardId && edge.toCardId === toCardId)
+          || (edge.fromCardId === toCardId && edge.toCardId === fromCardId)
+        if (!same) continue
+        canvas.addEdges({ [id]: { ...edge, lastPushAt: pushedAt } })
+      }
       showToast(t('toast.pushed', { to: toTitle }))
     } catch (error) {
       const code = (error as ApiError).code

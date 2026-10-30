@@ -46,6 +46,8 @@ export interface MapEdgeData {
   toHandle?: string
   /** Pipe mode: source digest changes auto-push along this edge. */
   autoSync?: boolean
+  /** When this edge last delivered context (manual push or auto push). */
+  lastPushAt?: number
   /** Source-session title snapshot for host-side auto-sync headers. */
   fromTitle?: string
   createdAt: number

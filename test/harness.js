@@ -158,8 +158,9 @@
       boardId: 'inbox',
       fromCardId: 'card-1',
       toCardId: 'card-2',
-      injection: { kind: 'link' },
-      createdAt: T0,
+      // A digest channel that is currently in sync: the line animates.
+      injection: { kind: 'digest', autoPush: true },
+      lastPushAt: T0,
     }
   }
 

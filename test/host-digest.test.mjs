@@ -27,7 +27,9 @@ assert.match(source, /route === "POST \/talk-map\/digest\/ensure"/, 'missing /ta
 
 // 6. auto push is per edge and rides injectInto
 assert.match(source, /injection\?\.autoPush !== true/, 'auto push must check injection.autoPush')
-assert.match(source, /runtime\.spawner\.injectInto\(target,/, 'auto push must deliver through the spawner')
+// 8. a delivery stamps the edge, which is what the sync animation reads
+assert.match(source, /lastPushAt: pushedAt/, 'auto push must stamp the edge it delivered on')
+assert.match(source, /runtime\.spawner\.injectInto\(target\.sessionId,/, 'auto push must deliver through the spawner')
 
 // 7. the push text carries the "read the full conversation" reminder
 assert.match(source, /【提醒】以上是摘要提纲/, 'host push text lost the reminder')
