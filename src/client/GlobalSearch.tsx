@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { SearchResults, type SearchHitView } from './SearchResults.tsx'
 import { fetchSearchContext, fetchSessionHits, searchSessions } from './rpc.ts'
 import { t } from './i18n.ts'
-import { allSessionTitles, mapUi, sessionTitle } from './map-state.ts'
+import { allCards, mapUi, sessionTitle } from './map-state.ts'
 import { clearSearch, loadSearch, saveSearch } from './search-store.ts'
 import styles from './talk-map.module.css'
 
@@ -45,47 +45,33 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
     clearSearch(GLOBAL_SCOPE)
   }
 
-  const run = async (value: string): Promise<void> => {
-    const trimmed = value.trim()
-    if (trimmed === '') {
+  /** Local filter over the cards the map has rendered — no corpus query. */
+  const run = (value: string): void => {
+    const needle = value.trim().toLowerCase()
+    if (needle === '') {
       setSubmitted('')
+      setHits([])
       return
     }
-    setSubmitted(trimmed)
-    setSearching(true)
+    setSubmitted(value.trim())
+    setSearching(false)
     setError(null)
-    try {
-      const found = await searchSessions(trimmed)
-      const views = found.map(hit => ({
-        sessionId: hit.sessionId,
-        title: sessionTitle(hit.sessionId) ?? hit.sessionId,
-        blocks: hit.blocks,
-        seqs: hit.seqs,
-        agent: hit.agent,
-        depth: hit.depth,
-      }))
-      const needle = trimmed.toLowerCase()
-      const already = new Set(views.map(view => view.sessionId))
-      const byTitle = allSessionTitles()
-        .filter(entry => !already.has(entry.sessionId))
-        .filter(entry => entry.title.toLowerCase().includes(needle))
-        .map(entry => ({
-          sessionId: entry.sessionId,
-          title: entry.title,
-          blocks: [[entry.title]],
+    const views = allCards()
+      .filter(card => card.title.toLowerCase().includes(needle)
+        || card.preview.toLowerCase().includes(needle))
+      .map(card => {
+        const titleHit = card.title.toLowerCase().includes(needle)
+        return {
+          sessionId: card.sessionId,
+          title: card.workspaceTitle === '' ? card.title : card.title + ' · ' + card.workspaceTitle,
+          blocks: [[titleHit ? card.title : card.preview]],
           seqs: [null],
           roles: [null],
-          byTitle: true,
-        }))
-      const merged = [...byTitle, ...views]
-      setHits(merged)
-      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: merged })
-    } catch (cause) {
-      setHits([])
-      setError(String((cause as Error)?.message ?? cause))
-    } finally {
-      setSearching(false)
-    }
+          byTitle: titleHit,
+        }
+      })
+    setHits(views)
+    saveSearch(GLOBAL_SCOPE, { query: value.trim(), hits: views })
   }
 
   return (
@@ -100,7 +86,7 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
         onKeyDown={(event) => {
           if (event.key !== 'Enter') return
           event.preventDefault()
-          void run(query)
+          run(query)
         }}
       />
       <button
@@ -109,7 +95,7 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
         title={t('global.searchRun')}
         aria-label={t('global.searchRun')}
         data-talkmap-global-search-run=""
-        onClick={() => { void run(query) }}
+        onClick={() => { run(query) }}
       >
         {t('global.searchRun')}
       </button>

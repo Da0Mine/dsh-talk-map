@@ -379,3 +379,22 @@ export function allSessionTitles(): { sessionId: string; title: string }[] {
     return []
   }
 }
+
+/** Cards currently on the board (title + body) — the header search reads this. */
+export interface CardTableEntry {
+  cardId: string
+  sessionId: string
+  title: string
+  preview: string
+  workspaceTitle: string
+}
+
+let cardTable: CardTableEntry[] = []
+
+export function setCardTable(next: CardTableEntry[]): void {
+  cardTable = next
+}
+
+export function allCards(): CardTableEntry[] {
+  return cardTable
+}

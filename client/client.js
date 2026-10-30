@@ -381,7 +381,7 @@ var zh = {
   "stack.total": "共 {n} 个对话",
   "stack.hint": "滚轮滚动",
   "stack.close": "收起（Esc）",
-  "stack.searchPlaceholder": "在本工作区里搜标题与内容，回车开始",
+  "stack.searchPlaceholder": "搜这个抽屉里的卡片，回车开始",
   "stack.searching": "全文搜索中…",
   "stack.searchFailed": "全文搜索失败",
   "stack.searchDisabled": "全文搜索未启用（本机索引关闭）",
@@ -430,9 +430,9 @@ var zh = {
   "menu.noGroup": "移出分组（自由卡片）",
   "menu.open": "打开对话",
   "menu.markUnread": "标为未读",
-  "global.searchPlaceholder": "全部对话里搜内容，回车开始",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文），回车开始",
   "global.searchRun": "搜索",
-  "global.searchTitle": "全局搜索",
+  "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
   "font.increase": "加大字号（每一项 +1）",
   "font.decrease": "减小字号（每一项 −1）",
@@ -572,9 +572,9 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search all conversations, press Enter",
+  "global.searchPlaceholder": "Search cards on the map (title/body), Enter",
   "global.searchRun": "Search",
-  "global.searchTitle": "Global search",
+  "global.searchTitle": "Search the map",
   "font.group": "Text size",
   "font.increase": "Larger text (+1 on every style)",
   "font.decrease": "Smaller text (−1 on every style)",
@@ -1200,32 +1200,16 @@ var titleResolver;
 function setTitleResolver(resolver) {
   titleResolver = resolver;
 }
-function sessionTitle(sessionId) {
-  const resolved = titleResolver?.(sessionId);
-  if (resolved !== void 0 && resolved !== "") return resolved;
-  const services2 = getServices();
-  if (services2 === void 0) return void 0;
-  try {
-    const snapshot5 = services2.sessions.list().getSnapshot();
-    return snapshot5.byId[sessionId]?.displayTitle;
-  } catch {
-    return void 0;
-  }
-}
 var titleTable = [];
 function setTitleTable(next) {
   titleTable = next;
 }
-function allSessionTitles() {
-  if (titleTable.length > 0) return titleTable;
-  const services2 = getServices();
-  if (services2 === void 0) return [];
-  try {
-    const snapshot5 = services2.sessions.list().getSnapshot();
-    return Object.entries(snapshot5.byId).map(([sessionId, row]) => ({ sessionId, title: row.displayTitle ?? "" })).filter((entry) => entry.title !== "");
-  } catch {
-    return [];
-  }
+var cardTable = [];
+function setCardTable(next) {
+  cardTable = next;
+}
+function allCards() {
+  return cardTable;
 }
 
 // src/client/MapOverlay.tsx
@@ -1652,8 +1636,6 @@ function SearchResults(props) {
 }
 
 // src/client/rpc.ts
-var searchCache = /* @__PURE__ */ new Map();
-var SEARCH_CACHE_MS = 6e4;
 async function callRpc(endpoint, request = {}) {
   const rpc = connectionService()?.rpc;
   if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
@@ -1674,59 +1656,6 @@ function reportToHost(payload) {
     }).catch(() => {
     });
   } catch {
-  }
-}
-async function searchSessions(query, cwd) {
-  const key = (cwd ?? "") + "|" + query.trim().toLowerCase();
-  const remembered = searchCache.get(key);
-  if (remembered !== void 0 && Date.now() - remembered.at < SEARCH_CACHE_MS) return remembered.hits;
-  const hits = await searchSessionsUncached(query, cwd);
-  searchCache.set(key, { at: Date.now(), hits });
-  return hits;
-}
-async function searchSessionsUncached(query, cwd) {
-  const clean = (lines) => lines.filter((line) => typeof line === "string" && line.trim() !== "");
-  const normalize = (items) => (items ?? []).filter((item) => typeof item.sessionId === "string").map((item) => {
-    const seqs = Array.isArray(item.seqs) ? item.seqs : [];
-    const roles = Array.isArray(item.roles) ? item.roles : [];
-    const agent = item.agent === "subagent" ? "subagent" : "main";
-    const depth = typeof item.depth === "number" ? item.depth : 0;
-    const withSeqs = (blocks) => ({
-      sessionId: item.sessionId,
-      blocks,
-      seqs: blocks.map((_, index2) => typeof seqs[index2] === "number" ? seqs[index2] : null),
-      roles: blocks.map((_, index2) => typeof roles[index2] === "string" ? roles[index2] : null),
-      agent,
-      depth
-    });
-    if (Array.isArray(item.blocks)) {
-      const blocks = item.blocks.map(clean).filter((block) => block.length > 0);
-      if (blocks.length > 0) return withSeqs(blocks);
-    }
-    if (Array.isArray(item.lines)) {
-      const lines = clean(item.lines);
-      if (lines.length > 0) return withSeqs(lines.map((line) => [line]));
-    }
-    if (typeof item.snippet === "string" && item.snippet.trim() !== "") {
-      return withSeqs([[item.snippet.trim()]]);
-    }
-    return { sessionId: item.sessionId, blocks: [], seqs: [], roles: [], agent, depth };
-  }).filter((hit) => hit.blocks.length > 0);
-  let routeError;
-  try {
-    const page = await talkMapApi.searchSessions(query, cwd);
-    return normalize(page.items);
-  } catch (error) {
-    routeError = error;
-    reportToHost({ phase: "search-host-failed", query, message: String(routeError?.message ?? error) });
-  }
-  try {
-    const page = await callRpc("session/search", { query });
-    return normalize(page.items);
-  } catch (error) {
-    reportToHost({ phase: "search-rpc-failed", query, message: String(error?.message ?? error) });
-    const combined = [routeError?.message, error?.message].filter(Boolean).join("；");
-    throw new Error(combined === "" ? "search failed" : combined);
   }
 }
 async function fetchSearchContext(sessionId, seq, query) {
@@ -1780,44 +1709,29 @@ function GlobalSearch(props) {
     setQuery("");
     clearSearch(GLOBAL_SCOPE);
   };
-  const run = async (value) => {
-    const trimmed = value.trim();
-    if (trimmed === "") {
+  const run = (value) => {
+    const needle = value.trim().toLowerCase();
+    if (needle === "") {
       setSubmitted("");
+      setHits([]);
       return;
     }
-    setSubmitted(trimmed);
-    setSearching(true);
+    setSubmitted(value.trim());
+    setSearching(false);
     setError(null);
-    try {
-      const found = await searchSessions(trimmed);
-      const views = found.map((hit) => ({
-        sessionId: hit.sessionId,
-        title: sessionTitle(hit.sessionId) ?? hit.sessionId,
-        blocks: hit.blocks,
-        seqs: hit.seqs,
-        agent: hit.agent,
-        depth: hit.depth
-      }));
-      const needle = trimmed.toLowerCase();
-      const already = new Set(views.map((view) => view.sessionId));
-      const byTitle = allSessionTitles().filter((entry) => !already.has(entry.sessionId)).filter((entry) => entry.title.toLowerCase().includes(needle)).map((entry) => ({
-        sessionId: entry.sessionId,
-        title: entry.title,
-        blocks: [[entry.title]],
+    const views = allCards().filter((card) => card.title.toLowerCase().includes(needle) || card.preview.toLowerCase().includes(needle)).map((card) => {
+      const titleHit = card.title.toLowerCase().includes(needle);
+      return {
+        sessionId: card.sessionId,
+        title: card.workspaceTitle === "" ? card.title : card.title + " · " + card.workspaceTitle,
+        blocks: [[titleHit ? card.title : card.preview]],
         seqs: [null],
         roles: [null],
-        byTitle: true
-      }));
-      const merged = [...byTitle, ...views];
-      setHits(merged);
-      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: merged });
-    } catch (cause) {
-      setHits([]);
-      setError(String(cause?.message ?? cause));
-    } finally {
-      setSearching(false);
-    }
+        byTitle: titleHit
+      };
+    });
+    setHits(views);
+    saveSearch(GLOBAL_SCOPE, { query: value.trim(), hits: views });
   };
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearch"], children: [
     /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
@@ -1834,7 +1748,7 @@ function GlobalSearch(props) {
         onKeyDown: (event) => {
           if (event.key !== "Enter") return;
           event.preventDefault();
-          void run(query);
+          run(query);
         }
       }
     ),
@@ -1847,7 +1761,7 @@ function GlobalSearch(props) {
         "aria-label": t("global.searchRun"),
         "data-talkmap-global-search-run": "",
         onClick: () => {
-          void run(query);
+          run(query);
         },
         children: t("global.searchRun")
       }
@@ -13530,20 +13444,19 @@ function CanvasInner(props) {
     openSession(sessionId);
   };
   const searchInWorkspace = async (groupId, query) => {
-    const cwd = workspaces.items.find((item) => item.workspaceId === groupId)?.path;
-    const found = await searchSessions(query, cwd);
-    const views = found.slice(0, 12).map(toHitView);
     const needle = query.trim().toLowerCase();
-    const already = new Set(views.map((view) => view.sessionId));
-    const byTitle = allSessionTitles().filter((entry) => !already.has(entry.sessionId)).filter((entry) => sessionWs.get(entry.sessionId) === groupId).filter((entry) => entry.title.toLowerCase().includes(needle)).map((entry) => ({
-      sessionId: entry.sessionId,
-      title: entry.title,
-      blocks: [[entry.title]],
-      seqs: [null],
-      roles: [null],
-      byTitle: true
-    }));
-    return [...byTitle, ...views];
+    if (needle === "") return [];
+    return drawerItems(groupId).filter((item) => item.title.toLowerCase().includes(needle) || (item.preview ?? "").toLowerCase().includes(needle)).map((item) => {
+      const titleHit = item.title.toLowerCase().includes(needle);
+      return {
+        sessionId: item.sessionId,
+        title: item.title,
+        blocks: [[titleHit ? item.title : item.preview ?? item.title]],
+        seqs: [null],
+        roles: [null],
+        byTitle: titleHit
+      };
+    });
   };
   const toHitView = (hit) => ({
     sessionId: hit.sessionId,
@@ -13556,6 +13469,13 @@ function CanvasInner(props) {
   });
   (0, import_react11.useEffect)(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle);
+    setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
+      cardId,
+      sessionId: card.sessionId,
+      title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+      preview: previews[card.sessionId] ?? "",
+      workspaceTitle: wsTitles.get(sessionWs.get(card.sessionId) ?? "") ?? ""
+    })));
     setTitleTable(Object.entries(sessions.byId).map(([sessionId, row]) => ({
       sessionId,
       title: renamedTitles[sessionId] ?? row.displayTitle ?? ""

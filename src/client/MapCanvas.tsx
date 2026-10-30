@@ -26,7 +26,7 @@ import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
-import { allSessionTitles, setTitleResolver, setTitleTable } from './map-state.ts'
+import { allSessionTitles, setCardTable, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
@@ -1362,29 +1362,28 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /**
-   * Search inside ONE workspace: the folder's cwd is passed to the Host as a
-   * corpus filter, so results cannot leak in from other workspaces.
+   * The drawer search is intentionally LOCAL: it filters the rows this folder is
+   * rendering (title + body) instead of asking the corpus. Nothing leaves the
+   * board, so it is instant and it can never surface a conversation the folder
+   * does not contain.
    */
   const searchInWorkspace = async (groupId: string, query: string): Promise<DrawerSearchHit[]> => {
-    const cwd = workspaces.items.find(item => item.workspaceId === groupId)?.path
-    const found = await searchSessions(query, cwd)
-    const views = found.slice(0, 12).map(toHitView)
     const needle = query.trim().toLowerCase()
-    const already = new Set(views.map(view => view.sessionId))
-    // Titles are matched here, not on the Host: the board already knows them.
-    const byTitle = allSessionTitles()
-      .filter(entry => !already.has(entry.sessionId))
-      .filter(entry => sessionWs.get(entry.sessionId) === groupId)
-      .filter(entry => entry.title.toLowerCase().includes(needle))
-      .map(entry => ({
-        sessionId: entry.sessionId,
-        title: entry.title,
-        blocks: [[entry.title]],
-        seqs: [null],
-        roles: [null],
-        byTitle: true,
-      }))
-    return [...byTitle, ...views]
+    if (needle === '') return []
+    return drawerItems(groupId)
+      .filter(item => item.title.toLowerCase().includes(needle)
+        || (item.preview ?? '').toLowerCase().includes(needle))
+      .map(item => {
+        const titleHit = item.title.toLowerCase().includes(needle)
+        return {
+          sessionId: item.sessionId,
+          title: item.title,
+          blocks: [[titleHit ? item.title : (item.preview ?? item.title)]],
+          seqs: [null],
+          roles: [null],
+          byTitle: titleHit,
+        }
+      })
   }
 
   const toHitView = (hit: ContentHit): DrawerSearchHit => ({
@@ -1399,6 +1398,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // Publish the board's title lookup for the header's global search panel.
   useEffect(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle)
+    setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
+      cardId,
+      sessionId: card.sessionId,
+      title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+      preview: previews[card.sessionId] ?? '',
+      workspaceTitle: wsTitles.get(sessionWs.get(card.sessionId) ?? '') ?? '',
+    })))
     setTitleTable(Object.entries(sessions.byId).map(([sessionId, row]) => ({
       sessionId,
       title: renamedTitles[sessionId] ?? row.displayTitle ?? '',

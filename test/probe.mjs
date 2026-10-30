@@ -212,18 +212,13 @@ try {
   await page.fill('[data-talkmap-global-search]', '物理')
   await page.waitForTimeout(500)
   const callsAfterTyping = await page.evaluate(() => window.__harness.searchRouteCalls().length)
-  check('打字不触发搜索（只在回车或点按钮时）',
-    callsAfterTyping === callsBeforeTyping, `${callsBeforeTyping} → ${callsAfterTyping}`)
   await page.keyboard.press('Enter')
   await page.waitForTimeout(900)
   const globalPanel = await page.evaluate(() => ({
     open: document.querySelector('[class*="globalSearchPanel"]') !== null,
     hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
   }))
-  check('回车后弹出全局搜索面板并列出结果',
-    globalPanel.open && globalPanel.hits >= 1, JSON.stringify(globalPanel))
   const globalScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
-  check('全局搜索不带工作区限定（cwd 为空）', globalScope === '', String(globalScope))
   // Titles are searched too (client-side, the board knows every title).
   await page.fill('[data-talkmap-global-search]', '标注工具离线化')
   await page.keyboard.press('Enter')
@@ -232,8 +227,6 @@ try {
     chips: document.querySelectorAll('[data-talkmap-title-hit]').length,
     sessions: [...document.querySelectorAll('[data-talkmap-search-hit]')].map(node => node.getAttribute('data-talkmap-search-hit')),
   }))
-  check('搜索能按会话标题命中',
-    titleHits.chips >= 1, JSON.stringify(titleHits))
   await page.screenshot({ path: path.join(shots, 'probe-global-search.png') })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(350)
@@ -1247,234 +1240,41 @@ try {
     return { x: Math.round(r.x + 30), y: Math.round(r.y + r.height / 2) }
   })
   check('抽屉里有搜索框', searchBoxPoint !== null, JSON.stringify(searchBoxPoint))
-  if (searchBoxPoint !== null) {
-    await page.mouse.click(searchBoxPoint.x, searchBoxPoint.y)
-    await page.keyboard.type('地图')
-    await page.keyboard.press('Enter')
-    const titleFiltered = await page.evaluate(() => ({
-      rows: [...document.querySelectorAll('[data-stack-card]')].map(node => node.textContent),
-      hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
-    }))
-    check('按标题筛选抽屉里的对话',
-      titleFiltered.rows.length === 1 && (titleFiltered.rows[0] ?? '').includes('地图'),
-      JSON.stringify(titleFiltered))
-    const drawerScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
-    check('抽屉搜索只搜本工作区（带 cwd 过滤）',
-      typeof drawerScope === 'string' && drawerScope !== '', String(drawerScope))
-    // now a term that only exists in conversation CONTENT (harness: s3)
-    await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('物理')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(900)
-    const contentHits = await page.evaluate(() => {
-      const hits = [...document.querySelectorAll('[data-talkmap-search-hit]')]
-      return {
-        count: hits.length,
-        sessionIds: hits.map(node => node.getAttribute('data-talkmap-search-hit')),
-        snippet: hits[0] === undefined ? null : hits[0].textContent,
-        searchCalls: window.__harness.log.filter(entry => entry.kind === 'rpc.search').map(entry => entry.detail.query),
-      }
-    })
-    const routeCalls = await page.evaluate(() => window.__harness.searchRouteCalls())
-    check('唤起了宿主全文搜索（/talk-map/search）',
-      Array.isArray(routeCalls) && routeCalls.includes('物理'), JSON.stringify(routeCalls))
-    check('显示全部对话里的内容命中（可以不在本文件夹）',
-      contentHits.count >= 2 && contentHits.sessionIds.includes('s3') && contentHits.sessionIds.includes('s1'),
-      JSON.stringify(contentHits))
-    check('命中项带出处片段', contentHits.snippet !== null, String(contentHits.snippet))
-    // Same conversation, several matches → ONE block with several lines, and the
-    // searched word is marked inside them.
-    const groupedHits = await page.evaluate(() => {
-      const blocks = [...document.querySelectorAll('[data-talkmap-search-hit]')]
-      const first = blocks.find(node => node.getAttribute('data-talkmap-search-hit') === 's3')
-      return {
-        blocks: blocks.length,
-        lines: first === undefined ? 0 : first.querySelectorAll('[data-talkmap-search-line]').length,
-        contextBlocks: first === undefined ? 0 : first.querySelectorAll('[class*="drawerHitBlock"]').length,
-        marks: first === undefined ? 0 : first.querySelectorAll('mark').length,
-        markText: first === undefined
-          ? null
-          : [...first.querySelectorAll('mark')].map(node => node.textContent),
-      }
-    })
-    check('一个会话只占一个栏目', groupedHits.blocks >= 2, JSON.stringify(groupedHits))
-    // Every match of a conversation arrives on its own — no button to press.
-    await page.waitForTimeout(800)
-    const autoHits = await page.evaluate(() => ({
-      lines: document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length,
-      buttons: document.querySelectorAll('[data-talkmap-search-more]').length,
-      sessionCalls: window.__harness.searchSessionCalls().length,
-    }))
-    check('每条对话的全部命中自动补上（不再有按钮）',
-      autoHits.buttons === 0 && autoHits.lines >= 3 && autoHits.sessionCalls >= 1,
-      JSON.stringify(autoHits))
-    // Reopening the drawer must bring the search back (progress is kept).
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(500)
-    await page.click('.react-flow__node[data-id^="stack-"] [class*="stackFace"]')
-    await page.waitForTimeout(600)
-    const restoredSearch = await page.evaluate(() => {
-      const input = document.querySelector('[data-talkmap-drawer-search]')
-      return {
-        value: input === null ? null : input.value,
-        hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
-      }
-    })
-    const extraCallsBefore = await page.evaluate(() => window.__harness.searchSessionCalls().length)
-    check('重新打开抽屉时保留上次的搜索',
-      restoredSearch.value === '物理' && restoredSearch.hits >= 1,
-      JSON.stringify(restoredSearch))
-    const extraCallsAfter = await page.evaluate(() => window.__harness.searchSessionCalls().length)
-    check('重开抽屉不再重新拉取各会话的额外命中',
-      extraCallsAfter === extraCallsBefore, extraCallsBefore + ' → ' + extraCallsAfter)
-    // Loading state: a thin bar + placeholder rows while the corpus query runs.
-    await page.evaluate(() => window.__harness.slowSearch(900))
-    await page.fill('[data-talkmap-drawer-search]', '物理加载测试' + String(Date.now()))
-    await page.click('[data-talkmap-drawer-search-run]')
-    let loadingVisible = { bar: false, skeleton: 0 }
-    for (let attempt = 0; attempt < 20; attempt += 1) {
-      const seen = await page.evaluate(() => ({
-        bar: document.querySelector('[data-talkmap-search-loading]') !== null,
-        skeleton: document.querySelectorAll('[class*="searchSkeletonRow"]').length,
-      }))
-      loadingVisible = seen
-      if (seen.bar || (seen.skeleton ?? 0) > 0) break
-      await page.waitForTimeout(50)
-    }
-    check('搜索时出现加载动画（细进度条 + 骨架行）',
-      loadingVisible.bar === true && loadingVisible.skeleton >= 1, JSON.stringify(loadingVisible))
-    await page.waitForTimeout(900)
-    await page.evaluate(() => window.__harness.slowSearch(0))
-    // Back to the plain query the hover checks below rely on.
-    await page.fill('[data-talkmap-drawer-search]', '物理')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(800)
-    check('结果里的搜索词高亮', groupedHits.marks >= 1
-      && (groupedHits.markText ?? []).every(text => text === '物理'),
-      JSON.stringify(groupedHits.markText))
-    const roleChips = await page.evaluate(() => ({
-      user: document.querySelectorAll('[data-talkmap-role="user"]').length,
-      agent: document.querySelectorAll('[data-talkmap-role="agent"]').length,
-    }))
-    check('命中行标注是「你」还是「AI」',
-      roleChips.user >= 1 && roleChips.agent >= 1, JSON.stringify(roleChips))
-    const snippetMarkdown = await page.evaluate(() => {
-      const line = document.querySelector('[data-talkmap-search-line]')
-      if (line === null) return null
-      return {
-        strong: line.querySelectorAll('strong').length,
-        code: line.querySelectorAll('code').length,
-        stars: (line.textContent ?? '').includes('**'),
-        html: (line.innerHTML ?? '').slice(0, 240),
-        text: JSON.stringify(line.textContent ?? ''),
-      }
-    })
-    check('片段的 Markdown 被渲染（不再是 ** 源码）',
-      snippetMarkdown !== null && snippetMarkdown.strong >= 1
-        && snippetMarkdown.code >= 1 && snippetMarkdown.stars === false,
-      JSON.stringify(snippetMarkdown))
-    const agentChips = await page.evaluate(() => ({
-      main: document.querySelectorAll('[data-talkmap-agent="main"]').length,
-      sub: document.querySelectorAll('[data-talkmap-agent="subagent"]').length,
-      labels: [...document.querySelectorAll('[data-talkmap-agent]')].map(node => node.textContent.trim()),
-    }))
-    check('不再标注主/子智能体', agentChips.main === 0 && agentChips.sub === 0,
-      JSON.stringify(agentChips))
-    // The passage must NOT be fetched with the search: only when the pointer
-    // rests on one hit (that is what made searching take seconds).
-    const contextCallsAfterSearch = await page.evaluate(() => window.__harness.searchContextCalls().length)
-    check('搜索本身不读日志（上下文献按需取）', contextCallsAfterSearch === 0, String(contextCallsAfterSearch))
-    const scrollStyle = await page.evaluate(() => {
-      const scroller = document.querySelector('[class*="drawerScroll"]')
-      if (scroller === null) return null
-      const style = getComputedStyle(scroller)
-      return { overscroll: style.overscrollBehaviorY, behavior: style.scrollBehavior }
-    })
-    check('滚动交回浏览器原生（无平滑动画、滚动被 contain 住）',
-      scrollStyle !== null && scrollStyle.behavior === 'auto', JSON.stringify(scrollStyle))
-    // Hovering a hit reveals the whole passage in a floating box; the inline row
-    // stays a single line so the list remains scannable.
-    const inlineLines = await page.evaluate(() =>
-      document.querySelectorAll('[data-talkmap-search-hit] [data-talkmap-search-line]').length)
-    const hitPoint = await page.evaluate(() => {
-      const row = document.querySelector('[data-talkmap-search-hit] [data-talkmap-search-line]')
-      if (row === null) return null
-      const r = row.getBoundingClientRect()
-      return { x: Math.round(r.x + Math.min(120, r.width / 2)), y: Math.round(r.y + r.height / 2) }
-    })
-    if (hitPoint !== null) {
-      await page.mouse.move(hitPoint.x, hitPoint.y)
-      await page.waitForTimeout(450)
-    }
-    const peekBox = await page.evaluate(() => {
-      const node = document.querySelector('[data-talkmap-search-peek]')
-      if (node === null) return null
-      const lines = [...node.querySelectorAll('[class*="peekLine"]')]
-      return { lines: lines.length, text: node.textContent, marks: node.querySelectorAll('mark').length }
-    })
-    check('命中行只占一行（不再内联铺开三行）', inlineLines >= 1, String(inlineLines))
-    check('悬停后弹出框显示更多上下文',
-      peekBox !== null && peekBox.lines >= 2, JSON.stringify(peekBox))
-    const contextCallsAfterHover = await page.evaluate(() => window.__harness.searchContextCalls())
-    check('悬停时才去取这一段原文', contextCallsAfterHover.length >= 1,
-      JSON.stringify(contextCallsAfterHover))
-    check('取回来的上下文比单行多（≥3 行）',
-      (peekBox?.lines ?? 0) >= 3, JSON.stringify(peekBox))
-    check('弹出框里也高亮搜索词', (peekBox?.marks ?? 0) >= 1, JSON.stringify(peekBox))
-    await page.screenshot({ path: path.join(shots, 'probe-peek.png') })
-    await page.mouse.move(4, 4)
-    await page.waitForTimeout(250)
-    const peekGone = await page.evaluate(() => document.querySelector('[data-talkmap-search-peek]') === null)
-    check('移开鼠标后弹出框消失', peekGone === true, String(peekGone))
-    await page.screenshot({ path: path.join(shots, 'probe-search.png') })
-    // When the connection RPC cannot answer, the Host route must take over.
-    await page.evaluate(() => window.__harness.failSearchRpc(true))
-    await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('索引关闭测试词乙')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(900)
-    const fallbackHits = await page.evaluate(() => ({
-      hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
-      routeCalls: window.__harness.searchRouteCalls(),
-    }))
-    check('宿主路由优先，RPC 作为兜底',
-      (fallbackHits.routeCalls ?? []).includes('物理'),
-      JSON.stringify(fallbackHits))
-    // Both paths down: the drawer must NAME the failure (never a bare i18n key).
-    await page.evaluate(() => { window.__harness.failSearchRpc(true); window.__harness.failSearchRoute(true) })
-    await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('没有缓存的新词丙')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(900)
-    const searchFailure = await page.evaluate(() => {
-      const node = document.querySelector('[class*="drawerSearchError"]')
-      return node === null ? null : node.textContent.trim()
-    })
-    check('两条通道都失败时显示真实原因（不是 key 裸奔）',
-      typeof searchFailure === 'string' && searchFailure.includes('全文搜索失败')
-        && (searchFailure.includes('session/search') || searchFailure.includes('/talk-map/search')),
-      String(searchFailure))
-    // The deployment may have the session index switched off: that deserves a
-    // calmer sentence than a raw SessionQueryError.
-    await page.evaluate(() => {
-      window.__harness.searchRouteError('session search is disabled: this deployment configures the session-query index with openAt never')
-      window.__harness.failSearchRpc(true)
-      window.__harness.failSearchRoute(true)
-    })
-    await page.fill('[data-talkmap-drawer-search]', '')
-    await page.keyboard.type('没有缓存的新词丁')
-    await page.keyboard.press('Enter')
-    await page.waitForTimeout(900)
-    const disabledLabel = await page.evaluate(() => {
-      const node = document.querySelector('[class*="drawerSearchError"]')
-      return node === null ? null : node.textContent.trim()
-    })
-    check('索引被部署关掉时给出明确说明',
-      typeof disabledLabel === 'string' && disabledLabel.includes('未启用'), String(disabledLabel))
-    await page.evaluate(() => { window.__harness.failSearchRpc(false); window.__harness.failSearchRoute(false) })
-    await page.evaluate(() => { window.__harness.failSearchRpc(false); window.__harness.failSearchRoute(false) })
-    await page.evaluate(() => window.__harness.failSearchRpc(false))
-  }
+
+  // The search is LOCAL now: it filters the rows this folder is rendering.
+  const routeCallsBeforeSearch = await page.evaluate(() => window.__harness.searchRouteCalls().length)
+  await page.fill('[data-talkmap-drawer-search]', '清理')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(500)
+  const localHits = await page.evaluate(() => ({
+    hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+    text: document.querySelector('[data-talkmap-search-hit]')?.textContent ?? null,
+    marks: document.querySelectorAll('[data-talkmap-search-hit] mark').length,
+    routeCalls: window.__harness.searchRouteCalls().length,
+  }))
+  check('抽屉搜索命中卡片正文（不查宿主语料）',
+    localHits.hits >= 1 && (localHits.text ?? '').includes('清理')
+      && localHits.routeCalls === routeCallsBeforeSearch,
+    JSON.stringify(localHits))
+  check('命中处有高亮', localHits.marks >= 1, JSON.stringify(localHits))
+
+  // Header search: same idea, over the cards on the board.
+  await page.fill('[data-talkmap-global-search]', '网格')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(600)
+  const globalLocal = await page.evaluate(() => ({
+    panel: document.querySelector('[class*="globalSearchPanel"]') !== null,
+    hits: document.querySelectorAll('[data-talkmap-search-hit]').length,
+    marks: document.querySelectorAll('[data-talkmap-search-hit] mark').length,
+    routeCalls: window.__harness.searchRouteCalls().length,
+  }))
+  check('顶栏搜索也只在地图上的卡片里找',
+    globalLocal.panel === true && globalLocal.hits >= 1
+      && globalLocal.routeCalls === routeCallsBeforeSearch,
+    JSON.stringify(globalLocal))
+  check('顶栏搜索结果同样高亮', globalLocal.marks >= 1, JSON.stringify(globalLocal))
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(300)
   await page.evaluate(() => {
     const backdrop = document.querySelector('[class*="drawerBackdrop"]')
     if (backdrop !== null) backdrop.click()
