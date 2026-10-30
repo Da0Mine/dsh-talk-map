@@ -337,39 +337,12 @@
 /* Slot layout: a card that gets pushed aside or fills a gap glides to its new
  * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
 /* ---- edges: 两种样子 ------------------------------------------------
-   未同步 = 灰白静态虚线；同步中 = 灰白静态实线 + 一道流光沿路径滑过。
-   线由 TalkMapEdge 画（三层同路径、不同长度的 dash，末端对齐），这里只管
-   位移：每层从自己的长度出发、回到 0，等效于"整段光带从头走到尾"，
-   pathLength=100 归一，一循环恰好一次完整传输，接缝无缝。 */
-.canvas :global(.tmEdgeHead),
-.canvas :global(.tmEdgeMid),
-.canvas :global(.tmEdgeTail) {
-  animation: tmEdgeSweep 2800ms cubic-bezier(.37, 0, .35, 1) infinite;
-}
-
-.canvas :global(.tmEdgeHead) {
-  filter: drop-shadow(0 0 2.5px rgba(255, 255, 255, 0.6));
-}
-
-.canvas :global(.tmEdgeMid) {
-  filter: blur(0.6px);
-}
-
-.canvas :global(.tmEdgeTail) {
-  filter: blur(1.8px);
-}
-
-@keyframes tmEdgeSweep {
-  from { stroke-dashoffset: var(--edge-dash, 30); }
-  to { stroke-dashoffset: 0; }
-}
-
+   未同步 = 灰白静态虚线；同步中 = 灰白静态实线 + 一枚软光点沿曲线跑过去。
+   线体和光点都由 TalkMapEdge 组件画（光点是 animateMotion 跟随路径的径向
+   渐变圆），样式表在这里只保留一个兜底：动效受限时让光点停住但仍在。 */
 @media (prefers-reduced-motion: reduce) {
-  .canvas :global(.tmEdgeHead),
-  .canvas :global(.tmEdgeMid),
-  .canvas :global(.tmEdgeTail) {
-    animation: none;
-    opacity: 0.3;
+  .canvas :global(.react-flow__edge) circle {
+    opacity: 0.28;
   }
 }
 .canvas :global(.react-flow__node) {
