@@ -12,7 +12,6 @@ import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
 import { loadSearch, saveSearch } from './search-store.ts'
 import { SearchResults } from './SearchResults.tsx'
-import { SearchLoading } from './SearchLoading.tsx'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -275,7 +274,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
               )
             : null}
         </div>
-        {searching ? <SearchLoading rows={2} /> : null}
+
         <div
           className={styles['drawerScroll']}
           ref={scrollerRef}
@@ -368,14 +367,10 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             ? (
                 <SearchResults
                   query={query}
-                  storageScope={'drawer:' + props.groupId}
                   hits={hits}
-                  searching={searching}
-                  error={null}
-                  heading={t('stack.contentHits', { n: String(hits.length) })}
-                  onOpenSession={(sessionId, q) => { props.onOpenSession?.(sessionId, q) }}
-                  onFetchContext={props.onFetchContext}
-                  onFetchSessionHits={props.onFetchSessionHits}
+                  heading={t('map.hits', { n: String(hits.length) })}
+                  empty={t('map.noHit')}
+                  onOpenSession={(sessionId) => { props.onOpenSession?.(sessionId) }}
                 />
               )
             : null}

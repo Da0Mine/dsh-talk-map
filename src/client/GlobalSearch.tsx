@@ -1,7 +1,7 @@
 /** Global search panel for the map header (search runs on submit only). */
 import { useEffect, useState } from 'react'
 import { SearchResults, type SearchHitView } from './SearchResults.tsx'
-import { fetchSearchContext, fetchSessionHits, searchSessions } from './rpc.ts'
+
 import { t } from './i18n.ts'
 import { allCards, mapUi, sessionTitle } from './map-state.ts'
 import { clearSearch, loadSearch, saveSearch } from './search-store.ts'
@@ -124,16 +124,10 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
                 <div className={styles['globalSearchBody']}>
                   <SearchResults
                     query={submitted === '' ? query : submitted}
-                  storageScope={GLOBAL_SCOPE}
                     hits={hits}
-                    searching={searching}
-                    error={error}
-                    heading={t('stack.contentHits', { n: String(hits.length) })}
-                    onOpenSession={(sessionId, q) => {
-                      props.onOpenSession(sessionId, q)
-                    }}
-                    onFetchContext={(sessionId, seq, text) => fetchSearchContext(sessionId, seq, text)}
-                    onFetchSessionHits={(sessionId, text) => fetchSessionHits(sessionId, text)}
+                    heading={t('map.hits', { n: String(hits.length) })}
+                    empty={t('map.noHit')}
+                    onOpenSession={(sessionId) => { props.onOpenSession(sessionId) }}
                   />
                 </div>
               </div>

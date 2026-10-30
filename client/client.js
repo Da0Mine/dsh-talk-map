@@ -63,12 +63,12 @@ var require_use_sync_external_store_shim_production = __commonJS({
       return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
-    var useState9 = React.useState;
-    var useEffect12 = React.useEffect;
+    var useState8 = React.useState;
+    var useEffect11 = React.useEffect;
     var useLayoutEffect2 = React.useLayoutEffect;
     var useDebugValue2 = React.useDebugValue;
     function useSyncExternalStore$2(subscribe2, getSnapshot2) {
-      var value = getSnapshot2(), _useState = useState9({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
+      var value = getSnapshot2(), _useState = useState8({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
       useLayoutEffect2(
         function() {
           inst.value = value;
@@ -77,7 +77,7 @@ var require_use_sync_external_store_shim_production = __commonJS({
         },
         [subscribe2, value, getSnapshot2]
       );
-      useEffect12(
+      useEffect11(
         function() {
           checkIfSnapshotChanged(inst) && forceUpdate({ inst });
           return subscribe2(function() {
@@ -130,12 +130,12 @@ var require_with_selector_production = __commonJS({
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
     var useSyncExternalStore5 = shim.useSyncExternalStore;
-    var useRef8 = React.useRef;
-    var useEffect12 = React.useEffect;
+    var useRef7 = React.useRef;
+    var useEffect11 = React.useEffect;
     var useMemo3 = React.useMemo;
     var useDebugValue2 = React.useDebugValue;
     exports.useSyncExternalStoreWithSelector = function(subscribe2, getSnapshot2, getServerSnapshot, selector, isEqual) {
-      var instRef = useRef8(null);
+      var instRef = useRef7(null);
       if (null === instRef.current) {
         var inst = { hasValue: false, value: null };
         instRef.current = inst;
@@ -175,7 +175,7 @@ var require_with_selector_production = __commonJS({
         [getSnapshot2, getServerSnapshot, selector, isEqual]
       );
       var value = useSyncExternalStore5(subscribe2, instRef[0], instRef[1]);
-      useEffect12(
+      useEffect11(
         function() {
           inst.hasValue = true;
           inst.value = value;
@@ -400,6 +400,8 @@ var zh = {
   "stack.roleUser": "你",
   "stack.roleAgent": "AI",
   "stack.titleHit": "标题命中",
+  "map.hits": "地图上的卡片 · {n} 张",
+  "map.noHit": "地图上没有找到匹配的卡片",
   "stack.agentMainHint": "你和 DSH 直接对话产生的会话",
   "stack.agentSubHint": "某个 Agent / 工具派生的子会话",
   "stack.moreLoading": "查询中…",
@@ -551,6 +553,8 @@ var en = {
   "stack.agentMain": "main",
   "stack.agentSub": "sub-agent",
   "stack.titleHit": "title match",
+  "map.hits": "Cards on the map · {n}",
+  "map.noHit": "No card on the map matches that",
   "stack.roleUser": "you",
   "stack.roleAgent": "AI",
   "stack.agentMainHint": "A conversation you had with DSH",
@@ -1235,7 +1239,7 @@ function allCards() {
 }
 
 // src/client/MapOverlay.tsx
-var import_react14 = require("react");
+var import_react13 = require("react");
 
 // src/client/font-scale.ts
 var STORAGE_KEY = "dsh.talk-map.font-step";
@@ -1298,11 +1302,7 @@ var fontScale = {
 };
 
 // src/client/GlobalSearch.tsx
-var import_react2 = require("react");
-
-// src/client/SearchResults.tsx
 var import_react = require("react");
-var import_react_dom = require("react-dom");
 
 // src/client/snippet-text.ts
 var NOISE_MARKER = /\[(?:tool\/result|assistant\/message|user\/message|system\/message|developer\/message|dsh-[a-z-]+)[^\]]*\]/gi;
@@ -1439,16 +1439,46 @@ function renderMarkdownInline(raw, query) {
   return { nodes, plain };
 }
 
-// src/client/SearchLoading.tsx
+// src/client/SearchResults.tsx
 var import_jsx_runtime2 = require("react/jsx-runtime");
-function SearchLoading(props) {
-  const rows = props.rows ?? 2;
-  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["searchLoading"], "data-talkmap-search-loading": "", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["searchLoadingBar"], children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("i", {}) }),
-    Array.from({ length: rows }, (_, index2) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["searchSkeletonRow"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["searchSkeletonTitle"] }),
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["searchSkeletonLine"] })
-    ] }, index2))
+function SearchResults(props) {
+  return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHits"], "data-talkmap-local-results": "", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: props.heading }),
+    props.hits.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerEmpty"], children: props.empty }) : null,
+    props.hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
+        hit.byTitle === true ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-title-hit": "1", children: props.heading === "" ? "" : "标题" }) : null,
+        hit.agent === "subagent" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-agent": "subagent", children: "子" }) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          "button",
+          {
+            type: "button",
+            className: talk_map_default["drawerHitTitle"],
+            onClick: () => {
+              props.onOpenSession(hit.sessionId);
+            },
+            children: renderMarkdownInline(hit.title, props.query).nodes
+          }
+        )
+      ] }),
+      hit.blocks.map((block, index2) => {
+        const needle = props.query.trim().toLowerCase();
+        const line = block.find((entry) => entry.toLowerCase().includes(needle)) ?? block[0] ?? "";
+        return /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+          "button",
+          {
+            type: "button",
+            className: talk_map_default["drawerHitLine"],
+            "data-talkmap-search-line": hit.sessionId,
+            onClick: () => {
+              props.onOpenSession(hit.sessionId);
+            },
+            children: renderMarkdownInline(line, props.query).nodes
+          },
+          index2
+        );
+      })
+    ] }, hit.sessionId))
   ] });
 }
 
@@ -1485,232 +1515,17 @@ function clearSearch(scope) {
   }
 }
 
-// src/client/SearchResults.tsx
-var import_jsx_runtime3 = require("react/jsx-runtime");
-function place(x, y) {
-  const width = Math.min(560, window.innerWidth - 24);
-  const left = Math.min(Math.max(12, x + 14), Math.max(12, window.innerWidth - width - 12));
-  const estimated = 260;
-  const top = y + estimated > window.innerHeight ? Math.max(12, y - estimated) : y + 14;
-  return { left, top };
-}
-function SearchResults(props) {
-  const [peek, setPeek] = (0, import_react.useState)(null);
-  const peekTimer = (0, import_react.useRef)(null);
-  const cache3 = (0, import_react.useRef)(/* @__PURE__ */ new Map());
-  const remembered = props.storageScope === void 0 ? null : loadSearch(props.storageScope);
-  const [more, setMore] = (0, import_react.useState)(
-    remembered?.more ?? {}
-  );
-  const [pending, setPending] = (0, import_react.useState)({});
-  const cancelPeek = () => {
-    if (peekTimer.current !== null) {
-      window.clearTimeout(peekTimer.current);
-      peekTimer.current = null;
-    }
-    setPeek(null);
-  };
-  (0, import_react.useEffect)(() => cancelPeek, []);
-  (0, import_react.useEffect)(() => {
-    if (props.onFetchSessionHits === void 0) return;
-    let alive = true;
-    for (const hit of props.hits.slice(0, 5)) {
-      if (more[hit.sessionId] !== void 0) continue;
-      setPending((previous) => previous[hit.sessionId] === true ? previous : { ...previous, [hit.sessionId]: true });
-      void props.onFetchSessionHits(hit.sessionId, props.query).then((page) => {
-        if (!alive) return;
-        if (page.blocks.length > 1) {
-          setMore((previous) => previous[hit.sessionId] === void 0 ? { ...previous, [hit.sessionId]: page } : previous);
-        }
-      }).catch(() => {
-      }).finally(() => {
-        if (!alive) return;
-        setPending((previous) => {
-          if (previous[hit.sessionId] !== true) return previous;
-          const next = { ...previous };
-          delete next[hit.sessionId];
-          return next;
-        });
-      });
-    }
-    return () => {
-      alive = false;
-    };
-  }, [props.hits, props.query, props.onFetchSessionHits]);
-  (0, import_react.useEffect)(() => {
-    if (props.storageScope === void 0) return;
-    if (Object.keys(more).length === 0) return;
-    saveSearch(props.storageScope, { query: props.query, hits: props.hits, more });
-  }, [more, props.hits, props.query, props.storageScope]);
-  const schedulePeek = (hit, block, event, seq) => {
-    if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
-    const { clientX, clientY } = event;
-    peekTimer.current = window.setTimeout(() => {
-      peekTimer.current = null;
-      setPeek({ title: hit.title, lines: block, x: clientX, y: clientY });
-      if (typeof seq !== "number" || props.onFetchContext === void 0) return;
-      const key = hit.sessionId + ":" + String(seq);
-      const remembered2 = cache3.current.get(key);
-      if (remembered2 !== void 0) {
-        setPeek((current) => current === null ? current : { ...current, lines: remembered2 });
-        return;
-      }
-      void props.onFetchContext(hit.sessionId, seq, props.query).then((lines) => {
-        if (lines.length === 0) return;
-        const needle = props.query.trim().toLowerCase();
-        if (!lines.some((line) => line.toLowerCase().includes(needle))) return;
-        cache3.current.set(key, lines);
-        setPeek((current) => current === null ? current : { ...current, lines });
-      });
-    }, 170);
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHits"], children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: props.searching ? t("stack.searching") : props.heading }),
-    props.searching ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(SearchLoading, { rows: 2 }) : null,
-    props.error !== null ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["drawerSearchError"], title: props.error, children: props.error.includes("search is disabled") || props.error.includes("SESSION_QUERY_SEARCH_DISABLED") ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (props.error.length > 70 ? props.error.slice(0, 70) + "…" : props.error) }) : null,
-    props.hits.map((hit) => {
-      const blocks = more[hit.sessionId]?.blocks ?? hit.blocks;
-      const seqs = more[hit.sessionId]?.seqs ?? hit.seqs ?? [];
-      const roles = hit.roles ?? [];
-      return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
-          hit.byTitle === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-title-hit": "1", children: t("stack.titleHit") }) : null,
-          hit.agent === "subagent" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-            "span",
-            {
-              className: `${talk_map_default["drawerAgentChip"]} ${talk_map_default["drawerAgentChipSub"]}`,
-              "data-talkmap-agent": "subagent",
-              title: t("stack.agentSubHint"),
-              children: t("stack.agentSub")
-            }
-          ) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-            "button",
-            {
-              type: "button",
-              className: talk_map_default["drawerHitTitle"],
-              onClick: () => {
-                props.onOpenSession(hit.sessionId, props.query);
-              },
-              children: renderMarkdownInline(hit.title, props.query).nodes
-            }
-          )
-        ] }),
-        pending[hit.sessionId] === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["searchInlineLoading"], "data-talkmap-search-pending": hit.sessionId, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["searchSkeletonLine"] }) }) : null,
-        blocks.map((block, index2) => {
-          const needle = props.query.trim().toLowerCase();
-          const line = block.find((entry) => entry.toLowerCase().includes(needle)) ?? block[0] ?? "";
-          return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-            "button",
-            {
-              type: "button",
-              className: talk_map_default["drawerHitLine"],
-              "data-talkmap-search-line": hit.sessionId,
-              onClick: () => {
-                props.onOpenSession(hit.sessionId, props.query);
-              },
-              onMouseEnter: (event) => {
-                schedulePeek(hit, block, event, seqs[index2] ?? null);
-              },
-              onMouseLeave: cancelPeek,
-              onFocus: (event) => {
-                schedulePeek(hit, block, event, seqs[index2] ?? null);
-              },
-              onBlur: cancelPeek,
-              children: [
-                /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
-                  "span",
-                  {
-                    className: talk_map_default["drawerRoleChip"],
-                    "data-talkmap-role": roles[index2] ?? "agent",
-                    children: roles[index2] === "user" ? t("stack.roleUser") : t("stack.roleAgent")
-                  }
-                ),
-                renderMarkdownInline(line, props.query).nodes
-              ]
-            },
-            index2
-          );
-        })
-      ] }, hit.sessionId);
-    }),
-    peek !== null ? (0, import_react_dom.createPortal)(
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(
-        "div",
-        {
-          className: talk_map_default["peek"],
-          "data-talkmap-search-peek": "",
-          style: place(peek.x, peek.y),
-          onMouseEnter: () => {
-            if (peekTimer.current !== null) window.clearTimeout(peekTimer.current);
-          },
-          onMouseLeave: cancelPeek,
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekTitle"], children: peek.title }),
-            peek.lines.map((line, index2) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekLine"], children: renderMarkdownInline(line, props.query).nodes }, index2)),
-            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["peekHint"], children: t("stack.peekHint") })
-          ]
-        }
-      ),
-      document.body
-    ) : null
-  ] });
-}
-
-// src/client/rpc.ts
-async function callRpc(endpoint, request = {}) {
-  const rpc = connectionService()?.rpc;
-  if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
-  const controller = new AbortController();
-  const result = await rpc.call("/api", endpoint, { args: { request } }, controller.signal);
-  if (result.ok !== true) {
-    const failure = result.error;
-    throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? "failed"}`);
-  }
-  return result.value;
-}
-function reportToHost(payload) {
-  try {
-    void fetch("/talk-map/client-boot", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...payload })
-    }).catch(() => {
-    });
-  } catch {
-  }
-}
-async function fetchSearchContext(sessionId, seq, query) {
-  try {
-    const page = await talkMapApi.searchContext(sessionId, seq, query);
-    return Array.isArray(page.lines) ? page.lines.filter((line) => typeof line === "string" && line !== "") : [];
-  } catch (error) {
-    reportToHost({ phase: "search-context-failed", sessionId, seq, message: String(error?.message ?? error) });
-    return [];
-  }
-}
-async function fetchSessionHits(sessionId, query) {
-  try {
-    const page = await talkMapApi.searchSessionHits(sessionId, query);
-    const blocks = (page.blocks ?? []).filter((block) => Array.isArray(block) && block.length > 0);
-    return { blocks, seqs: blocks.map((_, index2) => typeof page.seqs?.[index2] === "number" ? page.seqs[index2] : null) };
-  } catch (error) {
-    reportToHost({ phase: "search-session-failed", sessionId, message: String(error?.message ?? error) });
-    return { blocks: [], seqs: [] };
-  }
-}
-
 // src/client/GlobalSearch.tsx
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_jsx_runtime3 = require("react/jsx-runtime");
 var GLOBAL_SCOPE = "global";
 function GlobalSearch(props) {
   const remembered = loadSearch(GLOBAL_SCOPE);
-  const [query, setQuery] = (0, import_react2.useState)(remembered?.query ?? "");
-  const [submitted, setSubmitted] = (0, import_react2.useState)("");
-  const [hits, setHits] = (0, import_react2.useState)(remembered?.hits ?? []);
-  const [searching, setSearching] = (0, import_react2.useState)(false);
-  const [error, setError] = (0, import_react2.useState)(null);
-  (0, import_react2.useEffect)(() => {
+  const [query, setQuery] = (0, import_react.useState)(remembered?.query ?? "");
+  const [submitted, setSubmitted] = (0, import_react.useState)("");
+  const [hits, setHits] = (0, import_react.useState)(remembered?.hits ?? []);
+  const [searching, setSearching] = (0, import_react.useState)(false);
+  const [error, setError] = (0, import_react.useState)(null);
+  (0, import_react.useEffect)(() => {
     if (submitted === "") return;
     const release = mapUi.claimEscape("global-search");
     const onKeyDown = (event) => {
@@ -1755,8 +1570,8 @@ function GlobalSearch(props) {
     setHits(views);
     saveSearch(GLOBAL_SCOPE, { query: value.trim(), hits: views });
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearch"], children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearch"], children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       "input",
       {
         className: talk_map_default["globalSearchInput"],
@@ -1774,7 +1589,7 @@ function GlobalSearch(props) {
         }
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       "button",
       {
         type: "button",
@@ -1788,23 +1603,23 @@ function GlobalSearch(props) {
         children: t("global.searchRun")
       }
     ),
-    submitted !== "" || hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+    submitted !== "" || hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
       "div",
       {
         className: talk_map_default["globalSearchBackdrop"],
         onMouseDown: (event) => {
           if (event.target === event.currentTarget) dismiss();
         },
-        children: /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearchPanel"], role: "dialog", "aria-label": t("global.searchTitle"), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: talk_map_default["globalSearchHead"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("span", { className: talk_map_default["globalSearchTitle"], children: [
+        children: /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearchPanel"], role: "dialog", "aria-label": t("global.searchTitle"), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["globalSearchHead"], children: [
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("span", { className: talk_map_default["globalSearchTitle"], children: [
               t("global.searchTitle"),
               "「",
               submitted,
               "」"
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: talk_map_default["drawerSpace"] }),
-            /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+            /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
               "button",
               {
                 type: "button",
@@ -1816,20 +1631,16 @@ function GlobalSearch(props) {
               }
             )
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("div", { className: talk_map_default["globalSearchBody"], children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { className: talk_map_default["globalSearchBody"], children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
             SearchResults,
             {
               query: submitted === "" ? query : submitted,
-              storageScope: GLOBAL_SCOPE,
               hits,
-              searching,
-              error,
-              heading: t("stack.contentHits", { n: String(hits.length) }),
-              onOpenSession: (sessionId, q) => {
-                props.onOpenSession(sessionId, q);
-              },
-              onFetchContext: (sessionId, seq, text) => fetchSearchContext(sessionId, seq, text),
-              onFetchSessionHits: (sessionId, text) => fetchSessionHits(sessionId, text)
+              heading: t("map.hits", { n: String(hits.length) }),
+              empty: t("map.noHit"),
+              onOpenSession: (sessionId) => {
+                props.onOpenSession(sessionId);
+              }
             }
           ) })
         ] })
@@ -1839,11 +1650,11 @@ function GlobalSearch(props) {
 }
 
 // src/client/MapCanvas.tsx
-var import_react12 = require("react");
+var import_react11 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
-var import_jsx_runtime5 = require("react/jsx-runtime");
-var import_react4 = require("react");
+var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_react3 = require("react");
 
 // node_modules/classcat/index.js
 function cc(names) {
@@ -7528,7 +7339,7 @@ function XYResizer({ domNode, nodeId, getStoreItems, onChange, onEnd }) {
 }
 
 // node_modules/zustand/esm/traditional.mjs
-var import_react3 = __toESM(require("react"), 1);
+var import_react2 = __toESM(require("react"), 1);
 var import_with_selector = __toESM(require_with_selector(), 1);
 
 // node_modules/zustand/esm/vanilla.mjs
@@ -7565,7 +7376,7 @@ var createStoreImpl = (createState) => {
 var createStore = (createState) => createState ? createStoreImpl(createState) : createStoreImpl;
 
 // node_modules/zustand/esm/traditional.mjs
-var { useDebugValue } = import_react3.default;
+var { useDebugValue } = import_react2.default;
 var { useSyncExternalStoreWithSelector } = import_with_selector.default;
 var identity3 = (arg) => arg;
 function useStoreWithEqualityFn(api, selector = identity3, equalityFn) {
@@ -7626,23 +7437,23 @@ function shallow$1(objA, objB) {
 }
 
 // node_modules/@xyflow/react/dist/esm/index.js
-var import_react_dom2 = require("react-dom");
-var StoreContext = (0, import_react4.createContext)(null);
+var import_react_dom = require("react-dom");
+var StoreContext = (0, import_react3.createContext)(null);
 var Provider$1 = StoreContext.Provider;
 var zustandErrorMessage = errorMessages["error001"]("react");
 function useStore(selector, equalityFn) {
-  const store = (0, import_react4.useContext)(StoreContext);
+  const store = (0, import_react3.useContext)(StoreContext);
   if (store === null) {
     throw new Error(zustandErrorMessage);
   }
   return useStoreWithEqualityFn(store, selector, equalityFn);
 }
 function useStoreApi() {
-  const store = (0, import_react4.useContext)(StoreContext);
+  const store = (0, import_react3.useContext)(StoreContext);
   if (store === null) {
     throw new Error(zustandErrorMessage);
   }
-  return (0, import_react4.useMemo)(() => ({
+  return (0, import_react3.useMemo)(() => ({
     getState: store.getState,
     setState: store.setState,
     subscribe: store.subscribe
@@ -7667,20 +7478,20 @@ var ariaLiveSelector = (s) => s.ariaLiveMessage;
 var ariaLabelConfigSelector = (s) => s.ariaLabelConfig;
 function AriaLiveMessage({ rfId }) {
   const ariaLiveMessage = useStore(ariaLiveSelector);
-  return (0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_LIVE_MESSAGE}-${rfId}`, "aria-live": "assertive", "aria-atomic": "true", style: ariaLiveStyle, children: ariaLiveMessage });
+  return (0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_LIVE_MESSAGE}-${rfId}`, "aria-live": "assertive", "aria-atomic": "true", style: ariaLiveStyle, children: ariaLiveMessage });
 }
 function A11yDescriptions({ rfId, disableKeyboardA11y }) {
   const ariaLabelConfig = useStore(ariaLabelConfigSelector);
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_NODE_DESC_KEY}-${rfId}`, style, children: disableKeyboardA11y ? ariaLabelConfig["node.a11yDescription.default"] : ariaLabelConfig["node.a11yDescription.keyboardDisabled"] }), (0, import_jsx_runtime5.jsx)("div", { id: `${ARIA_EDGE_DESC_KEY}-${rfId}`, style, children: ariaLabelConfig["edge.a11yDescription.default"] }), !disableKeyboardA11y && (0, import_jsx_runtime5.jsx)(AriaLiveMessage, { rfId })] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_NODE_DESC_KEY}-${rfId}`, style, children: disableKeyboardA11y ? ariaLabelConfig["node.a11yDescription.default"] : ariaLabelConfig["node.a11yDescription.keyboardDisabled"] }), (0, import_jsx_runtime4.jsx)("div", { id: `${ARIA_EDGE_DESC_KEY}-${rfId}`, style, children: ariaLabelConfig["edge.a11yDescription.default"] }), !disableKeyboardA11y && (0, import_jsx_runtime4.jsx)(AriaLiveMessage, { rfId })] });
 }
-var Panel = (0, import_react4.forwardRef)(({ position = "top-left", children: children2, className, style: style2, ...rest }, ref) => {
+var Panel = (0, import_react3.forwardRef)(({ position = "top-left", children: children2, className, style: style2, ...rest }, ref) => {
   const positionClasses = `${position}`.split("-");
-  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__panel", className, ...positionClasses]), style: style2, ref, ...rest, children: children2 });
+  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__panel", className, ...positionClasses]), style: style2, ref, ...rest, children: children2 });
 });
 Panel.displayName = "Panel";
 var link = `https://reactflow.dev${true ? "?utm_source=attribution" : "/attribution"}`;
 function Attribution({ proOptions, position = "bottom-right" }) {
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (true) {
       return;
     }
@@ -7689,7 +7500,7 @@ function Attribution({ proOptions, position = "bottom-right" }) {
   if (proOptions?.hideAttribution) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)(Panel, { position, className: "react-flow__attribution", "data-message": `Please only hide this attribution when you are subscribed to React Flow Pro: ${link}`, children: (0, import_jsx_runtime5.jsx)("a", { href: link, target: "_blank", rel: "noopener noreferrer", "aria-label": "React Flow attribution", children: "React Flow" }) });
+  return (0, import_jsx_runtime4.jsx)(Panel, { position, className: "react-flow__attribution", "data-message": `Please only hide this attribution when you are subscribed to React Flow Pro: ${link}`, children: (0, import_jsx_runtime4.jsx)("a", { href: link, target: "_blank", rel: "noopener noreferrer", "aria-label": "React Flow attribution", children: "React Flow" }) });
 }
 var selector$l = (s) => {
   const selectedNodes = [];
@@ -7713,7 +7524,7 @@ function areEqual$1(a, b) {
 function SelectionListenerInner({ onSelectionChange }) {
   const store = useStoreApi();
   const { selectedNodes, selectedEdges } = useStore(selector$l, areEqual$1);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const params = { nodes: selectedNodes, edges: selectedEdges };
     onSelectionChange?.(params);
     store.getState().onSelectionChangeHandlers.forEach((fn) => fn(params));
@@ -7724,7 +7535,7 @@ var changeSelector = (s) => !!s.onSelectionChangeHandlers;
 function SelectionListener({ onSelectionChange }) {
   const storeHasSelectionChangeHandlers = useStore(changeSelector);
   if (onSelectionChange || storeHasSelectionChangeHandlers) {
-    return (0, import_jsx_runtime5.jsx)(SelectionListenerInner, { onSelectionChange });
+    return (0, import_jsx_runtime4.jsx)(SelectionListenerInner, { onSelectionChange });
   }
   return null;
 }
@@ -7818,15 +7629,15 @@ var initPrevValues2 = {
 function StoreUpdater(props) {
   const { setNodes, setEdges, setMinZoom, setMaxZoom, setTranslateExtent, setNodeExtent, reset, setDefaultNodesAndEdges } = useStore(selector$k, shallow$1);
   const store = useStoreApi();
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     setDefaultNodesAndEdges(props.defaultNodes, props.defaultEdges);
     return () => {
       previousFields.current = initPrevValues2;
       reset();
     };
   }, []);
-  const previousFields = (0, import_react4.useRef)(initPrevValues2);
-  (0, import_react4.useEffect)(
+  const previousFields = (0, import_react3.useRef)(initPrevValues2);
+  (0, import_react3.useEffect)(
     () => {
       for (const fieldName of fieldsToTrack) {
         const fieldValue = props[fieldName];
@@ -7870,8 +7681,8 @@ function getMediaQuery() {
   return window.matchMedia("(prefers-color-scheme: dark)");
 }
 function useColorModeClass(colorMode) {
-  const [colorModeClass, setColorModeClass] = (0, import_react4.useState)(colorMode === "system" ? null : colorMode);
-  (0, import_react4.useEffect)(() => {
+  const [colorModeClass, setColorModeClass] = (0, import_react3.useState)(colorMode === "system" ? null : colorMode);
+  (0, import_react3.useEffect)(() => {
     if (colorMode !== "system") {
       setColorModeClass(colorMode);
       return;
@@ -7888,10 +7699,10 @@ function useColorModeClass(colorMode) {
 }
 var defaultDoc = typeof document !== "undefined" ? document : null;
 function useKeyPress(keyCode = null, options = { target: defaultDoc, actInsideInputWithModifier: true }) {
-  const [keyPressed, setKeyPressed] = (0, import_react4.useState)(false);
-  const modifierPressed = (0, import_react4.useRef)(false);
-  const pressedKeys = (0, import_react4.useRef)(/* @__PURE__ */ new Set([]));
-  const [keyCodes, keysToWatch] = (0, import_react4.useMemo)(() => {
+  const [keyPressed, setKeyPressed] = (0, import_react3.useState)(false);
+  const modifierPressed = (0, import_react3.useRef)(false);
+  const pressedKeys = (0, import_react3.useRef)(/* @__PURE__ */ new Set([]));
+  const [keyCodes, keysToWatch] = (0, import_react3.useMemo)(() => {
     if (keyCode !== null) {
       const keyCodeArr = Array.isArray(keyCode) ? keyCode : [keyCode];
       const keys = keyCodeArr.filter((kc) => typeof kc === "string").map((kc) => kc.replace(/\+/g, "\n").replace("\n\n", "\n+").split("\n"));
@@ -7900,7 +7711,7 @@ function useKeyPress(keyCode = null, options = { target: defaultDoc, actInsideIn
     }
     return [[], []];
   }, [keyCode]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const target = options?.target ?? defaultDoc;
     const actInsideInputWithModifier = options?.actInsideInputWithModifier ?? true;
     if (keyCode !== null) {
@@ -7960,7 +7771,7 @@ function useKeyOrCode(eventCode, keysToWatch) {
 }
 var useViewportHelper = () => {
   const store = useStoreApi();
-  return (0, import_react4.useMemo)(() => {
+  return (0, import_react3.useMemo)(() => {
     return {
       zoomIn: async (options) => {
         const { panZoom } = store.getState();
@@ -8184,12 +7995,12 @@ function addEdge2(edgeParams, edges, options = {}) {
 var isNode = (element) => isNodeBase(element);
 var isEdge = (element) => isEdgeBase(element);
 function fixedForwardRef(render) {
-  return (0, import_react4.forwardRef)(render);
+  return (0, import_react3.forwardRef)(render);
 }
-var useIsomorphicLayoutEffect = typeof window !== "undefined" ? import_react4.useLayoutEffect : import_react4.useEffect;
+var useIsomorphicLayoutEffect = typeof window !== "undefined" ? import_react3.useLayoutEffect : import_react3.useEffect;
 function useQueue(runQueue) {
-  const [serial, setSerial] = (0, import_react4.useState)(BigInt(0));
-  const [queue] = (0, import_react4.useState)(() => createQueue(() => setSerial((n) => n + BigInt(1))));
+  const [serial, setSerial] = (0, import_react3.useState)(BigInt(0));
+  const [queue] = (0, import_react3.useState)(() => createQueue(() => setSerial((n) => n + BigInt(1))));
   useIsomorphicLayoutEffect(() => {
     const queueItems = queue.get();
     if (queueItems.length) {
@@ -8212,10 +8023,10 @@ function createQueue(cb) {
     }
   };
 }
-var BatchContext = (0, import_react4.createContext)(null);
+var BatchContext = (0, import_react3.createContext)(null);
 function BatchProvider({ children: children2 }) {
   const store = useStoreApi();
-  const nodeQueueHandler = (0, import_react4.useCallback)((queueItems) => {
+  const nodeQueueHandler = (0, import_react3.useCallback)((queueItems) => {
     const { nodes = [], setNodes, hasDefaultNodes, onNodesChange, nodeLookup, fitViewQueued, onNodesChangeMiddlewareMap } = store.getState();
     let next = nodes;
     for (const payload of queueItems) {
@@ -8243,7 +8054,7 @@ function BatchProvider({ children: children2 }) {
     }
   }, []);
   const nodeQueue = useQueue(nodeQueueHandler);
-  const edgeQueueHandler = (0, import_react4.useCallback)((queueItems) => {
+  const edgeQueueHandler = (0, import_react3.useCallback)((queueItems) => {
     const { edges = [], setEdges, hasDefaultEdges, onEdgesChange, edgeLookup } = store.getState();
     let next = edges;
     for (const payload of queueItems) {
@@ -8259,11 +8070,11 @@ function BatchProvider({ children: children2 }) {
     }
   }, []);
   const edgeQueue = useQueue(edgeQueueHandler);
-  const value = (0, import_react4.useMemo)(() => ({ nodeQueue, edgeQueue }), []);
-  return (0, import_jsx_runtime5.jsx)(BatchContext.Provider, { value, children: children2 });
+  const value = (0, import_react3.useMemo)(() => ({ nodeQueue, edgeQueue }), []);
+  return (0, import_jsx_runtime4.jsx)(BatchContext.Provider, { value, children: children2 });
 }
 function useBatchContext() {
-  const batchContext = (0, import_react4.useContext)(BatchContext);
+  const batchContext = (0, import_react3.useContext)(BatchContext);
   if (!batchContext) {
     throw new Error("useBatchContext must be used within a BatchProvider");
   }
@@ -8275,7 +8086,7 @@ function useReactFlow() {
   const store = useStoreApi();
   const batchContext = useBatchContext();
   const viewportInitialized = useStore(selector$j);
-  const generalHelper = (0, import_react4.useMemo)(() => {
+  const generalHelper = (0, import_react3.useMemo)(() => {
     const getInternalNode = (id2) => store.getState().nodeLookup.get(id2);
     const setNodes = (payload) => {
       batchContext.nodeQueue.push(payload);
@@ -8432,7 +8243,7 @@ function useReactFlow() {
       }
     };
   }, []);
-  return (0, import_react4.useMemo)(() => {
+  return (0, import_react3.useMemo)(() => {
     return {
       ...generalHelper,
       ...viewportHelper,
@@ -8447,20 +8258,20 @@ function useGlobalKeyHandler({ deleteKeyCode, multiSelectionKeyCode }) {
   const { deleteElements } = useReactFlow();
   const deleteKeyPressed = useKeyPress(deleteKeyCode, { actInsideInputWithModifier: false });
   const multiSelectionKeyPressed = useKeyPress(multiSelectionKeyCode, { target: win$1 });
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (deleteKeyPressed) {
       const { edges, nodes } = store.getState();
       deleteElements({ nodes: nodes.filter(selected), edges: edges.filter(selected) });
       store.setState({ nodesSelectionActive: false });
     }
   }, [deleteKeyPressed]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     store.setState({ multiSelectionActive: multiSelectionKeyPressed });
   }, [multiSelectionKeyPressed]);
 }
 function useResizeHandler(domNode) {
   const store = useStoreApi();
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const updateDimensions = () => {
       if (!domNode.current || !(domNode.current.checkVisibility?.() ?? true)) {
         return false;
@@ -8499,18 +8310,18 @@ var selector$i = (s) => ({
 });
 function ZoomPane({ onPaneContextMenu, zoomOnScroll = true, zoomOnPinch = true, panOnScroll = false, panActivationKeyPressed, panOnScrollSpeed = 0.5, panOnScrollMode = PanOnScrollMode.Free, zoomOnDoubleClick = true, panOnDrag = true, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, zoomActivationKeyCode, preventScrolling = true, children: children2, noWheelClassName, noPanClassName, onViewportChange, isControlledViewport, paneClickDistance, selectionOnDrag }) {
   const store = useStoreApi();
-  const zoomPane = (0, import_react4.useRef)(null);
+  const zoomPane = (0, import_react3.useRef)(null);
   const { userSelectionActive, lib, connectionInProgress } = useStore(selector$i, shallow$1);
   const zoomActivationKeyPressed = useKeyPress(zoomActivationKeyCode);
-  const panZoom = (0, import_react4.useRef)();
+  const panZoom = (0, import_react3.useRef)();
   useResizeHandler(zoomPane);
-  const onTransformChange = (0, import_react4.useCallback)((transform2) => {
+  const onTransformChange = (0, import_react3.useCallback)((transform2) => {
     onViewportChange?.({ x: transform2[0], y: transform2[1], zoom: transform2[2] });
     if (!isControlledViewport) {
       store.setState({ transform: transform2 });
     }
   }, [onViewportChange, isControlledViewport]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (zoomPane.current) {
       panZoom.current = XYPanZoom({
         domNode: zoomPane.current,
@@ -8546,7 +8357,7 @@ function ZoomPane({ onPaneContextMenu, zoomOnScroll = true, zoomOnPinch = true, 
       };
     }
   }, []);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     panZoom.current?.update({
       onPaneContextMenu,
       zoomOnScroll,
@@ -8589,7 +8400,7 @@ function ZoomPane({ onPaneContextMenu, zoomOnScroll = true, zoomOnPinch = true, 
     selectionOnDrag,
     paneClickDistance
   ]);
-  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__renderer", ref: zoomPane, style: containerStyle, children: children2 });
+  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__renderer", ref: zoomPane, style: containerStyle, children: children2 });
 }
 var selector$h = (s) => ({
   userSelectionActive: s.userSelectionActive,
@@ -8601,7 +8412,7 @@ function UserSelection() {
   if (!isActive) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__selection react-flow__container", style: {
+  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__selection react-flow__container", style: {
     width: userSelectionRect.width,
     height: userSelectionRect.height,
     transform: `translate(${userSelectionRect.x}px, ${userSelectionRect.y}px)`
@@ -8623,18 +8434,18 @@ var selector$g = (s) => ({
   autoPanSpeed: s.autoPanSpeed
 });
 function Pane({ isSelecting, selectionKeyPressed, selectionMode = SelectionMode.Full, panOnDrag, autoPanOnSelection, paneClickDistance, selectionOnDrag, onSelectionStart, onSelectionEnd, onPaneClick, onPaneContextMenu, onPaneScroll, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, children: children2 }) {
-  const autoPanId = (0, import_react4.useRef)(0);
+  const autoPanId = (0, import_react3.useRef)(0);
   const store = useStoreApi();
   const { userSelectionActive, elementsSelectable, dragging, panBy: panBy2, autoPanSpeed } = useStore(selector$g, shallow$1);
   const isSelectionEnabled = elementsSelectable && (isSelecting || userSelectionActive);
-  const container = (0, import_react4.useRef)(null);
-  const containerBounds = (0, import_react4.useRef)();
-  const selectedNodeIds = (0, import_react4.useRef)(/* @__PURE__ */ new Set());
-  const selectedEdgeIds = (0, import_react4.useRef)(/* @__PURE__ */ new Set());
-  const connectionEndedOnPane = (0, import_react4.useRef)(false);
-  const selectionInProgress = (0, import_react4.useRef)(false);
-  const position = (0, import_react4.useRef)({ x: 0, y: 0 });
-  const autoPanStarted = (0, import_react4.useRef)(false);
+  const container = (0, import_react3.useRef)(null);
+  const containerBounds = (0, import_react3.useRef)();
+  const selectedNodeIds = (0, import_react3.useRef)(/* @__PURE__ */ new Set());
+  const selectedEdgeIds = (0, import_react3.useRef)(/* @__PURE__ */ new Set());
+  const connectionEndedOnPane = (0, import_react3.useRef)(false);
+  const selectionInProgress = (0, import_react3.useRef)(false);
+  const position = (0, import_react3.useRef)({ x: 0, y: 0 });
+  const autoPanStarted = (0, import_react3.useRef)(false);
   const onClick = (event) => {
     if (selectionInProgress.current || connectionEndedOnPane.current || store.getState().connection.inProgress) {
       selectionInProgress.current = false;
@@ -8758,7 +8569,7 @@ function Pane({ isSelecting, selectionKeyPressed, selectionMode = SelectionMode.
     autoPanId.current = 0;
     autoPanStarted.current = false;
   };
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     return () => cleanupAutoPan();
   }, []);
   const onPointerMove = (event) => {
@@ -8816,7 +8627,7 @@ function Pane({ isSelecting, selectionKeyPressed, selectionMode = SelectionMode.
     cleanupAutoPan();
   };
   const draggable = panOnDrag === true || Array.isArray(panOnDrag) && panOnDrag.includes(0);
-  return (0, import_jsx_runtime5.jsxs)("div", { className: cc(["react-flow__pane", { draggable, dragging, selection: isSelecting }]), onClick: isSelectionEnabled ? void 0 : wrapHandler(onClick, container), onContextMenu: wrapHandler(onContextMenu, container), onWheel: wrapHandler(onWheel, container), onPointerEnter: isSelectionEnabled ? void 0 : onPaneMouseEnter, onPointerMove: isSelectionEnabled ? onPointerMove : onPaneMouseMove, onPointerUp, onPointerCancel: isSelectionEnabled ? onPointerCancel : void 0, onPointerDownCapture: isSelectionEnabled ? onPointerDownCapture : void 0, onClickCapture: isSelectionEnabled ? onClickCapture : void 0, onPointerLeave: onPaneMouseLeave, ref: container, style: containerStyle, children: [children2, (0, import_jsx_runtime5.jsx)(UserSelection, {})] });
+  return (0, import_jsx_runtime4.jsxs)("div", { className: cc(["react-flow__pane", { draggable, dragging, selection: isSelecting }]), onClick: isSelectionEnabled ? void 0 : wrapHandler(onClick, container), onContextMenu: wrapHandler(onContextMenu, container), onWheel: wrapHandler(onWheel, container), onPointerEnter: isSelectionEnabled ? void 0 : onPaneMouseEnter, onPointerMove: isSelectionEnabled ? onPointerMove : onPaneMouseMove, onPointerUp, onPointerCancel: isSelectionEnabled ? onPointerCancel : void 0, onPointerDownCapture: isSelectionEnabled ? onPointerDownCapture : void 0, onClickCapture: isSelectionEnabled ? onClickCapture : void 0, onPointerLeave: onPaneMouseLeave, ref: container, style: containerStyle, children: [children2, (0, import_jsx_runtime4.jsx)(UserSelection, {})] });
 }
 function handleNodeClick({ id: id2, store, unselect = false, nodeRef }) {
   const { addSelectedNodes, unselectNodesAndEdges, multiSelectionActive, nodeLookup, onError } = store.getState();
@@ -8835,9 +8646,9 @@ function handleNodeClick({ id: id2, store, unselect = false, nodeRef }) {
 }
 function useDrag({ nodeRef, disabled = false, noDragClassName, handleSelector, nodeId, isSelectable, nodeClickDistance }) {
   const store = useStoreApi();
-  const [dragging, setDragging] = (0, import_react4.useState)(false);
-  const xyDrag = (0, import_react4.useRef)();
-  (0, import_react4.useEffect)(() => {
+  const [dragging, setDragging] = (0, import_react3.useState)(false);
+  const xyDrag = (0, import_react3.useRef)();
+  (0, import_react3.useEffect)(() => {
     if (disabled) {
       return;
     }
@@ -8862,7 +8673,7 @@ function useDrag({ nodeRef, disabled = false, noDragClassName, handleSelector, n
       xyDrag.current = void 0;
     };
   }, [disabled, store, nodeRef]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (disabled || !nodeRef.current || !xyDrag.current) {
       return;
     }
@@ -8880,7 +8691,7 @@ function useDrag({ nodeRef, disabled = false, noDragClassName, handleSelector, n
 var selectedAndDraggable = (nodesDraggable) => (n) => n.selected && (n.draggable || nodesDraggable && typeof n.draggable === "undefined");
 function useMoveSelectedNodes() {
   const store = useStoreApi();
-  const moveSelectedNodes = (0, import_react4.useCallback)((params) => {
+  const moveSelectedNodes = (0, import_react3.useCallback)((params) => {
     const { nodeExtent, snapToGrid, snapGrid, nodesDraggable, onError, updateNodePositions, nodeLookup, nodeOrigin } = store.getState();
     const nodeUpdates = /* @__PURE__ */ new Map();
     const isSelected = selectedAndDraggable(nodesDraggable);
@@ -8915,11 +8726,11 @@ function useMoveSelectedNodes() {
   }, []);
   return moveSelectedNodes;
 }
-var NodeIdContext = (0, import_react4.createContext)(null);
+var NodeIdContext = (0, import_react3.createContext)(null);
 var Provider = NodeIdContext.Provider;
 NodeIdContext.Consumer;
 var useNodeId = () => {
-  const nodeId = (0, import_react4.useContext)(NodeIdContext);
+  const nodeId = (0, import_react3.useContext)(NodeIdContext);
   return nodeId;
 };
 var selector$f = (s) => ({
@@ -8927,13 +8738,13 @@ var selector$f = (s) => ({
   noPanClassName: s.noPanClassName,
   rfId: s.rfId
 });
-var HandleConfigContext = (0, import_react4.createContext)(null);
+var HandleConfigContext = (0, import_react3.createContext)(null);
 function HandleConfigProvider({ children: children2 }) {
   const config = useStore(selector$f, shallow$1);
-  return (0, import_jsx_runtime5.jsx)(HandleConfigContext.Provider, { value: config, children: children2 });
+  return (0, import_jsx_runtime4.jsx)(HandleConfigContext.Provider, { value: config, children: children2 });
 }
 function useHandleConfig() {
-  const config = (0, import_react4.useContext)(HandleConfigContext);
+  const config = (0, import_react3.useContext)(HandleConfigContext);
   if (!config) {
     throw new Error("useHandleConfig must be used within a HandleConfigProvider");
   }
@@ -9063,7 +8874,7 @@ function HandleComponent({ type = "source", position = Position.Top, isValidConn
     onClickConnectEnd?.(event, connectionClone);
     store.setState({ connectionClickStartHandle: null });
   };
-  return (0, import_jsx_runtime5.jsx)("div", { "data-handleid": handleId, "data-nodeid": nodeId, "data-handlepos": position, "data-id": `${rfId}-${nodeId}-${handleId}-${type}`, className: cc([
+  return (0, import_jsx_runtime4.jsx)("div", { "data-handleid": handleId, "data-nodeid": nodeId, "data-handlepos": position, "data-id": `${rfId}-${nodeId}-${handleId}-${type}`, className: cc([
     "react-flow__handle",
     `react-flow__handle-${position}`,
     "nodrag",
@@ -9087,18 +8898,18 @@ function HandleComponent({ type = "source", position = Position.Top, isValidConn
     }
   ]), onMouseDown: onPointerDown2, onTouchStart: onPointerDown2, onClick: connectOnClick ? onClick : void 0, ref, ...rest, children: children2 });
 }
-var Handle = (0, import_react4.memo)(fixedForwardRef(HandleComponent));
+var Handle = (0, import_react3.memo)(fixedForwardRef(HandleComponent));
 function InputNode({ data, isConnectable, sourcePosition = Position.Bottom }) {
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [data?.label, (0, import_jsx_runtime5.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [data?.label, (0, import_jsx_runtime4.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
 }
 function DefaultNode({ data, isConnectable, targetPosition = Position.Top, sourcePosition = Position.Bottom }) {
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label, (0, import_jsx_runtime5.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label, (0, import_jsx_runtime4.jsx)(Handle, { type: "source", position: sourcePosition, isConnectable })] });
 }
 function GroupNode() {
   return null;
 }
 function OutputNode({ data, isConnectable, targetPosition = Position.Top }) {
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(Handle, { type: "target", position: targetPosition, isConnectable }), data?.label] });
 }
 var arrowKeyDiffs = {
   ArrowUp: { x: 0, y: -1 },
@@ -9139,8 +8950,8 @@ function NodesSelection({ onSelectionContextMenu, noPanClassName, disableKeyboar
   const store = useStoreApi();
   const { width, height, transformString, userSelectionActive } = useStore(selector$e, shallow$1);
   const moveSelectedNodes = useMoveSelectedNodes();
-  const nodeRef = (0, import_react4.useRef)(null);
-  (0, import_react4.useEffect)(() => {
+  const nodeRef = (0, import_react3.useRef)(null);
+  (0, import_react3.useEffect)(() => {
     if (!disableKeyboardA11y) {
       nodeRef.current?.focus({
         preventScroll: true
@@ -9168,9 +8979,9 @@ function NodesSelection({ onSelectionContextMenu, noPanClassName, disableKeyboar
       });
     }
   };
-  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__nodesselection", "react-flow__container", noPanClassName]), style: {
+  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__nodesselection", "react-flow__container", noPanClassName]), style: {
     transform: transformString
-  }, children: (0, import_jsx_runtime5.jsx)("div", { ref: nodeRef, className: "react-flow__nodesselection-rect", onContextMenu, tabIndex: disableKeyboardA11y ? void 0 : -1, onKeyDown: disableKeyboardA11y ? void 0 : onKeyDown, style: {
+  }, children: (0, import_jsx_runtime4.jsx)("div", { ref: nodeRef, className: "react-flow__nodesselection-rect", onContextMenu, tabIndex: disableKeyboardA11y ? void 0 : -1, onKeyDown: disableKeyboardA11y ? void 0 : onKeyDown, style: {
     width,
     height
   } }) });
@@ -9188,21 +8999,21 @@ function FlowRendererComponent({ children: children2, onPaneClick, onPaneMouseEn
   const _selectionOnDrag = selectionOnDrag && panOnDrag !== true;
   const isSelecting = selectionKeyPressed || userSelectionActive || _selectionOnDrag;
   useGlobalKeyHandler({ deleteKeyCode, multiSelectionKeyCode });
-  return (0, import_jsx_runtime5.jsx)(ZoomPane, { onPaneContextMenu, elementsSelectable, zoomOnScroll, zoomOnPinch, panOnScroll, panActivationKeyPressed, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag: !selectionKeyPressed && panOnDrag, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, zoomActivationKeyCode, preventScrolling, noWheelClassName, noPanClassName, onViewportChange, isControlledViewport, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: (0, import_jsx_runtime5.jsxs)(Pane, { onSelectionStart, onSelectionEnd, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, panOnDrag, autoPanOnSelection, isSelecting: !!isSelecting, selectionMode, selectionKeyPressed, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: [children2, nodesSelectionActive && (0, import_jsx_runtime5.jsx)(NodesSelection, { onSelectionContextMenu, noPanClassName, disableKeyboardA11y })] }) });
+  return (0, import_jsx_runtime4.jsx)(ZoomPane, { onPaneContextMenu, elementsSelectable, zoomOnScroll, zoomOnPinch, panOnScroll, panActivationKeyPressed, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag: !selectionKeyPressed && panOnDrag, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, zoomActivationKeyCode, preventScrolling, noWheelClassName, noPanClassName, onViewportChange, isControlledViewport, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: (0, import_jsx_runtime4.jsxs)(Pane, { onSelectionStart, onSelectionEnd, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, panOnDrag, autoPanOnSelection, isSelecting: !!isSelecting, selectionMode, selectionKeyPressed, paneClickDistance, selectionOnDrag: _selectionOnDrag, children: [children2, nodesSelectionActive && (0, import_jsx_runtime4.jsx)(NodesSelection, { onSelectionContextMenu, noPanClassName, disableKeyboardA11y })] }) });
 }
 FlowRendererComponent.displayName = "FlowRenderer";
-var FlowRenderer = (0, import_react4.memo)(FlowRendererComponent);
+var FlowRenderer = (0, import_react3.memo)(FlowRendererComponent);
 var selector$c = (onlyRenderVisible) => (s) => {
   return onlyRenderVisible ? getNodesInside(s.nodeLookup, { x: 0, y: 0, width: s.width, height: s.height }, s.transform, true).map((node) => node.id) : Array.from(s.nodeLookup.keys());
 };
 function useVisibleNodeIds(onlyRenderVisible) {
-  const nodeIds = useStore((0, import_react4.useCallback)(selector$c(onlyRenderVisible), [onlyRenderVisible]), shallow$1);
+  const nodeIds = useStore((0, import_react3.useCallback)(selector$c(onlyRenderVisible), [onlyRenderVisible]), shallow$1);
   return nodeIds;
 }
 var selector$b = (s) => s.updateNodeInternals;
 function useResizeObserver() {
   const updateNodeInternals2 = useStore(selector$b);
-  const [resizeObserver] = (0, import_react4.useState)(() => {
+  const [resizeObserver] = (0, import_react3.useState)(() => {
     if (typeof ResizeObserver === "undefined") {
       return null;
     }
@@ -9219,7 +9030,7 @@ function useResizeObserver() {
       updateNodeInternals2(updates);
     });
   });
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     return () => {
       resizeObserver?.disconnect();
     };
@@ -9228,13 +9039,13 @@ function useResizeObserver() {
 }
 function useNodeObserver({ node, nodeType, hasDimensions, resizeObserver }) {
   const store = useStoreApi();
-  const nodeRef = (0, import_react4.useRef)(null);
-  const observedNode = (0, import_react4.useRef)(null);
-  const prevSourcePosition = (0, import_react4.useRef)(node.sourcePosition);
-  const prevTargetPosition = (0, import_react4.useRef)(node.targetPosition);
-  const prevType = (0, import_react4.useRef)(nodeType);
+  const nodeRef = (0, import_react3.useRef)(null);
+  const observedNode = (0, import_react3.useRef)(null);
+  const prevSourcePosition = (0, import_react3.useRef)(node.sourcePosition);
+  const prevTargetPosition = (0, import_react3.useRef)(node.targetPosition);
+  const prevType = (0, import_react3.useRef)(nodeType);
   const isInitialized = hasDimensions && !!node.internals.handleBounds;
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (nodeRef.current && !node.hidden && (!isInitialized || observedNode.current !== nodeRef.current)) {
       if (observedNode.current) {
         resizeObserver?.unobserve(observedNode.current);
@@ -9243,7 +9054,7 @@ function useNodeObserver({ node, nodeType, hasDimensions, resizeObserver }) {
       observedNode.current = nodeRef.current;
     }
   }, [isInitialized, node.hidden]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     return () => {
       if (observedNode.current) {
         resizeObserver?.unobserve(observedNode.current);
@@ -9251,7 +9062,7 @@ function useNodeObserver({ node, nodeType, hasDimensions, resizeObserver }) {
       }
     };
   }, []);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (nodeRef.current) {
       const typeChanged = prevType.current !== nodeType;
       const sourcePosChanged = prevSourcePosition.current !== node.sourcePosition;
@@ -9367,7 +9178,7 @@ function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave
       });
     }
   };
-  return (0, import_jsx_runtime5.jsx)("div", { className: cc([
+  return (0, import_jsx_runtime4.jsx)("div", { className: cc([
     "react-flow__node",
     `react-flow__node-${nodeType}`,
     {
@@ -9389,9 +9200,9 @@ function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave
     visibility: hasDimensions ? "visible" : "hidden",
     ...node.style,
     ...inlineDimensions
-  }, "data-id": id2, "data-testid": `rf__node-${id2}`, onMouseEnter: onMouseEnterHandler, onMouseMove: onMouseMoveHandler, onMouseLeave: onMouseLeaveHandler, onContextMenu: onContextMenuHandler, onClick: onSelectNodeHandler, onDoubleClick: onDoubleClickHandler, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, onFocus: isFocusable ? onFocus : void 0, role: node.ariaRole ?? (isFocusable ? "group" : void 0), "aria-roledescription": "node", "aria-describedby": disableKeyboardA11y ? void 0 : `${ARIA_NODE_DESC_KEY}-${rfId}`, "aria-label": node.ariaLabel, ...node.domAttributes, children: (0, import_jsx_runtime5.jsx)(Provider, { value: id2, children: (0, import_jsx_runtime5.jsx)(NodeComponent, { id: id2, data: node.data, type: nodeType, positionAbsoluteX: internals.positionAbsolute.x, positionAbsoluteY: internals.positionAbsolute.y, selected: node.selected ?? false, selectable: isSelectable, draggable: isDraggable, deletable: node.deletable ?? true, isConnectable, sourcePosition: node.sourcePosition, targetPosition: node.targetPosition, dragging, dragHandle: node.dragHandle, zIndex: internals.z, parentId: node.parentId, ...nodeDimensions }) }) });
+  }, "data-id": id2, "data-testid": `rf__node-${id2}`, onMouseEnter: onMouseEnterHandler, onMouseMove: onMouseMoveHandler, onMouseLeave: onMouseLeaveHandler, onContextMenu: onContextMenuHandler, onClick: onSelectNodeHandler, onDoubleClick: onDoubleClickHandler, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, onFocus: isFocusable ? onFocus : void 0, role: node.ariaRole ?? (isFocusable ? "group" : void 0), "aria-roledescription": "node", "aria-describedby": disableKeyboardA11y ? void 0 : `${ARIA_NODE_DESC_KEY}-${rfId}`, "aria-label": node.ariaLabel, ...node.domAttributes, children: (0, import_jsx_runtime4.jsx)(Provider, { value: id2, children: (0, import_jsx_runtime4.jsx)(NodeComponent, { id: id2, data: node.data, type: nodeType, positionAbsoluteX: internals.positionAbsolute.x, positionAbsoluteY: internals.positionAbsolute.y, selected: node.selected ?? false, selectable: isSelectable, draggable: isDraggable, deletable: node.deletable ?? true, isConnectable, sourcePosition: node.sourcePosition, targetPosition: node.targetPosition, dragging, dragHandle: node.dragHandle, zIndex: internals.z, parentId: node.parentId, ...nodeDimensions }) }) });
 }
-var NodeWrapper$1 = (0, import_react4.memo)(NodeWrapper);
+var NodeWrapper$1 = (0, import_react3.memo)(NodeWrapper);
 var selector$a = (s) => ({
   nodesConnectable: s.nodesConnectable,
   nodesFocusable: s.nodesFocusable,
@@ -9402,7 +9213,7 @@ function NodeRendererComponent(props) {
   const { nodesConnectable, nodesFocusable, elementsSelectable, onError } = useStore(selector$a, shallow$1);
   const nodeIds = useVisibleNodeIds(props.onlyRenderVisibleElements);
   const resizeObserver = useResizeObserver();
-  return (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__nodes", style: containerStyle, children: nodeIds.map((nodeId) => {
+  return (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__nodes", style: containerStyle, children: nodeIds.map((nodeId) => {
     return (
       /*
        * The split of responsibilities between NodeRenderer and
@@ -9429,14 +9240,14 @@ function NodeRendererComponent(props) {
        *   memorized – so if `NodeRenderer` *has* to rerender, it only
        *   needs to regenerate the list of nodes, nothing else.
        */
-      (0, import_jsx_runtime5.jsx)(NodeWrapper$1, { id: nodeId, nodeTypes: props.nodeTypes, nodeExtent: props.nodeExtent, onClick: props.onNodeClick, onMouseEnter: props.onNodeMouseEnter, onMouseMove: props.onNodeMouseMove, onMouseLeave: props.onNodeMouseLeave, onContextMenu: props.onNodeContextMenu, onDoubleClick: props.onNodeDoubleClick, noDragClassName: props.noDragClassName, noPanClassName: props.noPanClassName, rfId: props.rfId, disableKeyboardA11y: props.disableKeyboardA11y, resizeObserver, nodesDraggable: props.nodesDraggable ?? true, nodesConnectable, nodesFocusable, elementsSelectable, nodeClickDistance: props.nodeClickDistance, onError }, nodeId)
+      (0, import_jsx_runtime4.jsx)(NodeWrapper$1, { id: nodeId, nodeTypes: props.nodeTypes, nodeExtent: props.nodeExtent, onClick: props.onNodeClick, onMouseEnter: props.onNodeMouseEnter, onMouseMove: props.onNodeMouseMove, onMouseLeave: props.onNodeMouseLeave, onContextMenu: props.onNodeContextMenu, onDoubleClick: props.onNodeDoubleClick, noDragClassName: props.noDragClassName, noPanClassName: props.noPanClassName, rfId: props.rfId, disableKeyboardA11y: props.disableKeyboardA11y, resizeObserver, nodesDraggable: props.nodesDraggable ?? true, nodesConnectable, nodesFocusable, elementsSelectable, nodeClickDistance: props.nodeClickDistance, onError }, nodeId)
     );
   }) });
 }
 NodeRendererComponent.displayName = "NodeRenderer";
-var NodeRenderer = (0, import_react4.memo)(NodeRendererComponent);
+var NodeRenderer = (0, import_react3.memo)(NodeRendererComponent);
 function useVisibleEdgeIds(onlyRenderVisible) {
-  const edgeIds = useStore((0, import_react4.useCallback)((s) => {
+  const edgeIds = useStore((0, import_react3.useCallback)((s) => {
     if (!onlyRenderVisible) {
       return s.edges.map((edge) => edge.id);
     }
@@ -9465,14 +9276,14 @@ var ArrowSymbol = ({ color: color2 = "none", strokeWidth = 1 }) => {
     strokeWidth,
     ...color2 && { stroke: color2 }
   };
-  return (0, import_jsx_runtime5.jsx)("polyline", { className: "arrow", style: style2, strokeLinecap: "round", fill: "none", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4" });
+  return (0, import_jsx_runtime4.jsx)("polyline", { className: "arrow", style: style2, strokeLinecap: "round", fill: "none", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4" });
 };
 var ArrowClosedSymbol = ({ color: color2 = "none", strokeWidth = 1 }) => {
   const style2 = {
     strokeWidth,
     ...color2 && { stroke: color2, fill: color2 }
   };
-  return (0, import_jsx_runtime5.jsx)("polyline", { className: "arrowclosed", style: style2, strokeLinecap: "round", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4 -5,-4" });
+  return (0, import_jsx_runtime4.jsx)("polyline", { className: "arrowclosed", style: style2, strokeLinecap: "round", strokeLinejoin: "round", points: "-5,-4 0,0 -5,4 -5,-4" });
 };
 var MarkerSymbols = {
   [MarkerType.Arrow]: ArrowSymbol,
@@ -9480,7 +9291,7 @@ var MarkerSymbols = {
 };
 function useMarkerSymbol(type) {
   const store = useStoreApi();
-  const symbol = (0, import_react4.useMemo)(() => {
+  const symbol = (0, import_react3.useMemo)(() => {
     const symbolExists = Object.prototype.hasOwnProperty.call(MarkerSymbols, type);
     if (!symbolExists) {
       store.getState().onError?.("009", errorMessages["error009"](type));
@@ -9495,12 +9306,12 @@ var Marker = ({ id: id2, type, color: color2, width = 12.5, height = 12.5, marke
   if (!Symbol2) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)("marker", { className: "react-flow__arrowhead", id: id2, markerWidth: `${width}`, markerHeight: `${height}`, viewBox: "-10 -10 20 20", markerUnits, orient, refX: "0", refY: "0", children: (0, import_jsx_runtime5.jsx)(Symbol2, { color: color2, strokeWidth }) });
+  return (0, import_jsx_runtime4.jsx)("marker", { className: "react-flow__arrowhead", id: id2, markerWidth: `${width}`, markerHeight: `${height}`, viewBox: "-10 -10 20 20", markerUnits, orient, refX: "0", refY: "0", children: (0, import_jsx_runtime4.jsx)(Symbol2, { color: color2, strokeWidth }) });
 };
 var MarkerDefinitions = ({ defaultColor, rfId }) => {
   const edges = useStore((s) => s.edges);
   const defaultEdgeOptions = useStore((s) => s.defaultEdgeOptions);
-  const markers = (0, import_react4.useMemo)(() => {
+  const markers = (0, import_react3.useMemo)(() => {
     const markers2 = createMarkerIds(edges, {
       id: rfId,
       defaultColor,
@@ -9512,15 +9323,15 @@ var MarkerDefinitions = ({ defaultColor, rfId }) => {
   if (!markers.length) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)("svg", { className: "react-flow__marker", "aria-hidden": "true", children: (0, import_jsx_runtime5.jsx)("defs", { children: markers.map((marker) => (0, import_jsx_runtime5.jsx)(Marker, { id: marker.id, type: marker.type, color: marker.color, width: marker.width, height: marker.height, markerUnits: marker.markerUnits, strokeWidth: marker.strokeWidth, orient: marker.orient }, marker.id)) }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { className: "react-flow__marker", "aria-hidden": "true", children: (0, import_jsx_runtime4.jsx)("defs", { children: markers.map((marker) => (0, import_jsx_runtime4.jsx)(Marker, { id: marker.id, type: marker.type, color: marker.color, width: marker.width, height: marker.height, markerUnits: marker.markerUnits, strokeWidth: marker.strokeWidth, orient: marker.orient }, marker.id)) }) });
 };
 MarkerDefinitions.displayName = "MarkerDefinitions";
-var MarkerDefinitions$1 = (0, import_react4.memo)(MarkerDefinitions);
+var MarkerDefinitions$1 = (0, import_react3.memo)(MarkerDefinitions);
 function EdgeTextComponent({ x, y, label, labelStyle, labelShowBg = true, labelBgStyle, labelBgPadding = [2, 4], labelBgBorderRadius = 2, children: children2, className, ...rest }) {
-  const [edgeTextBbox, setEdgeTextBbox] = (0, import_react4.useState)({ x: 1, y: 0, width: 0, height: 0 });
+  const [edgeTextBbox, setEdgeTextBbox] = (0, import_react3.useState)({ x: 1, y: 0, width: 0, height: 0 });
   const edgeTextClasses = cc(["react-flow__edge-textwrapper", className]);
-  const edgeTextRef = (0, import_react4.useRef)(null);
-  (0, import_react4.useEffect)(() => {
+  const edgeTextRef = (0, import_react3.useRef)(null);
+  (0, import_react3.useEffect)(() => {
     if (edgeTextRef.current) {
       const textBbox = edgeTextRef.current.getBBox();
       setEdgeTextBbox({
@@ -9534,12 +9345,12 @@ function EdgeTextComponent({ x, y, label, labelStyle, labelShowBg = true, labelB
   if (!label) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsxs)("g", { transform: `translate(${x - edgeTextBbox.width / 2} ${y - edgeTextBbox.height / 2})`, className: edgeTextClasses, visibility: edgeTextBbox.width ? "visible" : "hidden", ...rest, children: [labelShowBg && (0, import_jsx_runtime5.jsx)("rect", { width: edgeTextBbox.width + 2 * labelBgPadding[0], x: -labelBgPadding[0], y: -labelBgPadding[1], height: edgeTextBbox.height + 2 * labelBgPadding[1], className: "react-flow__edge-textbg", style: labelBgStyle, rx: labelBgBorderRadius, ry: labelBgBorderRadius }), (0, import_jsx_runtime5.jsx)("text", { className: "react-flow__edge-text", y: edgeTextBbox.height / 2, dy: "0.3em", ref: edgeTextRef, style: labelStyle, children: label }), children2] });
+  return (0, import_jsx_runtime4.jsxs)("g", { transform: `translate(${x - edgeTextBbox.width / 2} ${y - edgeTextBbox.height / 2})`, className: edgeTextClasses, visibility: edgeTextBbox.width ? "visible" : "hidden", ...rest, children: [labelShowBg && (0, import_jsx_runtime4.jsx)("rect", { width: edgeTextBbox.width + 2 * labelBgPadding[0], x: -labelBgPadding[0], y: -labelBgPadding[1], height: edgeTextBbox.height + 2 * labelBgPadding[1], className: "react-flow__edge-textbg", style: labelBgStyle, rx: labelBgBorderRadius, ry: labelBgBorderRadius }), (0, import_jsx_runtime4.jsx)("text", { className: "react-flow__edge-text", y: edgeTextBbox.height / 2, dy: "0.3em", ref: edgeTextRef, style: labelStyle, children: label }), children2] });
 }
 EdgeTextComponent.displayName = "EdgeText";
-var EdgeText = (0, import_react4.memo)(EdgeTextComponent);
+var EdgeText = (0, import_react3.memo)(EdgeTextComponent);
 function BaseEdge({ path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, interactionWidth = 20, ...props }) {
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)("path", { ...props, d: path, fill: "none", className: cc(["react-flow__edge-path", props.className]) }), interactionWidth ? (0, import_jsx_runtime5.jsx)("path", { d: path, fill: "none", strokeOpacity: 0, strokeWidth: interactionWidth, className: "react-flow__edge-interaction" }) : null, label && isNumeric(labelX) && isNumeric(labelY) ? (0, import_jsx_runtime5.jsx)(EdgeText, { x: labelX, y: labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius }) : null] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)("path", { ...props, d: path, fill: "none", className: cc(["react-flow__edge-path", props.className]) }), interactionWidth ? (0, import_jsx_runtime4.jsx)("path", { d: path, fill: "none", strokeOpacity: 0, strokeWidth: interactionWidth, className: "react-flow__edge-interaction" }) : null, label && isNumeric(labelX) && isNumeric(labelY) ? (0, import_jsx_runtime4.jsx)(EdgeText, { x: labelX, y: labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius }) : null] });
 }
 function getControl({ pos, x1, y1, x2, y2 }) {
   if (pos === Position.Left || pos === Position.Right) {
@@ -9581,7 +9392,7 @@ function getSimpleBezierPath({ sourceX, sourceY, sourcePosition = Position.Botto
   ];
 }
 function createSimpleBezierEdge(params) {
-  return (0, import_react4.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth }) => {
+  return (0, import_react3.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth }) => {
     const [path, labelX, labelY] = getSimpleBezierPath({
       sourceX,
       sourceY,
@@ -9591,7 +9402,7 @@ function createSimpleBezierEdge(params) {
       targetPosition
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var SimpleBezierEdge = createSimpleBezierEdge({ isInternal: false });
@@ -9599,7 +9410,7 @@ var SimpleBezierEdgeInternal = createSimpleBezierEdge({ isInternal: true });
 SimpleBezierEdge.displayName = "SimpleBezierEdge";
 SimpleBezierEdgeInternal.displayName = "SimpleBezierEdgeInternal";
 function createSmoothStepEdge(params) {
-  return (0, import_react4.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, sourcePosition = Position.Bottom, targetPosition = Position.Top, markerEnd, markerStart, pathOptions, interactionWidth }) => {
+  return (0, import_react3.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, sourcePosition = Position.Bottom, targetPosition = Position.Top, markerEnd, markerStart, pathOptions, interactionWidth }) => {
     const [path, labelX, labelY] = getSmoothStepPath({
       sourceX,
       sourceY,
@@ -9612,7 +9423,7 @@ function createSmoothStepEdge(params) {
       stepPosition: pathOptions?.stepPosition
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var SmoothStepEdge = createSmoothStepEdge({ isInternal: false });
@@ -9620,9 +9431,9 @@ var SmoothStepEdgeInternal = createSmoothStepEdge({ isInternal: true });
 SmoothStepEdge.displayName = "SmoothStepEdge";
 SmoothStepEdgeInternal.displayName = "SmoothStepEdgeInternal";
 function createStepEdge(params) {
-  return (0, import_react4.memo)(({ id: id2, ...props }) => {
+  return (0, import_react3.memo)(({ id: id2, ...props }) => {
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime5.jsx)(SmoothStepEdge, { ...props, id: _id, pathOptions: (0, import_react4.useMemo)(() => ({ borderRadius: 0, offset: props.pathOptions?.offset }), [props.pathOptions?.offset]) });
+    return (0, import_jsx_runtime4.jsx)(SmoothStepEdge, { ...props, id: _id, pathOptions: (0, import_react3.useMemo)(() => ({ borderRadius: 0, offset: props.pathOptions?.offset }), [props.pathOptions?.offset]) });
   });
 }
 var StepEdge = createStepEdge({ isInternal: false });
@@ -9630,10 +9441,10 @@ var StepEdgeInternal = createStepEdge({ isInternal: true });
 StepEdge.displayName = "StepEdge";
 StepEdgeInternal.displayName = "StepEdgeInternal";
 function createStraightEdge(params) {
-  return (0, import_react4.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth }) => {
+  return (0, import_react3.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth }) => {
     const [path, labelX, labelY] = getStraightPath({ sourceX, sourceY, targetX, targetY });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var StraightEdge = createStraightEdge({ isInternal: false });
@@ -9641,7 +9452,7 @@ var StraightEdgeInternal = createStraightEdge({ isInternal: true });
 StraightEdge.displayName = "StraightEdge";
 StraightEdgeInternal.displayName = "StraightEdgeInternal";
 function createBezierEdge(params) {
-  return (0, import_react4.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, sourcePosition = Position.Bottom, targetPosition = Position.Top, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, pathOptions, interactionWidth }) => {
+  return (0, import_react3.memo)(({ id: id2, sourceX, sourceY, targetX, targetY, sourcePosition = Position.Bottom, targetPosition = Position.Top, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, pathOptions, interactionWidth }) => {
     const [path, labelX, labelY] = getBezierPath({
       sourceX,
       sourceY,
@@ -9652,7 +9463,7 @@ function createBezierEdge(params) {
       curvature: pathOptions?.curvature
     });
     const _id = params.isInternal ? void 0 : id2;
-    return (0, import_jsx_runtime5.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
+    return (0, import_jsx_runtime4.jsx)(BaseEdge, { id: _id, path, labelX, labelY, label, labelStyle, labelShowBg, labelBgStyle, labelBgPadding, labelBgBorderRadius, style: style2, markerEnd, markerStart, interactionWidth });
   });
 }
 var BezierEdge = createBezierEdge({ isInternal: false });
@@ -9691,7 +9502,7 @@ var shiftY = (y, shift, position) => {
 };
 var EdgeUpdaterClassName = "react-flow__edgeupdater";
 function EdgeAnchor({ position, centerX, centerY, radius = 10, onMouseDown, onMouseEnter, onMouseOut, type }) {
-  return (0, import_jsx_runtime5.jsx)("circle", { onMouseDown, onMouseEnter, onMouseOut, className: cc([EdgeUpdaterClassName, `${EdgeUpdaterClassName}-${type}`]), cx: shiftX(centerX, radius, position), cy: shiftY(centerY, radius, position), r: radius, stroke: "transparent", fill: "transparent" });
+  return (0, import_jsx_runtime4.jsx)("circle", { onMouseDown, onMouseEnter, onMouseOut, className: cc([EdgeUpdaterClassName, `${EdgeUpdaterClassName}-${type}`]), cx: shiftX(centerX, radius, position), cy: shiftY(centerY, radius, position), r: radius, stroke: "transparent", fill: "transparent" });
 }
 function EdgeUpdateAnchors({ isReconnectable, reconnectRadius, edge, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, onReconnect, onReconnectStart, onReconnectEnd, setReconnecting, setUpdateHover }) {
   const store = useStoreApi();
@@ -9741,7 +9552,7 @@ function EdgeUpdateAnchors({ isReconnectable, reconnectRadius, edge, sourceX, so
   const onReconnectTargetMouseDown = (event) => handleEdgeUpdater(event, { nodeId: edge.source, id: edge.sourceHandle ?? null, type: "source" });
   const onReconnectMouseEnter = () => setUpdateHover(true);
   const onReconnectMouseOut = () => setUpdateHover(false);
-  return (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(isReconnectable === true || isReconnectable === "source") && (0, import_jsx_runtime5.jsx)(EdgeAnchor, { position: sourcePosition, centerX: sourceX, centerY: sourceY, radius: reconnectRadius, onMouseDown: onReconnectSourceMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "source" }), (isReconnectable === true || isReconnectable === "target") && (0, import_jsx_runtime5.jsx)(EdgeAnchor, { position: targetPosition, centerX: targetX, centerY: targetY, radius: reconnectRadius, onMouseDown: onReconnectTargetMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "target" })] });
+  return (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(isReconnectable === true || isReconnectable === "source") && (0, import_jsx_runtime4.jsx)(EdgeAnchor, { position: sourcePosition, centerX: sourceX, centerY: sourceY, radius: reconnectRadius, onMouseDown: onReconnectSourceMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "source" }), (isReconnectable === true || isReconnectable === "target") && (0, import_jsx_runtime4.jsx)(EdgeAnchor, { position: targetPosition, centerX: targetX, centerY: targetY, radius: reconnectRadius, onMouseDown: onReconnectTargetMouseDown, onMouseEnter: onReconnectMouseEnter, onMouseOut: onReconnectMouseOut, type: "target" })] });
 }
 function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, onClick, onDoubleClick, onContextMenu, onMouseEnter, onMouseMove, onMouseLeave, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, rfId, edgeTypes, noPanClassName, onError, disableKeyboardA11y }) {
   let edge = useStore((s) => s.edgeLookup.get(id2));
@@ -9757,11 +9568,11 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
   const isFocusable = !!(edge.focusable || edgesFocusable && typeof edge.focusable === "undefined");
   const isReconnectable = typeof onReconnect !== "undefined" && (edge.reconnectable || edgesReconnectable && typeof edge.reconnectable === "undefined");
   const isSelectable = !!(edge.selectable || elementsSelectable && typeof edge.selectable === "undefined");
-  const edgeRef = (0, import_react4.useRef)(null);
-  const [updateHover, setUpdateHover] = (0, import_react4.useState)(false);
-  const [reconnecting, setReconnecting] = (0, import_react4.useState)(false);
+  const edgeRef = (0, import_react3.useRef)(null);
+  const [updateHover, setUpdateHover] = (0, import_react3.useState)(false);
+  const [reconnecting, setReconnecting] = (0, import_react3.useState)(false);
   const store = useStoreApi();
-  const { zIndex = edge.zIndex, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition } = useStore((0, import_react4.useCallback)((store2) => {
+  const { zIndex = edge.zIndex, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition } = useStore((0, import_react3.useCallback)((store2) => {
     const sourceNode = store2.nodeLookup.get(edge.source);
     const targetNode = store2.nodeLookup.get(edge.target);
     if (!sourceNode || !targetNode) {
@@ -9789,8 +9600,8 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
       zIndex: zIndex2
     };
   }, [edge.source, edge.target, edge.sourceHandle, edge.targetHandle, edge.selected, edge.zIndex, onError]), shallow$1);
-  const markerStartUrl = (0, import_react4.useMemo)(() => edge.markerStart ? `url('#${getMarkerId(edge.markerStart, rfId)}')` : void 0, [edge.markerStart, rfId]);
-  const markerEndUrl = (0, import_react4.useMemo)(() => edge.markerEnd ? `url('#${getMarkerId(edge.markerEnd, rfId)}')` : void 0, [edge.markerEnd, rfId]);
+  const markerStartUrl = (0, import_react3.useMemo)(() => edge.markerStart ? `url('#${getMarkerId(edge.markerStart, rfId)}')` : void 0, [edge.markerStart, rfId]);
+  const markerEndUrl = (0, import_react3.useMemo)(() => edge.markerEnd ? `url('#${getMarkerId(edge.markerEnd, rfId)}')` : void 0, [edge.markerEnd, rfId]);
   if (edge.hidden || sourceX === null || sourceY === null || targetX === null || targetY === null) {
     return null;
   }
@@ -9836,7 +9647,7 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
       }
     }
   };
-  return (0, import_jsx_runtime5.jsx)("svg", { style: { zIndex }, children: (0, import_jsx_runtime5.jsxs)("g", { className: cc([
+  return (0, import_jsx_runtime4.jsx)("svg", { style: { zIndex }, children: (0, import_jsx_runtime4.jsxs)("g", { className: cc([
     "react-flow__edge",
     `react-flow__edge-${edgeType}`,
     edge.className,
@@ -9848,9 +9659,9 @@ function EdgeWrapper({ id: id2, edgesFocusable, edgesReconnectable, elementsSele
       updating: updateHover,
       selectable: isSelectable
     }
-  ]), onClick: onEdgeClick, onDoubleClick: onEdgeDoubleClick, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, role: edge.ariaRole ?? (isFocusable ? "group" : "img"), "aria-roledescription": "edge", "data-id": id2, "data-testid": `rf__edge-${id2}`, "aria-label": edge.ariaLabel === null ? void 0 : edge.ariaLabel || `Edge from ${edge.source} to ${edge.target}`, "aria-describedby": isFocusable ? `${ARIA_EDGE_DESC_KEY}-${rfId}` : void 0, ref: edgeRef, ...edge.domAttributes, children: [!reconnecting && (0, import_jsx_runtime5.jsx)(EdgeComponent, { id: id2, source: edge.source, target: edge.target, type: edge.type, selected: edge.selected, animated: edge.animated, selectable: isSelectable, deletable: edge.deletable ?? true, label: edge.label, labelStyle: edge.labelStyle, labelShowBg: edge.labelShowBg, labelBgStyle: edge.labelBgStyle, labelBgPadding: edge.labelBgPadding, labelBgBorderRadius: edge.labelBgBorderRadius, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data: edge.data, style: edge.style, sourceHandleId: edge.sourceHandle, targetHandleId: edge.targetHandle, markerStart: markerStartUrl, markerEnd: markerEndUrl, pathOptions: "pathOptions" in edge ? edge.pathOptions : void 0, interactionWidth: edge.interactionWidth }), isReconnectable && (0, import_jsx_runtime5.jsx)(EdgeUpdateAnchors, { edge, isReconnectable, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, setUpdateHover, setReconnecting })] }) });
+  ]), onClick: onEdgeClick, onDoubleClick: onEdgeDoubleClick, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onKeyDown: isFocusable ? onKeyDown : void 0, tabIndex: isFocusable ? 0 : void 0, role: edge.ariaRole ?? (isFocusable ? "group" : "img"), "aria-roledescription": "edge", "data-id": id2, "data-testid": `rf__edge-${id2}`, "aria-label": edge.ariaLabel === null ? void 0 : edge.ariaLabel || `Edge from ${edge.source} to ${edge.target}`, "aria-describedby": isFocusable ? `${ARIA_EDGE_DESC_KEY}-${rfId}` : void 0, ref: edgeRef, ...edge.domAttributes, children: [!reconnecting && (0, import_jsx_runtime4.jsx)(EdgeComponent, { id: id2, source: edge.source, target: edge.target, type: edge.type, selected: edge.selected, animated: edge.animated, selectable: isSelectable, deletable: edge.deletable ?? true, label: edge.label, labelStyle: edge.labelStyle, labelShowBg: edge.labelShowBg, labelBgStyle: edge.labelBgStyle, labelBgPadding: edge.labelBgPadding, labelBgBorderRadius: edge.labelBgBorderRadius, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data: edge.data, style: edge.style, sourceHandleId: edge.sourceHandle, targetHandleId: edge.targetHandle, markerStart: markerStartUrl, markerEnd: markerEndUrl, pathOptions: "pathOptions" in edge ? edge.pathOptions : void 0, interactionWidth: edge.interactionWidth }), isReconnectable && (0, import_jsx_runtime4.jsx)(EdgeUpdateAnchors, { edge, isReconnectable, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, setUpdateHover, setReconnecting })] }) });
 }
-var EdgeWrapper$1 = (0, import_react4.memo)(EdgeWrapper);
+var EdgeWrapper$1 = (0, import_react3.memo)(EdgeWrapper);
 var selector$9 = (s) => ({
   edgesFocusable: s.edgesFocusable,
   edgesReconnectable: s.edgesReconnectable,
@@ -9861,17 +9672,17 @@ var selector$9 = (s) => ({
 function EdgeRendererComponent({ defaultMarkerColor, onlyRenderVisibleElements, rfId, edgeTypes, noPanClassName, onReconnect, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, onEdgeClick, reconnectRadius, onEdgeDoubleClick, onReconnectStart, onReconnectEnd, disableKeyboardA11y }) {
   const { edgesFocusable, edgesReconnectable, elementsSelectable, onError } = useStore(selector$9, shallow$1);
   const edgeIds = useVisibleEdgeIds(onlyRenderVisibleElements);
-  return (0, import_jsx_runtime5.jsxs)("div", { className: "react-flow__edges", children: [(0, import_jsx_runtime5.jsx)(MarkerDefinitions$1, { defaultColor: defaultMarkerColor, rfId }), edgeIds.map((id2) => {
-    return (0, import_jsx_runtime5.jsx)(EdgeWrapper$1, { id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, noPanClassName, onReconnect, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onClick: onEdgeClick, reconnectRadius, onDoubleClick: onEdgeDoubleClick, onReconnectStart, onReconnectEnd, rfId, onError, edgeTypes, disableKeyboardA11y }, id2);
+  return (0, import_jsx_runtime4.jsxs)("div", { className: "react-flow__edges", children: [(0, import_jsx_runtime4.jsx)(MarkerDefinitions$1, { defaultColor: defaultMarkerColor, rfId }), edgeIds.map((id2) => {
+    return (0, import_jsx_runtime4.jsx)(EdgeWrapper$1, { id: id2, edgesFocusable, edgesReconnectable, elementsSelectable, noPanClassName, onReconnect, onContextMenu: onEdgeContextMenu, onMouseEnter: onEdgeMouseEnter, onMouseMove: onEdgeMouseMove, onMouseLeave: onEdgeMouseLeave, onClick: onEdgeClick, reconnectRadius, onDoubleClick: onEdgeDoubleClick, onReconnectStart, onReconnectEnd, rfId, onError, edgeTypes, disableKeyboardA11y }, id2);
   })] });
 }
 EdgeRendererComponent.displayName = "EdgeRenderer";
-var EdgeRenderer = (0, import_react4.memo)(EdgeRendererComponent);
+var EdgeRenderer = (0, import_react3.memo)(EdgeRendererComponent);
 var toTransformString = (transform2) => `translate(${transform2[0]}px,${transform2[1]}px) scale(${transform2[2]})`;
 function Viewport({ children: children2 }) {
   const store = useStoreApi();
-  const viewportRef = (0, import_react4.useRef)(null);
-  const [initialTransform] = (0, import_react4.useState)(() => store.getState().transform);
+  const viewportRef = (0, import_react3.useRef)(null);
+  const [initialTransform] = (0, import_react3.useState)(() => store.getState().transform);
   useIsomorphicLayoutEffect(() => {
     let prevTransform = null;
     const applyTransform = () => {
@@ -9887,12 +9698,12 @@ function Viewport({ children: children2 }) {
     applyTransform();
     return store.subscribe(applyTransform);
   }, [store]);
-  return (0, import_jsx_runtime5.jsx)("div", { ref: viewportRef, className: "react-flow__viewport xyflow__viewport react-flow__container", style: { transform: toTransformString(initialTransform) }, children: children2 });
+  return (0, import_jsx_runtime4.jsx)("div", { ref: viewportRef, className: "react-flow__viewport xyflow__viewport react-flow__container", style: { transform: toTransformString(initialTransform) }, children: children2 });
 }
 function useOnInitHandler(onInit) {
   const rfInstance = useReactFlow();
-  const isInitialized = (0, import_react4.useRef)(false);
-  (0, import_react4.useEffect)(() => {
+  const isInitialized = (0, import_react3.useRef)(false);
+  (0, import_react3.useEffect)(() => {
     if (!isInitialized.current && rfInstance.viewportInitialized && onInit) {
       setTimeout(() => onInit(rfInstance), 1);
       isInitialized.current = true;
@@ -9903,7 +9714,7 @@ var selector$8 = (state3) => state3.panZoom?.syncViewport;
 function useViewportSync(viewport) {
   const syncViewport = useStore(selector$8);
   const store = useStoreApi();
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (viewport) {
       syncViewport?.(viewport);
       store.setState({ transform: [viewport.x, viewport.y, viewport.zoom] });
@@ -9941,7 +9752,7 @@ function ConnectionLineWrapper({ containerStyle: containerStyle2, style: style2,
   if (!renderConnection) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)("svg", { style: containerStyle2, width, height, className: "react-flow__connectionline react-flow__container", children: (0, import_jsx_runtime5.jsx)("g", { className: cc(["react-flow__connection", getConnectionStatus(isValid)]), children: (0, import_jsx_runtime5.jsx)(ConnectionLine, { style: style2, type, CustomComponent: component, isValid }) }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { style: containerStyle2, width, height, className: "react-flow__connectionline react-flow__container", children: (0, import_jsx_runtime4.jsx)("g", { className: cc(["react-flow__connection", getConnectionStatus(isValid)]), children: (0, import_jsx_runtime4.jsx)(ConnectionLine, { style: style2, type, CustomComponent: component, isValid }) }) });
 }
 var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomComponent, isValid }) => {
   const { inProgress, from, fromNode, fromHandle, fromPosition, to, toNode, toHandle, toPosition, pointer } = useConnection();
@@ -9949,7 +9760,7 @@ var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomC
     return;
   }
   if (CustomComponent) {
-    return (0, import_jsx_runtime5.jsx)(CustomComponent, { connectionLineType: type, connectionLineStyle: style2, fromNode, fromHandle, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, fromPosition, toPosition, connectionStatus: getConnectionStatus(isValid), toNode, toHandle, pointer });
+    return (0, import_jsx_runtime4.jsx)(CustomComponent, { connectionLineType: type, connectionLineStyle: style2, fromNode, fromHandle, fromX: from.x, fromY: from.y, toX: to.x, toY: to.y, fromPosition, toPosition, connectionStatus: getConnectionStatus(isValid), toNode, toHandle, pointer });
   }
   let path = "";
   const pathParams = {
@@ -9979,14 +9790,14 @@ var ConnectionLine = ({ style: style2, type = ConnectionLineType.Bezier, CustomC
     default:
       [path] = getStraightPath(pathParams);
   }
-  return (0, import_jsx_runtime5.jsx)("path", { d: path, fill: "none", className: "react-flow__connection-path", style: style2 });
+  return (0, import_jsx_runtime4.jsx)("path", { d: path, fill: "none", className: "react-flow__connection-path", style: style2 });
 };
 ConnectionLine.displayName = "ConnectionLine";
 var emptyTypes = {};
 function useNodeOrEdgeTypesWarning(nodeOrEdgeTypes = emptyTypes) {
-  const typesRef = (0, import_react4.useRef)(nodeOrEdgeTypes);
+  const typesRef = (0, import_react3.useRef)(nodeOrEdgeTypes);
   const store = useStoreApi();
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (false) {
       const usedKeys = /* @__PURE__ */ new Set([...Object.keys(typesRef.current), ...Object.keys(nodeOrEdgeTypes)]);
       for (const key of usedKeys) {
@@ -10001,8 +9812,8 @@ function useNodeOrEdgeTypesWarning(nodeOrEdgeTypes = emptyTypes) {
 }
 function useStylesLoadedWarning() {
   const store = useStoreApi();
-  const checked = (0, import_react4.useRef)(false);
-  (0, import_react4.useEffect)(() => {
+  const checked = (0, import_react3.useRef)(false);
+  (0, import_react3.useEffect)(() => {
     if (false) {
       if (!checked.current) {
         const pane = document.querySelector(".react-flow__pane");
@@ -10020,10 +9831,10 @@ function GraphViewComponent({ nodeTypes: nodeTypes2, edgeTypes, onInit, onNodeCl
   useStylesLoadedWarning();
   useOnInitHandler(onInit);
   useViewportSync(viewport);
-  return (0, import_jsx_runtime5.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime5.jsxs)(Viewport, { children: [(0, import_jsx_runtime5.jsx)(EdgeRenderer, { edgeTypes, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime5.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime5.jsx)(NodeRenderer, { nodeTypes: nodeTypes2, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime5.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
+  return (0, import_jsx_runtime4.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime4.jsxs)(Viewport, { children: [(0, import_jsx_runtime4.jsx)(EdgeRenderer, { edgeTypes, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime4.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime4.jsx)(NodeRenderer, { nodeTypes: nodeTypes2, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime4.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
 }
 GraphViewComponent.displayName = "GraphView";
-var GraphView = (0, import_react4.memo)(GraphViewComponent);
+var GraphView = (0, import_react3.memo)(GraphViewComponent);
 var devWarn = createDevWarn("React Flow", "https://reactflow.dev/");
 var getInitialState = ({ nodes, edges, defaultNodes, defaultEdges, width, height, fitView, fitViewOptions, minZoom = 0.5, maxZoom = 2, nodeOrigin, nodeExtent, zIndexMode = "basic" } = {}) => {
   const nodeLookup = /* @__PURE__ */ new Map();
@@ -10415,7 +10226,7 @@ var createStore2 = ({ nodes, edges, defaultNodes, defaultEdges, width, height, f
   };
 }, Object.is);
 function ReactFlowProvider({ initialNodes: nodes, initialEdges: edges, defaultNodes, defaultEdges, initialWidth: width, initialHeight: height, initialMinZoom: minZoom, initialMaxZoom: maxZoom, initialFitViewOptions: fitViewOptions, fitView, nodeOrigin, nodeExtent, zIndexMode, children: children2 }) {
-  const [store] = (0, import_react4.useState)(() => createStore2({
+  const [store] = (0, import_react3.useState)(() => createStore2({
     nodes,
     edges,
     defaultNodes,
@@ -10430,14 +10241,14 @@ function ReactFlowProvider({ initialNodes: nodes, initialEdges: edges, defaultNo
     nodeExtent,
     zIndexMode
   }));
-  return (0, import_jsx_runtime5.jsx)(Provider$1, { value: store, children: (0, import_jsx_runtime5.jsx)(BatchProvider, { children: (0, import_jsx_runtime5.jsx)(HandleConfigProvider, { children: children2 }) }) });
+  return (0, import_jsx_runtime4.jsx)(Provider$1, { value: store, children: (0, import_jsx_runtime4.jsx)(BatchProvider, { children: (0, import_jsx_runtime4.jsx)(HandleConfigProvider, { children: children2 }) }) });
 }
 function Wrapper({ children: children2, nodes, edges, defaultNodes, defaultEdges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode }) {
-  const isWrapped = (0, import_react4.useContext)(StoreContext);
+  const isWrapped = (0, import_react3.useContext)(StoreContext);
   if (isWrapped) {
-    return (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: children2 });
+    return (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: children2 });
   }
-  return (0, import_jsx_runtime5.jsx)(ReactFlowProvider, { initialNodes: nodes, initialEdges: edges, defaultNodes, defaultEdges, initialWidth: width, initialHeight: height, fitView, initialFitViewOptions: fitViewOptions, initialMinZoom: minZoom, initialMaxZoom: maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: children2 });
+  return (0, import_jsx_runtime4.jsx)(ReactFlowProvider, { initialNodes: nodes, initialEdges: edges, defaultNodes, defaultEdges, initialWidth: width, initialHeight: height, fitView, initialFitViewOptions: fitViewOptions, initialMinZoom: minZoom, initialMaxZoom: maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: children2 });
 }
 var wrapperStyle = {
   width: "100%",
@@ -10449,19 +10260,19 @@ var wrapperStyle = {
 function ReactFlow({ nodes, edges, defaultNodes, defaultEdges, className, nodeTypes: nodeTypes2, edgeTypes, onNodeClick, onEdgeClick, onInit, onMove, onMoveStart, onMoveEnd, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, onNodeDragStart, onNodeDrag, onNodeDragStop, onNodesDelete, onEdgesDelete, onDelete, onSelectionChange, onSelectionDragStart, onSelectionDrag, onSelectionDragStop, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onBeforeDelete, connectionMode, connectionLineType = ConnectionLineType.Bezier, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, deleteKeyCode = "Backspace", selectionKeyCode = "Shift", selectionOnDrag = false, selectionMode = SelectionMode.Full, panActivationKeyCode = "Space", multiSelectionKeyCode = isMacOs() ? "Meta" : "Control", zoomActivationKeyCode = isMacOs() ? "Meta" : "Control", snapToGrid, snapGrid, onlyRenderVisibleElements = false, selectNodesOnDrag, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, nodeOrigin = defaultNodeOrigin, edgesFocusable, edgesReconnectable, elementsSelectable = true, defaultViewport: defaultViewport$1 = defaultViewport, minZoom = 0.5, maxZoom = 2, translateExtent = infiniteExtent, preventScrolling = true, nodeExtent, defaultMarkerColor = "#b1b1b7", zoomOnScroll = true, zoomOnPinch = true, panOnScroll = false, panOnScrollSpeed = 0.5, panOnScrollMode = PanOnScrollMode.Free, zoomOnDoubleClick = true, panOnDrag = true, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance = 1, nodeClickDistance = 0, children: children2, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius = 10, onNodesChange, onEdgesChange, noDragClassName = "nodrag", noWheelClassName = "nowheel", noPanClassName = "nopan", fitView, fitViewOptions, connectOnClick, attributionPosition, proOptions, defaultEdgeOptions, elevateNodesOnSelect = true, elevateEdgesOnSelect = false, disableKeyboardA11y = false, autoPanOnConnect, autoPanOnNodeDrag, autoPanOnSelection = true, autoPanSpeed, connectionRadius, isValidConnection, onError, style: style2, id: id2, nodeDragThreshold, connectionDragThreshold, viewport, onViewportChange, width, height, colorMode = "light", debug, onScroll, ariaLabelConfig, zIndexMode = "basic", ...rest }, ref) {
   const rfId = id2 || "1";
   const colorModeClassName = useColorModeClass(colorMode);
-  const wrapperOnScroll = (0, import_react4.useCallback)((e) => {
+  const wrapperOnScroll = (0, import_react3.useCallback)((e) => {
     e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "instant" });
     onScroll?.(e);
   }, [onScroll]);
-  return (0, import_jsx_runtime5.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime5.jsxs)(Wrapper, { nodes, edges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime5.jsx)(StoreUpdater, { nodes, edges, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime5.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime5.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime5.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime5.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
+  return (0, import_jsx_runtime4.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime4.jsxs)(Wrapper, { nodes, edges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime4.jsx)(StoreUpdater, { nodes, edges, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime4.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime4.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime4.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime4.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
 }
 var index = fixedForwardRef(ReactFlow);
 var error014 = errorMessages["error014"]();
 function LinePattern({ dimensions, lineWidth, variant, className }) {
-  return (0, import_jsx_runtime5.jsx)("path", { strokeWidth: lineWidth, d: `M${dimensions[0] / 2} 0 V${dimensions[1]} M0 ${dimensions[1] / 2} H${dimensions[0]}`, className: cc(["react-flow__background-pattern", variant, className]) });
+  return (0, import_jsx_runtime4.jsx)("path", { strokeWidth: lineWidth, d: `M${dimensions[0] / 2} 0 V${dimensions[1]} M0 ${dimensions[1] / 2} H${dimensions[0]}`, className: cc(["react-flow__background-pattern", variant, className]) });
 }
 function DotPattern({ radius, className }) {
-  return (0, import_jsx_runtime5.jsx)("circle", { cx: radius, cy: radius, r: radius, className: cc(["react-flow__background-pattern", "dots", className]) });
+  return (0, import_jsx_runtime4.jsx)("circle", { cx: radius, cy: radius, r: radius, className: cc(["react-flow__background-pattern", "dots", className]) });
 }
 var BackgroundVariant;
 (function(BackgroundVariant2) {
@@ -10490,7 +10301,7 @@ function BackgroundComponent({
   className,
   patternClassName
 }) {
-  const ref = (0, import_react4.useRef)(null);
+  const ref = (0, import_react3.useRef)(null);
   const { transform: transform2, patternId } = useStore(selector$3, shallow$1);
   const patternSize = size || defaultSize[variant];
   const isDots = variant === BackgroundVariant.Dots;
@@ -10505,32 +10316,32 @@ function BackgroundComponent({
     offsetXY[1] * transform2[2] + patternDimensions[1] / 2
   ];
   const _patternId = `${patternId}${id2 ? id2 : ""}`;
-  return (0, import_jsx_runtime5.jsxs)("svg", { className: cc(["react-flow__background", className]), style: {
+  return (0, import_jsx_runtime4.jsxs)("svg", { className: cc(["react-flow__background", className]), style: {
     ...style2,
     ...containerStyle,
     "--xy-background-color-props": bgColor,
     "--xy-background-pattern-color-props": color2
-  }, ref, "data-testid": "rf__background", children: [(0, import_jsx_runtime5.jsx)("pattern", { id: _patternId, x: transform2[0] % scaledGap[0], y: transform2[1] % scaledGap[1], width: scaledGap[0], height: scaledGap[1], patternUnits: "userSpaceOnUse", patternTransform: `translate(-${scaledOffset[0]},-${scaledOffset[1]})`, children: isDots ? (0, import_jsx_runtime5.jsx)(DotPattern, { radius: scaledSize / 2, className: patternClassName }) : (0, import_jsx_runtime5.jsx)(LinePattern, { dimensions: patternDimensions, lineWidth, variant, className: patternClassName }) }), (0, import_jsx_runtime5.jsx)("rect", { x: "0", y: "0", width: "100%", height: "100%", fill: `url(#${_patternId})` })] });
+  }, ref, "data-testid": "rf__background", children: [(0, import_jsx_runtime4.jsx)("pattern", { id: _patternId, x: transform2[0] % scaledGap[0], y: transform2[1] % scaledGap[1], width: scaledGap[0], height: scaledGap[1], patternUnits: "userSpaceOnUse", patternTransform: `translate(-${scaledOffset[0]},-${scaledOffset[1]})`, children: isDots ? (0, import_jsx_runtime4.jsx)(DotPattern, { radius: scaledSize / 2, className: patternClassName }) : (0, import_jsx_runtime4.jsx)(LinePattern, { dimensions: patternDimensions, lineWidth, variant, className: patternClassName }) }), (0, import_jsx_runtime4.jsx)("rect", { x: "0", y: "0", width: "100%", height: "100%", fill: `url(#${_patternId})` })] });
 }
 BackgroundComponent.displayName = "Background";
-var Background = (0, import_react4.memo)(BackgroundComponent);
+var Background = (0, import_react3.memo)(BackgroundComponent);
 function PlusIcon() {
-  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z" }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M32 18.133H18.133V32h-4.266V18.133H0v-4.266h13.867V0h4.266v13.867H32z" }) });
 }
 function MinusIcon() {
-  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 5", children: (0, import_jsx_runtime5.jsx)("path", { d: "M0 0h32v4.2H0z" }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 5", children: (0, import_jsx_runtime4.jsx)("path", { d: "M0 0h32v4.2H0z" }) });
 }
 function FitViewIcon() {
-  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 30", children: (0, import_jsx_runtime5.jsx)("path", { d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 32 30", children: (0, import_jsx_runtime4.jsx)("path", { d: "M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z" }) });
 }
 function LockIcon() {
-  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z" }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0 8 0 4.571 3.429 4.571 7.619v3.048H3.048A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047zm4.724-13.866H7.467V7.619c0-2.59 2.133-4.724 4.723-4.724 2.591 0 4.724 2.133 4.724 4.724v3.048z" }) });
 }
 function UnlockIcon() {
-  return (0, import_jsx_runtime5.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime5.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z" }) });
+  return (0, import_jsx_runtime4.jsx)("svg", { xmlns: "http://www.w3.org/2000/svg", viewBox: "0 0 25 32", children: (0, import_jsx_runtime4.jsx)("path", { d: "M21.333 10.667H19.81V7.619C19.81 3.429 16.38 0 12.19 0c-4.114 1.828-1.37 2.133.305 2.438 1.676.305 4.42 2.59 4.42 5.181v3.048H3.047A3.056 3.056 0 000 13.714v15.238A3.056 3.056 0 003.048 32h18.285a3.056 3.056 0 003.048-3.048V13.714a3.056 3.056 0 00-3.048-3.047zM12.19 24.533a3.056 3.056 0 01-3.047-3.047 3.056 3.056 0 013.047-3.048 3.056 3.056 0 013.048 3.048 3.056 3.056 0 01-3.048 3.047z" }) });
 }
 function ControlButton({ children: children2, className, ...rest }) {
-  return (0, import_jsx_runtime5.jsx)("button", { type: "button", className: cc(["react-flow__controls-button", className]), ...rest, children: children2 });
+  return (0, import_jsx_runtime4.jsx)("button", { type: "button", className: cc(["react-flow__controls-button", className]), ...rest, children: children2 });
 }
 var selector$2 = (s) => ({
   isInteractive: s.nodesDraggable || s.nodesConnectable || s.elementsSelectable,
@@ -10563,20 +10374,20 @@ function ControlsComponent({ style: style2, showZoom = true, showFitView = true,
     onInteractiveChange?.(!isInteractive);
   };
   const orientationClass = orientation === "horizontal" ? "horizontal" : "vertical";
-  return (0, import_jsx_runtime5.jsxs)(Panel, { className: cc(["react-flow__controls", orientationClass, className]), position, style: style2, "data-testid": "rf__controls", "aria-label": ariaLabel ?? ariaLabelConfig["controls.ariaLabel"], children: [showZoom && (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [(0, import_jsx_runtime5.jsx)(ControlButton, { onClick: onZoomInHandler, className: "react-flow__controls-zoomin", title: ariaLabelConfig["controls.zoomIn.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomIn.ariaLabel"], disabled: maxZoomReached, children: (0, import_jsx_runtime5.jsx)(PlusIcon, {}) }), (0, import_jsx_runtime5.jsx)(ControlButton, { onClick: onZoomOutHandler, className: "react-flow__controls-zoomout", title: ariaLabelConfig["controls.zoomOut.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomOut.ariaLabel"], disabled: minZoomReached, children: (0, import_jsx_runtime5.jsx)(MinusIcon, {}) })] }), showFitView && (0, import_jsx_runtime5.jsx)(ControlButton, { className: "react-flow__controls-fitview", onClick: onFitViewHandler, title: ariaLabelConfig["controls.fitView.ariaLabel"], "aria-label": ariaLabelConfig["controls.fitView.ariaLabel"], children: (0, import_jsx_runtime5.jsx)(FitViewIcon, {}) }), showInteractive && (0, import_jsx_runtime5.jsx)(ControlButton, { className: "react-flow__controls-interactive", onClick: onToggleInteractivity, title: ariaLabelConfig["controls.interactive.ariaLabel"], "aria-label": ariaLabelConfig["controls.interactive.ariaLabel"], children: isInteractive ? (0, import_jsx_runtime5.jsx)(UnlockIcon, {}) : (0, import_jsx_runtime5.jsx)(LockIcon, {}) }), children2] });
+  return (0, import_jsx_runtime4.jsxs)(Panel, { className: cc(["react-flow__controls", orientationClass, className]), position, style: style2, "data-testid": "rf__controls", "aria-label": ariaLabel ?? ariaLabelConfig["controls.ariaLabel"], children: [showZoom && (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [(0, import_jsx_runtime4.jsx)(ControlButton, { onClick: onZoomInHandler, className: "react-flow__controls-zoomin", title: ariaLabelConfig["controls.zoomIn.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomIn.ariaLabel"], disabled: maxZoomReached, children: (0, import_jsx_runtime4.jsx)(PlusIcon, {}) }), (0, import_jsx_runtime4.jsx)(ControlButton, { onClick: onZoomOutHandler, className: "react-flow__controls-zoomout", title: ariaLabelConfig["controls.zoomOut.ariaLabel"], "aria-label": ariaLabelConfig["controls.zoomOut.ariaLabel"], disabled: minZoomReached, children: (0, import_jsx_runtime4.jsx)(MinusIcon, {}) })] }), showFitView && (0, import_jsx_runtime4.jsx)(ControlButton, { className: "react-flow__controls-fitview", onClick: onFitViewHandler, title: ariaLabelConfig["controls.fitView.ariaLabel"], "aria-label": ariaLabelConfig["controls.fitView.ariaLabel"], children: (0, import_jsx_runtime4.jsx)(FitViewIcon, {}) }), showInteractive && (0, import_jsx_runtime4.jsx)(ControlButton, { className: "react-flow__controls-interactive", onClick: onToggleInteractivity, title: ariaLabelConfig["controls.interactive.ariaLabel"], "aria-label": ariaLabelConfig["controls.interactive.ariaLabel"], children: isInteractive ? (0, import_jsx_runtime4.jsx)(UnlockIcon, {}) : (0, import_jsx_runtime4.jsx)(LockIcon, {}) }), children2] });
 }
 ControlsComponent.displayName = "Controls";
-var Controls = (0, import_react4.memo)(ControlsComponent);
+var Controls = (0, import_react3.memo)(ControlsComponent);
 function MiniMapNodeComponent({ id: id2, x, y, width, height, style: style2, color: color2, strokeColor, strokeWidth, className, borderRadius, shapeRendering, selected: selected2, onClick }) {
   const { background, backgroundColor } = style2 || {};
   const fill = color2 || background || backgroundColor;
-  return (0, import_jsx_runtime5.jsx)("rect", { className: cc(["react-flow__minimap-node", { selected: selected2 }, className]), x, y, rx: borderRadius, ry: borderRadius, width, height, style: {
+  return (0, import_jsx_runtime4.jsx)("rect", { className: cc(["react-flow__minimap-node", { selected: selected2 }, className]), x, y, rx: borderRadius, ry: borderRadius, width, height, style: {
     fill,
     stroke: strokeColor,
     strokeWidth
   }, shapeRendering, onClick: onClick ? (event) => onClick(event, id2) : void 0 });
 }
-var MiniMapNode = (0, import_react4.memo)(MiniMapNodeComponent);
+var MiniMapNode = (0, import_react3.memo)(MiniMapNodeComponent);
 var selectorNodeIds = (s) => s.nodes.map((node) => node.id);
 var getAttrFunction = (func) => func instanceof Function ? func : () => func;
 function MiniMapNodes({
@@ -10597,7 +10408,7 @@ function MiniMapNodes({
   const nodeStrokeColorFunc = getAttrFunction(nodeStrokeColor);
   const nodeClassNameFunc = getAttrFunction(nodeClassName);
   const shapeRendering = typeof window === "undefined" || !!window.chrome ? "crispEdges" : "geometricPrecision";
-  return (0, import_jsx_runtime5.jsx)(import_jsx_runtime5.Fragment, { children: nodeIds.map((nodeId) => (
+  return (0, import_jsx_runtime4.jsx)(import_jsx_runtime4.Fragment, { children: nodeIds.map((nodeId) => (
     /*
      * The split of responsibilities between MiniMapNodes and
      * NodeComponentWrapper may appear weird. However, it’s designed to
@@ -10605,7 +10416,7 @@ function MiniMapNodes({
      *
      * For more details, see a similar commit in `NodeRenderer/index.tsx`.
      */
-    (0, import_jsx_runtime5.jsx)(NodeComponentWrapper, { id: nodeId, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, NodeComponent, onClick, shapeRendering }, nodeId)
+    (0, import_jsx_runtime4.jsx)(NodeComponentWrapper, { id: nodeId, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, NodeComponent, onClick, shapeRendering }, nodeId)
   )) });
 }
 function NodeComponentWrapperInner({ id: id2, nodeColorFunc, nodeStrokeColorFunc, nodeClassNameFunc, nodeBorderRadius, nodeStrokeWidth, shapeRendering, NodeComponent, onClick }) {
@@ -10628,10 +10439,10 @@ function NodeComponentWrapperInner({ id: id2, nodeColorFunc, nodeStrokeColorFunc
   if (!node || node.hidden || !nodeHasDimensions(node)) {
     return null;
   }
-  return (0, import_jsx_runtime5.jsx)(NodeComponent, { x, y, width, height, style: node.style, selected: !!node.selected, className: nodeClassNameFunc(node), color: nodeColorFunc(node), borderRadius: nodeBorderRadius, strokeColor: nodeStrokeColorFunc(node), strokeWidth: nodeStrokeWidth, shapeRendering, onClick, id: node.id });
+  return (0, import_jsx_runtime4.jsx)(NodeComponent, { x, y, width, height, style: node.style, selected: !!node.selected, className: nodeClassNameFunc(node), color: nodeColorFunc(node), borderRadius: nodeBorderRadius, strokeColor: nodeStrokeColorFunc(node), strokeWidth: nodeStrokeWidth, shapeRendering, onClick, id: node.id });
 }
-var NodeComponentWrapper = (0, import_react4.memo)(NodeComponentWrapperInner);
-var MiniMapNodes$1 = (0, import_react4.memo)(MiniMapNodes);
+var NodeComponentWrapper = (0, import_react3.memo)(NodeComponentWrapperInner);
+var MiniMapNodes$1 = (0, import_react3.memo)(MiniMapNodes);
 var defaultWidth = 200;
 var defaultHeight = 150;
 var filterHidden = (node) => !node.hidden;
@@ -10691,7 +10502,7 @@ function MiniMapComponent({
   offsetScale = 5
 }) {
   const store = useStoreApi();
-  const svg = (0, import_react4.useRef)(null);
+  const svg = (0, import_react3.useRef)(null);
   const { boundingRect, panZoom, viewBB, rfId, translateExtent, flowWidth, flowHeight, ariaLabelConfig } = useStore(selector$1, areEqual);
   const elementWidth = style2?.width ?? defaultWidth;
   const elementHeight = style2?.height ?? defaultHeight;
@@ -10706,10 +10517,10 @@ function MiniMapComponent({
   const width = viewWidth + offset * 2;
   const height = viewHeight + offset * 2;
   const labelledBy = `${ARIA_LABEL_KEY}-${rfId}`;
-  const viewScaleRef = (0, import_react4.useRef)(0);
-  const minimapInstance = (0, import_react4.useRef)();
+  const viewScaleRef = (0, import_react3.useRef)(0);
+  const minimapInstance = (0, import_react3.useRef)();
   viewScaleRef.current = viewScale;
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     const currentPanZoom = store.getState().panZoom;
     if (svg.current && currentPanZoom) {
       minimapInstance.current = XYMinimap({
@@ -10723,7 +10534,7 @@ function MiniMapComponent({
       };
     }
   }, [panZoom]);
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     minimapInstance.current?.update({
       translateExtent,
       width: flowWidth,
@@ -10738,13 +10549,13 @@ function MiniMapComponent({
     const [x2, y2] = minimapInstance.current?.pointer(event) || [0, 0];
     onClick(event, { x: x2, y: y2 });
   } : void 0;
-  const nodeClickHandler = (0, import_react4.useCallback)((event, nodeId) => {
+  const nodeClickHandler = (0, import_react3.useCallback)((event, nodeId) => {
     const node = store.getState().nodeLookup.get(nodeId).internals.userNode;
     onNodeClick?.(event, node);
   }, [onNodeClick]);
   const onSvgNodeClick = onNodeClick ? nodeClickHandler : void 0;
   const _ariaLabel = ariaLabel ?? ariaLabelConfig["minimap.ariaLabel"];
-  return (0, import_jsx_runtime5.jsx)(Panel, { position, style: {
+  return (0, import_jsx_runtime4.jsx)(Panel, { position, style: {
     ...style2,
     "--xy-minimap-background-color-props": typeof bgColor === "string" ? bgColor : void 0,
     "--xy-minimap-mask-background-color-props": typeof maskColor === "string" ? maskColor : void 0,
@@ -10753,11 +10564,11 @@ function MiniMapComponent({
     "--xy-minimap-node-background-color-props": typeof nodeColor === "string" ? nodeColor : void 0,
     "--xy-minimap-node-stroke-color-props": typeof nodeStrokeColor === "string" ? nodeStrokeColor : void 0,
     "--xy-minimap-node-stroke-width-props": typeof nodeStrokeWidth === "number" ? nodeStrokeWidth : void 0
-  }, className: cc(["react-flow__minimap", className]), "data-testid": "rf__minimap", children: (0, import_jsx_runtime5.jsxs)("svg", { width: elementWidth, height: elementHeight, viewBox: `${x} ${y} ${width} ${height}`, className: "react-flow__minimap-svg", role: "img", "aria-labelledby": labelledBy, ref: svg, onClick: onSvgClick, children: [_ariaLabel && (0, import_jsx_runtime5.jsx)("title", { id: labelledBy, children: _ariaLabel }), (0, import_jsx_runtime5.jsx)(MiniMapNodes$1, { onClick: onSvgNodeClick, nodeColor, nodeStrokeColor, nodeBorderRadius, nodeClassName, nodeStrokeWidth, nodeComponent }), (0, import_jsx_runtime5.jsx)("path", { className: "react-flow__minimap-mask", d: `M${x - offset},${y - offset}h${width + offset * 2}v${height + offset * 2}h${-width - offset * 2}z
+  }, className: cc(["react-flow__minimap", className]), "data-testid": "rf__minimap", children: (0, import_jsx_runtime4.jsxs)("svg", { width: elementWidth, height: elementHeight, viewBox: `${x} ${y} ${width} ${height}`, className: "react-flow__minimap-svg", role: "img", "aria-labelledby": labelledBy, ref: svg, onClick: onSvgClick, children: [_ariaLabel && (0, import_jsx_runtime4.jsx)("title", { id: labelledBy, children: _ariaLabel }), (0, import_jsx_runtime4.jsx)(MiniMapNodes$1, { onClick: onSvgNodeClick, nodeColor, nodeStrokeColor, nodeBorderRadius, nodeClassName, nodeStrokeWidth, nodeComponent }), (0, import_jsx_runtime4.jsx)("path", { className: "react-flow__minimap-mask", d: `M${x - offset},${y - offset}h${width + offset * 2}v${height + offset * 2}h${-width - offset * 2}z
         M${viewBB.x},${viewBB.y}h${viewBB.width}v${viewBB.height}h${-viewBB.width}z`, fillRule: "evenodd", pointerEvents: "none" })] }) });
 }
 MiniMapComponent.displayName = "MiniMap";
-var MiniMap = (0, import_react4.memo)(MiniMapComponent);
+var MiniMap = (0, import_react3.memo)(MiniMapComponent);
 var scaleSelector = (calculateScale) => (store) => calculateScale ? `${Math.max(1 / store.transform[2], 1)}` : void 0;
 var defaultPositions = {
   [ResizeControlVariant.Line]: "right",
@@ -10767,12 +10578,12 @@ function ResizeControl({ nodeId, position, variant = ResizeControlVariant.Handle
   const contextNodeId = useNodeId();
   const id2 = typeof nodeId === "string" ? nodeId : contextNodeId;
   const store = useStoreApi();
-  const resizeControlRef = (0, import_react4.useRef)(null);
+  const resizeControlRef = (0, import_react3.useRef)(null);
   const isHandleControl = variant === ResizeControlVariant.Handle;
-  const scale = useStore((0, import_react4.useCallback)(scaleSelector(isHandleControl && autoScale), [isHandleControl, autoScale]), shallow$1);
-  const resizer = (0, import_react4.useRef)(null);
+  const scale = useStore((0, import_react3.useCallback)(scaleSelector(isHandleControl && autoScale), [isHandleControl, autoScale]), shallow$1);
+  const resizer = (0, import_react3.useRef)(null);
   const controlPosition = position ?? defaultPositions[variant];
-  (0, import_react4.useEffect)(() => {
+  (0, import_react3.useEffect)(() => {
     if (!resizeControlRef.current || !id2) {
       return;
     }
@@ -10893,13 +10704,13 @@ function ResizeControl({ nodeId, position, variant = ResizeControlVariant.Handle
     shouldResize
   ]);
   const positionClassNames = controlPosition.split("-");
-  return (0, import_jsx_runtime5.jsx)("div", { className: cc(["react-flow__resize-control", "nodrag", ...positionClassNames, variant, className]), ref: resizeControlRef, style: {
+  return (0, import_jsx_runtime4.jsx)("div", { className: cc(["react-flow__resize-control", "nodrag", ...positionClassNames, variant, className]), ref: resizeControlRef, style: {
     ...style2,
     scale,
     ...color2 && { [isHandleControl ? "backgroundColor" : "borderColor"]: color2 }
   }, children: children2 });
 }
-var NodeResizeControl = (0, import_react4.memo)(ResizeControl);
+var NodeResizeControl = (0, import_react3.memo)(ResizeControl);
 
 // dsh-css: dsh-css:node_modules/@xyflow/react/dist/style.css
 var __tagId2 = "dsh-talk-map/style.css";
@@ -10962,11 +10773,11 @@ function buildPushText(title, digest) {
 }
 
 // src/client/DigestDialog.tsx
-var import_react5 = require("react");
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_react4 = require("react");
+var import_jsx_runtime5 = require("react/jsx-runtime");
 function DigestDialog(props) {
-  const textRef = (0, import_react5.useRef)(null);
-  (0, import_react5.useEffect)(() => {
+  const textRef = (0, import_react4.useRef)(null);
+  (0, import_react4.useEffect)(() => {
     const release = mapUi.claimEscape("digest-dialog");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
@@ -10982,7 +10793,7 @@ function DigestDialog(props) {
   const empty2 = digestIsEmpty2(props.digest);
   const pushText = empty2 ? "" : buildPushText(props.title, props.digest);
   const injectText = empty2 ? "" : buildInjectionText(props.title, props.digest);
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
     "div",
     {
       className: talk_map_default["dialogBackdrop"],
@@ -10990,16 +10801,16 @@ function DigestDialog(props) {
       onMouseDown: (event) => {
         if (event.target === event.currentTarget) props.onClose();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["digestDialog"], onMouseDown: (event) => {
+      children: /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["digestDialog"], onMouseDown: (event) => {
         event.stopPropagation();
       }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["digestDialogHead"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["digestDialogTitle"], children: t("digest.title") }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { className: talk_map_default["digestDialogFrom"], children: props.title })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["digestDialogHead"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: talk_map_default["digestDialogTitle"], children: t("digest.title") }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { className: talk_map_default["digestDialogFrom"], children: props.title })
         ] }),
-        empty2 ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["digestEmpty"], children: t("digest.empty") }) : /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["digestLabel"], children: t("digest.pushLabel") }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        empty2 ? /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["digestEmpty"], children: t("digest.empty") }) : /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["digestLabel"], children: t("digest.pushLabel") }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "textarea",
             {
               ref: textRef,
@@ -11012,8 +10823,8 @@ function DigestDialog(props) {
               }
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: talk_map_default["digestLabel"], children: t("digest.injectLabel") }),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: talk_map_default["digestLabel"], children: t("digest.injectLabel") }),
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "textarea",
             {
               className: talk_map_default["digestText"],
@@ -11026,8 +10837,8 @@ function DigestDialog(props) {
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: talk_map_default["digestActions"], children: [
-          empty2 ? null : /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { className: talk_map_default["digestActions"], children: [
+          empty2 ? null : /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(
             "button",
             {
               type: "button",
@@ -11040,7 +10851,7 @@ function DigestDialog(props) {
               children: t("digest.copy")
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { type: "button", className: talk_map_default["spawnBtnGhost"], onClick: props.onClose, children: t("digest.close") })
+          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { type: "button", className: talk_map_default["spawnBtnGhost"], onClick: props.onClose, children: t("digest.close") })
         ] })
       ] })
     }
@@ -11134,6 +10945,49 @@ var drawerState = {
     safeWrite(SCROLL_KEY, null);
   }
 };
+
+// src/client/rpc.ts
+async function callRpc(endpoint, request = {}) {
+  const rpc = connectionService()?.rpc;
+  if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
+  const controller = new AbortController();
+  const result = await rpc.call("/api", endpoint, { args: { request } }, controller.signal);
+  if (result.ok !== true) {
+    const failure = result.error;
+    throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? "failed"}`);
+  }
+  return result.value;
+}
+function reportToHost(payload) {
+  try {
+    void fetch("/talk-map/client-boot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...payload })
+    }).catch(() => {
+    });
+  } catch {
+  }
+}
+async function fetchSearchContext(sessionId, seq, query) {
+  try {
+    const page = await talkMapApi.searchContext(sessionId, seq, query);
+    return Array.isArray(page.lines) ? page.lines.filter((line) => typeof line === "string" && line !== "") : [];
+  } catch (error) {
+    reportToHost({ phase: "search-context-failed", sessionId, seq, message: String(error?.message ?? error) });
+    return [];
+  }
+}
+async function fetchSessionHits(sessionId, query) {
+  try {
+    const page = await talkMapApi.searchSessionHits(sessionId, query);
+    const blocks = (page.blocks ?? []).filter((block) => Array.isArray(block) && block.length > 0);
+    return { blocks, seqs: blocks.map((_, index2) => typeof page.seqs?.[index2] === "number" ? page.seqs[index2] : null) };
+  } catch (error) {
+    reportToHost({ phase: "search-session-failed", sessionId, message: String(error?.message ?? error) });
+    return { blocks: [], seqs: [] };
+  }
+}
 
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
@@ -11575,58 +11429,58 @@ function putPreview(sessionId, text, stamp) {
 }
 
 // src/client/ContextMenu.tsx
-var import_react6 = require("react");
+var import_react5 = require("react");
 
 // src/client/MenuIcons.tsx
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 var PATHS = {
-  digest: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(import_jsx_runtime7.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "currentColor", d: "M5 2h10l4 4v16H5V2zm9 1.5V7h3.5L14 3.5zM7 11h10v1.6H7V11zm0 3.4h10v1.6H7v-1.6zm0 3.4h6.5V19H7v-1.2z" }) }),
-  pin: /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
-  unpin: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "currentColor", opacity: "0.4", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "currentColor", d: "M3.6 2.4 2.4 3.6l18 18 1.2-1.2z" })
+  digest: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(import_jsx_runtime6.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", d: "M5 2h10l4 4v16H5V2zm9 1.5V7h3.5L14 3.5zM7 11h10v1.6H7V11zm0 3.4h10v1.6H7v-1.6zm0 3.4h6.5V19H7v-1.2z" }) }),
+  pin: /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
+  unpin: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", opacity: "0.4", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "currentColor", d: "M3.6 2.4 2.4 3.6l18 18 1.2-1.2z" })
   ] }),
-  rename: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M14.9 3.5a2 2 0 0 1 2.9 2.9L7.4 16.8 3.4 18l1.2-4z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M13.2 5.2 16.6 8.6" })
+  rename: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M14.9 3.5a2 2 0 0 1 2.9 2.9L7.4 16.8 3.4 18l1.2-4z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M13.2 5.2 16.6 8.6" })
   ] }),
-  unread: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "12", cy: "12", r: "8.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("circle", { cx: "12", cy: "12", r: "3.2", fill: "currentColor" })
+  unread: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("circle", { cx: "12", cy: "12", r: "8.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("circle", { cx: "12", cy: "12", r: "3.2", fill: "currentColor" })
   ] }),
-  archive: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("rect", { x: "3.2", y: "4", width: "17.6", height: "4.6", rx: "1.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M5.2 8.6v9.1c0 .8.6 1.4 1.4 1.4h10.8c.8 0 1.4-.6 1.4-1.4V8.6M10 12.6h4" })
+  archive: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.2", y: "4", width: "17.6", height: "4.6", rx: "1.3", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M5.2 8.6v9.1c0 .8.6 1.4 1.4 1.4h10.8c.8 0 1.4-.6 1.4-1.4V8.6M10 12.6h4" })
   ] }),
-  delete: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M4 6.3h16M9.5 6.3V4.1h5v2.2" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M6.3 6.3 7.5 20h9l1.2-13.7M10.3 9.9v6.4M13.7 9.9v6.4" })
+  delete: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M4 6.3h16M9.5 6.3V4.1h5v2.2" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M6.3 6.3 7.5 20h9l1.2-13.7M10.3 9.9v6.4M13.7 9.9v6.4" })
   ] }),
-  batch: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("rect", { x: "3.6", y: "3.6", width: "8.2", height: "8.2", rx: "1.6", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("rect", { x: "10.6", y: "10.6", width: "9.8", height: "9.8", rx: "1.8", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeDasharray: "3 2" })
+  batch: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.6", y: "3.6", width: "8.2", height: "8.2", rx: "1.6", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "10.6", y: "10.6", width: "9.8", height: "9.8", rx: "1.8", fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeDasharray: "3 2" })
   ] }),
-  open: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M13.6 4.6h5.8v5.8M19.4 4.6 11.2 12.8" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M18 14.5v4c0 .8-.6 1.4-1.4 1.4H5.4c-.8 0-1.4-.6-1.4-1.4V7.3c0-.8.6-1.4 1.4-1.4h4" })
+  open: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", strokeLinejoin: "round", d: "M13.6 4.6h5.8v5.8M19.4 4.6 11.2 12.8" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M18 14.5v4c0 .8-.6 1.4-1.4 1.4H5.4c-.8 0-1.4-.6-1.4-1.4V7.3c0-.8.6-1.4 1.4-1.4h4" })
   ] }),
-  group: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("rect", { x: "3.4", y: "4", width: "17.2", height: "16", rx: "2.4", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M3.4 9.2h17.2" })
+  group: /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("rect", { x: "3.4", y: "4", width: "17.2", height: "16", rx: "2.4", fill: "none", stroke: "currentColor", strokeWidth: "1.9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("path", { fill: "none", stroke: "currentColor", strokeWidth: "1.9", strokeLinecap: "round", d: "M3.4 9.2h17.2" })
   ] })
 };
 function MenuIcon(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("svg", { className: talk_map_default["menuIcon"], viewBox: "0 0 24 24", width: "14", height: "14", "aria-hidden": "true", children: PATHS[props.name] });
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("svg", { className: talk_map_default["menuIcon"], viewBox: "0 0 24 24", width: "14", height: "14", "aria-hidden": "true", children: PATHS[props.name] });
 }
 
 // src/client/ContextMenu.tsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime7 = require("react/jsx-runtime");
 function ContextMenu(props) {
   const { menu } = props;
-  const [query, setQuery] = (0, import_react6.useState)("");
-  const [busy, setBusy] = (0, import_react6.useState)(false);
-  const [error, setError] = (0, import_react6.useState)(void 0);
-  const inputRef = (0, import_react6.useRef)(null);
+  const [query, setQuery] = (0, import_react5.useState)("");
+  const [busy, setBusy] = (0, import_react5.useState)(false);
+  const [error, setError] = (0, import_react5.useState)(void 0);
+  const inputRef = (0, import_react5.useRef)(null);
   const submitPrompt = async () => {
     const prompt = menu.prompt;
     if (prompt === void 0 || busy || query.trim() === "") return;
@@ -11639,7 +11493,7 @@ function ContextMenu(props) {
       setBusy(false);
     }
   };
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     const release = mapUi.claimEscape("context-menu");
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -11653,12 +11507,12 @@ function ContextMenu(props) {
       release();
     };
   }, []);
-  (0, import_react6.useEffect)(() => {
+  (0, import_react5.useEffect)(() => {
     if (menu.searchable === true || menu.prompt !== void 0) inputRef.current?.focus();
   }, [menu.searchable, menu.prompt]);
   const normalized = query.trim().toLowerCase();
   const visible = normalized === "" ? menu.items : menu.items.filter((item) => item.label.toLowerCase().includes(normalized));
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
     "div",
     {
       className: talk_map_default["menu"],
@@ -11674,9 +11528,9 @@ function ContextMenu(props) {
         event.preventDefault();
       },
       children: [
-        menu.title !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["menuTitle"], children: menu.title }) : null,
-        menu.prompt !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        menu.title !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuTitle"], children: menu.title }) : null,
+        menu.prompt !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             "input",
             {
               ref: inputRef,
@@ -11694,9 +11548,9 @@ function ContextMenu(props) {
               }
             }
           ),
-          menu.prompt.preview !== void 0 && query.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["menuPreview"], children: menu.prompt.preview(query.trim()) }) : null,
-          error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          menu.prompt.preview !== void 0 && query.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuPreview"], children: menu.prompt.preview(query.trim()) }) : null,
+          error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
             "button",
             {
               type: "button",
@@ -11709,7 +11563,7 @@ function ContextMenu(props) {
             }
           )
         ] }) : null,
-        menu.searchable === true ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+        menu.searchable === true ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(
           "input",
           {
             ref: inputRef,
@@ -11721,7 +11575,7 @@ function ContextMenu(props) {
             }
           }
         ) : null,
-        menu.prompt !== void 0 ? null : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["menuEmpty"], children: t("menu.empty") }) : visible.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
+        menu.prompt !== void 0 ? null : visible.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: talk_map_default["menuEmpty"], children: t("menu.empty") }) : visible.map((item) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(
           "button",
           {
             type: "button",
@@ -11732,9 +11586,9 @@ function ContextMenu(props) {
               item.onPick();
             },
             children: [
-              item.icon !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(MenuIcon, { name: item.icon }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { className: talk_map_default["menuIcon"] }),
+              item.icon !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(MenuIcon, { name: item.icon }) : /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("span", { className: talk_map_default["menuIcon"] }),
               item.label,
-              item.hint !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: talk_map_default["menuHint"], children: [
+              item.hint !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("span", { className: talk_map_default["menuHint"], children: [
                 " ",
                 item.hint
               ] }) : null
@@ -11748,14 +11602,14 @@ function ContextMenu(props) {
 }
 
 // src/client/RenameDialog.tsx
-var import_react7 = require("react");
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_react6 = require("react");
+var import_jsx_runtime8 = require("react/jsx-runtime");
 function RenameDialog(props) {
-  const [value, setValue] = (0, import_react7.useState)(props.target.title);
-  const [busy, setBusy] = (0, import_react7.useState)(false);
-  const [error, setError] = (0, import_react7.useState)(null);
-  const inputRef = (0, import_react7.useRef)(null);
-  (0, import_react7.useEffect)(() => {
+  const [value, setValue] = (0, import_react6.useState)(props.target.title);
+  const [busy, setBusy] = (0, import_react6.useState)(false);
+  const [error, setError] = (0, import_react6.useState)(null);
+  const inputRef = (0, import_react6.useRef)(null);
+  (0, import_react6.useEffect)(() => {
     const release = mapUi.claimEscape("rename-dialog");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
@@ -11803,9 +11657,9 @@ function RenameDialog(props) {
       setBusy(false);
     }
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["renameBackdrop"], onClick: () => {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameBackdrop"], onClick: () => {
     props.onDone(null);
-  }, children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
+  }, children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(
     "div",
     {
       className: talk_map_default["renameDialog"],
@@ -11815,8 +11669,8 @@ function RenameDialog(props) {
       role: "dialog",
       "aria-label": t("rename.title"),
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "input",
           {
             ref: inputRef,
@@ -11834,12 +11688,12 @@ function RenameDialog(props) {
             }
           }
         ),
-        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["renameError"], children: error }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["renameActions"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { type: "button", className: talk_map_default["renameButton"], onClick: () => {
+        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: talk_map_default["renameError"], children: error }) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: talk_map_default["renameActions"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { type: "button", className: talk_map_default["renameButton"], onClick: () => {
             props.onDone(null);
           }, children: t("rename.cancel") }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
             "button",
             {
               type: "button",
@@ -11858,7 +11712,7 @@ function RenameDialog(props) {
 }
 
 // src/client/SessionCard.tsx
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_jsx_runtime9 = require("react/jsx-runtime");
 var LAMP_CLASS = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -11874,13 +11728,13 @@ var LAMP_CHIP = {
 function statusChip(glow, running) {
   const spec = glow !== void 0 ? LAMP_CHIP[glow] : running ? LAMP_CHIP.running : void 0;
   if (spec === void 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "span",
     {
       className: `${talk_map_default["cardChip"]} ${talk_map_default[spec.className]}`,
       "data-talkmap-chip": glow ?? "running",
       children: [
-        spec.dot ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+        spec.dot ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
         t(spec.key)
       ]
     }
@@ -11905,7 +11759,7 @@ function SessionCardNode(props) {
   if (data.glow !== void 0) classNames.push(talk_map_default[LAMP_CLASS[data.glow]] ?? "");
   const quiet = data.current !== true && data.pinned !== true && data.glow === void 0 && data.pendingDraft !== true && data.interrupted !== true;
   if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(
     "div",
     {
       className: classNames.filter(Boolean).join(" "),
@@ -11917,16 +11771,16 @@ function SessionCardNode(props) {
       style: data.onPick !== void 0 ? { cursor: "pointer" } : void 0,
       "data-talkmap-session": data.sessionId,
       children: [
-        data.current === true ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("span", { className: talk_map_default["cardReticle"], "aria-hidden": "true", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("i", {}),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("i", {})
+        data.current === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: talk_map_default["cardReticle"], "aria-hidden": "true", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("i", {})
         ] }) : null,
         "      ",
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
-        data.onPick !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "t", type: "source", position: Position.Top, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "l", type: "source", position: Position.Left, className: talk_map_default["cardHandle"] ?? "" }),
+        data.onPick !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "span",
           {
             className: `${talk_map_default["pickBox"]}${selected2 === true ? ` ${talk_map_default["pickBoxChecked"]}` : ""}`,
@@ -11936,11 +11790,11 @@ function SessionCardNode(props) {
             children: selected2 === true ? "✓" : ""
           }
         ) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-          data.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "aria-label": t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+          data.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "aria-label": t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardTitle"], children: data.ghost ? t("card.ghostTitle") : data.title })
         ] }),
-        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        data.ghost ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
           "button",
           {
             type: "button",
@@ -11950,10 +11804,10 @@ function SessionCardNode(props) {
             },
             children: t("card.remove")
           }
-        ) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(import_jsx_runtime10.Fragment, { children: data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
-          data.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+        ) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(import_jsx_runtime9.Fragment, { children: data.preview !== void 0 && data.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: talk_map_default["cardSummary"], children: data.preview }) : null }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(data.updatedAt) }),
+          data.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
             "span",
             {
               className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
@@ -11962,7 +11816,7 @@ function SessionCardNode(props) {
               children: t("card.draft")
             }
           ) : null,
-          data.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
+          data.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(
             "span",
             {
               className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
@@ -11973,25 +11827,25 @@ function SessionCardNode(props) {
           ) : null,
           statusChip(data.glow, data.running === true)
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "r", type: "source", position: Position.Right, className: talk_map_default["cardHandle"] ?? "" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom, className: talk_map_default["cardHandle"] ?? "" })
       ]
     }
   );
 }
 
 // src/client/SpawnPreview.tsx
-var import_react9 = require("react");
-var import_jsx_runtime11 = require("react/jsx-runtime");
+var import_react8 = require("react");
+var import_jsx_runtime10 = require("react/jsx-runtime");
 function SpawnPreview(props) {
   const { pending } = props;
   const digest = canvas.get().digests[pending.parent.sessionId];
-  const [mode, setMode] = (0, import_react9.useState)("full");
-  const [text, setText] = (0, import_react9.useState)(() => buildInjectionText(pending.parent.title, digest));
-  const [firstMessage, setFirstMessage] = (0, import_react9.useState)("");
-  const [busy, setBusy] = (0, import_react9.useState)(false);
-  const [error, setError] = (0, import_react9.useState)(void 0);
-  (0, import_react9.useEffect)(() => {
+  const [mode, setMode] = (0, import_react8.useState)("full");
+  const [text, setText] = (0, import_react8.useState)(() => buildInjectionText(pending.parent.title, digest));
+  const [firstMessage, setFirstMessage] = (0, import_react8.useState)("");
+  const [busy, setBusy] = (0, import_react8.useState)(false);
+  const [error, setError] = (0, import_react8.useState)(void 0);
+  (0, import_react8.useEffect)(() => {
     const release = mapUi.claimEscape("spawn-preview");
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -12084,15 +11938,15 @@ function SpawnPreview(props) {
     { id: "digest", label: t("spawn.mode.digest") },
     { id: "full", label: t("spawn.mode.full") }
   ];
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHeading"], children: t("spawn.heading") }),
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnFrom"], children: [
       t("spawn.from"),
       "「",
       pending.parent.title,
       "」"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnModes"], children: modes.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
       "button",
       {
         type: "button",
@@ -12104,9 +11958,9 @@ function SpawnPreview(props) {
       },
       entry.id
     )) }),
-    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    mode === "digest" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.hint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -12117,9 +11971,9 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    ] }) : mode === "none" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.noneHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "textarea",
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
@@ -12137,10 +11991,10 @@ function SpawnPreview(props) {
           }
         }
       )
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
-    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.fullHint") }),
+    error !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: talk_map_default["spawnError"], children: error }) : null,
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: talk_map_default["spawnActions"], children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
           type: "button",
@@ -12150,7 +12004,7 @@ function SpawnPreview(props) {
           children: t("spawn.cancel")
         }
       ),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(
         "button",
         {
           type: "button",
@@ -12167,7 +12021,7 @@ function SpawnPreview(props) {
 }
 
 // src/client/WsFrame.tsx
-var import_jsx_runtime12 = require("react/jsx-runtime");
+var import_jsx_runtime11 = require("react/jsx-runtime");
 var EDGE = 10;
 var CORNER = 26;
 var EDGE_HANDLES = [
@@ -12190,7 +12044,7 @@ function WsFrameNode(props) {
     event.stopPropagation();
     data.onResizeStart?.(axis, event);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
     "div",
     {
       className: `${talk_map_default["wsFrame"]}${selected2 === true ? ` ${talk_map_default["wsFrameSelected"]}` : ""}${data.blocked === true ? ` ${talk_map_default["wsFrameBlocked"]}` : ""}`,
@@ -12204,22 +12058,22 @@ function WsFrameNode(props) {
       "data-talkmap-frame": "",
       "data-talkmap-workspace": data.workspaceId,
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(
           "div",
           {
             className: talk_map_default["wsFrameLabel"],
             style: color2 !== void 0 ? { borderColor: color2.border, backgroundImage: `linear-gradient(${color2.fill}, ${color2.fill})` } : {},
             children: [
               data.title,
-              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
+              /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { className: talk_map_default["wsFrameCount"], children: data.count })
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
-        [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { bottom: 0, left: 0, right: 0, height: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, left: 0, width: EDGE } }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["wsFrameEdge"], style: { top: 0, bottom: 0, right: 0, width: EDGE } }),
+        [...EDGE_HANDLES, ...CORNER_HANDLES].map((handle) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
           "div",
           {
             className: `${talk_map_default["wsFrameResize"]} ${talk_map_default[handle.className] ?? ""}`,
@@ -12298,8 +12152,8 @@ function clamp2(value, min, max) {
 }
 
 // src/client/StackDrawer.tsx
-var import_react10 = require("react");
-var import_jsx_runtime13 = require("react/jsx-runtime");
+var import_react9 = require("react");
+var import_jsx_runtime12 = require("react/jsx-runtime");
 var LAMP_CLASS2 = {
   running: "cardLampRunning",
   done: "cardLampDone",
@@ -12310,12 +12164,12 @@ function isIndexDisabled(message) {
   return message.includes("search is disabled") || message.includes("SESSION_QUERY_SEARCH_DISABLED");
 }
 function StackDrawer(props) {
-  const scrollerRef = (0, import_react10.useRef)(null);
+  const scrollerRef = (0, import_react9.useRef)(null);
   const remembered = loadSearch("drawer:" + props.groupId);
-  const [query, setQuery] = (0, import_react10.useState)(remembered?.query ?? "");
-  const [hits, setHits] = (0, import_react10.useState)(remembered?.hits ?? []);
-  const [searching, setSearching] = (0, import_react10.useState)(false);
-  const [searchError, setSearchError] = (0, import_react10.useState)(null);
+  const [query, setQuery] = (0, import_react9.useState)(remembered?.query ?? "");
+  const [hits, setHits] = (0, import_react9.useState)(remembered?.hits ?? []);
+  const [searching, setSearching] = (0, import_react9.useState)(false);
+  const [searchError, setSearchError] = (0, import_react9.useState)(null);
   const runSearch = async () => {
     const trimmed = query.trim();
     if (trimmed.length < 2 || props.onSearchContent === void 0) {
@@ -12339,12 +12193,12 @@ function StackDrawer(props) {
   };
   const needle = query.trim().toLowerCase();
   const visibleItems = needle === "" ? props.items : props.items.filter((item) => item.title.toLowerCase().includes(needle));
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     const scroller = scrollerRef.current;
     if (scroller === null) return;
     scroller.scrollTop = drawerState.readScroll();
   }, []);
-  (0, import_react10.useEffect)(() => {
+  (0, import_react9.useEffect)(() => {
     const release = mapUi.claimEscape("stack-drawer");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
@@ -12357,9 +12211,9 @@ function StackDrawer(props) {
       release();
     };
   }, []);
-  const lastScrollAt = (0, import_react10.useRef)(0);
-  const [leaving, setLeaving] = (0, import_react10.useState)(false);
-  const leaveTimer = (0, import_react10.useRef)(null);
+  const lastScrollAt = (0, import_react9.useRef)(0);
+  const [leaving, setLeaving] = (0, import_react9.useState)(false);
+  const leaveTimer = (0, import_react9.useRef)(null);
   const requestClose = () => {
     if (leaving) return;
     setLeaving(true);
@@ -12368,11 +12222,11 @@ function StackDrawer(props) {
       props.onClose();
     }, 130);
   };
-  (0, import_react10.useEffect)(() => () => {
+  (0, import_react9.useEffect)(() => () => {
     if (leaveTimer.current !== null) window.clearTimeout(leaveTimer.current);
   }, []);
-  const scrollSaveTimer = (0, import_react10.useRef)(null);
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+  const scrollSaveTimer = (0, import_react9.useRef)(null);
+  return /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
     "div",
     {
       className: `${talk_map_default["drawerBackdrop"]}${leaving ? ` ${talk_map_default["drawerBackdropOut"]}` : ""}`,
@@ -12382,19 +12236,19 @@ function StackDrawer(props) {
       onClick: (event) => {
         if (event.target === event.currentTarget) requestClose();
       },
-      children: /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+      children: /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
         "div",
         {
           className: `${talk_map_default["drawer"]}${leaving ? ` ${talk_map_default["drawerOut"]}` : ""}`,
           role: "dialog",
           "aria-label": props.workspaceTitle,
           children: [
-            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerSpace"] }),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerHead"], children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerTitle"], children: props.workspaceTitle }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerCount"], children: t("stack.total", { n: String(props.items.length) }) }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSpace"] }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerHint"], children: t("stack.hint") }),
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "button",
                 {
                   type: "button",
@@ -12406,8 +12260,8 @@ function StackDrawer(props) {
                 }
               )
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["drawerSearchRow"], children: [
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["drawerSearchRow"], children: [
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "input",
                 {
                   className: talk_map_default["drawerSearch"],
@@ -12433,7 +12287,7 @@ function StackDrawer(props) {
                   }
                 }
               ),
-              /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+              /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                 "button",
                 {
                   type: "button",
@@ -12445,11 +12299,10 @@ function StackDrawer(props) {
                   children: t("global.searchRun")
                 }
               ),
-              searching ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
-              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
+              searching ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchState"], children: t("stack.searching") }) : null,
+              searchError !== null ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["drawerSearchError"], title: searchError, children: isIndexDisabled(searchError) ? t("stack.searchDisabled") : t("stack.searchFailed") + "：" + (searchError.length > 70 ? searchError.slice(0, 70) + "…" : searchError) }) : null
             ] }),
-            searching ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(SearchLoading, { rows: 2 }) : null,
-            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+            /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
               "div",
               {
                 className: talk_map_default["drawerScroll"],
@@ -12470,7 +12323,7 @@ function StackDrawer(props) {
                     const quiet = item.glow === void 0 && item.pendingDraft !== true && item.interrupted !== true && item.pinned !== true;
                     if (quiet) classNames.push(talk_map_default["cardQuiet"] ?? "");
                     if (item.selected === true) classNames.push(talk_map_default["cardSelected"] ?? "");
-                    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+                    return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
                       "button",
                       {
                         type: "button",
@@ -12486,20 +12339,20 @@ function StackDrawer(props) {
                           props.onCardMenu?.(item.cardId, event);
                         },
                         children: [
-                          item.current === true ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: talk_map_default["cardReticle"], children: [
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("i", {}),
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("i", {})
+                          item.current === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: talk_map_default["cardReticle"], children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {}),
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("i", {})
                           ] }) : null,
-                          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["cardTop"], children: [
-                            item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
+                          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["cardTop"], children: [
+                            item.pinned === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardPin"], title: t("card.pinned"), "data-talkmap-pin": "1", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("svg", { viewBox: "0 0 24 24", width: "13", height: "13", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("path", { fill: "currentColor", d: "M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" }) }) }) : null,
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardTitle"], children: item.title })
                           ] }),
-                          item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
-                          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-                            /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
-                            item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+                          item.preview !== void 0 && item.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["cardSummary"], children: item.preview }) : null,
+                          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                            /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(item.updatedAt) }),
+                            item.pendingDraft === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`,
@@ -12508,7 +12361,7 @@ function StackDrawer(props) {
                                 children: t("card.draft")
                               }
                             ) : null,
-                            item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+                            item.interrupted === true ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipInterrupted"]}`,
@@ -12517,13 +12370,13 @@ function StackDrawer(props) {
                                 children: t("card.interrupted")
                               }
                             ) : null,
-                            item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
+                            item.glow === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(
                               "span",
                               {
                                 className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[item.glow].className]}`,
                                 "data-talkmap-chip": item.glow,
                                 children: [
-                                  item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                                  item.glow === "running" ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
                                   t(LAMP_CHIP[item.glow].key)
                                 ]
                               }
@@ -12534,23 +12387,19 @@ function StackDrawer(props) {
                       item.cardId
                     );
                   }),
-                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+                  hits.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(
                     SearchResults,
                     {
                       query,
-                      storageScope: "drawer:" + props.groupId,
                       hits,
-                      searching,
-                      error: null,
-                      heading: t("stack.contentHits", { n: String(hits.length) }),
-                      onOpenSession: (sessionId, q) => {
-                        props.onOpenSession?.(sessionId, q);
-                      },
-                      onFetchContext: props.onFetchContext,
-                      onFetchSessionHits: props.onFetchSessionHits
+                      heading: t("map.hits", { n: String(hits.length) }),
+                      empty: t("map.noHit"),
+                      onOpenSession: (sessionId) => {
+                        props.onOpenSession?.(sessionId);
+                      }
                     }
                   ) : null,
-                  needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
+                  needle !== "" && visibleItems.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: talk_map_default["drawerEmpty"], children: t("stack.noTitleMatch") }) : null
                 ]
               }
             )
@@ -12562,13 +12411,13 @@ function StackDrawer(props) {
 }
 
 // src/client/StackNode.tsx
-var import_jsx_runtime14 = require("react/jsx-runtime");
+var import_jsx_runtime13 = require("react/jsx-runtime");
 function StackNode(props) {
   const { data } = props;
   const open = () => {
     data.onOpen();
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(
     "div",
     {
       className: [talk_map_default["stackCell"], talk_map_default["cardQuiet"] ?? ""].filter(Boolean).join(" "),
@@ -12586,11 +12435,11 @@ function StackNode(props) {
         open();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["stackFace"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { className: [talk_map_default["stackBadge"], data.busy === true ? talk_map_default["stackBadgeBusy"] ?? "" : ""].filter(Boolean).join(" "), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackSheetBack"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackSheetMid"] }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: talk_map_default["stackFace"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: talk_map_default["stackFaceTitle"], children: data.topTitle ?? t("frame.unknown") }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { className: [talk_map_default["stackBadge"], data.busy === true ? talk_map_default["stackBadgeBusy"] ?? "" : ""].filter(Boolean).join(" "), children: [
             "+",
             data.count
           ] })
@@ -12601,7 +12450,7 @@ function StackNode(props) {
 }
 
 // src/client/use-dark.ts
-var import_react11 = require("react");
+var import_react10 = require("react");
 var DARK_ATTRIBUTE = "data-ds-dark-theme";
 function subscribe(listener) {
   if (typeof document === "undefined") return () => {
@@ -12617,11 +12466,11 @@ function getSnapshot() {
   return document.body.hasAttribute(DARK_ATTRIBUTE);
 }
 function useDsDarkTheme() {
-  return (0, import_react11.useSyncExternalStore)(subscribe, getSnapshot);
+  return (0, import_react10.useSyncExternalStore)(subscribe, getSnapshot);
 }
 
 // src/client/MapCanvas.tsx
-var import_jsx_runtime15 = require("react/jsx-runtime");
+var import_jsx_runtime14 = require("react/jsx-runtime");
 var nodeTypes = {
   sessionCard: SessionCardNode,
   wsFrame: WsFrameNode,
@@ -12675,14 +12524,14 @@ function fitRect(members) {
 }
 function CanvasInner(props) {
   const dark = useDsDarkTheme();
-  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  const canvasState = (0, import_react11.useSyncExternalStore)(canvas.subscribe, canvas.get);
   const sessions = props.useSessions((state3) => state3);
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
-  const alertById = (0, import_react12.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
-  const finishedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
-  const interruptedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
-  (0, import_react12.useEffect)(() => {
+  const alertById = (0, import_react11.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const finishedById = (0, import_react11.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
+  const interruptedById = (0, import_react11.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
+  (0, import_react11.useEffect)(() => {
     const onUnload = () => {
       sessionActivity.recordShutdown(statusById, sessions.byId);
     };
@@ -12691,14 +12540,14 @@ function CanvasInner(props) {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, [statusById, sessions]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     sessionActivity.beginPanelSession();
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     sessionActivity.observe(statusById, sessions.byId);
   }, [statusById, sessions]);
-  const draftSessions = (0, import_react12.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
-  (0, import_react12.useEffect)(() => {
+  const draftSessions = (0, import_react11.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
+  (0, import_react11.useEffect)(() => {
     draftWatch.refresh();
     const timer4 = setInterval(() => {
       draftWatch.refresh();
@@ -12707,22 +12556,22 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  const [previews, setPreviews] = (0, import_react12.useState)(readPreviewTexts);
-  const previewStamp = (0, import_react12.useRef)(
+  const [previews, setPreviews] = (0, import_react11.useState)(readPreviewTexts);
+  const previewStamp = (0, import_react11.useRef)(
     // Only entries that still make a usable body count as cached: a rule fix that
     // empties an old entry must trigger a refetch, not leave a blank card.
     new Map(Object.entries(loadPreviewCache()).filter(([, entry]) => typeof entry?.text === "string" && cleanPreviewText(entry.text) !== "").map(([sessionId, entry]) => [sessionId, entry.stamp]))
   );
   const { screenToFlowPosition, zoomTo, setNodes } = useReactFlow();
-  const [selectedIds, setSelectedIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [connecting, setConnecting] = (0, import_react12.useState)(false);
-  const connectCancelledRef = (0, import_react12.useRef)(false);
-  const [toast, setToast] = (0, import_react12.useState)(null);
-  const toastTimer = (0, import_react12.useRef)(void 0);
-  const [pendingSpawn, setPendingSpawn] = (0, import_react12.useState)(null);
-  const [menu, setMenu] = (0, import_react12.useState)(null);
-  const [drawer, setDrawer] = (0, import_react12.useState)(() => {
+  const [selectedIds, setSelectedIds] = (0, import_react11.useState)(/* @__PURE__ */ new Set());
+  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react11.useState)(/* @__PURE__ */ new Set());
+  const [connecting, setConnecting] = (0, import_react11.useState)(false);
+  const connectCancelledRef = (0, import_react11.useRef)(false);
+  const [toast, setToast] = (0, import_react11.useState)(null);
+  const toastTimer = (0, import_react11.useRef)(void 0);
+  const [pendingSpawn, setPendingSpawn] = (0, import_react11.useState)(null);
+  const [menu, setMenu] = (0, import_react11.useState)(null);
+  const [drawer, setDrawer] = (0, import_react11.useState)(() => {
     const remembered = drawerState.readGroup();
     return remembered === null ? null : { groupId: remembered };
   });
@@ -12730,35 +12579,35 @@ function CanvasInner(props) {
     setDrawer(null);
     drawerState.clear();
   };
-  const [digestTarget, setDigestTarget] = (0, import_react12.useState)(null);
-  const [renameTarget, setRenameTarget] = (0, import_react12.useState)(null);
-  const [renamedTitles, setRenamedTitles] = (0, import_react12.useState)({});
-  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react12.useState)({});
-  const [batchMode, setBatchMode] = (0, import_react12.useState)(false);
-  const [batchPicks, setBatchPicks] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [batchBusy, setBatchBusy] = (0, import_react12.useState)(false);
-  const wrapperRef = (0, import_react12.useRef)(null);
-  const [draggingCardId, setDraggingCardId] = (0, import_react12.useState)(null);
-  const [liveFrame, setLiveFrame] = (0, import_react12.useState)(null);
-  const [blockedFrame, setBlockedFrame] = (0, import_react12.useState)(null);
-  const [dragCenter, setDragCenter] = (0, import_react12.useState)(null);
-  const [isSelecting, setIsSelecting] = (0, import_react12.useState)(false);
-  const frozenRef = (0, import_react12.useRef)(null);
-  const locale = (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const sessionWs = (0, import_react12.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
-  const wsTitles = (0, import_react12.useMemo)(
+  const [digestTarget, setDigestTarget] = (0, import_react11.useState)(null);
+  const [renameTarget, setRenameTarget] = (0, import_react11.useState)(null);
+  const [renamedTitles, setRenamedTitles] = (0, import_react11.useState)({});
+  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react11.useState)({});
+  const [batchMode, setBatchMode] = (0, import_react11.useState)(false);
+  const [batchPicks, setBatchPicks] = (0, import_react11.useState)(/* @__PURE__ */ new Set());
+  const [batchBusy, setBatchBusy] = (0, import_react11.useState)(false);
+  const wrapperRef = (0, import_react11.useRef)(null);
+  const [draggingCardId, setDraggingCardId] = (0, import_react11.useState)(null);
+  const [liveFrame, setLiveFrame] = (0, import_react11.useState)(null);
+  const [blockedFrame, setBlockedFrame] = (0, import_react11.useState)(null);
+  const [dragCenter, setDragCenter] = (0, import_react11.useState)(null);
+  const [isSelecting, setIsSelecting] = (0, import_react11.useState)(false);
+  const frozenRef = (0, import_react11.useRef)(null);
+  const locale = (0, import_react11.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const sessionWs = (0, import_react11.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
+  const wsTitles = (0, import_react11.useMemo)(
     () => new Map(workspaces.items.map((item) => [item.workspaceId, item.title])),
     [workspaces]
   );
   const workspacesReady = workspaces.baselinesReady !== false;
-  const pinnedSessions = (0, import_react12.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
-  const boardSessionIds = (0, import_react12.useMemo)(
+  const pinnedSessions = (0, import_react11.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
+  const boardSessionIds = (0, import_react11.useMemo)(
     () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
     [canvasState.cards]
   );
   const wsFrames = canvasState.global?.wsFrames ?? {};
   const layoutVersion = canvasState.global?.layoutVersion ?? 1;
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (canvasState.phase !== "ready" || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return;
     const byGroup = /* @__PURE__ */ new Map();
     for (const card of Object.values(canvasState.cards)) {
@@ -12777,7 +12626,7 @@ function CanvasInner(props) {
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext });
   }, [canvasState.phase, layoutVersion, workspacesReady, canvasState.cards, canvasState.global, sessionWs]);
-  const visibleCards = (0, import_react12.useMemo)(() => {
+  const visibleCards = (0, import_react11.useMemo)(() => {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
@@ -12785,11 +12634,11 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
-  const previewInputs = (0, import_react12.useRef)({ cards: visibleCards, sessions });
+  const previewInputs = (0, import_react11.useRef)({ cards: visibleCards, sessions });
   previewInputs.current = { cards: visibleCards, sessions };
-  const previewTick = (0, import_react12.useRef)(() => {
+  const previewTick = (0, import_react11.useRef)(() => {
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     const tick = () => {
       const { cards, sessions: latest } = previewInputs.current;
       const pending = [];
@@ -12821,10 +12670,10 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     previewTick.current();
   }, [visibleCards]);
-  const membersByGroup = (0, import_react12.useMemo)(() => {
+  const membersByGroup = (0, import_react11.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       const groupId = sessionWs.get(card.sessionId);
@@ -12833,7 +12682,7 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards, sessionWs]);
-  const frameRects = (0, import_react12.useMemo)(() => {
+  const frameRects = (0, import_react11.useMemo)(() => {
     const out = {};
     for (const [groupId, stored] of Object.entries(wsFrames)) {
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored;
@@ -12841,7 +12690,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [wsFrames, liveFrame]);
-  const folderLayouts = (0, import_react12.useMemo)(() => {
+  const folderLayouts = (0, import_react11.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
@@ -12873,21 +12722,21 @@ function CanvasInner(props) {
     }
     return out;
   }, [frameRects, membersByGroup, visibleCards, pinnedSessions, draggingCardId, dragCenter]);
-  const cardLayout = (0, import_react12.useMemo)(() => {
+  const cardLayout = (0, import_react11.useMemo)(() => {
     const out = {};
     for (const layout of Object.values(folderLayouts)) {
       Object.assign(out, layoutFor(layout.rect, layout.ordered));
     }
     return out;
   }, [folderLayouts]);
-  const foldedCards = (0, import_react12.useMemo)(() => {
+  const foldedCards = (0, import_react11.useMemo)(() => {
     const out = {};
     for (const [groupId, layout] of Object.entries(folderLayouts)) {
       if (layout.folded.length > 0) out[groupId] = layout.folded;
     }
     return out;
   }, [folderLayouts]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const stale = {};
@@ -12898,8 +12747,8 @@ function CanvasInner(props) {
     }
     if (Object.keys(stale).length > 0) canvas.moveCards(stale);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
-  const foldedSet = (0, import_react12.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
-  (0, import_react12.useEffect)(() => {
+  const foldedSet = (0, import_react11.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
+  (0, import_react11.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const seen = lastActivitySeen;
@@ -12934,8 +12783,8 @@ function CanvasInner(props) {
     for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
     if (Object.keys(promoted).length > 0) canvas.moveCards(promoted);
   }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame, pinnedSessions]);
-  const autoSyncedRef = (0, import_react12.useRef)(false);
-  (0, import_react12.useEffect)(() => {
+  const autoSyncedRef = (0, import_react11.useRef)(false);
+  (0, import_react11.useEffect)(() => {
     if (canvasState.phase !== "ready" || !workspacesReady || autoSyncedRef.current) return;
     autoSyncedRef.current = true;
     const remembered = canvasState.global?.layoutMemory ?? {};
@@ -12995,7 +12844,7 @@ function CanvasInner(props) {
     }
     if (Object.keys(added).length > 0) canvas.addCards(added);
   }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
     const onKeyDown = (event) => {
@@ -13016,7 +12865,7 @@ function CanvasInner(props) {
       release();
     };
   }, [connecting]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     const onKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.code !== "KeyZ") return;
       const target = event.target;
@@ -13031,7 +12880,7 @@ function CanvasInner(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  const liveSelectedIds = (0, import_react12.useMemo)(() => {
+  const liveSelectedIds = (0, import_react11.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedIds) {
       if (id2.startsWith("frame-")) {
@@ -13042,7 +12891,7 @@ function CanvasInner(props) {
     }
     return next;
   }, [selectedIds, visibleCards, wsFrames]);
-  const liveSelectedEdgeIds = (0, import_react12.useMemo)(() => {
+  const liveSelectedEdgeIds = (0, import_react11.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedEdgeIds) {
       if (canvasState.edges[id2] !== void 0) next.add(id2);
@@ -13050,7 +12899,7 @@ function CanvasInner(props) {
     return next;
   }, [selectedEdgeIds, canvasState.edges]);
   const hasSelection = liveSelectedIds.size > 0 || liveSelectedEdgeIds.size > 0;
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (!hasSelection) return;
     const release = mapUi.claimEscape("selection");
     const onKeyDown = (event) => {
@@ -13079,7 +12928,7 @@ function CanvasInner(props) {
       release();
     };
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     if (!batchMode) return;
     const release = mapUi.claimEscape("batch-mode");
     const onKeyDown = (event) => {
@@ -13172,7 +13021,7 @@ function CanvasInner(props) {
     if (status?.completionUnread === true || finishedById.has(sessionId)) return "done";
     return void 0;
   };
-  const liveNodes = (0, import_react12.useMemo)(() => {
+  const liveNodes = (0, import_react11.useMemo)(() => {
     const wsColors = canvasState.global?.wsColors ?? {};
     const frameNodes = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? [];
@@ -13283,14 +13132,14 @@ function CanvasInner(props) {
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
   }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale]);
-  const sessionIdToCardId = (0, import_react12.useMemo)(() => {
+  const sessionIdToCardId = (0, import_react11.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
     }
     return index2;
   }, [visibleCards]);
-  const liveEdges = (0, import_react12.useMemo)(() => {
+  const liveEdges = (0, import_react11.useMemo)(() => {
     const out = [];
     const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
     const explicitPairs = /* @__PURE__ */ new Set();
@@ -13466,8 +13315,8 @@ function CanvasInner(props) {
     }
     if (removedIds.length > 0) canvas.removeEdges(removedIds);
   };
-  const mountedRef = (0, import_react12.useRef)(true);
-  (0, import_react12.useEffect)(() => {
+  const mountedRef = (0, import_react11.useRef)(true);
+  (0, import_react11.useEffect)(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -13602,7 +13451,7 @@ function CanvasInner(props) {
     agent: hit.agent,
     depth: hit.depth
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react11.useEffect)(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle);
     setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
       cardId,
@@ -13674,11 +13523,11 @@ function CanvasInner(props) {
       setBatchBusy(false);
     }
   };
-  const selectedCardIds = (0, import_react12.useMemo)(
+  const selectedCardIds = (0, import_react11.useMemo)(
     () => [...batchPicks].filter((id2) => visibleCards[id2] !== void 0),
     [batchPicks, visibleCards]
   );
-  const selectedFrameWs = (0, import_react12.useMemo)(
+  const selectedFrameWs = (0, import_react11.useMemo)(
     () => [...liveSelectedIds].filter((id2) => id2.startsWith("frame-")).map((id2) => id2.slice("frame-".length)),
     [liveSelectedIds]
   );
@@ -13815,7 +13664,7 @@ function CanvasInner(props) {
       view: "root"
     });
   };
-  const menuState = (0, import_react12.useMemo)(() => {
+  const menuState = (0, import_react11.useMemo)(() => {
     if (menu === null) return null;
     const close = () => {
       setMenu(null);
@@ -14082,7 +13931,7 @@ function CanvasInner(props) {
   }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, pinnedSessions, locale]);
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID);
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
     "div",
     {
       ref: wrapperRef,
@@ -14106,7 +13955,7 @@ function CanvasInner(props) {
         if (menu !== null) setMenu(null);
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(
           index,
           {
             nodes,
@@ -14173,14 +14022,14 @@ function CanvasInner(props) {
             proOptions: { hideAttribution: true },
             ...savedCamera !== void 0 ? { defaultViewport: savedCamera } : { fitView: hasContent },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
                 void zoomTo(1, { duration: 200 });
-              }, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
+              }, children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
             ]
           }
         ),
-        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           BatchBar,
           {
             count: selectedCardIds.length,
@@ -14197,15 +14046,15 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        !batchMode && selectedFrameWs.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FrameColorToolbar, { workspaceIds: selectedFrameWs }) : null,
-        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ContextMenu, { menu: menuState, onClose: () => {
+        !batchMode && selectedFrameWs.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(FrameColorToolbar, { workspaceIds: selectedFrameWs }) : null,
+        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
+        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,
-        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
+        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
           setPendingSpawn(null);
         } }) : null,
-        digestTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        digestTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           DigestDialog,
           {
             title: digestTarget.title,
@@ -14215,7 +14064,7 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           RenameDialog,
           {
             target: renameTarget,
@@ -14232,7 +14081,7 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
           StackDrawer,
           {
             workspaceTitle: renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
@@ -14253,7 +14102,7 @@ function CanvasInner(props) {
             onClose: closeDrawer
           }
         ) : null,
-        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
+        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
       ]
     }
   );
@@ -14262,9 +14111,9 @@ function FrameColorToolbar(props) {
   const apply2 = (colorTag) => {
     for (const workspaceId of props.workspaceIds) canvas.setWorkspaceColor(workspaceId, colorTag);
   };
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
-    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
+    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14278,7 +14127,7 @@ function FrameColorToolbar(props) {
       },
       tag.id
     )),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14294,10 +14143,10 @@ function FrameColorToolbar(props) {
   ] });
 }
 function BatchBar(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["batchSpace"] }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { className: talk_map_default["batchSpace"] }),
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14307,7 +14156,7 @@ function BatchBar(props) {
         children: t("batch.archive")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14317,7 +14166,7 @@ function BatchBar(props) {
         children: t("batch.delete")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
       "button",
       {
         type: "button",
@@ -14330,18 +14179,18 @@ function BatchBar(props) {
   ] });
 }
 function MapCanvas(props) {
-  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
-  (0, import_react12.useEffect)(() => {
+  const canvasState = (0, import_react11.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  (0, import_react11.useEffect)(() => {
     canvas.ensureLoaded();
     canvas.refresh();
     return canvas.connect();
   }, []);
   if (canvasState.phase === "error") {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
       t("map.loadError"),
       " ",
       canvasState.error,
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(
         "button",
         {
           type: "button",
@@ -14356,17 +14205,17 @@ function MapCanvas(props) {
     ] }) });
   }
   if (canvasState.phase !== "ready") {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(CanvasInner, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(CanvasInner, { ...props }) });
 }
 
 // src/client/MapOverlay.tsx
-var import_jsx_runtime16 = require("react/jsx-runtime");
+var import_jsx_runtime15 = require("react/jsx-runtime");
 function FontSizeButtons() {
-  const step2 = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  const step2 = (0, import_react13.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
       "button",
       {
         type: "button",
@@ -14378,12 +14227,12 @@ function FontSizeButtons() {
           fontScale.decrease();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
       "button",
       {
         type: "button",
@@ -14395,12 +14244,12 @@ function FontSizeButtons() {
           fontScale.increase();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
       "button",
       {
         type: "button",
@@ -14417,15 +14266,15 @@ function FontSizeButtons() {
   ] });
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
 function CloseIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
-  (0, import_react14.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const fontStep = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  (0, import_react14.useEffect)(() => {
+  (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const fontStep = (0, import_react13.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  (0, import_react13.useEffect)(() => {
     mapUi.setOpen(true);
     hideSidebarForMap();
     return () => {
@@ -14433,7 +14282,7 @@ function MapOverlay(props) {
       restoreSidebarAfterMap();
     };
   }, []);
-  (0, import_react14.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       if (mapUi.escapeClaimed()) return;
@@ -14445,7 +14294,7 @@ function MapOverlay(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
     "div",
     {
       className: talk_map_default["panel"],
@@ -14454,8 +14303,8 @@ function MapOverlay(props) {
       "aria-label": t("map.title"),
       style: { "--tm-font-step": `${fontStep}px` },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["header"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["header"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
             "button",
             {
               type: "button",
@@ -14464,17 +14313,17 @@ function MapOverlay(props) {
               "aria-label": t("map.back"),
               onClick: closeMapPanel,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(BackIcon, {}),
-                /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { children: t("map.back") })
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(BackIcon, {}),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { children: t("map.back") })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["headerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["headerSpace"] }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
             openSessionInUi(sessionId);
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(FontSizeButtons, {}),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FontSizeButtons, {}),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
             "button",
             {
               type: "button",
@@ -14482,36 +14331,36 @@ function MapOverlay(props) {
               title: t("map.close"),
               "aria-label": t("map.close"),
               onClick: closeMapPanel,
-              children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(CloseIcon, {})
+              children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(CloseIcon, {})
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(MapCanvas, { ...props })
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MapCanvas, { ...props })
       ]
     }
   );
 }
 
 // src/client/MapToggleButton.tsx
-var import_react15 = require("react");
-var import_jsx_runtime17 = require("react/jsx-runtime");
+var import_react14 = require("react");
+var import_jsx_runtime16 = require("react/jsx-runtime");
 function MapIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M9 4v14" }),
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M15 6v14" })
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M9 4v14" }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M15 6v14" })
   ] });
 }
 function MapToggleButton(props) {
-  const open = (0, import_react15.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  const locale = (0, import_react15.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const open = (0, import_react14.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
+  const locale = (0, import_react14.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const wide = props.wide;
-  (0, import_react15.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     reportSidebarWide(wide);
   }, [wide]);
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
     "button",
     {
       type: "button",
@@ -14524,8 +14373,8 @@ function MapToggleButton(props) {
         mapUi.toggle();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(MapIcon, {}),
-        wide ? /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(MapIcon, {}),
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
       ]
     }
   );
