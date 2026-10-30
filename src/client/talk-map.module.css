@@ -337,21 +337,29 @@
 /* Slot layout: a card that gets pushed aside or fills a gap glides to its new
  * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
 /* ---- edges: 两种样子 ------------------------------------------------
-   未同步 = 灰白静态虚线；同步中 = 同样灰白、静态实线，上面一串光点沿路径流过去。
-   线本身由 TalkMapEdge 组件画（内联 stroke），这里只管那串光点的动画。 */
-@keyframes tmEdgeFlow {
-  from { stroke-dashoffset: 0; }
-  to { stroke-dashoffset: -32; }
+   未同步 = 灰白静态虚线；同步中 = 灰白静态实线 + 一枚彗星沿路径流动。
+   线由 TalkMapEdge 组件画（内联 stroke + pathLength=100 的 dash 列），
+   这里只管两层光带的动画：位移 -100/循环 = 恰好一整次传输，任意长度无缝。 */
+.canvas :global(.tmEdgeComet) {
+  animation: tmEdgeTravel 3200ms cubic-bezier(.4, 0, .6, 1) infinite;
+  filter: drop-shadow(0 0 3px rgba(200, 225, 255, 0.45));
 }
 
-.canvas :global(.tmEdgeFlow) {
-  animation: tmEdgeFlow 900ms linear infinite;
+.canvas :global(.tmEdgeBloom) {
+  animation: tmEdgeTravel 3200ms cubic-bezier(.4, 0, .6, 1) infinite;
+  filter: blur(2.5px);
+}
+
+@keyframes tmEdgeTravel {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .canvas :global(.tmEdgeFlow) {
+  .canvas :global(.tmEdgeComet),
+  .canvas :global(.tmEdgeBloom) {
     animation: none;
-    opacity: 0.5;
+    opacity: 0.35;
   }
 }
 .canvas :global(.react-flow__node) {

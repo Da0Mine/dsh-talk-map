@@ -3,9 +3,9 @@
  *
  * Exactly TWO looks:
  *   未同步 = 灰白静态虚线
- *   同步中 = 同样灰白、静态实线 + 一串光点沿路径流动
- * The line itself is drawn by the TalkMapEdge component (inline stroke), so the
- * only thing left in CSS is the packet animation — assert both halves.
+ *   同步中 = 灰白静态实线 + 一枚彗星（亮头 + 渐弱尾 + 光晕层）沿路径流动
+ * The line itself is drawn by the TalkMapEdge component (inline stroke over a
+ * pathLength-normalised dash train), so CSS only carries the two animations.
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -17,25 +17,32 @@ const css = fs.readFileSync('src/client/talk-map.module.css', 'utf8')
 assert.match(bundle, /type: TALK_MAP_EDGE_TYPE/, 'edges must use the custom renderer')
 assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be registered on ReactFlow')
 
-// 2. synced = solid (no dasharray on the base path) + a flowing dot layer
+// 2. synced = solid (no dasharray on the base path) + the comet layers
 assert.match(bundle, /synced \? \{\} : \{ strokeDasharray/, 'only the unsynced line is dashed')
-assert.match(bundle, /strokeDasharray"?: ?"0 16"|strokeDasharray: "0 16"/, 'the packet must be round dots')
-assert.match(css, /@keyframes tmEdgeFlow/, 'missing the packet keyframes')
-assert.match(css, /\.tmEdgeFlow[^{]*\{[^}]*animation: tmEdgeFlow/, 'the packet must animate')
+assert.match(bundle, /tmEdgeComet/, 'the comet layer must exist')
+assert.match(bundle, /tmEdgeBloom/, 'the bloom layer must exist')
 
-// 3. grey-white, not gold
-assert.match(bundle, /232, 236, 244/, 'the synced line must be grey-white')
+// 3. the comet is a tapering train, normalised to pathLength 100
+assert.match(bundle, /pathLength: 100|pathLength=\{100\}/, 'layers must normalise to pathLength 100')
+assert.match(bundle, /9 3 5 3 2\.5/, 'the dash train must taper (head, then shorter)')
+
+// 4. one traversal per cycle: offset -100 over the whole loop, seamless
+assert.match(css, /@keyframes tmEdgeTravel/, 'missing the travel keyframes')
+assert.match(css, /stroke-dashoffset: -100/, 'one loop must be exactly one traversal')
+
+// 5. per-edge phase, so parallel lines don't pulse in lockstep
+assert.match(bundle, /animationDelay/, 'each edge needs its own phase')
+
+// 6. grey-white base line, not gold
+assert.match(bundle, /226, 232, 242/, 'the synced line must be grey-white')
 assert.match(bundle, /200, 206, 216/, 'the unsynced line must be grey-white')
 
-// 4. no leftover gold/red line looks
-for (const gone of ['tmEdge-synced', 'tmEdge-idle', 'tmEdge-stale', 'tmEdge-far', 'tmEdge-lineage']) {
+// 7. reduced motion keeps something on screen but stops it
+assert.match(css, /prefers-reduced-motion: reduce[\s\S]{0,200}tmEdgeComet/, 'reduced motion must stop the comet')
+
+// 8. no leftover looks
+for (const gone of ['tmEdge-synced', 'tmEdge-idle', 'tmEdge-stale', 'tmEdge-far', 'tmEdge-lineage', 'tmEdgeFlow']) {
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
-// 5. reduced motion keeps the dots on screen but stops them
-assert.match(css, /prefers-reduced-motion: reduce[\s\S]{0,160}tmEdgeFlow/, 'reduced motion must stop the packet')
-
-// 6. the menu no longer explains itself
-assert.ok(!bundle.includes('edge.lineageTitle'), 'the explanatory menu row must be gone')
-
-console.log('edge-flow: 10 checks passed')
+console.log('edge-flow: 12 checks passed')
