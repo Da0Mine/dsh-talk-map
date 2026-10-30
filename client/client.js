@@ -460,6 +460,7 @@ var zh = {
   "menu.renameWorkspace": "重命名工作区",
   "menu.removeCard": "从地图移除",
   "edge.push": "推送最新摘要",
+  "edge.lineageHint": "这是一条血缘线：推送只是把摘要注入子会话，连线本身不改",
   "edge.pushNoDigest": "来源还没有摘要",
   "edge.delete": "删除连线",
   "edge.autoPushOn": "开启自动推送",
@@ -609,6 +610,7 @@ var en = {
   "menu.renameWorkspace": "Rename workspace",
   "menu.removeCard": "Remove from map",
   "edge.push": "Push latest digest",
+  "edge.lineageHint": "This is a lineage line: pushing injects the digest into the child, the line itself is unchanged",
   "edge.pushNoDigest": "source has no digest yet",
   "edge.delete": "Delete edge",
   "edge.autoPushOn": "Turn on auto push",
@@ -10798,6 +10800,37 @@ function lineageSyncState(input) {
   return now2 - child >= FAR_BEHIND_MS ? "far" : "stale";
 }
 
+// src/client/push-log.ts
+var KEY = "dsh.talk-map.push-log.v1";
+function pairKey(fromCardId, toCardId) {
+  return `${fromCardId}>${toCardId}`;
+}
+function read2() {
+  try {
+    if (typeof localStorage === "undefined") return {};
+    const raw = localStorage.getItem(KEY);
+    if (raw === null) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+function stampPush(fromCardId, toCardId) {
+  const at = Date.now();
+  try {
+    const log = read2();
+    log[pairKey(fromCardId, toCardId)] = at;
+    if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(log));
+  } catch {
+  }
+  return at;
+}
+function lastPushFor(fromCardId, toCardId) {
+  const value = read2()[pairKey(fromCardId, toCardId)];
+  return typeof value === "number" ? value : void 0;
+}
+
 // src/client/DigestDialog.tsx
 var import_react4 = require("react");
 var import_jsx_runtime5 = require("react/jsx-runtime");
@@ -12701,6 +12734,7 @@ function CanvasInner(props) {
     drawerState.clear();
   };
   const [digestTarget, setDigestTarget] = (0, import_react11.useState)(null);
+  const [pushEpoch, setPushEpoch] = (0, import_react11.useState)(0);
   const [renameTarget, setRenameTarget] = (0, import_react11.useState)(null);
   const [renamedTitles, setRenamedTitles] = (0, import_react11.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react11.useState)({});
@@ -13260,6 +13294,13 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards]);
+  const lastPushOf = (fromCardId, toCardId) => {
+    for (const edge of Object.values(canvasState.edges)) {
+      const same = edge.fromCardId === fromCardId && edge.toCardId === toCardId || edge.fromCardId === toCardId && edge.toCardId === fromCardId;
+      if (same && typeof edge.lastPushAt === "number") return edge.lastPushAt;
+    }
+    return lastPushFor(fromCardId, toCardId);
+  };
   const sourceCardUpdatedAt = (cardId) => {
     const card = canvasState.cards[cardId];
     if (card === void 0) return void 0;
@@ -13276,7 +13317,7 @@ function CanvasInner(props) {
       const kind = edge.injection.kind;
       const sync = edgeSyncState({
         kind,
-        ...typeof edge.lastPushAt === "number" ? { lastPushAt: edge.lastPushAt } : {},
+        ...lastPushOf(edge.fromCardId, edge.toCardId) !== void 0 ? { lastPushAt: lastPushOf(edge.fromCardId, edge.toCardId) } : {},
         ...sourceCardUpdatedAt(edge.fromCardId) !== void 0 ? { sourceUpdatedAt: sourceCardUpdatedAt(edge.fromCardId) } : {}
       });
       out.push({
@@ -13318,7 +13359,12 @@ function CanvasInner(props) {
       if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue;
       const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? ""];
       const childSession = sessions.byId[card.sessionId];
-      const lineageSync = lineageSyncState({
+      const lineagePush = lastPushOf(parentCardId, cardId);
+      const lineageSync = lineagePush !== void 0 ? edgeSyncState({
+        kind: "digest",
+        lastPushAt: lineagePush,
+        ...parentSession?.updatedAt !== void 0 ? { sourceUpdatedAt: parentSession.updatedAt } : {}
+      }) : lineageSyncState({
         ...parentSession?.updatedAt !== void 0 ? { parentUpdatedAt: parentSession.updatedAt } : {},
         ...childSession?.updatedAt !== void 0 ? { childUpdatedAt: childSession.updatedAt } : {}
       });
@@ -13336,7 +13382,7 @@ function CanvasInner(props) {
       });
     }
     return out;
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale]);
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch]);
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes;
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges;
   const onSelectionStart = () => {
@@ -13525,7 +13571,8 @@ function CanvasInner(props) {
       await talkMapApi.injectContext(toCard.sessionId, [
         { sessionId: fromCard.sessionId, text: buildPushText(fromTitle, digest) }
       ]);
-      const pushedAt = Date.now();
+      const pushedAt = stampPush(fromCardId, toCardId);
+      setPushEpoch((previous) => previous + 1);
       for (const [id2, edge] of Object.entries(canvasState.edges)) {
         const same = edge.fromCardId === fromCardId && edge.toCardId === toCardId || edge.fromCardId === toCardId && edge.toCardId === fromCardId;
         if (!same) continue;
@@ -14041,6 +14088,7 @@ function CanvasInner(props) {
       items.push({
         key: "push",
         label: t("edge.push"),
+        ...stored === void 0 ? { hint: t("edge.lineageHint") } : {},
         ...noDigest ? { hint: t("edge.pushNoDigest"), disabled: true } : {},
         onPick: () => {
           close();

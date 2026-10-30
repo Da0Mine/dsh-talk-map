@@ -25,6 +25,7 @@ import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-st
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { edgeSyncState, lineageSyncState } from './edge-sync.ts'
+import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
@@ -226,6 +227,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
   /** Card whose digest is being inspected (read-only). */
   const [digestTarget, setDigestTarget] = useState<{ title: string; digest: Digest | undefined } | null>(null)
+  /** Bumped after a push: edges recompute their sync state (lineage has no edge row). */
+  const [pushEpoch, setPushEpoch] = useState(0)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -970,6 +973,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return index
   }, [visibleCards])
 
+  /** Last delivery for a card pair: the edge's own stamp, else the push log. */
+  const lastPushOf = (fromCardId: string, toCardId: string): number | undefined => {
+    for (const edge of Object.values(canvasState.edges)) {
+      const same = (edge.fromCardId === fromCardId && edge.toCardId === toCardId)
+        || (edge.fromCardId === toCardId && edge.toCardId === fromCardId)
+      if (same && typeof edge.lastPushAt === 'number') return edge.lastPushAt
+    }
+    return lastPushFor(fromCardId, toCardId)
+  }
+
   /** `updatedAt` of the session behind a card (undefined when it is gone). */
   const sourceCardUpdatedAt = (cardId: string): number | undefined => {
     const card = canvasState.cards[cardId]
@@ -995,7 +1008,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // Does this line still carry the source's latest context?
       const sync = edgeSyncState({
         kind,
-        ...(typeof edge.lastPushAt === 'number' ? { lastPushAt: edge.lastPushAt } : {}),
+        ...(lastPushOf(edge.fromCardId, edge.toCardId) !== undefined
+          ? { lastPushAt: lastPushOf(edge.fromCardId, edge.toCardId) }
+          : {}),
         ...(sourceCardUpdatedAt(edge.fromCardId) !== undefined
           ? { sourceUpdatedAt: sourceCardUpdatedAt(edge.fromCardId) }
           : {}),
@@ -1051,10 +1066,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       // to be judged by its own timestamps.
       const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? '']
       const childSession = sessions.byId[card.sessionId]
-      const lineageSync = lineageSyncState({
-        ...(parentSession?.updatedAt !== undefined ? { parentUpdatedAt: parentSession.updatedAt } : {}),
-        ...(childSession?.updatedAt !== undefined ? { childUpdatedAt: childSession.updatedAt } : {}),
-      })
+      // A lineage line can be pushed along too (the menu offers 推送摘要 on it),
+      // so the pair log decides: pushed after the parent changed → synced.
+      const lineagePush = lastPushOf(parentCardId, cardId)
+      const lineageSync = lineagePush !== undefined
+        ? edgeSyncState({
+            kind: 'digest',
+            lastPushAt: lineagePush,
+            ...(parentSession?.updatedAt !== undefined ? { sourceUpdatedAt: parentSession.updatedAt } : {}),
+          })
+        : lineageSyncState({
+            ...(parentSession?.updatedAt !== undefined ? { parentUpdatedAt: parentSession.updatedAt } : {}),
+            ...(childSession?.updatedAt !== undefined ? { childUpdatedAt: childSession.updatedAt } : {}),
+          })
       out.push({
         id: `lineage-${parentCardId}-${cardId}`,
         source: parentCardId,
@@ -1070,7 +1094,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
     }
     return out
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale])
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch])
 
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges
@@ -1325,7 +1349,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         { sessionId: fromCard.sessionId, text: buildPushText(fromTitle, digest) },
       ])
       // Remember when this line last delivered: "synced" is decided from it.
-      const pushedAt = Date.now()
+      // The record is keyed by the card PAIR, so a lineage line (which has no
+      // stored edge to write to) keeps its state too.
+      const pushedAt = stampPush(fromCardId, toCardId)
+      setPushEpoch(previous => previous + 1)
       for (const [id, edge] of Object.entries(canvasState.edges)) {
         const same = (edge.fromCardId === fromCardId && edge.toCardId === toCardId)
           || (edge.fromCardId === toCardId && edge.toCardId === fromCardId)
@@ -1975,6 +2002,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       items.push({
         key: 'push',
         label: t('edge.push'),
+        ...(stored === undefined ? { hint: t('edge.lineageHint') } : {}),
         ...(noDigest ? { hint: t('edge.pushNoDigest'), disabled: true } : {}),
         onPick: () => {
           close()

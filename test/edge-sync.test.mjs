@@ -66,4 +66,16 @@ assert.equal(
 )
 assert.equal(lineageSyncState({ now: NOW }), 'idle', 'unknown timestamps stay neutral')
 
-console.log('edge-sync: 14 checks passed')
+// ---- a lineage line that HAS been pushed behaves like a channel -------
+assert.equal(
+  edgeSyncState({ kind: 'digest', lastPushAt: NOW - HOUR, sourceUpdatedAt: NOW, now: NOW }),
+  'stale',
+  'pushed before the parent moved → the child fell behind',
+)
+assert.equal(
+  edgeSyncState({ kind: 'digest', lastPushAt: NOW, sourceUpdatedAt: NOW - HOUR, now: NOW }),
+  'synced',
+  'pushed after the parent moved → in sync',
+)
+
+console.log('edge-sync: 16 checks passed')

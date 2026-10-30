@@ -37,4 +37,9 @@ assert.match(bundle, /lastPushAt: pushedAt/, 'a manual push must stamp the edge'
 assert.match(bundle, /tmEdge-\$\{lineageSync\}/, 'lineage edges must carry a state class')
 assert.match(css, /tmEdge-lineage[\s\S]{0,200}animation: none/, 'lineage lines must not run the packet')
 
-console.log('edge-flow: 11 checks passed')
+// 8. a lineage push is recorded by card PAIR, so the line gets a state after it
+assert.match(bundle, /stampPush\(fromCardId, toCardId\)/, 'a push must record the pair')
+assert.match(bundle, /lastPushOf\(parentCardId, cardId\)/, 'lineage lines must read the pair log')
+assert.match(bundle, /setPushEpoch/, 'a push must repaint the edges')
+
+console.log('edge-flow: 14 checks passed')
