@@ -460,7 +460,10 @@ var zh = {
   "menu.renameWorkspace": "重命名工作区",
   "menu.removeCard": "从地图移除",
   "edge.push": "推送最新摘要",
-  "edge.lineageHint": "这是一条血缘线：推送只是把摘要注入子会话，连线本身不改",
+  "edge.lineageHint": "这条线不是画的，是会话自己记录的来源：它会一直指向父会话，推送不影响它",
+  "edge.lineageTitle": "这是血缘线（自动生成）",
+  "edge.hideLineage": "隐藏所有血缘线",
+  "edge.showLineage": "显示所有血缘线",
   "edge.pushNoDigest": "来源还没有摘要",
   "edge.delete": "删除连线",
   "edge.autoPushOn": "开启自动推送",
@@ -613,6 +616,10 @@ var en = {
   "edge.lineageHint": "This is a lineage line: pushing injects the digest into the child, the line itself is unchanged",
   "edge.pushNoDigest": "source has no digest yet",
   "edge.delete": "Delete edge",
+  "edge.lineageHint": "Not drawn by hand: the session records where it came from. It keeps pointing at the parent; pushing does not change it.",
+  "edge.lineageTitle": "Lineage line (generated)",
+  "edge.hideLineage": "Hide all lineage lines",
+  "edge.showLineage": "Show all lineage lines",
   "edge.autoPushOn": "Turn on auto push",
   "edge.autoPushOff": "Turn off auto push",
   "edge.autoPushHint": "Push the digest automatically whenever this conversation changes",
@@ -12735,6 +12742,21 @@ function CanvasInner(props) {
   };
   const [digestTarget, setDigestTarget] = (0, import_react11.useState)(null);
   const [pushEpoch, setPushEpoch] = (0, import_react11.useState)(0);
+  const LINEAGE_KEY = "dsh.talk-map.lineage-hidden.v1";
+  const [lineageHidden, setLineageHiddenState] = (0, import_react11.useState)(() => {
+    try {
+      return localStorage.getItem("dsh.talk-map.lineage-hidden.v1") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const setLineageHidden = (next) => {
+    setLineageHiddenState(next);
+    try {
+      localStorage.setItem("dsh.talk-map.lineage-hidden.v1", next ? "1" : "0");
+    } catch {
+    }
+  };
   const [renameTarget, setRenameTarget] = (0, import_react11.useState)(null);
   const [renamedTitles, setRenamedTitles] = (0, import_react11.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react11.useState)({});
@@ -13350,39 +13372,42 @@ function CanvasInner(props) {
         }
       });
     }
-    for (const [cardId, card] of Object.entries(visibleCards)) {
-      if (foldedSet.has(cardId)) continue;
-      const parentSessionId = sessions.byId[card.sessionId]?.parentId;
-      if (parentSessionId === void 0) continue;
-      const parentCardId = sessionIdToCardId.get(parentSessionId);
-      if (parentCardId === void 0) continue;
-      if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue;
-      const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? ""];
-      const childSession = sessions.byId[card.sessionId];
-      const lineagePush = lastPushOf(parentCardId, cardId);
-      const lineageSync = lineagePush !== void 0 ? edgeSyncState({
-        kind: "digest",
-        lastPushAt: lineagePush,
-        ...parentSession?.updatedAt !== void 0 ? { sourceUpdatedAt: parentSession.updatedAt } : {}
-      }) : lineageSyncState({
-        ...parentSession?.updatedAt !== void 0 ? { parentUpdatedAt: parentSession.updatedAt } : {},
-        ...childSession?.updatedAt !== void 0 ? { childUpdatedAt: childSession.updatedAt } : {}
-      });
-      out.push({
-        id: `lineage-${parentCardId}-${cardId}`,
-        source: parentCardId,
-        target: cardId,
-        sourceHandle: "r",
-        targetHandle: "l",
-        type: "smoothstep",
-        selectable: false,
-        className: `tmEdge tmEdge-${lineageSync}` + (lineageSync === "idle" ? " tmEdge-lineage" : ""),
-        data: { fromCardId: parentCardId, toCardId: cardId },
-        style: { strokeDasharray: "6 4", opacity: 0.5 }
-      });
+    if (!lineageHidden) {
+      for (const [cardId, card] of Object.entries(visibleCards)) {
+        if (foldedSet.has(cardId)) continue;
+        const parentSessionId = sessions.byId[card.sessionId]?.parentId;
+        if (parentSessionId === void 0) continue;
+        const parentCardId = sessionIdToCardId.get(parentSessionId);
+        if (parentCardId === void 0) continue;
+        if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue;
+        const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? ""];
+        const childSession = sessions.byId[card.sessionId];
+        const lineagePush = lastPushOf(parentCardId, cardId);
+        const lineageSync = lineagePush !== void 0 ? edgeSyncState({
+          kind: "digest",
+          lastPushAt: lineagePush,
+          ...parentSession?.updatedAt !== void 0 ? { sourceUpdatedAt: parentSession.updatedAt } : {}
+        }) : lineageSyncState({
+          ...parentSession?.updatedAt !== void 0 ? { parentUpdatedAt: parentSession.updatedAt } : {},
+          ...childSession?.updatedAt !== void 0 ? { childUpdatedAt: childSession.updatedAt } : {}
+        });
+        out.push({
+          id: `lineage-${parentCardId}-${cardId}`,
+          source: parentCardId,
+          target: cardId,
+          sourceHandle: "r",
+          targetHandle: "l",
+          type: "smoothstep",
+          // Selectable on purpose: right-clicking it must answer "what is this",
+          // and offer to hide it. It used to be un-clickable mystery wiring.
+          className: `tmEdge tmEdge-${lineageSync}` + (lineageSync === "idle" ? " tmEdge-lineage" : ""),
+          data: { fromCardId: parentCardId, toCardId: cardId },
+          style: { strokeDasharray: "6 4", opacity: 0.5 }
+        });
+      }
     }
     return out;
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch]);
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden]);
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes;
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges;
   const onSelectionStart = () => {
@@ -13980,6 +14005,14 @@ function CanvasInner(props) {
         }
       });
       items.push({
+        key: "toggle-lineage",
+        label: lineageHidden ? t("edge.showLineage") : t("edge.hideLineage"),
+        onPick: () => {
+          close();
+          setLineageHidden(!lineageHidden);
+        }
+      });
+      items.push({
         key: "import-ws",
         label: `${t("menu.importWs")}…`,
         onPick: () => {
@@ -14085,6 +14118,22 @@ function CanvasInner(props) {
       title = `${fromTitle} → ${toTitle}`;
       const digest = fromCard !== void 0 ? canvasState.digests[fromCard.sessionId] : void 0;
       const noDigest = digest === void 0 || digestIsEmpty2(digest);
+      if (stored === void 0) {
+        items.push({
+          key: "lineage-info",
+          label: t("edge.lineageTitle"),
+          hint: t("edge.lineageHint"),
+          disabled: true
+        });
+        items.push({
+          key: "hide-lineage",
+          label: t("edge.hideLineage"),
+          onPick: () => {
+            close();
+            setLineageHidden(true);
+          }
+        });
+      }
       items.push({
         key: "push",
         label: t("edge.push"),

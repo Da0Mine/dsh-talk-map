@@ -42,4 +42,11 @@ assert.match(bundle, /stampPush\(fromCardId, toCardId\)/, 'a push must record th
 assert.match(bundle, /lastPushOf\(parentCardId, cardId\)/, 'lineage lines must read the pair log')
 assert.match(bundle, /setPushEpoch/, 'a push must repaint the edges')
 
-console.log('edge-flow: 14 checks passed')
+// 9. lineage lines are selectable, explainable and switchable
+assert.match(bundle, /edge\.lineageTitle/, 'the edge menu must name a lineage line')
+assert.match(bundle, /edge\.hideLineage/, 'the edge menu must offer hiding it')
+assert.match(bundle, /edge\.showLineage/, 'the canvas menu must offer bringing it back')
+assert.match(bundle, /lineage-hidden\.v1/, 'the choice must be remembered')
+assert.match(bundle, /if \(!lineageHidden\)/, 'hidden lineage lines must not be painted')
+
+console.log('edge-flow: 19 checks passed')

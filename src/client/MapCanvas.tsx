@@ -229,6 +229,21 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [digestTarget, setDigestTarget] = useState<{ title: string; digest: Digest | undefined } | null>(null)
   /** Bumped after a push: edges recompute their sync state (lineage has no edge row). */
   const [pushEpoch, setPushEpoch] = useState(0)
+  /** Lineage lines (fork/subagent provenance) can be switched off entirely. */
+  const LINEAGE_KEY = 'dsh.talk-map.lineage-hidden.v1'
+  const [lineageHidden, setLineageHiddenState] = useState(() => {
+    try {
+      return localStorage.getItem('dsh.talk-map.lineage-hidden.v1') === '1'
+    } catch {
+      return false
+    }
+  })
+  const setLineageHidden = (next: boolean): void => {
+    setLineageHiddenState(next)
+    try {
+      localStorage.setItem('dsh.talk-map.lineage-hidden.v1', next ? '1' : '0')
+    } catch { /* private mode: the choice lasts this session */ }
+  }
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -1055,6 +1070,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             }),
       })
     }
+    if (!lineageHidden) {
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (foldedSet.has(cardId)) continue
       const parentSessionId = sessions.byId[card.sessionId]?.parentId
@@ -1086,15 +1102,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         sourceHandle: 'r',
         targetHandle: 'l',
         type: 'smoothstep',
-        selectable: false,
+        // Selectable on purpose: right-clicking it must answer "what is this",
+        // and offer to hide it. It used to be un-clickable mystery wiring.
         className: `tmEdge tmEdge-${lineageSync}`
           + (lineageSync === 'idle' ? ' tmEdge-lineage' : ''),
         data: { fromCardId: parentCardId, toCardId: cardId },
         style: { strokeDasharray: '6 4', opacity: 0.5 },
       })
     }
+    }
     return out
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch])
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden])
 
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges
@@ -1882,6 +1900,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         },
       })
       items.push({
+        key: 'toggle-lineage',
+        label: lineageHidden ? t('edge.showLineage') : t('edge.hideLineage'),
+        onPick: () => {
+          close()
+          setLineageHidden(!lineageHidden)
+        },
+      })
+      items.push({
         key: 'import-ws',
         label: `${t('menu.importWs')}…`,
         onPick: () => { setMenu({ ...menu, view: 'import-ws' }) },
@@ -1999,6 +2025,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       title = `${fromTitle} → ${toTitle}`
       const digest = fromCard !== undefined ? canvasState.digests[fromCard.sessionId] : undefined
       const noDigest = digest === undefined || digestIsEmpty(digest)
+      if (stored === undefined) {
+        // A derived lineage line: nothing to push along, nothing to delete.
+        items.push({
+          key: 'lineage-info',
+          label: t('edge.lineageTitle'),
+          hint: t('edge.lineageHint'),
+          disabled: true,
+        })
+        items.push({
+          key: 'hide-lineage',
+          label: t('edge.hideLineage'),
+          onPick: () => {
+            close()
+            setLineageHidden(true)
+          },
+        })
+      }
       items.push({
         key: 'push',
         label: t('edge.push'),
