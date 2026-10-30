@@ -3,9 +3,9 @@
  *
  * Exactly TWO looks:
  *   未同步 = 灰白静态虚线
- *   同步中 = 灰白静态实线 + 一道连续的光带沿路径滑过（核心 + 光晕两条带）
- * The line and the light are both drawn by TalkMapEdge; CSS carries no look at all
- * any more, except the reduced-motion fallback.
+ *   同步中 = 灰白静态实线 + 一枚彗星沿路径跑（亮头 + 渐弱长尾 + 光晕），
+ *            并且被裁剪在线身之内 —— 拐角处不会戳出去。
+ * Everything is drawn by TalkMapEdge; the stylesheet carries no edge look at all.
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -20,28 +20,33 @@ assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be 
 // 2. unsynced is the only dashed line
 assert.match(bundle, /synced \? \{\} : \{ strokeDasharray/, 'only the unsynced line is dashed')
 
-// 3. two travelling bands, percent-of-path lengths
-assert.match(bundle, /var CORE = \{ len: 12/, "the bright core band must exist")
-assert.match(bundle, /var HALO = \{ len: 20/, "the soft halo band must exist")
-assert.match(bundle, /pathLength: 100|pathLength=\{100\}/, 'bands must be percent-of-path')
+// 3. the comet has a shape: tapered tail path + rounded head
+assert.match(bundle, /M0 -1\.4 C -30 -3\.6/, 'the tapered tail path must exist')
+assert.match(bundle, /rx: 34/, 'the body ellipse must exist')
+assert.match(bundle, /rx: 5\.5/, 'the bright head must exist')
 
-// 4. motion is SMIL on the dash offset, with an eased ride
-assert.match(bundle, /attributeName: "stroke-dashoffset"/, 'the band must move by dash offset')
-assert.match(bundle, /keySplines/, 'the ride must be eased, not linear')
+// 4. it follows the curve, nose first
+assert.match(bundle, /rotate: "auto"/, 'the comet must orient along the tangent')
+assert.match(bundle, /animateMotion/, 'the comet must ride the path')
+assert.match(bundle, /keySplines/, 'the ride must be eased')
 
-// 5. per-edge phase so parallel lines do not sweep together
+// 5. clipped into the line, so a corner cannot be overrun
+assert.match(bundle, /maskUnits: "userSpaceOnUse"/, 'the corridor mask must be user-space')
+assert.match(bundle, /CORRIDOR = 16/, 'the corridor width must be defined')
+
+// 6. per-edge phase so parallel lines do not fly together
 assert.match(bundle, /begin: `\$\{phase\}s`|begin: phase/, 'each edge needs its own phase')
 
-// 6. grey-white base line, not gold
+// 7. grey-white base line, not gold
 assert.match(bundle, /226, 232, 242/, 'the synced line must be grey-white')
 assert.match(bundle, /200, 206, 216/, 'the unsynced line must be grey-white')
 
-// 7. reduced motion removes the travelling light entirely
+// 8. reduced motion removes the flying light entirely
 assert.match(bundle, /prefersReducedMotion/, 'the component must respect reduced motion')
 
-// 8. no leftover band-aids in the stylesheet
+// 9. no leftover looks in the stylesheet
 for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmEdgeBloom', 'tmEdgeFlow', 'tmEdgeSweep']) {
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
-console.log('edge-flow: 12 checks passed')
+console.log('edge-flow: 15 checks passed')

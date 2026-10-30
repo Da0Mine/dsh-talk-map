@@ -1,5 +1,6 @@
 /**
- * Iterate the edge look standalone and screenshot it, before touching the plugin.
+ * Render three candidate "light" treatments side by side so one can be picked
+ * before any more plugin code is written.
  *
  *   node scripts/_edge-preview.mjs
  */
@@ -14,52 +15,54 @@ const EDGE = [
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
 ].find(candidate => fs.existsSync(candidate))
 
-const FLOW_S = 2.6
+const D = 'M60 0 H300 Q320 0 320 20 V60 Q320 80 340 80 H640 Q660 80 660 60 V20 Q660 0 680 0 H840'
+
+/** Exactly what TalkMapEdge renders (same numbers), so the shot is faithful. */
+const edgeSvg = `
+  <path id="r1" d="${D}" fill="none" stroke="rgba(226,232,242,0.6)" stroke-width="1.6" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="ramp" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="rgba(186,210,255,0)"/>
+      <stop offset="38%" stop-color="rgba(198,220,255,0.22)"/>
+      <stop offset="72%" stop-color="rgba(230,240,255,0.62)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.96)"/>
+    </linearGradient>
+    <radialGradient id="bloom">
+      <stop offset="0%" stop-color="rgba(224,238,255,0.55)"/>
+      <stop offset="55%" stop-color="rgba(196,218,255,0.18)"/>
+      <stop offset="100%" stop-color="rgba(190,214,255,0)"/>
+    </radialGradient>
+  </defs>
+  <mask id="onpath" maskUnits="userSpaceOnUse" x="-200" y="-400" width="1400" height="900"><path d="${D}" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round"/></mask>
+  <g mask="url(#onpath)">
+  <g style="filter:blur(0.8px)">
+    <animateMotion dur="2.8s" repeatCount="indefinite" rotate="auto" calcMode="spline"
+      keyTimes="0;1" keyPoints="0;1" keySplines="0.4 0 0.55 1"><mpath href="#r1"/></animateMotion>
+    <animate attributeName="opacity" dur="2.8s" repeatCount="indefinite"
+      values="0;1;1;0" keyTimes="0;0.08;0.9;1"/>
+    <path d="M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z"
+          fill="url(#ramp)" opacity="0.75"/>
+    <ellipse rx="34" ry="3.4" fill="url(#ramp)" opacity="0.9"/>
+    <ellipse rx="10" ry="4.2" fill="rgba(255,255,255,0.5)"/>
+    <ellipse rx="5.5" ry="3.4" fill="rgba(255,255,255,0.98)"/>
+  </g>
+  <g style="filter:blur(6px)">
+    <animateMotion dur="2.8s" repeatCount="indefinite" rotate="auto" calcMode="spline"
+      keyTimes="0;1" keyPoints="0;1" keySplines="0.4 0 0.55 1"><mpath href="#r1"/></animateMotion>
+    <animate attributeName="opacity" dur="2.8s" repeatCount="indefinite"
+      values="0;1;1;0" keyTimes="0;0.08;0.9;1"/>
+    <ellipse rx="22" ry="12" fill="url(#bloom)"/>
+    <ellipse cx="-40" rx="26" ry="7" fill="url(#bloom)" opacity="0.55"/>
+  </g>`
 
 const html = `<!doctype html>
 <meta charset="utf-8" />
 <body style="margin:0;background:#16181d;font-family:system-ui">
-<svg width="900" height="420" viewBox="0 0 900 420">
-  <defs>
-    <!-- A stretched gradient: bright near the head, gone by the tail. -->
-    <radialGradient id="comet" cx="78%" cy="50%" r="78%">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.98)"/>
-      <stop offset="26%" stop-color="rgba(228,240,255,0.62)"/>
-      <stop offset="58%" stop-color="rgba(200,222,255,0.22)"/>
-      <stop offset="100%" stop-color="rgba(190,214,255,0)"/>
-    </radialGradient>
-    <radialGradient id="halo" cx="70%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="rgba(210,230,255,0.55)"/>
-      <stop offset="55%" stop-color="rgba(190,214,255,0.16)"/>
-      <stop offset="100%" stop-color="rgba(190,214,255,0)"/>
-    </radialGradient>
-  </defs>
-
-  <path id="r1" d="M60 90 H300 Q320 90 320 110 V150 Q320 170 340 170 H640 Q660 170 660 150 V110 Q660 90 680 90 H840"
-        fill="none" stroke="rgba(226,232,242,0.55)" stroke-width="1.5" stroke-linecap="round"/>
-
-  <!-- A single soft capsule travelling the whole line, plus a wider halo.
-       One dash = no beads; blur softens both ends into a gradient. -->
-  <path d="M60 90 H300 Q320 90 320 110 V150 Q320 170 340 170 H640 Q660 170 660 150 V110 Q660 90 680 90 H840"
-        fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2.6" stroke-linecap="round"
-        pathLength="100" stroke-dasharray="12 88" style="filter:blur(1.1px)">
-    <animate attributeName="stroke-dashoffset" dur="2.6s" repeatCount="indefinite"
-      values="12;0;-88" keyTimes="0;0.1;1" calcMode="spline" keySplines="0.4 0 0.6 1;0.3 0 0.5 1"/>
-  </path>
-  <path d="M60 90 H300 Q320 90 320 110 V150 Q320 170 340 170 H640 Q660 170 660 150 V110 Q660 90 680 90 H840"
-        fill="none" stroke="rgba(190,214,255,0.45)" stroke-width="9" stroke-linecap="round"
-        pathLength="100" stroke-dasharray="20 80" style="filter:blur(5px)">
-    <animate attributeName="stroke-dashoffset" dur="2.6s" repeatCount="indefinite"
-      values="20;0;-80" keyTimes="0;0.1;1" calcMode="spline" keySplines="0.4 0 0.6 1;0.3 0 0.5 1"/>
-  </path>
-  <path d="M60 300 H840" fill="none" stroke="rgba(200,206,216,0.34)" stroke-width="1.6"
-        stroke-linecap="round" stroke-dasharray="6 5"/>
-
-  <text x="60" y="60" fill="#8b93a3" font-size="13">同步中</text>
-  <text x="60" y="270" fill="#8b93a3" font-size="13">未同步</text>
+<svg width="920" height="200" viewBox="0 0 920 200">
+  <text x="60" y="140" fill="#8b93a3" font-size="12">同步中：彗星（亮头 + 渐弱长尾 + 光晕），贴着曲线走</text>
+  <g transform="translate(0,40)">${edgeSvg}</g>
 </svg>
 </body>`
-
 const profileDir = path.join(os.tmpdir(), 'talkmap-edge-preview')
 fs.rmSync(profileDir, { recursive: true, force: true })
 const pageFile = path.join(os.tmpdir(), 'talkmap-edge-preview.html')
@@ -89,13 +92,13 @@ await waitForCdp()
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP}`)
 const context = browser.contexts()[0] ?? await browser.newContext()
 const page = context.pages()[0] ?? await context.newPage()
-await page.setViewportSize({ width: 920, height: 440 })
+await page.setViewportSize({ width: 920, height: 420 })
 await page.goto('file:///' + pageFile.replace(/\\/g, '/'))
-await page.waitForTimeout(400)
+await page.waitForTimeout(500)
 
 const outDir = path.join('test', 'shots')
 fs.mkdirSync(outDir, { recursive: true })
-for (const [index, delay] of [400, 700, 700, 700].entries()) {
+for (const [index, delay] of [500, 900, 900].entries()) {
   await page.waitForTimeout(delay)
   const file = path.join(outDir, `edge-preview-${index + 1}.png`)
   await page.screenshot({ path: file })

@@ -2,15 +2,13 @@
  * One edge renderer for the whole map.
  *
  * 未同步 → 灰白静态虚线。
- * 同步中 → 灰白静态实线，一道**连续的光带**沿路径从源滑到目标，带柔光晕。
+ * 同步中 → 灰白静态实线，一枚**彗星**沿路径跑：亮头在前，尾巴沿渐变淡掉，
+ * 外圈一层柔光。头圆尾细、整组随切线转动，并且被**裁剪在线身之内**——所以它
+ * 不会在拐角处戳出线外，读起来就是"光在管子里流"，不是"色块平移"。
  *
- * 为什么是"一条"而不是很多点：早先试过的圆点阵列无论多密都会有颗粒感，多层
- * dash 又会在接缝处露硬边。这里只用一条 dash —— 但它是**百分比长度**的
- * （pathLength=100），所以任意长度的线都是同一段相对长度；前后各端靠模糊化开，
- * 于是读起来是一团连续的光，而不是一串珠子。
- *
- * 位移走 0.1→1 的 spline：起步淡入（源头"点亮"），到站停在末端，回程发生在
- * 完全移出路径的时候，所以看不到跳变。和卡片运行光环一个道理：只有一段在亮。
+ * 为什么不用 stroke-dasharray：等宽 dash 无论怎么模糊都是一条亮度均匀的带子，
+ * 没有形状变化。这里用形状（尾形 + 亮头 + 光晕）+ 沿长轴渐变来造光，用
+ * animateMotion + rotate=auto 让它贴着曲线走，再用一个把路径描粗的 mask 兜底。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
 
@@ -21,18 +19,12 @@ export interface TalkMapEdgeData {
 }
 
 /** One full traversal of the line, in seconds. */
-const FLOW_S = 2.6
+const FLOW_S = 2.8
 
-/**
- * The travelling light, two stacked bands:
- *   core — short, bright, lightly blurred (the "head")
- *   halo — longer, wide and very soft (the glow around it)
- * Lengths are percent of the path (pathLength = 100).
- */
-const CORE = { len: 12, width: 2.6, blur: 1.1, opacity: 0.95 }
-const HALO = { len: 20, width: 9, blur: 5, opacity: 0.45 }
+/** How wide the corridor is that the light is clipped into. */
+const CORRIDOR = 16
 
-/** Stable hash → per-edge phase, so parallel lines don't sweep in lockstep. */
+/** Stable hash → per-edge phase, so parallel lines don't fly in lockstep. */
 function hashOf(value: string): number {
   let hash = 0
   for (let index = 0; index < value.length; index += 1) {
@@ -49,6 +41,11 @@ function prefersReducedMotion(): boolean {
   }
 }
 
+/** SVG ids must be unique per edge and safe inside url(#…). */
+function safeId(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, '_')
+}
+
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const data = (props.data ?? {}) as TalkMapEdgeData
   const synced = data.sync === 'synced'
@@ -60,36 +57,49 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     targetY: props.targetY,
     targetPosition: props.targetPosition,
   })
-  const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * FLOW_S
-  const flowing = synced && !prefersReducedMotion()
 
-  /** One travelling band. */
-  const band = (band: typeof CORE, stroke: string, key: string): React.JSX.Element => (
-    <path
-      key={key}
-      d={path}
-      fill="none"
-      stroke={stroke}
-      strokeWidth={band.width}
-      strokeLinecap="round"
-      // Percent lengths: the same relative band on every edge, whatever its length.
-      pathLength={100}
-      strokeDasharray={`${band.len} ${100 - band.len}`}
-      style={{ filter: `blur(${band.blur}px)`, pointerEvents: 'none' }}
-    >
-      {/* Enter during the first 10%, then ride to the far end; the wrap home
-          happens while the band is off the path, so nothing pops. */}
-      <animate
-        attributeName="stroke-dashoffset"
+  const uid = safeId(props.id ?? 'edge')
+  const routeId = 'tmr' + uid
+  const rampId = 'tmp' + uid
+  const bloomId = 'tmb' + uid
+  const clipId = 'tmc' + uid
+  const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * FLOW_S
+  const flying = synced && !prefersReducedMotion()
+
+  // A smoothstep path never leaves the box spanned by its endpoints, so the
+  // corridor mask only has to cover that box plus the corner radius.
+  const boxX = Math.min(props.sourceX, props.targetX) - 40
+  const boxY = Math.min(props.sourceY, props.targetY) - 40
+  const boxW = Math.abs(props.sourceX - props.targetX) + 80
+  const boxH = Math.abs(props.sourceY - props.targetY) + 80
+
+  /** Ride the path nose-first, fading in on departure and out on arrival. */
+  const ride = (suffix: string): React.JSX.Element => (
+    <>
+      <animateMotion
+        key={'m' + suffix}
         dur={`${FLOW_S}s`}
         begin={`${phase}s`}
         repeatCount="indefinite"
-        values={`${band.len};0;${-(100 - band.len)}`}
-        keyTimes="0;0.1;1"
+        rotate="auto"
         calcMode="spline"
-        keySplines="0.4 0 0.6 1;0.3 0 0.5 1"
+        keyTimes="0;1"
+        keyPoints="0;1"
+        keySplines="0.4 0 0.55 1"
+      >
+        {/* Both spellings: SMIL mpath historically honoured only xlink:href. */}
+        <mpath href={`#${routeId}`} xlinkHref={`#${routeId}`} />
+      </animateMotion>
+      <animate
+        key={'o' + suffix}
+        attributeName="opacity"
+        dur={`${FLOW_S}s`}
+        begin={`${phase}s`}
+        repeatCount="indefinite"
+        values="0;1;1;0"
+        keyTimes="0;0.08;0.9;1"
       />
-    </path>
+    </>
   )
 
   return (
@@ -106,11 +116,67 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
           ...(synced ? {} : { strokeDasharray: '6 5' }),
         }}
       />
-      {flowing
+
+      {flying
         ? (
             <>
-              {band(HALO, `rgba(190, 214, 255, ${HALO.opacity})`, 'halo')}
-              {band(CORE, `rgba(255, 255, 255, ${CORE.opacity})`, 'core')}
+              <defs>
+                {/* Along-the-body ramp: clear at the tail, white at the head. */}
+                <linearGradient id={rampId} x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="rgba(186, 210, 255, 0)" />
+                  <stop offset="38%" stopColor="rgba(198, 220, 255, 0.22)" />
+                  <stop offset="72%" stopColor="rgba(230, 240, 255, 0.62)" />
+                  <stop offset="100%" stopColor="rgba(255, 255, 255, 0.96)" />
+                </linearGradient>
+                <radialGradient id={bloomId}>
+                  <stop offset="0%" stopColor="rgba(224, 238, 255, 0.55)" />
+                  <stop offset="55%" stopColor="rgba(196, 218, 255, 0.18)" />
+                  <stop offset="100%" stopColor="rgba(190, 214, 255, 0)" />
+                </radialGradient>
+                {/* The corridor: everything outside the line is cut away, which is
+                    what keeps the tail from poking off a corner. */}
+                <mask
+                  id={clipId}
+                  maskUnits="userSpaceOnUse"
+                  x={boxX}
+                  y={boxY}
+                  width={boxW}
+                  height={boxH}
+                >
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke="#fff"
+                    strokeWidth={CORRIDOR}
+                    strokeLinecap="round"
+                  />
+                </mask>
+              </defs>
+
+              {/* Motion route: invisible, only geometry. */}
+              <path id={routeId} d={path} fill="none" stroke="none" />
+
+              <g mask={`url(#${clipId})`}>
+                {/* The light itself: tail + body + head, all nose-first. */}
+                <g style={{ filter: 'blur(0.8px)', pointerEvents: 'none' }}>
+                  {ride('body')}
+                  <path
+                    d="M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z"
+                    fill={`url(#${rampId})`}
+                    opacity={0.75}
+                  />
+                  <ellipse rx={34} ry={3.4} fill={`url(#${rampId})`} opacity={0.9} />
+                  <ellipse rx={10} ry={4.2} fill="rgba(255, 255, 255, 0.5)" />
+                  <ellipse rx={5.5} ry={3.4} fill="rgba(255, 255, 255, 0.98)" />
+                </g>
+
+                {/* Bloom: wider and softer, centred on the head. */}
+                <g style={{ filter: 'blur(6px)', pointerEvents: 'none' }}>
+                  {ride('bloom')}
+                  <ellipse rx={22} ry={12} fill={`url(#${bloomId})`} />
+                  <ellipse cx={-40} rx={26} ry={7} fill={`url(#${bloomId})`} opacity={0.55} />
+                </g>
+              </g>
             </>
           )
         : null}

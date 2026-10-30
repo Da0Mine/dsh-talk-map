@@ -11698,9 +11698,8 @@ function ContextMenu(props) {
 
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
-var FLOW_S = 2.6;
-var CORE = { len: 12, width: 2.6, blur: 1.1, opacity: 0.95 };
-var HALO = { len: 20, width: 9, blur: 5, opacity: 0.45 };
+var FLOW_S = 2.8;
+var CORRIDOR = 16;
 function hashOf(value) {
   let hash = 0;
   for (let index2 = 0; index2 < value.length; index2 += 1) {
@@ -11715,6 +11714,9 @@ function prefersReducedMotion() {
     return false;
   }
 }
+function safeId(value) {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
@@ -11726,35 +11728,46 @@ function TalkMapEdge(props) {
     targetY: props.targetY,
     targetPosition: props.targetPosition
   });
+  const uid = safeId(props.id ?? "edge");
+  const routeId = "tmr" + uid;
+  const rampId = "tmp" + uid;
+  const bloomId = "tmb" + uid;
+  const clipId = "tmc" + uid;
   const phase = -(hashOf(props.id ?? "") % 1e3 / 1e3) * FLOW_S;
-  const flowing = synced && !prefersReducedMotion();
-  const band = (band2, stroke, key) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-    "path",
-    {
-      d: path,
-      fill: "none",
-      stroke,
-      strokeWidth: band2.width,
-      strokeLinecap: "round",
-      pathLength: 100,
-      strokeDasharray: `${band2.len} ${100 - band2.len}`,
-      style: { filter: `blur(${band2.blur}px)`, pointerEvents: "none" },
-      children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        "animate",
-        {
-          attributeName: "stroke-dashoffset",
-          dur: `${FLOW_S}s`,
-          begin: `${phase}s`,
-          repeatCount: "indefinite",
-          values: `${band2.len};0;${-(100 - band2.len)}`,
-          keyTimes: "0;0.1;1",
-          calcMode: "spline",
-          keySplines: "0.4 0 0.6 1;0.3 0 0.5 1"
-        }
-      )
-    },
-    key
-  );
+  const flying = synced && !prefersReducedMotion();
+  const boxX = Math.min(props.sourceX, props.targetX) - 40;
+  const boxY = Math.min(props.sourceY, props.targetY) - 40;
+  const boxW = Math.abs(props.sourceX - props.targetX) + 80;
+  const boxH = Math.abs(props.sourceY - props.targetY) + 80;
+  const ride = (suffix) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      "animateMotion",
+      {
+        dur: `${FLOW_S}s`,
+        begin: `${phase}s`,
+        repeatCount: "indefinite",
+        rotate: "auto",
+        calcMode: "spline",
+        keyTimes: "0;1",
+        keyPoints: "0;1",
+        keySplines: "0.4 0 0.55 1",
+        children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("mpath", { href: `#${routeId}`, xlinkHref: `#${routeId}` })
+      },
+      "m" + suffix
+    ),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      "animate",
+      {
+        attributeName: "opacity",
+        dur: `${FLOW_S}s`,
+        begin: `${phase}s`,
+        repeatCount: "indefinite",
+        values: "0;1;1;0",
+        keyTimes: "0;0.08;0.9;1"
+      },
+      "o" + suffix
+    )
+  ] });
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
     /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       BaseEdge,
@@ -11771,9 +11784,63 @@ function TalkMapEdge(props) {
         }
       }
     ),
-    flowing ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      band(HALO, `rgba(190, 214, 255, ${HALO.opacity})`, "halo"),
-      band(CORE, `rgba(255, 255, 255, ${CORE.opacity})`, "core")
+    flying ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("defs", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("linearGradient", { id: rampId, x1: "0", y1: "0", x2: "1", y2: "0", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(186, 210, 255, 0)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "38%", stopColor: "rgba(198, 220, 255, 0.22)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "72%", stopColor: "rgba(230, 240, 255, 0.62)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(255, 255, 255, 0.96)" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("radialGradient", { id: bloomId, children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(224, 238, 255, 0.55)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "55%", stopColor: "rgba(196, 218, 255, 0.18)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(190, 214, 255, 0)" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+          "mask",
+          {
+            id: clipId,
+            maskUnits: "userSpaceOnUse",
+            x: boxX,
+            y: boxY,
+            width: boxW,
+            height: boxH,
+            children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+              "path",
+              {
+                d: path,
+                fill: "none",
+                stroke: "#fff",
+                strokeWidth: CORRIDOR,
+                strokeLinecap: "round"
+              }
+            )
+          }
+        )
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { id: routeId, d: path, fill: "none", stroke: "none" }),
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { mask: `url(#${clipId})`, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { style: { filter: "blur(0.8px)", pointerEvents: "none" }, children: [
+          ride("body"),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+            "path",
+            {
+              d: "M0 -1.4 C -30 -3.6, -70 -5.2, -126 -4.2 C -132 -1.4, -132 1.4, -126 4.2 C -70 5.2, -30 3.6, 0 1.4 Z",
+              fill: `url(#${rampId})`,
+              opacity: 0.75
+            }
+          ),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 34, ry: 3.4, fill: `url(#${rampId})`, opacity: 0.9 }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 10, ry: 4.2, fill: "rgba(255, 255, 255, 0.5)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 5.5, ry: 3.4, fill: "rgba(255, 255, 255, 0.98)" })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { style: { filter: "blur(6px)", pointerEvents: "none" }, children: [
+          ride("bloom"),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { rx: 22, ry: 12, fill: `url(#${bloomId})` }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("ellipse", { cx: -40, rx: 26, ry: 7, fill: `url(#${bloomId})`, opacity: 0.55 })
+        ] })
+      ] })
     ] }) : null
   ] });
 }
