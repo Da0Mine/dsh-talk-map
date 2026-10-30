@@ -38,6 +38,10 @@ import { draftWatch } from './draft-watch.ts'
 import { cleanPreviewText } from './preview-text.ts'
 import { loadPreviewCache, putPreview, readPreviewTexts } from './preview-cache.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
+import { edgeTypes } from './TalkMapEdge.tsx'
+
+/** Registered in dgeTypes: the map's only edge renderer. */
+const TALK_MAP_EDGE_TYPE = 'talkMap'
 import { RenameDialog, type RenameTarget } from './RenameDialog.tsx'
 import { SessionCardNode, type CardGlow, type SessionCardData, type SessionCardNodeType } from './SessionCard.tsx'
 import { SpawnPreview, type PendingSpawn } from './SpawnPreview.tsx'
@@ -1031,19 +1035,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           : {}),
       })
       out.push({
-        // Two looks only: the packet runs while in sync, otherwise plain dashes.
-        className: `tmEdge ${sync === 'synced' ? 'tmEdge-synced' : 'tmEdge-idle'}`,
         id: edgeId,
         source: edge.fromCardId,
         target: edge.toCardId,
         // Handles stored per edge; legacy edges keep their old r→l anchoring.
         sourceHandle: edge.fromHandle ?? 'r',
         targetHandle: edge.toHandle ?? 'l',
-        type: 'smoothstep',
+        type: TALK_MAP_EDGE_TYPE,
         selected: liveSelectedEdgeIds.has(edgeId),
         // Endpoints ride along for the edge context menu (id parsing would
-        // be ambiguous — card ids contain dashes).
-        data: { fromCardId: edge.fromCardId, toCardId: edge.toCardId },
+        // be ambiguous — card ids contain dashes); `sync` drives the look.
+        data: { fromCardId: edge.fromCardId, toCardId: edge.toCardId, sync },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
         markerEnd: {
@@ -1098,15 +1100,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         target: cardId,
         sourceHandle: 'r',
         targetHandle: 'l',
-        type: 'smoothstep',
+        type: TALK_MAP_EDGE_TYPE,
         // Selectable on purpose: right-clicking it must answer "what is this",
         // and offer to hide it. It used to be un-clickable mystery wiring.
         // Same two looks as any other line.
-        className: `tmEdge ${lineageSync === 'synced' ? 'tmEdge-synced' : 'tmEdge-idle'}`,
-        data: { fromCardId: parentCardId, toCardId: cardId },
-        // No inline stroke here: inline style beats the stylesheet, which is why
-        // the lineage line ignored every class-based look.
-        style: { opacity: 0.5 },
+        data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync },
+        // No inline stroke: inline style beats everything the renderer draws.
+        style: { opacity: 0.85 },
       })
     }
     }
@@ -2183,6 +2183,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}

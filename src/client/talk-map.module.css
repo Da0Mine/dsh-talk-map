@@ -336,40 +336,24 @@
 
 /* Slot layout: a card that gets pushed aside or fills a gap glides to its new
  * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
-/* ---- edges: two looks ------------------------------------------------
-   同步中 = 一道光沿路径跑；其余（从没推过 / 母对话已变 / 血缘派生）一律虚线。
-   三种颜色会读成装饰，只有"在流动"和"没在流动"是能一眼信的信息。 */
-.canvas :global(.react-flow__edge-path) {
-  transition: stroke 260ms ease-out;
+/* ---- edges: 两种样子 ------------------------------------------------
+   未同步 = 灰白静态虚线；同步中 = 同样灰白、静态实线，上面一串光点沿路径流过去。
+   线本身由 TalkMapEdge 组件画（内联 stroke），这里只管那串光点的动画。 */
+@keyframes tmEdgeFlow {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -32; }
 }
 
-.canvas :global(.tmEdge path.react-flow__edge-path) {
-  stroke: rgba(255, 255, 255, 0.32);
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-dasharray: 6 4;
-}
-
-/* 同步中：暖金 + 光流 */
-.canvas :global(.tmEdge-synced path.react-flow__edge-path) {
-  stroke: rgba(255, 214, 106, 0.75);
-  stroke-dasharray: 5 9;
-  animation: tmFlow 1.05s linear infinite;
-}
-
-@keyframes tmFlow {
-  from { stroke-dashoffset: 28; }
-  to { stroke-dashoffset: 0; }
+.canvas :global(.tmEdgeFlow) {
+  animation: tmEdgeFlow 900ms linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .canvas :global(.tmEdge-synced path.react-flow__edge-path) {
+  .canvas :global(.tmEdgeFlow) {
     animation: none;
-    stroke-dasharray: 6 4;
+    opacity: 0.5;
   }
 }
-
-
 .canvas :global(.react-flow__node) {
   transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1);
 }
