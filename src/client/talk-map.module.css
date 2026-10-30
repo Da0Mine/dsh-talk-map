@@ -552,6 +552,89 @@
 }
 
 /* ---- rename dialog ------------------------------------------------------ */
+/* ---- 查看摘要：read-only view of what a card would push --------------- */
+.dialogBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  animation: tmFadeIn 140ms ease-out;
+}
+
+.digestDialog {
+  width: min(720px, 86vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px 14px;
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-elevated, #232323);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  animation: tmRiseIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.digestDialogHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.digestDialogTitle {
+  font-size: calc(13px + var(--tm-font-step, 0px));
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.digestDialogFrom {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: calc(11px + var(--tm-font-step, 0px));
+  color: var(--dsw-alias-label-secondary);
+}
+
+.digestLabel {
+  margin-top: 4px;
+  font-size: calc(10.5px + var(--tm-font-step, 0px));
+  color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.5));
+}
+
+.digestText {
+  width: 100%;
+  min-height: 96px;
+  max-height: 30vh;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--dsw-alias-label-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: calc(11.5px + var(--tm-font-step, 0px));
+  line-height: 1.62;
+  resize: none;
+}
+
+.digestEmpty {
+  padding: 18px 4px;
+  font-size: calc(12px + var(--tm-font-step, 0px));
+  color: var(--dsw-alias-label-secondary);
+}
+
+.digestActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
 .renameBackdrop {
   position: fixed;
   inset: 0;

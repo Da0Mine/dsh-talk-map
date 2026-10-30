@@ -154,6 +154,7 @@
     s1: { atSeq: 12, summary: '把卡片改成网格槽位，含退让与补位动画。', keyFindings: [], nextStep: '补完工作区伸缩与双击新建', generatedAt: T0 },
     s2: { atSeq: 8, summary: '清理临时截图与旧脚本，统一放回收区。', keyFindings: [], nextStep: '核对 skill 内嵌脚本', generatedAt: T0 - 20 * MIN },
     s6: { atSeq: 5, summary: '标注流程拆成标注、复核两段。', keyFindings: [], nextStep: '补离线包说明', generatedAt: T0 - 200 * MIN },
+    s7: { atSeq: 9, summary: '标注工具离线化，导出 JSON 走本地校验。', keyFindings: ['离线包不带网络请求', '导出前先跑一遍校验'], nextStep: '补一份示例标注', generatedAt: T0 - 260 * MIN },
   }
 
   /**

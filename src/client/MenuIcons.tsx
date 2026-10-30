@@ -15,8 +15,14 @@ export type MenuIconName =
   | 'batch'
   | 'open'
   | 'group'
+  | 'digest'
 
 const PATHS: Record<MenuIconName, React.JSX.Element> = {
+  digest: (
+    <>
+      <path fill="currentColor" d="M5 2h10l4 4v16H5V2zm9 1.5V7h3.5L14 3.5zM7 11h10v1.6H7V11zm0 3.4h10v1.6H7v-1.6zm0 3.4h6.5V19H7v-1.2z" />
+    </>
+  ),
   pin: (
     <path fill="currentColor" d="M16 8.6V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v4.6c0 1.66-1.34 3-3 3v2h5.1v7.9l.9 1 .9-1V13.6H19v-2c-1.66 0-3-1.34-3-3z" />
   ),

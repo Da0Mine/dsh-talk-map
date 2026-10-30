@@ -1043,6 +1043,35 @@ try {
   check('右键菜单含置顶/标为未读/归档/删除/批量',
     ['置顶', '标为未读', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
     JSON.stringify(cardMenu))
+  // 查看摘要：read-only preview of exactly what this card would push.
+  check('卡片菜单里有「查看摘要」', cardMenu.some(text => text.includes('查看摘要')), JSON.stringify(cardMenu))
+  const digestRow = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('[class*="menuItem"]')]
+    const row = rows.find(node => node.textContent.includes('查看摘要'))
+    if (row === undefined) return null
+    const box = row.getBoundingClientRect()
+    return { x: Math.round(box.x + 30), y: Math.round(box.y + box.height / 2), disabled: row.getAttribute('aria-disabled') === 'true' }
+  })
+  if (digestRow !== null && digestRow.disabled === false) {
+    await page.mouse.click(digestRow.x, digestRow.y)
+    await page.waitForTimeout(500)
+    const digestDialog = await page.evaluate(() => {
+      const dialog = document.querySelector('[data-talkmap-digest-dialog]')
+      if (dialog === null) return null
+      const areas = [...dialog.querySelectorAll('textarea')].map(node => node.value)
+      return { areas: areas.length, hasRecall: areas.some(text => text.includes('提醒')), sample: (areas[0] ?? '').slice(0, 50) }
+    })
+    check('「查看摘要」是只读预览，并带上“去看完整对话”的提醒',
+      digestDialog !== null && digestDialog.areas >= 1 && digestDialog.hasRecall === true,
+      JSON.stringify(digestDialog))
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(300)
+    // The following checks read the menu rows: open it again.
+    await page.mouse.click(pinPoint.x, pinPoint.y, { button: 'right' })
+    await page.waitForTimeout(400)
+  } else {
+    check('「查看摘要」是只读预览，并带上“去看完整对话”的提醒', false, 'menu row missing/disabled')
+  }
   const menuDecor = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('[class*="menuItem"]')]
     const danger = rows.find(node => node.textContent.includes('删除'))

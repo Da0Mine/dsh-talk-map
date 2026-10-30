@@ -31,7 +31,9 @@ export function buildInjectionText(title: string, digest: Digest | undefined): s
   if (digest === undefined || digestIsEmpty(digest)) {
     return `${header}\n${t('spawn.noDigest')}`
   }
-  return [header, ...digestBody(digest)].join('\n')
+  // The recipient must know where the details live: a digest is an outline,
+  // not the conversation.
+  return [header, ...digestBody(digest), t('inject.recall', { title })].join('\n')
 }
 
 /** The pipe push: latest digest of the source, stamped with origin + time. */
@@ -39,5 +41,5 @@ export function buildPushText(title: string, digest: Digest): string {
   const now = new Date()
   const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
   const header = t('push.header', { from: title, time })
-  return [header, ...digestBody(digest)].join('\n')
+  return [header, ...digestBody(digest), t('inject.recall', { title })].join('\n')
 }

@@ -20,10 +20,11 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { RootSlotStandardProps, SessionListState, SessionStatusFact, WorkspaceListState } from './dsh.ts'
-import type { Card, FrameGeometry } from '../shared/model.ts'
+import type { Card, Digest, FrameGeometry } from '../shared/model.ts'
 import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-store.ts'
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
+import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { allSessionTitles, setCardTable, setTitleResolver, setTitleTable } from './map-state.ts'
@@ -222,6 +223,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     setDrawer(null)
     drawerState.clear()
   }
+  /** Card whose digest is being inspected (read-only). */
+  const [digestTarget, setDigestTarget] = useState<{ title: string; digest: Digest | undefined } | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -1784,6 +1787,24 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           togglePin(cardId)
         },
       })
+      // Read-only: exactly the text this card would push to another session.
+      items.push({
+        key: 'view-digest',
+        icon: 'digest',
+        label: t('menu.viewDigest'),
+        ...(card === undefined || digestIsEmpty(canvasState.digests[card.sessionId])
+          ? { hint: t('digest.empty'), disabled: true }
+          : {}),
+        onPick: () => {
+          close()
+          if (card === undefined) return
+          setDigestTarget({
+            title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+            digest: canvasState.digests[card.sessionId],
+          })
+        },
+      })
+
       items.push({
         key: 'rename',
         icon: 'rename',
@@ -2053,7 +2074,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       {pendingSpawn !== null
         ? <SpawnPreview pending={pendingSpawn} onClose={() => { setPendingSpawn(null) }} />
         : null}
+      {digestTarget !== null
+        ? (
+            <DigestDialog
+              title={digestTarget.title}
+              digest={digestTarget.digest}
+              onClose={() => { setDigestTarget(null) }}
+            />
+          )
+        : null}
       {renameTarget !== null
+
         ? (
             <RenameDialog
               target={renameTarget}
