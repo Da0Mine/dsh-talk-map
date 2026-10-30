@@ -75,6 +75,13 @@ export const talkMapApi = {
     return postJson('/talk-map/digest/refresh', { sessionId })
   },
   /**
+   * Regenerate ONLY if the conversation moved on: the Host hashes the
+   * transcript and hands back the stored digest when it is still current.
+   */
+  ensureDigest(sessionId: string): Promise<{ sessionId: string; digest: Digest }> {
+    return postJson('/talk-map/digest/ensure', { sessionId })
+  },
+  /**
    * The last message the USER sent, per session — what the card body shows now
    * that the LLM summary is gone. Read straight off the Host's session surface.
    */

@@ -1531,6 +1531,7 @@ try {
       spawnCalls.create !== null, JSON.stringify(spawnCalls.create))
     check('面板不再报「界面服务还在初始化」',
       (spawnCalls.error ?? '').includes('初始化') === false, String(spawnCalls.error))
+
   }
   // s4 finishes (green), s5 is still running when we "quit", s11 fails (red).
   // All three live in localStorage, so a reload must bring them back — the

@@ -102,8 +102,16 @@ export function SpawnPreview(props: {
         // (tools, preset, workspace binding) identical to a normal new chat.
         // The plugin only injects the digest into it afterwards.
         const created = await createSession()
+        // Refresh the digest on demand: unchanged conversation → no LLM call.
+        let injected = text
+        try {
+          const fresh = await talkMapApi.ensureDigest(pending.parent.sessionId)
+          if (fresh.digest !== undefined && !digestIsEmpty(fresh.digest)) {
+            injected = buildInjectionText(pending.parent.title, fresh.digest)
+          }
+        } catch { /* fall back to the text we already had */ }
         await talkMapApi.injectContext(created.sessionId, [
-          { sessionId: pending.parent.sessionId, text },
+          { sessionId: pending.parent.sessionId, text: injected },
         ])
         addCardAndEdge(created.sessionId, 'digest', text)
         jumpIn(created.sessionId)

@@ -1277,11 +1277,17 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const fromCard = canvasState.cards[fromCardId]
     const toCard = canvasState.cards[toCardId]
     if (fromCard === undefined || toCard === undefined) return
-    const digest = canvasState.digests[fromCard.sessionId]
-    if (digest === undefined || digestIsEmpty(digest)) return
     const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.sessionId
     const toTitle = sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.sessionId
     try {
+      // The digest is not kept warm any more: refresh it here, but only when
+      // this conversation actually changed (the Host skips the LLM call).
+      const fresh = await talkMapApi.ensureDigest(fromCard.sessionId)
+      const digest = fresh.digest ?? canvasState.digests[fromCard.sessionId]
+      if (digest === undefined || digestIsEmpty(digest)) {
+        showToast(t('digest.empty'))
+        return
+      }
       await talkMapApi.injectContext(toCard.sessionId, [
         { sessionId: fromCard.sessionId, text: buildPushText(fromTitle, digest) },
       ])
@@ -1887,6 +1893,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           void pushAlongEdge(edgeFrom, edgeTo)
         },
       })
+      if (stored !== undefined) {
+        const auto = stored.injection.autoPush === true
+        items.push({
+          key: 'auto-push',
+          label: auto ? t('edge.autoPushOff') : t('edge.autoPushOn'),
+          ...(auto ? {} : { hint: t('edge.autoPushHint') }),
+          onPick: () => {
+            close()
+            canvas.addEdges({
+              [edgeId]: {
+                ...stored,
+                injection: { ...stored.injection, autoPush: !auto },
+              },
+            })
+          },
+        })
+      }
       // Stored edges only — lineage lines are derived, nothing to persist on.
       // (Auto-sync is shelved: schema + host fan-out exist but stay
       // unwired until the feature is wanted — see the handover doc.)

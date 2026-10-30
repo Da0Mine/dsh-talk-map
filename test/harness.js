@@ -150,6 +150,19 @@
     })
   }
 
+  // One association edge on the board, so the edge context menu always has
+  // something to open (the per-edge auto-push switch lives there).
+  const edges = {}
+  if (Object.keys(cards).length >= 2) {
+    edges['edge-fixture'] = {
+      boardId: 'inbox',
+      fromCardId: 'card-1',
+      toCardId: 'card-2',
+      injection: { kind: 'link' },
+      createdAt: T0,
+    }
+  }
+
   const digests = {
     s1: { atSeq: 12, summary: '把卡片改成网格槽位，含退让与补位动画。', keyFindings: [], nextStep: '补完工作区伸缩与双击新建', generatedAt: T0 },
     s2: { atSeq: 8, summary: '清理临时截图与旧脚本，统一放回收区。', keyFindings: [], nextStep: '核对 skill 内嵌脚本', generatedAt: T0 - 20 * MIN },
@@ -179,7 +192,7 @@
   const payload = {
     boards: { inbox: { name: '收件箱', color: '#888', order: 0, createdAt: T0 } },
     cards,
-    edges: {},
+    edges,
     digests,
     global: globalState,
   }
@@ -188,6 +201,7 @@
   /** '/talk-map/search' hits, and a switch to make the RPC path fail. */
   const searchRouteCalls = []
   const searchContextCalls = []
+  const digestCalls = []
   const searchRouteScopes = []
   const searchSessionCalls = []
   let searchRpcFails = false
@@ -237,6 +251,11 @@
         seqs: [42, 43],
       })
     }
+    // On-demand digest: the push path refreshes before injecting (hash-aware).
+    if (path.indexOf('/talk-map/digest/ensure') >= 0 || path.indexOf('/talk-map/digest/refresh') >= 0) {
+      digestCalls.push({ sessionId: String(body?.sessionId ?? ''), kind: path.includes('ensure') ? 'ensure' : 'refresh' })
+      return json({ sessionId: String(body?.sessionId ?? ''), digest: digests[String(body?.sessionId ?? '')] ?? null })
+    }
     // Lazy passage for one hit (hover).
     if (path.indexOf('/talk-map/search-context') >= 0) {
       searchContextCalls.push({ sessionId: body?.sessionId, seq: body?.seq })
@@ -281,6 +300,11 @@
     }
     // Host-side fallback for the drawer's full-text search (the client calls
     // this when the shared RPC surface does not answer).
+    // On-demand digest: the push path refreshes before injecting (hash-aware).
+    if (path.indexOf('/talk-map/digest/ensure') >= 0 || path.indexOf('/talk-map/digest/refresh') >= 0) {
+      digestCalls.push({ sessionId: String(body?.sessionId ?? ''), kind: path.includes('ensure') ? 'ensure' : 'refresh' })
+      return json({ sessionId: String(body?.sessionId ?? ''), digest: digests[String(body?.sessionId ?? '')] ?? null })
+    }
     // Lazy passage for one hit (hover).
     if (path.indexOf('/talk-map/search-context') >= 0) {
       searchContextCalls.push({ sessionId: body?.sessionId, seq: body?.seq })
@@ -692,6 +716,7 @@
       return searchRouteScopes.slice()
     },
     /** Which hits asked for their passage (hover), and when. */
+    digestCalls() { return [...digestCalls] },
     searchContextCalls() {
       return searchContextCalls.slice()
     },

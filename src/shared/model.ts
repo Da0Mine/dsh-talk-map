@@ -29,6 +29,11 @@ export interface EdgeInjection {
    * whose child inherited nothing. */
   kind: 'digest' | 'full' | 'selection' | 'none' | 'link'
   injectedText?: string
+  /**
+   * Push this card's digest to the edge's target whenever it changes.
+   * Off by default: digests are generated on demand only.
+   */
+  autoPush?: boolean
 }
 
 export interface MapEdgeData {

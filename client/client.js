@@ -266,6 +266,13 @@ var talkMapApi = {
     return postJson("/talk-map/digest/refresh", { sessionId });
   },
   /**
+   * Regenerate ONLY if the conversation moved on: the Host hashes the
+   * transcript and hands back the stored digest when it is still current.
+   */
+  ensureDigest(sessionId) {
+    return postJson("/talk-map/digest/ensure", { sessionId });
+  },
+  /**
    * The last message the USER sent, per session — what the card body shows now
    * that the LLM summary is gone. Read straight off the Host's session surface.
    */
@@ -452,6 +459,9 @@ var zh = {
   "edge.push": "推送最新摘要",
   "edge.pushNoDigest": "来源还没有摘要",
   "edge.delete": "删除连线",
+  "edge.autoPushOn": "开启自动推送",
+  "edge.autoPushOff": "关闭自动推送",
+  "edge.autoPushHint": "这条对话每次有新内容时，自动把摘要推过去",
   "toast.pushed": "已推送给「{to}」",
   "toast.notLive": "目标对话未激活——先打开它一次再推送",
   "toast.pushFailed": "推送失败：",
@@ -595,6 +605,9 @@ var en = {
   "edge.push": "Push latest digest",
   "edge.pushNoDigest": "source has no digest yet",
   "edge.delete": "Delete edge",
+  "edge.autoPushOn": "Turn on auto push",
+  "edge.autoPushOff": "Turn off auto push",
+  "edge.autoPushHint": "Push the digest automatically whenever this conversation changes",
   "toast.pushed": 'Pushed to "{to}"',
   "toast.notLive": "Target conversation is not active — open it once, then push again",
   "toast.pushFailed": "Push failed: ",
@@ -10930,12 +10943,12 @@ function digestBody(digest) {
   if (next !== "") parts.push(`${t("inject.next")}${next}`);
   return parts;
 }
-function digestIsEmpty(digest) {
+function digestIsEmpty2(digest) {
   return digest === void 0 || digestBody(digest).length === 0;
 }
 function buildInjectionText(title, digest) {
   const header = `${t("inject.header")}「${title}」`;
-  if (digest === void 0 || digestIsEmpty(digest)) {
+  if (digest === void 0 || digestIsEmpty2(digest)) {
     return `${header}
 ${t("spawn.noDigest")}`;
   }
@@ -10966,7 +10979,7 @@ function DigestDialog(props) {
       release();
     };
   }, [props]);
-  const empty2 = digestIsEmpty(props.digest);
+  const empty2 = digestIsEmpty2(props.digest);
   const pushText = empty2 ? "" : buildPushText(props.title, props.digest);
   const injectText = empty2 ? "" : buildInjectionText(props.title, props.digest);
   return /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(
@@ -12031,8 +12044,16 @@ function SpawnPreview(props) {
       if (mode === "digest") {
         if (text.trim() === "") throw new Error(t("spawn.needText"));
         const created2 = await createSession();
+        let injected = text;
+        try {
+          const fresh = await talkMapApi.ensureDigest(pending.parent.sessionId);
+          if (fresh.digest !== void 0 && !digestIsEmpty(fresh.digest)) {
+            injected = buildInjectionText(pending.parent.title, fresh.digest);
+          }
+        } catch {
+        }
         await talkMapApi.injectContext(created2.sessionId, [
-          { sessionId: pending.parent.sessionId, text }
+          { sessionId: pending.parent.sessionId, text: injected }
         ]);
         addCardAndEdge(created2.sessionId, "digest", text);
         jumpIn(created2.sessionId);
@@ -13502,11 +13523,15 @@ function CanvasInner(props) {
     const fromCard = canvasState.cards[fromCardId];
     const toCard = canvasState.cards[toCardId];
     if (fromCard === void 0 || toCard === void 0) return;
-    const digest = canvasState.digests[fromCard.sessionId];
-    if (digest === void 0 || digestIsEmpty(digest)) return;
     const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.sessionId;
     const toTitle = sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.sessionId;
     try {
+      const fresh = await talkMapApi.ensureDigest(fromCard.sessionId);
+      const digest = fresh.digest ?? canvasState.digests[fromCard.sessionId];
+      if (digest === void 0 || digestIsEmpty2(digest)) {
+        showToast(t("digest.empty"));
+        return;
+      }
       await talkMapApi.injectContext(toCard.sessionId, [
         { sessionId: fromCard.sessionId, text: buildPushText(fromTitle, digest) }
       ]);
@@ -13904,7 +13929,7 @@ function CanvasInner(props) {
         key: "view-digest",
         icon: "digest",
         label: t("menu.viewDigest"),
-        ...card === void 0 || digestIsEmpty(canvasState.digests[card.sessionId]) ? { hint: t("digest.empty"), disabled: true } : {},
+        ...card === void 0 || digestIsEmpty2(canvasState.digests[card.sessionId]) ? { hint: t("digest.empty"), disabled: true } : {},
         onPick: () => {
           close();
           if (card === void 0) return;
@@ -13978,7 +14003,7 @@ function CanvasInner(props) {
       const toTitle = toCard !== void 0 ? sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.sessionId : "?";
       title = `${fromTitle} → ${toTitle}`;
       const digest = fromCard !== void 0 ? canvasState.digests[fromCard.sessionId] : void 0;
-      const noDigest = digest === void 0 || digestIsEmpty(digest);
+      const noDigest = digest === void 0 || digestIsEmpty2(digest);
       items.push({
         key: "push",
         label: t("edge.push"),
@@ -13988,6 +14013,23 @@ function CanvasInner(props) {
           void pushAlongEdge(edgeFrom, edgeTo);
         }
       });
+      if (stored !== void 0) {
+        const auto = stored.injection.autoPush === true;
+        items.push({
+          key: "auto-push",
+          label: auto ? t("edge.autoPushOff") : t("edge.autoPushOn"),
+          ...auto ? {} : { hint: t("edge.autoPushHint") },
+          onPick: () => {
+            close();
+            canvas.addEdges({
+              [edgeId]: {
+                ...stored,
+                injection: { ...stored.injection, autoPush: !auto }
+              }
+            });
+          }
+        });
+      }
       if (stored !== void 0) {
         items.push({
           key: "delete-edge",
