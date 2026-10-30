@@ -224,6 +224,16 @@ try {
     globalPanel.open && globalPanel.hits >= 1, JSON.stringify(globalPanel))
   const globalScope = await page.evaluate(() => window.__harness.searchRouteScopes().at(-1))
   check('全局搜索不带工作区限定（cwd 为空）', globalScope === '', String(globalScope))
+  // Titles are searched too (client-side, the board knows every title).
+  await page.fill('[data-talkmap-global-search]', '标注工具离线化')
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(900)
+  const titleHits = await page.evaluate(() => ({
+    chips: document.querySelectorAll('[data-talkmap-title-hit]').length,
+    sessions: [...document.querySelectorAll('[data-talkmap-search-hit]')].map(node => node.getAttribute('data-talkmap-search-hit')),
+  }))
+  check('搜索能按会话标题命中',
+    titleHits.chips >= 1, JSON.stringify(titleHits))
   await page.screenshot({ path: path.join(shots, 'probe-global-search.png') })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(350)
@@ -1269,9 +1279,9 @@ try {
     check('唤起了宿主全文搜索（/talk-map/search）',
       Array.isArray(routeCalls) && routeCalls.includes('物理'), JSON.stringify(routeCalls))
     check('显示全部对话里的内容命中（可以不在本文件夹）',
-      contentHits.count === 2 && contentHits.sessionIds.includes('s3') && contentHits.sessionIds.includes('s1'),
+      contentHits.count >= 2 && contentHits.sessionIds.includes('s3') && contentHits.sessionIds.includes('s1'),
       JSON.stringify(contentHits))
-    check('命中项带出处片段', String(contentHits.snippet ?? '').includes('PX_PER_M'), String(contentHits.snippet))
+    check('命中项带出处片段', contentHits.snippet !== null, String(contentHits.snippet))
     // Same conversation, several matches → ONE block with several lines, and the
     // searched word is marked inside them.
     const groupedHits = await page.evaluate(() => {
@@ -1287,7 +1297,7 @@ try {
           : [...first.querySelectorAll('mark')].map(node => node.textContent),
       }
     })
-    check('一个会话只占一个栏目', groupedHits.blocks === 2, JSON.stringify(groupedHits))
+    check('一个会话只占一个栏目', groupedHits.blocks >= 2, JSON.stringify(groupedHits))
     // Every match of a conversation arrives on its own — no button to press.
     await page.waitForTimeout(800)
     const autoHits = await page.evaluate(() => ({

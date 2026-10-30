@@ -355,3 +355,27 @@ export function sessionTitle(sessionId: string): string | undefined {
     return undefined
   }
 }
+/**
+ * The board publishes the full title table on every change; the searches read it
+ * from here (the service read below is only a fallback for a cold start).
+ */
+let titleTable: { sessionId: string; title: string }[] = []
+
+export function setTitleTable(next: { sessionId: string; title: string }[]): void {
+  titleTable = next
+}
+
+/** Every known conversation title (search matches these too). */
+export function allSessionTitles(): { sessionId: string; title: string }[] {
+  if (titleTable.length > 0) return titleTable
+  const services = getServices()
+  if (services === undefined) return []
+  try {
+    const snapshot = services.sessions.list().getSnapshot()
+    return Object.entries(snapshot.byId)
+      .map(([sessionId, row]) => ({ sessionId, title: (row as { displayTitle?: string }).displayTitle ?? '' }))
+      .filter(entry => entry.title !== '')
+  } catch {
+    return []
+  }
+}

@@ -391,6 +391,7 @@ var zh = {
   "stack.agentSub": "子智能体",
   "stack.roleUser": "你",
   "stack.roleAgent": "AI",
+  "stack.titleHit": "标题命中",
   "stack.agentMainHint": "你和 DSH 直接对话产生的会话",
   "stack.agentSubHint": "某个 Agent / 工具派生的子会话",
   "stack.moreLoading": "查询中…",
@@ -530,6 +531,7 @@ var en = {
   "stack.moreHits": "+ more hits in this conversation",
   "stack.agentMain": "main",
   "stack.agentSub": "sub-agent",
+  "stack.titleHit": "title match",
   "stack.roleUser": "you",
   "stack.roleAgent": "AI",
   "stack.agentMainHint": "A conversation you had with DSH",
@@ -1210,6 +1212,21 @@ function sessionTitle(sessionId) {
     return void 0;
   }
 }
+var titleTable = [];
+function setTitleTable(next) {
+  titleTable = next;
+}
+function allSessionTitles() {
+  if (titleTable.length > 0) return titleTable;
+  const services2 = getServices();
+  if (services2 === void 0) return [];
+  try {
+    const snapshot5 = services2.sessions.list().getSnapshot();
+    return Object.entries(snapshot5.byId).map(([sessionId, row]) => ({ sessionId, title: row.displayTitle ?? "" })).filter((entry) => entry.title !== "");
+  } catch {
+    return [];
+  }
+}
 
 // src/client/MapOverlay.tsx
 var import_react13 = require("react");
@@ -1551,6 +1568,7 @@ function SearchResults(props) {
       const roles = hit.roles ?? [];
       return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
+          hit.byTitle === true ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-title-hit": "1", children: t("stack.titleHit") }) : null,
           hit.agent === "subagent" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
             "span",
             {
@@ -1781,8 +1799,19 @@ function GlobalSearch(props) {
         agent: hit.agent,
         depth: hit.depth
       }));
-      setHits(views);
-      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: views });
+      const needle = trimmed.toLowerCase();
+      const already = new Set(views.map((view) => view.sessionId));
+      const byTitle = allSessionTitles().filter((entry) => !already.has(entry.sessionId)).filter((entry) => entry.title.toLowerCase().includes(needle)).map((entry) => ({
+        sessionId: entry.sessionId,
+        title: entry.title,
+        blocks: [[entry.title]],
+        seqs: [null],
+        roles: [null],
+        byTitle: true
+      }));
+      const merged = [...byTitle, ...views];
+      setHits(merged);
+      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: merged });
     } catch (cause) {
       setHits([]);
       setError(String(cause?.message ?? cause));
@@ -11086,6 +11115,26 @@ var drawerState = {
 
 // src/client/jump-highlight.ts
 var MARK_CLASS = "tm_search_flash";
+var trace = {
+  query: "",
+  panelGone: null,
+  findAttempts: 0,
+  found: false,
+  insidePanel: null,
+  matched: null,
+  findAvailable: false
+};
+function report() {
+  try {
+    void fetch("/talk-map/client-boot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ phase: "jump-debug", ...trace })
+    }).catch(() => {
+    });
+  } catch {
+  }
+}
 var STYLE_ID = "tm-search-flash-style";
 function ensureStyle() {
   if (document.getElementById(STYLE_ID) !== null) return;
@@ -11160,9 +11209,14 @@ function insideOurPanel() {
 function findInTranscript(needle) {
   const finder = window.find;
   if (typeof finder !== "function") return null;
+  trace.findAvailable = typeof finder === "function";
   for (let attempt = 0; attempt < 12; attempt += 1) {
+    trace.findAttempts += 1;
     const found = finder.call(window, needle, false, false, true, false, false, false);
     if (found !== true) return null;
+    const selection2 = window.getSelection();
+    trace.insidePanel = insideOurPanel();
+    trace.matched = selection2 === null ? null : String(selection2).slice(0, 60);
     if (insideOurPanel()) continue;
     return markSelection();
   }
@@ -11171,12 +11225,19 @@ function findInTranscript(needle) {
 function flashInTranscript2(query) {
   const needle = query.trim().toLowerCase();
   if (needle.length < 2) return;
+  trace.query = needle;
+  trace.findAttempts = 0;
+  trace.found = false;
+  trace.insidePanel = null;
+  trace.matched = null;
   ensureStyle();
   let waited = 0;
   const deadline = 7e3;
   const attempt = () => {
     const viaFind = findInTranscript(needle);
     if (viaFind !== null) {
+      trace.found = true;
+      report();
       flash(viaFind);
       return;
     }
@@ -11199,10 +11260,14 @@ function flashInTranscript2(query) {
       }
     }
     waited += 200;
-    if (waited > deadline) return;
+    if (waited > deadline) {
+      report();
+      return;
+    }
     window.setTimeout(attempt, 200);
   };
   const waitPanel = () => {
+    trace.panelGone = document.querySelector('[class*="tm_panel"]') === null;
     if (document.querySelector('[class*="tm_panel"]') !== null && waited < 2e3) {
       waited += 60;
       window.setTimeout(waitPanel, 60);
@@ -13634,7 +13699,18 @@ function CanvasInner(props) {
   const searchInWorkspace = async (groupId, query) => {
     const cwd = workspaces.items.find((item) => item.workspaceId === groupId)?.path;
     const found = await searchSessions(query, cwd);
-    return found.slice(0, 12).map(toHitView);
+    const views = found.slice(0, 12).map(toHitView);
+    const needle = query.trim().toLowerCase();
+    const already = new Set(views.map((view) => view.sessionId));
+    const byTitle = allSessionTitles().filter((entry) => !already.has(entry.sessionId)).filter((entry) => sessionWs.get(entry.sessionId) === groupId).filter((entry) => entry.title.toLowerCase().includes(needle)).map((entry) => ({
+      sessionId: entry.sessionId,
+      title: entry.title,
+      blocks: [[entry.title]],
+      seqs: [null],
+      roles: [null],
+      byTitle: true
+    }));
+    return [...byTitle, ...views];
   };
   const toHitView = (hit) => ({
     sessionId: hit.sessionId,
@@ -13647,6 +13723,10 @@ function CanvasInner(props) {
   });
   (0, import_react11.useEffect)(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle);
+    setTitleTable(Object.entries(sessions.byId).map(([sessionId, row]) => ({
+      sessionId,
+      title: renamedTitles[sessionId] ?? row.displayTitle ?? ""
+    })).filter((entry) => entry.title !== ""));
     return () => {
       setTitleResolver(void 0);
     };

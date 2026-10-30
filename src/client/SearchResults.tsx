@@ -23,6 +23,8 @@ export interface SearchHitView {
   seqs?: (number | null)[]
   /** Author of each match: your message or the agent's answer. */
   roles?: (string | null)[]
+  /** This conversation matched by TITLE, not content. */
+  byTitle?: boolean
   /** Sub-agent sessions are labelled; ordinary ones are not. */
   agent?: 'main' | 'subagent'
   depth?: number
@@ -152,6 +154,11 @@ export function SearchResults(props: SearchResultsProps): React.JSX.Element {
         return (
           <div key={hit.sessionId} className={styles['drawerHit']} data-talkmap-search-hit={hit.sessionId}>
             <div className={styles['drawerHitHead']}>
+              {hit.byTitle === true
+                ? (
+                    <span className={styles['drawerAgentChip']} data-talkmap-title-hit="1">{t('stack.titleHit')}</span>
+                  )
+                : null}
               {hit.agent === 'subagent'
                 ? (
                     <span

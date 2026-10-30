@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { SearchResults, type SearchHitView } from './SearchResults.tsx'
 import { fetchSearchContext, fetchSessionHits, searchSessions } from './rpc.ts'
 import { t } from './i18n.ts'
-import { mapUi, sessionTitle } from './map-state.ts'
+import { allSessionTitles, mapUi, sessionTitle } from './map-state.ts'
 import { clearSearch, loadSearch, saveSearch } from './search-store.ts'
 import styles from './talk-map.module.css'
 
@@ -64,8 +64,22 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
         agent: hit.agent,
         depth: hit.depth,
       }))
-      setHits(views)
-      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: views })
+      const needle = trimmed.toLowerCase()
+      const already = new Set(views.map(view => view.sessionId))
+      const byTitle = allSessionTitles()
+        .filter(entry => !already.has(entry.sessionId))
+        .filter(entry => entry.title.toLowerCase().includes(needle))
+        .map(entry => ({
+          sessionId: entry.sessionId,
+          title: entry.title,
+          blocks: [[entry.title]],
+          seqs: [null],
+          roles: [null],
+          byTitle: true,
+        }))
+      const merged = [...byTitle, ...views]
+      setHits(merged)
+      saveSearch(GLOBAL_SCOPE, { query: trimmed, hits: merged })
     } catch (cause) {
       setHits([])
       setError(String((cause as Error)?.message ?? cause))

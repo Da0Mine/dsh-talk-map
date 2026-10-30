@@ -7,6 +7,32 @@
  * text nodes (older builds / engines without `find`).
  */
 const MARK_CLASS = 'tm_search_flash'
+
+/** Steps of the last jump, so a failure can be read from the host log. */
+interface JumpTrace {
+  query: string
+  panelGone: boolean | null
+  findAttempts: number
+  found: boolean
+  insidePanel: boolean | null
+  matched: string | null
+  findAvailable: boolean
+}
+
+const trace: JumpTrace = {
+  query: '', panelGone: null, findAttempts: 0, found: false,
+  insidePanel: null, matched: null, findAvailable: false,
+}
+
+function report(): void {
+  try {
+    void fetch('/talk-map/client-boot', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ phase: 'jump-debug', ...trace }),
+    }).catch(() => {})
+  } catch { /* nothing to do */ }
+}
 const STYLE_ID = 'tm-search-flash-style'
 
 function ensureStyle(): void {
@@ -96,10 +122,15 @@ function insideOurPanel(): boolean {
 function findInTranscript(needle: string): HTMLElement | null {
   const finder = (window as unknown as { find?: (...args: unknown[]) => boolean }).find
   if (typeof finder !== 'function') return null
+  trace.findAvailable = typeof finder === 'function'
   for (let attempt = 0; attempt < 12; attempt += 1) {
+    trace.findAttempts += 1
     // (text, caseSensitive, backwards, wrapAround, wholeWord, searchInFrames, showDialog)
     const found = finder.call(window, needle, false, false, true, false, false, false)
     if (found !== true) return null
+    const selection = window.getSelection()
+    trace.insidePanel = insideOurPanel()
+    trace.matched = selection === null ? null : String(selection).slice(0, 60)
     if (insideOurPanel()) continue
     return markSelection()
   }
@@ -109,6 +140,11 @@ function findInTranscript(needle: string): HTMLElement | null {
 export function flashInTranscript(query: string): void {
   const needle = query.trim().toLowerCase()
   if (needle.length < 2) return
+  trace.query = needle
+  trace.findAttempts = 0
+  trace.found = false
+  trace.insidePanel = null
+  trace.matched = null
   ensureStyle()
 
   let waited = 0
@@ -117,6 +153,8 @@ export function flashInTranscript(query: string): void {
   const attempt = (): void => {
     const viaFind = findInTranscript(needle)
     if (viaFind !== null) {
+      trace.found = true
+      report()
       flash(viaFind)
       return
     }
@@ -138,13 +176,17 @@ export function flashInTranscript(query: string): void {
       }
     }
     waited += 200
-    if (waited > deadline) return
+    if (waited > deadline) {
+      report()
+      return
+    }
     window.setTimeout(attempt, 200)
   }
 
   // The transcript needs a moment to mount, and the map panel has to be GONE:
   // while it is still in the DOM its result list owns the searched text.
   const waitPanel = (): void => {
+    trace.panelGone = document.querySelector('[class*="tm_panel"]') === null
     if (document.querySelector('[class*="tm_panel"]') !== null && waited < 2000) {
       waited += 60
       window.setTimeout(waitPanel, 60)

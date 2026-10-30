@@ -71,6 +71,8 @@ export interface DrawerSearchHit {
   seqs?: (number | null)[]
   /** Per-match author: your message or the agent's answer. */
   roles?: (string | null)[]
+  /** This conversation matched by title rather than content. */
+  byTitle?: boolean
   /** Main conversation, or one an agent spawned. */
   agent?: 'main' | 'subagent'
   depth?: number

@@ -26,7 +26,7 @@ import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
-import { setTitleResolver } from './map-state.ts'
+import { allSessionTitles, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
 import { flashInTranscript } from './jump-highlight.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
@@ -1363,7 +1363,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const searchInWorkspace = async (groupId: string, query: string): Promise<DrawerSearchHit[]> => {
     const cwd = workspaces.items.find(item => item.workspaceId === groupId)?.path
     const found = await searchSessions(query, cwd)
-    return found.slice(0, 12).map(toHitView)
+    const views = found.slice(0, 12).map(toHitView)
+    const needle = query.trim().toLowerCase()
+    const already = new Set(views.map(view => view.sessionId))
+    // Titles are matched here, not on the Host: the board already knows them.
+    const byTitle = allSessionTitles()
+      .filter(entry => !already.has(entry.sessionId))
+      .filter(entry => sessionWs.get(entry.sessionId) === groupId)
+      .filter(entry => entry.title.toLowerCase().includes(needle))
+      .map(entry => ({
+        sessionId: entry.sessionId,
+        title: entry.title,
+        blocks: [[entry.title]],
+        seqs: [null],
+        roles: [null],
+        byTitle: true,
+      }))
+    return [...byTitle, ...views]
   }
 
   const toHitView = (hit: ContentHit): DrawerSearchHit => ({
@@ -1378,6 +1394,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // Publish the board's title lookup for the header's global search panel.
   useEffect(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle)
+    setTitleTable(Object.entries(sessions.byId).map(([sessionId, row]) => ({
+      sessionId,
+      title: renamedTitles[sessionId] ?? row.displayTitle ?? '',
+    })).filter(entry => entry.title !== ''))
     return () => { setTitleResolver(undefined) }
   }, [renamedTitles, sessions])
   const drawerItems = (groupId: string): StackEntry[] => {
