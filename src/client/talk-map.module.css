@@ -336,19 +336,23 @@
 
 /* Slot layout: a card that gets pushed aside or fills a gap glides to its new
  * slot. The card under the pointer is exempt — it has to track the drag 1:1. */
-/* ---- edge sync: a packet runs along a line that is still in sync ------- */
+/* ---- edges: two looks ------------------------------------------------
+   同步中 = 一道光沿路径跑；其余（从没推过 / 母对话已变 / 血缘派生）一律虚线。
+   三种颜色会读成装饰，只有"在流动"和"没在流动"是能一眼信的信息。 */
 .canvas :global(.react-flow__edge-path) {
-  transition: stroke 260ms ease-out, filter 260ms ease-out;
+  transition: stroke 260ms ease-out;
 }
 
 .canvas :global(.tmEdge path.react-flow__edge-path) {
+  stroke: rgba(255, 255, 255, 0.32);
   stroke-width: 1.6;
   stroke-linecap: round;
+  stroke-dasharray: 6 4;
 }
 
-/* 同步中：线本身轻描 + 一道光沿路径跑过去 */
+/* 同步中：暖金 + 光流 */
 .canvas :global(.tmEdge-synced path.react-flow__edge-path) {
-  stroke: rgba(255, 214, 106, 0.5);
+  stroke: rgba(255, 214, 106, 0.75);
   stroke-dasharray: 5 9;
   animation: tmFlow 1.05s linear infinite;
 }
@@ -358,50 +362,13 @@
   to { stroke-dashoffset: 0; }
 }
 
-/* 落后：不流动，整条线发黄光 */
-.canvas :global(.tmEdge-stale path.react-flow__edge-path) {
-  stroke: rgba(255, 214, 106, 0.95);
-  stroke-width: 2;
-  filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.55));
-  animation: tmBreathe 2.4s ease-in-out infinite;
-}
-
-/* 落后很多：红光 */
-.canvas :global(.tmEdge-far path.react-flow__edge-path) {
-  stroke: rgba(242, 78, 78, 0.95);
-  stroke-width: 2.2;
-  filter: drop-shadow(0 0 5px rgba(242, 78, 78, 0.6));
-  animation: tmBreathe 1.4s ease-in-out infinite;
-}
-
-/* 血缘线（派生，不是通道）：颜色沿用同一套状态，但线型保持虚线，且光流
-   不跑 —— 这里没有东西在传，只有"新不新"。 */
-.canvas :global(.tmEdge-lineage path.react-flow__edge-path) {
-  opacity: 0.5;
-  stroke-dasharray: 6 4;
-  animation: none;
-}
-
-.canvas :global(.tmEdge-lineage.tmEdge-stale path.react-flow__edge-path) {
-  opacity: 0.8;
-}
-
-.canvas :global(.tmEdge-lineage.tmEdge-far path.react-flow__edge-path) {
-  opacity: 0.9;
-}
-
-@keyframes tmBreathe {
-  0%, 100% { opacity: 0.75; }
-  50% { opacity: 1; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .canvas :global(.tmEdge-synced path.react-flow__edge-path),
-  .canvas :global(.tmEdge-stale path.react-flow__edge-path),
-  .canvas :global(.tmEdge-far path.react-flow__edge-path) {
+  .canvas :global(.tmEdge-synced path.react-flow__edge-path) {
     animation: none;
+    stroke-dasharray: 6 4;
   }
 }
+
 
 .canvas :global(.react-flow__node) {
   transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1);

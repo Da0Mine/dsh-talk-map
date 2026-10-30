@@ -1031,9 +1031,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           : {}),
       })
       out.push({
-        // Read by the stylesheet: flow while synced, amber when behind, red
-        // when far behind. Classes beat inline styles for keyframes.
-        className: `tmEdge tmEdge-${sync}`,
+        // Two looks only: the packet runs while in sync, otherwise plain dashes.
+        className: `tmEdge ${sync === 'synced' ? 'tmEdge-synced' : 'tmEdge-idle'}`,
         id: edgeId,
         source: edge.fromCardId,
         target: edge.toCardId,
@@ -1051,22 +1050,20 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           type: MarkerType.ArrowClosed,
           width: kind === 'link' ? 13 : 16,
           height: kind === 'link' ? 13 : 16,
-          color: sync === 'far'
-            ? 'rgba(242, 78, 78, 0.9)'
-            : sync === 'stale'
-              ? 'rgba(255, 214, 106, 0.95)'
-              : kind === 'link' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 214, 106, 0.85)',
+          color: sync === 'synced'
+            ? 'rgba(255, 214, 106, 0.9)'
+            : 'rgba(255, 255, 255, 0.45)',
         },
         // Pure association lines: no label, lighter than injection edges.
         ...(kind === 'link'
-          ? { style: { opacity: 0.4 } }
+          ? { style: { opacity: 0.45 } }
           : {
               label: kind === 'none'
                 ? t('edge.none')
                 : kind === 'full'
                   ? t('edge.full')
                   : t('edge.injected'),
-              ...(kind === 'none' ? { style: { opacity: 0.65 } } : {}),
+              ...(kind === 'none' ? { style: { opacity: 0.45 } } : {}),
             }),
       })
     }
@@ -1104,11 +1101,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         type: 'smoothstep',
         // Selectable on purpose: right-clicking it must answer "what is this",
         // and offer to hide it. It used to be un-clickable mystery wiring.
-        // Structural marker, never conditional: a lineage line must look like a
-        // lineage line in every state — only its colour changes.
-        className: `tmEdge tmEdge-${lineageSync} tmEdge-lineage`,
+        // Same two looks as any other line.
+        className: `tmEdge ${lineageSync === 'synced' ? 'tmEdge-synced' : 'tmEdge-idle'}`,
         data: { fromCardId: parentCardId, toCardId: cardId },
-        style: { strokeDasharray: '6 4', opacity: 0.5 },
+        // No inline stroke here: inline style beats the stylesheet, which is why
+        // the lineage line ignored every class-based look.
+        style: { opacity: 0.5 },
       })
     }
     }
@@ -2054,15 +2052,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const digest = fromCard !== undefined ? canvasState.digests[fromCard.sessionId] : undefined
       const noDigest = digest === undefined || digestIsEmpty(digest)
       const lineage = stored === undefined
-      // Say what this line is, whichever kind it is.
-      if (lineage) {
-        items.push({
-          key: 'lineage-info',
-          label: t('edge.lineageTitle'),
-          hint: t('edge.lineageHint'),
-          disabled: true,
-        })
-      }
       items.push({
         key: 'push',
         label: t('edge.push'),
@@ -2090,9 +2079,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             })
             return
           }
-          const created = materialiseEdge(edgeFrom, edgeTo)
-          if (created === undefined) return
-          showToast(t('edge.lineageMaterialised'))
+          materialiseEdge(edgeFrom, edgeTo)
         },
       })
       if (lineage) {
