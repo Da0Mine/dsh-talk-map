@@ -1793,6 +1793,32 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           togglePin(cardId)
         },
       })
+      // Mark it unread by hand: exactly the "finished, nobody looked" state the
+      // map computes on its own, cleared the same way (open the conversation).
+      items.push({
+        key: 'unread',
+        icon: 'unread',
+        label: t('menu.markUnread'),
+        onPick: () => {
+          close()
+          if (card !== undefined) sessionActivity.markFinished(card.sessionId)
+        },
+      })
+      items.push({
+        key: 'rename',
+        icon: 'rename',
+        label: t('menu.rename'),
+        onPick: () => {
+          close()
+          if (card !== undefined) {
+            setRenameTarget({
+              kind: 'session',
+              id: card.sessionId,
+              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+            })
+          }
+        },
+      })
       // Read-only: exactly the text this card would push to another session.
       items.push({
         key: 'view-digest',
@@ -1811,32 +1837,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         },
       })
 
-      items.push({
-        key: 'rename',
-        icon: 'rename',
-        label: t('menu.rename'),
-        onPick: () => {
-          close()
-          if (card !== undefined) {
-            setRenameTarget({
-              kind: 'session',
-              id: card.sessionId,
-              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
-            })
-          }
-        },
-      })
-      // Mark it unread by hand: exactly the "finished, nobody looked" state the
-      // map computes on its own, cleared the same way (open the conversation).
-      items.push({
-        key: 'unread',
-        icon: 'unread',
-        label: t('menu.markUnread'),
-        onPick: () => {
-          close()
-          if (card !== undefined) sessionActivity.markFinished(card.sessionId)
-        },
-      })
       items.push({
         key: 'archive',
         icon: 'archive',

@@ -1044,6 +1044,12 @@ try {
     ['置顶', '标为未读', '归档', '删除会话', '批量操作'].every(needle => cardMenu.some(text => text.includes(needle))),
     JSON.stringify(cardMenu))
   // 查看摘要：read-only preview of exactly what this card would push.
+  // Reading order: 置顶 → 标为未读 → 重命名 → 查看摘要.
+  const order = (label) => cardMenu.findIndex(text => text.includes(label))
+  check('菜单顺序是 置顶 → 标为未读 → 重命名 → 查看摘要',
+    order('置顶') >= 0 && order('置顶') < order('标为未读')
+      && order('标为未读') < order('重命名') && order('重命名') < order('查看摘要'),
+    JSON.stringify(cardMenu))
   check('卡片菜单里有「查看摘要」', cardMenu.some(text => text.includes('查看摘要')), JSON.stringify(cardMenu))
   const digestRow = await page.evaluate(() => {
     const rows = [...document.querySelectorAll('[class*="menuItem"]')]

@@ -13775,17 +13775,12 @@ function CanvasInner(props) {
         }
       });
       items.push({
-        key: "view-digest",
-        icon: "digest",
-        label: t("menu.viewDigest"),
-        ...card === void 0 || digestIsEmpty2(canvasState.digests[card.sessionId]) ? { hint: t("digest.empty"), disabled: true } : {},
+        key: "unread",
+        icon: "unread",
+        label: t("menu.markUnread"),
         onPick: () => {
           close();
-          if (card === void 0) return;
-          setDigestTarget({
-            title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
-            digest: canvasState.digests[card.sessionId]
-          });
+          if (card !== void 0) sessionActivity.markFinished(card.sessionId);
         }
       });
       items.push({
@@ -13804,12 +13799,17 @@ function CanvasInner(props) {
         }
       });
       items.push({
-        key: "unread",
-        icon: "unread",
-        label: t("menu.markUnread"),
+        key: "view-digest",
+        icon: "digest",
+        label: t("menu.viewDigest"),
+        ...card === void 0 || digestIsEmpty2(canvasState.digests[card.sessionId]) ? { hint: t("digest.empty"), disabled: true } : {},
         onPick: () => {
           close();
-          if (card !== void 0) sessionActivity.markFinished(card.sessionId);
+          if (card === void 0) return;
+          setDigestTarget({
+            title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
+            digest: canvasState.digests[card.sessionId]
+          });
         }
       });
       items.push({
