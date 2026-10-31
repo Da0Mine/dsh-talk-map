@@ -13675,8 +13675,9 @@ function CanvasInner(props) {
           id: `lineage-${parentCardId}-${cardId}`,
           source: parentCardId,
           target: cardId,
-          sourceHandle: "r",
-          targetHandle: "l",
+          // Derived lines route like any other: faces are recomputed from the
+          // cards' current positions, so a 12px neighbour gap becomes a real loop.
+          ...computedHandles(parentCardId, cardId),
           type: TALK_MAP_EDGE_TYPE,
           // Selectable on purpose: right-clicking it must answer "what is this",
           // and offer to hide it. It used to be un-clickable mystery wiring.

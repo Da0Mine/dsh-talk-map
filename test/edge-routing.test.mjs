@@ -56,4 +56,23 @@ assert.equal(stacked.fromHandle, stacked.toHandle, 'it loops through a vertical 
 const tall = pickFaces({ id: 'a', x: 0, y: 0 }, { id: 'b', x: 0, y: 500 }, [], opts)
 assert.deepEqual(tall, { fromHandle: 'b', toHandle: 't' }, 'a long vertical gap connects top to bottom')
 
-console.log('edge-routing: 12 checks passed')
+// --- the real grid gap is 48px, which must also loop ---------------------
+const gridGap = pickFaces(
+  { id: 'a', x: 0, y: 0 },
+  { id: 'b', x: CARD_W + 48, y: 0 },
+  [],
+  opts,
+)
+assert.notDeepEqual(gridGap, { fromHandle: 'r', toHandle: 'l' }, 'the 48px grid gap loops too')
+assert.equal(gridGap.fromHandle, gridGap.toHandle, 'grid neighbours share a face')
+
+// --- and the same pair, once far apart, goes back to facing sides --------
+const sameButFar = pickFaces(
+  { id: 'a', x: 0, y: 0 },
+  { id: 'b', x: CARD_W + 48 + 200, y: 0 },
+  [],
+  opts,
+)
+assert.deepEqual(sameButFar, { fromHandle: 'r', toHandle: 'l' }, 'far apart uses the facing sides again')
+
+console.log('edge-routing: 15 checks passed')
