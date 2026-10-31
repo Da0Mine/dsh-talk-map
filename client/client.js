@@ -10797,6 +10797,53 @@ function lineageSyncState(input) {
   return now2 - child >= FAR_BEHIND_MS ? "far" : "stale";
 }
 
+// src/client/edge-routing.ts
+var DEFAULT_MIN_SPAN = 96;
+function overlapsSpan(a, b, tolerance) {
+  return Math.abs(a - b) < tolerance;
+}
+function blockedToward(card, side, obstacles, size) {
+  const vertical = side === "b" || side === "t";
+  for (const other of obstacles) {
+    if (other.id === card.id) continue;
+    const dx = other.x - card.x;
+    const dy = other.y - card.y;
+    if (vertical) {
+      if (!overlapsSpan(dx, 0, size.width * 0.9)) continue;
+      if (side === "b" && dy > 0 && dy < size.height * 1.15) return true;
+      if (side === "t" && dy < 0 && -dy < size.height * 1.15) return true;
+    } else {
+      if (!overlapsSpan(dy, 0, size.height * 0.9)) continue;
+      if (side === "r" && dx > 0 && dx < size.width * 1.15) return true;
+      if (side === "l" && dx < 0 && -dx < size.width * 1.15) return true;
+    }
+  }
+  return false;
+}
+function pickFaces(from, to, obstacles, options) {
+  const minSpan = options.minSpan ?? DEFAULT_MIN_SPAN;
+  const size = { width: options.cardWidth, height: options.cardHeight };
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const gapX = Math.abs(dx) - options.cardWidth;
+  const gapY = Math.abs(dy) - options.cardHeight;
+  const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
+  if (horizontalDominant) {
+    if (gapX >= minSpan) {
+      return dx >= 0 ? { fromHandle: "r", toHandle: "l" } : { fromHandle: "l", toHandle: "r" };
+    }
+    const fromSide2 = blockedToward(from, "b", obstacles, size) && !blockedToward(from, "t", obstacles, size) ? "t" : "b";
+    const toSide2 = blockedToward(to, "b", obstacles, size) && !blockedToward(to, "t", obstacles, size) ? "t" : "b";
+    return { fromHandle: fromSide2, toHandle: toSide2 };
+  }
+  if (gapY >= minSpan) {
+    return dy >= 0 ? { fromHandle: "b", toHandle: "t" } : { fromHandle: "t", toHandle: "b" };
+  }
+  const fromSide = blockedToward(from, "r", obstacles, size) && !blockedToward(from, "l", obstacles, size) ? "l" : "r";
+  const toSide = blockedToward(to, "r", obstacles, size) && !blockedToward(to, "l", obstacles, size) ? "l" : "r";
+  return { fromHandle: fromSide, toHandle: toSide };
+}
+
 // src/client/push-log.ts
 var KEY = "dsh.talk-map.push-log.v1";
 function pairKey(fromCardId, toCardId) {
@@ -11752,17 +11799,25 @@ function TalkMapEdge(props) {
   const sparks = Array.from({ length: SPARKS }, (_, index2) => ({
     dur: SPARK_S * (0.85 + 0.3 * noise(seed, index2 + 1)),
     begin: -(index2 / SPARKS * SPARK_S + noise(seed, index2 + 11) * 0.4),
-    r: 2 + 2 * noise(seed, index2 + 21),
-    opacity: 0.5 + 0.45 * noise(seed, index2 + 31),
-    blur: 0.3 + 0.6 * noise(seed, index2 + 41)
+    r: 2.6 + 2 * noise(seed, index2 + 21),
+    opacity: 0.85 + 0.15 * noise(seed, index2 + 31),
+    blur: 0.15 + 0.35 * noise(seed, index2 + 41)
   }));
   const flying = synced && !prefersReducedMotion();
+  const arrowAngle = (() => {
+    const position = String(props.targetPosition ?? "left");
+    if (position === "right") return 180;
+    if (position === "top") return 90;
+    if (position === "bottom") return -90;
+    return 0;
+  })();
   const dx = Math.abs(props.targetX - props.sourceX);
   const dy = Math.abs(props.targetY - props.sourceY);
   const horizontal = dx >= dy;
   const span = Math.max(1, horizontal ? dx : dy);
   const band = Math.max(140, Math.min(460, span * 0.5));
-  const origin = horizontal ? Math.min(props.sourceX, props.targetX) : Math.min(props.sourceY, props.targetY);
+  const direction = horizontal ? props.targetX >= props.sourceX ? 1 : -1 : props.targetY >= props.sourceY ? 1 : -1;
+  const origin = horizontal ? props.sourceX : props.sourceY;
   const pad = 80;
   const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0);
   const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band);
@@ -11775,7 +11830,6 @@ function TalkMapEdge(props) {
       {
         id: props.id,
         path,
-        ...props.markerEnd !== void 0 ? { markerEnd: props.markerEnd } : {},
         style: {
           // Both states are dashed now: the light alone says which is which.
           stroke: synced ? "rgba(226, 232, 242, 0.55)" : "rgba(200, 206, 216, 0.34)",
@@ -11785,11 +11839,20 @@ function TalkMapEdge(props) {
         }
       }
     ),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
+      "path",
+      {
+        d: "M0 0 L-11 -5 L-11 5 Z",
+        transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
+        fill: synced ? "rgba(232, 238, 250, 0.85)" : "rgba(200, 206, 216, 0.5)",
+        pointerEvents: "none"
+      }
+    ),
     flying ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("defs", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("radialGradient", { id: sparkId, children: [
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(255, 255, 255, 0.98)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "45%", stopColor: "rgba(214, 232, 255, 0.5)" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "42%", stopColor: "rgba(226, 240, 255, 0.75)" }),
           /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(190, 214, 255, 0)" })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
@@ -11827,7 +11890,7 @@ function TalkMapEdge(props) {
                   attributeName: "transform",
                   type: "translate",
                   from: horizontal ? `${-band} 0` : `0 ${-band}`,
-                  to: horizontal ? `${travel} 0` : `0 ${travel}`,
+                  to: horizontal ? `${direction * travel} 0` : `0 ${direction * travel}`,
                   dur: `${SWEEP_S}s`,
                   begin: `${phase}s`,
                   repeatCount: "indefinite"
@@ -13524,6 +13587,30 @@ function CanvasInner(props) {
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
   };
+  const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
+    id: id2,
+    x: card.x,
+    y: card.y
+  }));
+  const sideHandles = (fromCardId, toCardId) => {
+    const from = canvasState.cards[fromCardId];
+    const to = canvasState.cards[toCardId];
+    if (from === void 0 || to === void 0) return { fromHandle: "r", toHandle: "l" };
+    const picked = pickFaces(
+      { id: fromCardId, x: from.x, y: from.y },
+      { id: toCardId, x: to.x, y: to.y },
+      routingObstacles(),
+      { cardWidth: CARD_W, cardHeight: CARD_H }
+    );
+    return { fromHandle: picked.fromHandle, toHandle: picked.toHandle };
+  };
+  const computedHandles = (fromCardId, toCardId) => {
+    const from = canvasState.cards[fromCardId];
+    const to = canvasState.cards[toCardId];
+    if (from === void 0 || to === void 0) return { sourceHandle: "r", targetHandle: "l" };
+    const picked = sideHandles(fromCardId, toCardId);
+    return { sourceHandle: picked.fromHandle, targetHandle: picked.toHandle };
+  };
   const liveEdges = (0, import_react12.useMemo)(() => {
     const out = [];
     const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
@@ -13542,9 +13629,9 @@ function CanvasInner(props) {
         id: edgeId,
         source: edge.fromCardId,
         target: edge.toCardId,
-        // Handles stored per edge; legacy edges keep their old r→l anchoring.
-        sourceHandle: edge.fromHandle ?? "r",
-        targetHandle: edge.toHandle ?? "l",
+        // Faces are recomputed from the live positions — a stored handle would
+        // keep a 12px stub forever after the cards were laid out side by side.
+        ...computedHandles(edge.fromCardId, edge.toCardId),
         type: TALK_MAP_EDGE_TYPE,
         selected: liveSelectedEdgeIds.has(edgeId),
         // Endpoints ride along for the edge context menu (id parsing would
@@ -13737,14 +13824,6 @@ function CanvasInner(props) {
       setToast(null);
     }, 4e3);
   };
-  const sideHandles = (from, to) => {
-    const dx = to.x - from.x;
-    const dy = to.y - from.y;
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      return dx >= 0 ? { fromHandle: "r", toHandle: "l" } : { fromHandle: "l", toHandle: "r" };
-    }
-    return dy >= 0 ? { fromHandle: "b", toHandle: "t" } : { fromHandle: "t", toHandle: "b" };
-  };
   const createLinkEdge = (fromCardId, toCardId, handles) => {
     if (fromCardId === toCardId) return;
     const exists = Object.values(canvasState.edges).some((edge) => edge.fromCardId === fromCardId && edge.toCardId === toCardId || edge.fromCardId === toCardId && edge.toCardId === fromCardId);
@@ -13752,7 +13831,7 @@ function CanvasInner(props) {
     const fromCard = canvasState.cards[fromCardId];
     const toCard = canvasState.cards[toCardId];
     if (fromCard === void 0 || toCard === void 0) return;
-    const geometry = sideHandles(fromCard, toCard);
+    const geometry = sideHandles(fromCardId, toCardId);
     const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle;
     canvas.addEdges({
       [`edge-${crypto.randomUUID()}`]: {

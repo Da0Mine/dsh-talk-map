@@ -105,11 +105,25 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const sparks = Array.from({ length: SPARKS }, (_, index) => ({
     dur: SPARK_S * (0.85 + 0.3 * noise(seed, index + 1)),
     begin: -((index / SPARKS) * SPARK_S + noise(seed, index + 11) * 0.4),
-    r: 2 + 2 * noise(seed, index + 21),
-    opacity: 0.5 + 0.45 * noise(seed, index + 31),
-    blur: 0.3 + 0.6 * noise(seed, index + 41),
+    r: 2.6 + 2 * noise(seed, index + 21),
+    opacity: 0.85 + 0.15 * noise(seed, index + 31),
+    blur: 0.15 + 0.35 * noise(seed, index + 41),
   }))
   const flying = synced && !prefersReducedMotion()
+
+  /**
+   * Which way the arrow points. The path arrives at the target handle, so the
+   * head follows that face: left → pointing right, top → pointing down, …
+   * React Flow's own edge markers never reach a custom edge component, which is
+   * why the line had lost its arrow entirely.
+   */
+  const arrowAngle = (() => {
+    const position = String(props.targetPosition ?? 'left')
+    if (position === 'right') return 180
+    if (position === 'top') return 90
+    if (position === 'bottom') return -90
+    return 0
+  })()
 
   // Sweep along the dominant axis. A smoothstep path runs horizontally and
   // vertically, so whichever axis is longer is the direction the light travels.
@@ -119,9 +133,12 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const span = Math.max(1, horizontal ? dx : dy)
   /** Width of the lit band ≈ the card's 47%, with sane bounds for tiny edges. */
   const band = Math.max(140, Math.min(460, span * 0.5))
-  const origin = horizontal
-    ? Math.min(props.sourceX, props.targetX)
-    : Math.min(props.sourceY, props.targetY)
+  /** +1 when the path runs right/down out of the source, -1 when it runs back. */
+  const direction = horizontal
+    ? (props.targetX >= props.sourceX ? 1 : -1)
+    : (props.targetY >= props.sourceY ? 1 : -1)
+  /** The window starts just behind the SOURCE, then runs toward the target. */
+  const origin = horizontal ? props.sourceX : props.sourceY
 
   const pad = 80
   const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0)
@@ -135,7 +152,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
       <BaseEdge
         id={props.id}
         path={path}
-        {...(props.markerEnd !== undefined ? { markerEnd: props.markerEnd } : {})}
         style={{
           // Both states are dashed now: the light alone says which is which.
           stroke: synced ? 'rgba(226, 232, 242, 0.55)' : 'rgba(200, 206, 216, 0.34)',
@@ -145,13 +161,22 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         }}
       />
 
+      {/* Arrowhead drawn by hand: React Flow edge markers never reach a
+          custom edge component, which is why the line had no arrow. */}
+      <path
+        d="M0 0 L-11 -5 L-11 5 Z"
+        transform={`translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`}
+        fill={synced ? 'rgba(232, 238, 250, 0.85)' : 'rgba(200, 206, 216, 0.5)'}
+        pointerEvents="none"
+      />
+
       {flying
         ? (
             <>
               <defs>
                 <radialGradient id={sparkId}>
                   <stop offset="0%" stopColor="rgba(255, 255, 255, 0.98)" />
-                  <stop offset="45%" stopColor="rgba(214, 232, 255, 0.5)" />
+                  <stop offset="42%" stopColor="rgba(226, 240, 255, 0.75)" />
                   <stop offset="100%" stopColor="rgba(190, 214, 255, 0)" />
                 </radialGradient>
                 {/* The aura's profile, as a window gradient. */}
@@ -186,7 +211,9 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
                       attributeName="transform"
                       type="translate"
                       from={horizontal ? `${-band} 0` : `0 ${-band}`}
-                      to={horizontal ? `${travel} 0` : `0 ${travel}`}
+                      to={horizontal
+                        ? `${direction * travel} 0`
+                        : `0 ${direction * travel}`}
                       dur={`${SWEEP_S}s`}
                       begin={`${phase}s`}
                       repeatCount="indefinite"

@@ -61,4 +61,12 @@ assert.match(bundle, /function noise/, 'spark jitter must be deterministic')
 assert.match(bundle, /routeId/, 'sparks need a motion route on the path')
 assert.match(bundle, /xlinkHref/, 'mpath needs the legacy attribute too')
 
-console.log('edge-flow: 20 checks passed')
+// 10. the arrowhead is drawn by the component (React Flow markers do not reach it)
+assert.match(bundle, /M0 0 L-11 -5 L-11 5 Z/, 'the arrowhead must be drawn here')
+assert.match(bundle, /arrowAngle/, 'the arrowhead must orient to the target face')
+assert.match(bundle, /rotate\(\$\{arrowAngle\}\)|rotate\(/, 'the arrowhead must be rotated')
+
+// 11. sparks are solid, not ghostly
+assert.match(bundle, /0\.85 \+ 0\.15 \* noise/, 'sparks must be near-opaque')
+
+console.log('edge-flow: 24 checks passed')

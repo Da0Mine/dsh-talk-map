@@ -24469,10 +24469,10 @@
             }
           }
           var jsx4 = jsxWithValidationDynamic;
-          var jsxs3 = jsxWithValidationStatic;
+          var jsxs4 = jsxWithValidationStatic;
           exports.Fragment = REACT_FRAGMENT_TYPE;
           exports.jsx = jsx4;
-          exports.jsxs = jsxs3;
+          exports.jsxs = jsxs4;
         })();
       }
     }
@@ -32073,7 +32073,7 @@
     }, [node.id, nodeType, node.sourcePosition, node.targetPosition]);
     return nodeRef;
   }
-  function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave, onContextMenu, onDoubleClick, nodesDraggable, elementsSelectable, nodesConnectable, nodesFocusable, resizeObserver, noDragClassName, noPanClassName, disableKeyboardA11y, rfId, nodeTypes, nodeClickDistance, onError }) {
+  function NodeWrapper({ id: id2, onClick, onMouseEnter, onMouseMove, onMouseLeave, onContextMenu, onDoubleClick, nodesDraggable, elementsSelectable, nodesConnectable, nodesFocusable, resizeObserver, noDragClassName, noPanClassName, disableKeyboardA11y, rfId, nodeTypes: nodeTypes2, nodeClickDistance, onError }) {
     const { node, internals, isParent } = useStore((s) => {
       const node2 = s.nodeLookup.get(id2);
       const isParent2 = s.parentLookup.has(id2);
@@ -32084,11 +32084,11 @@
       };
     }, shallow$1);
     let nodeType = node.type || "default";
-    let NodeComponent = nodeTypes?.[nodeType] || builtinNodeTypes[nodeType];
+    let NodeComponent = nodeTypes2?.[nodeType] || builtinNodeTypes[nodeType];
     if (NodeComponent === void 0) {
       onError?.("003", errorMessages["error003"](nodeType));
       nodeType = "default";
-      NodeComponent = nodeTypes?.["default"] || builtinNodeTypes.default;
+      NodeComponent = nodeTypes2?.["default"] || builtinNodeTypes.default;
     }
     const isDraggable = !!(node.draggable || nodesDraggable && typeof node.draggable === "undefined");
     const isSelectable = !!(node.selectable || elementsSelectable && typeof node.selectable === "undefined");
@@ -32821,13 +32821,13 @@
       }
     }, []);
   }
-  function GraphViewComponent({ nodeTypes, edgeTypes: edgeTypes2, onInit, onNodeClick, onEdgeClick, onNodeDoubleClick, onEdgeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onSelectionContextMenu, onSelectionStart, onSelectionEnd, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, deleteKeyCode, onlyRenderVisibleElements, elementsSelectable, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, preventScrolling, defaultMarkerColor, zoomOnScroll, zoomOnPinch, panOnScroll, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, nodeExtent, rfId, viewport, onViewportChange, nodesDraggable }) {
-    useNodeOrEdgeTypesWarning(nodeTypes);
+  function GraphViewComponent({ nodeTypes: nodeTypes2, edgeTypes: edgeTypes2, onInit, onNodeClick, onEdgeClick, onNodeDoubleClick, onEdgeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onSelectionContextMenu, onSelectionStart, onSelectionEnd, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, deleteKeyCode, onlyRenderVisibleElements, elementsSelectable, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, preventScrolling, defaultMarkerColor, zoomOnScroll, zoomOnPinch, panOnScroll, panOnScrollSpeed, panOnScrollMode, zoomOnDoubleClick, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, onReconnect, onReconnectStart, onReconnectEnd, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, nodeExtent, rfId, viewport, onViewportChange, nodesDraggable }) {
+    useNodeOrEdgeTypesWarning(nodeTypes2);
     useNodeOrEdgeTypesWarning(edgeTypes2);
     useStylesLoadedWarning();
     useOnInitHandler(onInit);
     useViewportSync(viewport);
-    return (0, import_jsx_runtime.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime.jsxs)(Viewport, { children: [(0, import_jsx_runtime.jsx)(EdgeRenderer, { edgeTypes: edgeTypes2, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime.jsx)(NodeRenderer, { nodeTypes, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
+    return (0, import_jsx_runtime.jsx)(FlowRenderer, { onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneContextMenu, onPaneScroll, paneClickDistance, deleteKeyCode, selectionKeyCode, selectionOnDrag, selectionMode, onSelectionStart, onSelectionEnd, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, elementsSelectable, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, defaultViewport: defaultViewport2, translateExtent, minZoom, maxZoom, onSelectionContextMenu, preventScrolling, noDragClassName, noWheelClassName, noPanClassName, disableKeyboardA11y, onViewportChange, isControlledViewport: !!viewport, children: (0, import_jsx_runtime.jsxs)(Viewport, { children: [(0, import_jsx_runtime.jsx)(EdgeRenderer, { edgeTypes: edgeTypes2, onEdgeClick, onEdgeDoubleClick, onReconnect, onReconnectStart, onReconnectEnd, onlyRenderVisibleElements, onEdgeContextMenu, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noPanClassName, disableKeyboardA11y, rfId }), (0, import_jsx_runtime.jsx)(ConnectionLineWrapper, { style: connectionLineStyle, type: connectionLineType, component: connectionLineComponent, containerStyle: connectionLineContainerStyle }), (0, import_jsx_runtime.jsx)("div", { className: "react-flow__edgelabel-renderer" }), (0, import_jsx_runtime.jsx)(NodeRenderer, { nodeTypes: nodeTypes2, onNodeClick, onNodeDoubleClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, nodeClickDistance, onlyRenderVisibleElements, noPanClassName, noDragClassName, disableKeyboardA11y, nodeExtent, rfId, nodesDraggable }), (0, import_jsx_runtime.jsx)("div", { className: "react-flow__viewport-portal" })] }) });
   }
   GraphViewComponent.displayName = "GraphView";
   var GraphView = (0, import_react2.memo)(GraphViewComponent);
@@ -33253,14 +33253,14 @@
     position: "relative",
     zIndex: 0
   };
-  function ReactFlow({ nodes: nodes2, edges: edges2, defaultNodes, defaultEdges, className, nodeTypes, edgeTypes: edgeTypes2, onNodeClick, onEdgeClick, onInit, onMove, onMoveStart, onMoveEnd, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, onNodeDragStart, onNodeDrag, onNodeDragStop, onNodesDelete, onEdgesDelete, onDelete, onSelectionChange, onSelectionDragStart, onSelectionDrag, onSelectionDragStop, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onBeforeDelete, connectionMode, connectionLineType = ConnectionLineType.Bezier, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, deleteKeyCode = "Backspace", selectionKeyCode = "Shift", selectionOnDrag = false, selectionMode = SelectionMode.Full, panActivationKeyCode = "Space", multiSelectionKeyCode = isMacOs() ? "Meta" : "Control", zoomActivationKeyCode = isMacOs() ? "Meta" : "Control", snapToGrid, snapGrid, onlyRenderVisibleElements = false, selectNodesOnDrag, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, nodeOrigin = defaultNodeOrigin, edgesFocusable, edgesReconnectable, elementsSelectable = true, defaultViewport: defaultViewport$1 = defaultViewport, minZoom = 0.5, maxZoom = 2, translateExtent = infiniteExtent, preventScrolling = true, nodeExtent, defaultMarkerColor = "#b1b1b7", zoomOnScroll = true, zoomOnPinch = true, panOnScroll = false, panOnScrollSpeed = 0.5, panOnScrollMode = PanOnScrollMode.Free, zoomOnDoubleClick = true, panOnDrag = true, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance = 1, nodeClickDistance = 0, children: children2, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius = 10, onNodesChange, onEdgesChange, noDragClassName = "nodrag", noWheelClassName = "nowheel", noPanClassName = "nopan", fitView, fitViewOptions, connectOnClick, attributionPosition, proOptions, defaultEdgeOptions, elevateNodesOnSelect = true, elevateEdgesOnSelect = false, disableKeyboardA11y = false, autoPanOnConnect, autoPanOnNodeDrag, autoPanOnSelection = true, autoPanSpeed, connectionRadius, isValidConnection, onError, style: style2, id: id2, nodeDragThreshold, connectionDragThreshold, viewport, onViewportChange, width, height, colorMode = "light", debug, onScroll, ariaLabelConfig, zIndexMode = "basic", ...rest }, ref) {
+  function ReactFlow({ nodes: nodes2, edges: edges2, defaultNodes, defaultEdges, className, nodeTypes: nodeTypes2, edgeTypes: edgeTypes2, onNodeClick, onEdgeClick, onInit, onMove, onMoveStart, onMoveEnd, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, onNodeDragStart, onNodeDrag, onNodeDragStop, onNodesDelete, onEdgesDelete, onDelete, onSelectionChange, onSelectionDragStart, onSelectionDrag, onSelectionDragStop, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onBeforeDelete, connectionMode, connectionLineType = ConnectionLineType.Bezier, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, deleteKeyCode = "Backspace", selectionKeyCode = "Shift", selectionOnDrag = false, selectionMode = SelectionMode.Full, panActivationKeyCode = "Space", multiSelectionKeyCode = isMacOs() ? "Meta" : "Control", zoomActivationKeyCode = isMacOs() ? "Meta" : "Control", snapToGrid, snapGrid, onlyRenderVisibleElements = false, selectNodesOnDrag, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, nodeOrigin = defaultNodeOrigin, edgesFocusable, edgesReconnectable, elementsSelectable = true, defaultViewport: defaultViewport$1 = defaultViewport, minZoom = 0.5, maxZoom = 2, translateExtent = infiniteExtent, preventScrolling = true, nodeExtent, defaultMarkerColor = "#b1b1b7", zoomOnScroll = true, zoomOnPinch = true, panOnScroll = false, panOnScrollSpeed = 0.5, panOnScrollMode = PanOnScrollMode.Free, zoomOnDoubleClick = true, panOnDrag = true, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance = 1, nodeClickDistance = 0, children: children2, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius = 10, onNodesChange, onEdgesChange, noDragClassName = "nodrag", noWheelClassName = "nowheel", noPanClassName = "nopan", fitView, fitViewOptions, connectOnClick, attributionPosition, proOptions, defaultEdgeOptions, elevateNodesOnSelect = true, elevateEdgesOnSelect = false, disableKeyboardA11y = false, autoPanOnConnect, autoPanOnNodeDrag, autoPanOnSelection = true, autoPanSpeed, connectionRadius, isValidConnection, onError, style: style2, id: id2, nodeDragThreshold, connectionDragThreshold, viewport, onViewportChange, width, height, colorMode = "light", debug, onScroll, ariaLabelConfig, zIndexMode = "basic", ...rest }, ref) {
     const rfId = id2 || "1";
     const colorModeClassName = useColorModeClass(colorMode);
     const wrapperOnScroll = (0, import_react2.useCallback)((e) => {
       e.currentTarget.scrollTo({ top: 0, left: 0, behavior: "instant" });
       onScroll?.(e);
     }, [onScroll]);
-    return (0, import_jsx_runtime.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime.jsxs)(Wrapper, { nodes: nodes2, edges: edges2, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime.jsx)(StoreUpdater, { nodes: nodes2, edges: edges2, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes, edgeTypes: edgeTypes2, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
+    return (0, import_jsx_runtime.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime.jsxs)(Wrapper, { nodes: nodes2, edges: edges2, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime.jsx)(StoreUpdater, { nodes: nodes2, edges: edges2, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes: edgeTypes2, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
   }
   var index = fixedForwardRef(ReactFlow);
   var error014 = errorMessages["error014"]();
@@ -33769,17 +33769,25 @@
     const sparks = Array.from({ length: SPARKS }, (_, index2) => ({
       dur: SPARK_S * (0.85 + 0.3 * noise(seed, index2 + 1)),
       begin: -(index2 / SPARKS * SPARK_S + noise(seed, index2 + 11) * 0.4),
-      r: 2 + 2 * noise(seed, index2 + 21),
-      opacity: 0.5 + 0.45 * noise(seed, index2 + 31),
-      blur: 0.3 + 0.6 * noise(seed, index2 + 41)
+      r: 2.6 + 2 * noise(seed, index2 + 21),
+      opacity: 0.85 + 0.15 * noise(seed, index2 + 31),
+      blur: 0.15 + 0.35 * noise(seed, index2 + 41)
     }));
     const flying = synced && !prefersReducedMotion();
+    const arrowAngle = (() => {
+      const position = String(props.targetPosition ?? "left");
+      if (position === "right") return 180;
+      if (position === "top") return 90;
+      if (position === "bottom") return -90;
+      return 0;
+    })();
     const dx = Math.abs(props.targetX - props.sourceX);
     const dy = Math.abs(props.targetY - props.sourceY);
     const horizontal = dx >= dy;
     const span = Math.max(1, horizontal ? dx : dy);
     const band = Math.max(140, Math.min(460, span * 0.5));
-    const origin = horizontal ? Math.min(props.sourceX, props.targetX) : Math.min(props.sourceY, props.targetY);
+    const direction = horizontal ? props.targetX >= props.sourceX ? 1 : -1 : props.targetY >= props.sourceY ? 1 : -1;
+    const origin = horizontal ? props.sourceX : props.sourceY;
     const pad = 80;
     const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0);
     const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band);
@@ -33792,7 +33800,6 @@
         {
           id: props.id,
           path,
-          ...props.markerEnd !== void 0 ? { markerEnd: props.markerEnd } : {},
           style: {
             // Both states are dashed now: the light alone says which is which.
             stroke: synced ? "rgba(226, 232, 242, 0.55)" : "rgba(200, 206, 216, 0.34)",
@@ -33802,11 +33809,20 @@
           }
         }
       ),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "path",
+        {
+          d: "M0 0 L-11 -5 L-11 5 Z",
+          transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
+          fill: synced ? "rgba(232, 238, 250, 0.85)" : "rgba(200, 206, 216, 0.5)",
+          pointerEvents: "none"
+        }
+      ),
       flying ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("defs", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("radialGradient", { id: sparkId, children: [
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("stop", { offset: "0%", stopColor: "rgba(255, 255, 255, 0.98)" }),
-            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("stop", { offset: "45%", stopColor: "rgba(214, 232, 255, 0.5)" }),
+            /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("stop", { offset: "42%", stopColor: "rgba(226, 240, 255, 0.75)" }),
             /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("stop", { offset: "100%", stopColor: "rgba(190, 214, 255, 0)" })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
@@ -33844,7 +33860,7 @@
                     attributeName: "transform",
                     type: "translate",
                     from: horizontal ? `${-band} 0` : `0 ${-band}`,
-                    to: horizontal ? `${travel} 0` : `0 ${travel}`,
+                    to: horizontal ? `${direction * travel} 0` : `0 ${direction * travel}`,
                     dur: `${SWEEP_S}s`,
                     begin: `${phase}s`,
                     repeatCount: "indefinite"
@@ -33914,18 +33930,102 @@
   }
   var edgeTypes = { talkMap: TalkMapEdge };
 
+  // src/client/edge-routing.ts
+  var DEFAULT_MIN_SPAN = 96;
+  function overlapsSpan(a, b, tolerance) {
+    return Math.abs(a - b) < tolerance;
+  }
+  function blockedToward(card2, side, obstacles, size) {
+    const vertical = side === "b" || side === "t";
+    for (const other of obstacles) {
+      if (other.id === card2.id) continue;
+      const dx = other.x - card2.x;
+      const dy = other.y - card2.y;
+      if (vertical) {
+        if (!overlapsSpan(dx, 0, size.width * 0.9)) continue;
+        if (side === "b" && dy > 0 && dy < size.height * 1.15) return true;
+        if (side === "t" && dy < 0 && -dy < size.height * 1.15) return true;
+      } else {
+        if (!overlapsSpan(dy, 0, size.height * 0.9)) continue;
+        if (side === "r" && dx > 0 && dx < size.width * 1.15) return true;
+        if (side === "l" && dx < 0 && -dx < size.width * 1.15) return true;
+      }
+    }
+    return false;
+  }
+  function pickFaces(from, to, obstacles, options) {
+    const minSpan = options.minSpan ?? DEFAULT_MIN_SPAN;
+    const size = { width: options.cardWidth, height: options.cardHeight };
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const gapX = Math.abs(dx) - options.cardWidth;
+    const gapY = Math.abs(dy) - options.cardHeight;
+    const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
+    if (horizontalDominant) {
+      if (gapX >= minSpan) {
+        return dx >= 0 ? { fromHandle: "r", toHandle: "l" } : { fromHandle: "l", toHandle: "r" };
+      }
+      const fromSide2 = blockedToward(from, "b", obstacles, size) && !blockedToward(from, "t", obstacles, size) ? "t" : "b";
+      const toSide2 = blockedToward(to, "b", obstacles, size) && !blockedToward(to, "t", obstacles, size) ? "t" : "b";
+      return { fromHandle: fromSide2, toHandle: toSide2 };
+    }
+    if (gapY >= minSpan) {
+      return dy >= 0 ? { fromHandle: "b", toHandle: "t" } : { fromHandle: "t", toHandle: "b" };
+    }
+    const fromSide = blockedToward(from, "r", obstacles, size) && !blockedToward(from, "l", obstacles, size) ? "l" : "r";
+    const toSide = blockedToward(to, "r", obstacles, size) && !blockedToward(to, "l", obstacles, size) ? "l" : "r";
+    return { fromHandle: fromSide, toHandle: toSide };
+  }
+
   // scripts/_edge-live-entry.tsx
   var import_jsx_runtime3 = __toESM(require_jsx_runtime(), 1);
+  var CARD_W = 224;
+  var CARD_H = 120;
+  var card = (id2, x, y, label) => ({
+    id: id2,
+    position: { x, y },
+    data: { label },
+    style: { width: CARD_W, height: CARD_H, background: "#23262d", color: "#cfd6e3", border: "1px solid #333a45", borderRadius: 10 }
+  });
+  var nodeTypes = {
+    card: ({ data }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { style: {
+      width: CARD_W,
+      height: CARD_H,
+      background: "#23262d",
+      color: "#cfd6e3",
+      border: "1px solid #333a45",
+      borderRadius: 10,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "t", type: "source", position: Position.Top }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "r", type: "source", position: Position.Right }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "b", type: "source", position: Position.Bottom }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Handle, { id: "l", type: "source", position: Position.Left }),
+      data.label
+    ] })
+  };
   var nodes = [
-    { id: "a", position: { x: 60, y: 60 }, data: { label: "A" }, style: { width: 130, height: 64, background: "#23262d", color: "#cfd6e3", border: "1px solid #333a45", borderRadius: 10 } },
-    { id: "b", position: { x: 460, y: 220 }, data: { label: "B" }, style: { width: 130, height: 64, background: "#23262d", color: "#cfd6e3", border: "1px solid #333a45", borderRadius: 10 } }
+    { ...card("a", 40, 30, "A"), type: "card" },
+    { ...card("b", 520, 210, "B"), type: "card" },
+    { ...card("c", 40, 290, "C"), type: "card" },
+    { ...card("d", 40 + CARD_W + 12, 290, "D"), type: "card" }
   ];
+  var placed = nodes.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }));
+  var faceFor = (fromId, toId) => {
+    const from = placed.find((node) => node.id === fromId);
+    const to = placed.find((node) => node.id === toId);
+    const faces = pickFaces(from, to, placed, { cardWidth: CARD_W, cardHeight: CARD_H });
+    return { sourceHandle: faces.fromHandle, targetHandle: faces.toHandle };
+  };
   var edges = [
-    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced" } },
-    { id: "idle", source: "b", target: "a", type: "talkMap", data: { sync: "idle" } }
+    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced" }, ...faceFor("a", "b") },
+    { id: "idle", source: "b", target: "a", type: "talkMap", data: { sync: "idle" }, ...faceFor("b", "a") },
+    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced" }, ...faceFor("c", "d") }
   ];
   (0, import_client.createRoot)(document.getElementById("root")).render(
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 760, height: 420 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes, edges, edgeTypes, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 820, height: 560 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes, edges, edgeTypes, nodeTypes, connectionMode: ConnectionMode.Loose, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })
   );
 })();
 /*! Bundled license information:

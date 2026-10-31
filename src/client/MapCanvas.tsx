@@ -25,6 +25,7 @@ import { canvas, INBOX_BOARD_ID, newCardId, type CanvasState } from './canvas-st
 import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { edgeSyncState, lineageSyncState } from './edge-sync.ts'
+import { pickFaces, type Obstacle } from './edge-routing.ts'
 import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
@@ -1009,6 +1010,38 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return sessions.byId[card.sessionId]?.updatedAt
   }
 
+  /** Faces for a stored edge, from where its two cards are right now. */
+  const routingObstacles = (): Obstacle[] => Object.entries(canvasState.cards).map(([id, card]) => ({
+    id,
+    x: card.x,
+    y: card.y,
+  }))
+
+  /** Faces for a pair — see edge-routing.ts for the rules. */
+  const sideHandles = (fromCardId: string, toCardId: string): { fromHandle: string; toHandle: string } => {
+    const from = canvasState.cards[fromCardId]
+    const to = canvasState.cards[toCardId]
+    if (from === undefined || to === undefined) return { fromHandle: 'r', toHandle: 'l' }
+    const picked = pickFaces(
+      { id: fromCardId, x: from.x, y: from.y },
+      { id: toCardId, x: to.x, y: to.y },
+      routingObstacles(),
+      { cardWidth: CARD_W, cardHeight: CARD_H },
+    )
+    return { fromHandle: picked.fromHandle, toHandle: picked.toHandle }
+  }
+
+  const computedHandles = (fromCardId: string, toCardId: string): {
+    sourceHandle: string
+    targetHandle: string
+  } => {
+    const from = canvasState.cards[fromCardId]
+    const to = canvasState.cards[toCardId]
+    if (from === undefined || to === undefined) return { sourceHandle: 'r', targetHandle: 'l' }
+    const picked = sideHandles(fromCardId, toCardId)
+    return { sourceHandle: picked.fromHandle, targetHandle: picked.toHandle }
+  }
+
   const liveEdges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
     // A folded card is not painted, so its edges must not be either (an edge to
@@ -1038,9 +1071,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         id: edgeId,
         source: edge.fromCardId,
         target: edge.toCardId,
-        // Handles stored per edge; legacy edges keep their old r→l anchoring.
-        sourceHandle: edge.fromHandle ?? 'r',
-        targetHandle: edge.toHandle ?? 'l',
+        // Faces are recomputed from the live positions — a stored handle would
+        // keep a 12px stub forever after the cards were laid out side by side.
+        ...computedHandles(edge.fromCardId, edge.toCardId),
         type: TALK_MAP_EDGE_TYPE,
         selected: liveSelectedEdgeIds.has(edgeId),
         // Endpoints ride along for the edge context menu (id parsing would
@@ -1294,14 +1327,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
   /** Pick edge anchor sides from the cards' relative placement. */
-  const sideHandles = (from: Card, to: Card): { fromHandle: string; toHandle: string } => {
-    const dx = to.x - from.x
-    const dy = to.y - from.y
-    if (Math.abs(dx) >= Math.abs(dy)) {
-      return dx >= 0 ? { fromHandle: 'r', toHandle: 'l' } : { fromHandle: 'l', toHandle: 'r' }
-    }
-    return dy >= 0 ? { fromHandle: 'b', toHandle: 't' } : { fromHandle: 't', toHandle: 'b' }
-  }
+  /** Every card on this board, as routing obstacles. */
 
   /** A plain association between two existing cards. One edge per pair —
    * a second draw over an already-connected pair is silently a no-op. */
@@ -1318,7 +1344,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const fromCard = canvasState.cards[fromCardId]
     const toCard = canvasState.cards[toCardId]
     if (fromCard === undefined || toCard === undefined) return
-    const geometry = sideHandles(fromCard, toCard)
+    const geometry = sideHandles(fromCardId, toCardId)
     const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle
     canvas.addEdges({
       [`edge-${crypto.randomUUID()}`]: {
