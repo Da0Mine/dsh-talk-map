@@ -1,17 +1,11 @@
 /**
  * One edge renderer for the whole map.
  *
- * 未同步 → 灰白静态虚线。
- * 同步中 → 灰白静态实线，一层光沿着线扫过去。
+ * 未同步 → 灰线，基本不发光。
+ * 同步中 → 实线 + 外发光（一层模糊的宽描边垫在下面，再叠一条亮线）。
  *
- * 这层光直接**复用卡片运行光环的剖面**：卡片用的是 conic gradient
- *   190° 0 → 250° 0.18 → 292° 0.55 → 325° 1.0 → 352° 0.4 → 360° 0
- * 一条 47% 宽的软带（大半圈是暗的、缓慢爬升、末段一个亮尖、然后急落），以
- * 恒定速度扫过。线上没有极坐标，于是把同一条剖面做成**一扇渐变的窗口**，
- * 沿线的长轴平移：窗口外遮罩全黑，所以任意时刻只有一处亮，不会出现
- * dash 在接缝处"复制"成两段的问题。
- *
- * 线本身是 SVG path，所以窗口扫过时，光自然被裁在线身里、拐角也是圆的。
+ * 没有流动光斑：线本身亮起来就够了。箭头自己画——React Flow 的 edge marker
+ * 不会传给自定义边组件。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
 
@@ -19,49 +13,6 @@ export interface TalkMapEdgeData {
   fromCardId?: string
   toCardId?: string
   sync?: 'synced' | 'idle'
-}
-
-/** One sweep across the line, in seconds — same tempo as the card ring. */
-const SWEEP_S = 1.8
-
-/**
- * Brightness profile across the band, as fractions → opacity.
- *
- * Symmetric on purpose. The card ring is a CLOSED loop, so its gradient can ramp
- * up to a sharp peak and cut — there is no "head", the dark side simply joins the
- * bright side again. A line is open, so that same profile reads as a comet with a
- * nose. Fading at BOTH ends keeps the card's look: a soft mass of light sliding
- * along, brightest in the middle, nothing that looks like a nose.
- */
-const LIGHT_PROFILE: [number, number][] = [
-  [0, 0],
-  [0.16, 0.1],
-  [0.34, 0.38],
-  [0.5, 0.92],
-  [0.66, 0.38],
-  [0.84, 0.1],
-  [1, 0],
-]
-
-/** Stable hash → per-edge phase, so parallel lines don't sweep in lockstep. */
-function hashOf(value: string): number {
-  let hash = 0
-  for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) | 0
-  }
-  return Math.abs(hash)
-}
-
-function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  } catch {
-    return false
-  }
-}
-
-function safeId(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]/g, '_')
 }
 
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
@@ -76,18 +27,9 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     targetPosition: props.targetPosition,
   })
 
-  const uid = safeId(props.id ?? 'edge')
-  const rampId = 'tmp' + uid
-  const clipId = 'tmc' + uid
-  const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * SWEEP_S
-
-  const flying = synced && !prefersReducedMotion()
-
   /**
-   * Which way the arrow points. The path arrives at the target handle, so the
-   * head follows that face: left → pointing right, top → pointing down, …
-   * React Flow's own edge markers never reach a custom edge component, which is
-   * why the line had lost its arrow entirely.
+   * Which way the arrow points: the path arrives at the target handle, so the
+   * head follows that face (left → pointing right, top → pointing down, …).
    */
   const arrowAngle = (() => {
     const position = String(props.targetPosition ?? 'left')
@@ -97,129 +39,46 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     return 0
   })()
 
-  // Sweep along the dominant axis. A smoothstep path runs horizontally and
-  // vertically, so whichever axis is longer is the direction the light travels.
-  const dx = Math.abs(props.targetX - props.sourceX)
-  const dy = Math.abs(props.targetY - props.sourceY)
-  const horizontal = dx >= dy
-  const span = Math.max(1, horizontal ? dx : dy)
-  /** Width of the lit band ≈ the card's 47%, with sane bounds for tiny edges. */
-  const band = Math.max(140, Math.min(460, span * 0.5))
-  /** +1 when the path runs right/down out of the source, -1 when it runs back. */
-  const direction = horizontal
-    ? (props.targetX >= props.sourceX ? 1 : -1)
-    : (props.targetY >= props.sourceY ? 1 : -1)
-  /** The window starts just behind the SOURCE, then runs toward the target. */
-  const origin = horizontal ? props.sourceX : props.sourceY
-
-  const pad = 80
-  const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0)
-  const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band)
-  const maskW = dx + pad * 2 + (horizontal ? band * 2 : 0)
-  const maskH = dy + pad * 2 + (horizontal ? 0 : band * 2)
-  const travel = span + band
-
   return (
     <>
+      {/* The glow: the same path, wide and blurred, under the crisp line. */}
+      {synced
+        ? (
+            <path
+              d={path}
+              fill="none"
+              stroke="rgba(196, 219, 255, 0.55)"
+              strokeWidth={7}
+              strokeDasharray="6 5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ filter: 'blur(4px)', pointerEvents: 'none' }}
+            />
+          )
+        : null}
+
       <BaseEdge
         id={props.id}
         path={path}
         style={{
-          // Both states are dashed now: the light alone says which is which.
-          stroke: synced ? 'rgba(226, 232, 242, 0.55)' : 'rgba(200, 206, 216, 0.34)',
-          strokeWidth: 1.6,
+          stroke: synced ? 'rgba(240, 246, 255, 0.96)' : 'rgba(200, 206, 216, 0.42)',
+          strokeWidth: synced ? 1.9 : 1.4,
           strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          // Dashed again: the light is in the halo, not in a solid core.
           strokeDasharray: '6 5',
+          ...(synced
+            ? { filter: 'drop-shadow(0 0 3px rgba(190, 214, 255, 0.6))' }
+            : {}),
         }}
       />
 
-      {/* Arrowhead drawn by hand: React Flow edge markers never reach a
-          custom edge component, which is why the line had no arrow. */}
       <path
         d="M0 0 L-11 -5 L-11 5 Z"
         transform={`translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`}
-        fill={synced ? 'rgba(232, 238, 250, 0.85)' : 'rgba(200, 206, 216, 0.5)'}
+        fill={synced ? 'rgba(240, 246, 255, 0.92)' : 'rgba(200, 206, 216, 0.5)'}
         pointerEvents="none"
       />
-
-      {flying
-        ? (
-            <>
-              <defs>
-                {/* The aura's profile, as a window gradient. */}
-                <linearGradient
-                  id={rampId}
-                  x1="0"
-                  y1="0"
-                  x2={horizontal ? '1' : '0'}
-                  y2={horizontal ? '0' : '1'}
-                >
-                  {LIGHT_PROFILE.map(([at, opacity]) => (
-                    <stop
-                      key={at}
-                      offset={`${(at * 100).toFixed(1)}%`}
-                      stopColor="#fff"
-                      stopOpacity={opacity}
-                    />
-                  ))}
-                </linearGradient>
-                {/* One window: outside it the mask is black, so only one place
-                    on the line is ever lit. */}
-                <mask
-                  id={clipId}
-                  maskUnits="userSpaceOnUse"
-                  x={minX}
-                  y={minY}
-                  width={maskW}
-                  height={maskH}
-                >
-                  <g>
-                    <animateTransform
-                      attributeName="transform"
-                      type="translate"
-                      from={horizontal ? `${-band} 0` : `0 ${-band}`}
-                      to={horizontal
-                        ? `${direction * travel} 0`
-                        : `0 ${direction * travel}`}
-                      dur={`${SWEEP_S}s`}
-                      begin={`${phase}s`}
-                      repeatCount="indefinite"
-                    />
-                    <rect
-                      x={horizontal ? origin : minX}
-                      y={horizontal ? minY : origin}
-                      width={horizontal ? band : maskW}
-                      height={horizontal ? maskH : band}
-                      fill={`url(#${rampId})`}
-                    />
-                  </g>
-
-                </mask>
-              </defs>
-
-
-              <g mask={`url(#${clipId})`} style={{ pointerEvents: 'none' }}>
-                {/* Glow first, then the crisp line of light on top. */}
-                <path
-                  d={path}
-                  fill="none"
-                  stroke="rgba(190, 214, 255, 0.7)"
-                  strokeWidth={10}
-                  strokeLinecap="round"
-                  style={{ filter: 'blur(5px)' }}
-                />
-                <path
-                  d={path}
-                  fill="none"
-                  stroke="rgba(255, 255, 255, 0.95)"
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  style={{ filter: 'blur(0.7px)' }}
-                />
-              </g>
-            </>
-          )
-        : null}
     </>
   )
 }

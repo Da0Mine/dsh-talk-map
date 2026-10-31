@@ -33710,33 +33710,6 @@
 
   // src/client/TalkMapEdge.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
-  var SWEEP_S = 1.8;
-  var LIGHT_PROFILE = [
-    [0, 0],
-    [0.16, 0.1],
-    [0.34, 0.38],
-    [0.5, 0.92],
-    [0.66, 0.38],
-    [0.84, 0.1],
-    [1, 0]
-  ];
-  function hashOf(value) {
-    let hash = 0;
-    for (let index2 = 0; index2 < value.length; index2 += 1) {
-      hash = hash * 31 + value.charCodeAt(index2) | 0;
-    }
-    return Math.abs(hash);
-  }
-  function prefersReducedMotion() {
-    try {
-      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    } catch {
-      return false;
-    }
-  }
-  function safeId(value) {
-    return value.replace(/[^a-zA-Z0-9_-]/g, "_");
-  }
   function TalkMapEdge(props) {
     const data = props.data ?? {};
     const synced = data.sync === "synced";
@@ -33748,11 +33721,6 @@
       targetY: props.targetY,
       targetPosition: props.targetPosition
     });
-    const uid = safeId(props.id ?? "edge");
-    const rampId = "tmp" + uid;
-    const clipId = "tmc" + uid;
-    const phase = -(hashOf(props.id ?? "") % 1e3 / 1e3) * SWEEP_S;
-    const flying = synced && !prefersReducedMotion();
     const arrowAngle = (() => {
       const position = String(props.targetPosition ?? "left");
       if (position === "right") return 180;
@@ -33760,31 +33728,33 @@
       if (position === "bottom") return -90;
       return 0;
     })();
-    const dx = Math.abs(props.targetX - props.sourceX);
-    const dy = Math.abs(props.targetY - props.sourceY);
-    const horizontal = dx >= dy;
-    const span = Math.max(1, horizontal ? dx : dy);
-    const band = Math.max(140, Math.min(460, span * 0.5));
-    const direction = horizontal ? props.targetX >= props.sourceX ? 1 : -1 : props.targetY >= props.sourceY ? 1 : -1;
-    const origin = horizontal ? props.sourceX : props.sourceY;
-    const pad = 80;
-    const minX = Math.min(props.sourceX, props.targetX) - pad - (horizontal ? band : 0);
-    const minY = Math.min(props.sourceY, props.targetY) - pad - (horizontal ? 0 : band);
-    const maskW = dx + pad * 2 + (horizontal ? band * 2 : 0);
-    const maskH = dy + pad * 2 + (horizontal ? 0 : band * 2);
-    const travel = span + band;
     return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
+      synced ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "path",
+        {
+          d: path,
+          fill: "none",
+          stroke: "rgba(196, 219, 255, 0.55)",
+          strokeWidth: 7,
+          strokeDasharray: "6 5",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          style: { filter: "blur(4px)", pointerEvents: "none" }
+        }
+      ) : null,
       /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
         BaseEdge,
         {
           id: props.id,
           path,
           style: {
-            // Both states are dashed now: the light alone says which is which.
-            stroke: synced ? "rgba(226, 232, 242, 0.55)" : "rgba(200, 206, 216, 0.34)",
-            strokeWidth: 1.6,
+            stroke: synced ? "rgba(240, 246, 255, 0.96)" : "rgba(200, 206, 216, 0.42)",
+            strokeWidth: synced ? 1.9 : 1.4,
             strokeLinecap: "round",
-            strokeDasharray: "6 5"
+            strokeLinejoin: "round",
+            // Dashed again: the light is in the halo, not in a solid core.
+            strokeDasharray: "6 5",
+            ...synced ? { filter: "drop-shadow(0 0 3px rgba(190, 214, 255, 0.6))" } : {}
           }
         }
       ),
@@ -33793,92 +33763,10 @@
         {
           d: "M0 0 L-11 -5 L-11 5 Z",
           transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
-          fill: synced ? "rgba(232, 238, 250, 0.85)" : "rgba(200, 206, 216, 0.5)",
+          fill: synced ? "rgba(240, 246, 255, 0.92)" : "rgba(200, 206, 216, 0.5)",
           pointerEvents: "none"
         }
-      ),
-      flying ? /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)(import_jsx_runtime2.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("defs", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "linearGradient",
-            {
-              id: rampId,
-              x1: "0",
-              y1: "0",
-              x2: horizontal ? "1" : "0",
-              y2: horizontal ? "0" : "1",
-              children: LIGHT_PROFILE.map(([at, opacity]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-                "stop",
-                {
-                  offset: `${(at * 100).toFixed(1)}%`,
-                  stopColor: "#fff",
-                  stopOpacity: opacity
-                },
-                at
-              ))
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "mask",
-            {
-              id: clipId,
-              maskUnits: "userSpaceOnUse",
-              x: minX,
-              y: minY,
-              width: maskW,
-              height: maskH,
-              children: /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("g", { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-                  "animateTransform",
-                  {
-                    attributeName: "transform",
-                    type: "translate",
-                    from: horizontal ? `${-band} 0` : `0 ${-band}`,
-                    to: horizontal ? `${direction * travel} 0` : `0 ${direction * travel}`,
-                    dur: `${SWEEP_S}s`,
-                    begin: `${phase}s`,
-                    repeatCount: "indefinite"
-                  }
-                ),
-                /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-                  "rect",
-                  {
-                    x: horizontal ? origin : minX,
-                    y: horizontal ? minY : origin,
-                    width: horizontal ? band : maskW,
-                    height: horizontal ? maskH : band,
-                    fill: `url(#${rampId})`
-                  }
-                )
-              ] })
-            }
-          )
-        ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("g", { mask: `url(#${clipId})`, style: { pointerEvents: "none" }, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "path",
-            {
-              d: path,
-              fill: "none",
-              stroke: "rgba(190, 214, 255, 0.7)",
-              strokeWidth: 10,
-              strokeLinecap: "round",
-              style: { filter: "blur(5px)" }
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-            "path",
-            {
-              d: path,
-              fill: "none",
-              stroke: "rgba(255, 255, 255, 0.95)",
-              strokeWidth: 2.2,
-              strokeLinecap: "round",
-              style: { filter: "blur(0.7px)" }
-            }
-          )
-        ] })
-      ] }) : null
+      )
     ] });
   }
   var edgeTypes = { talkMap: TalkMapEdge };
