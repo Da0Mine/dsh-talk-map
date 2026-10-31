@@ -236,6 +236,28 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [pushEpoch, setPushEpoch] = useState(0)
   /** Lineage lines (fork/subagent provenance) can be switched off entirely. */
   const LINEAGE_KEY = 'dsh.talk-map.lineage-hidden.v1'
+  /** Fork lines the user deleted one by one; keyed `parent->child`. */
+  const LINEAGE_CUT_KEY = 'dsh.talk-map.lineage-cut.v1'
+  const [lineageCut, setLineageCut] = useState<readonly string[]>(() => {
+    try {
+      const raw = window.localStorage.getItem(LINEAGE_CUT_KEY)
+      const parsed = raw === null ? [] : JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : []
+    } catch {
+      return []
+    }
+  })
+  /** Deleting a derived fork line: it is not stored anywhere, so remember the pair. */
+  const cutLineage = (from: string, to: string): void => {
+    const key = from + '->' + to
+    setLineageCut(current => {
+      if (current.includes(key)) return current
+      const next = [...current, key]
+      try { window.localStorage.setItem(LINEAGE_CUT_KEY, JSON.stringify(next)) } catch { /* private mode */ }
+      return next
+    })
+  }
+
   const [lineageHidden, setLineageHiddenState] = useState(() => {
     try {
       return localStorage.getItem('dsh.talk-map.lineage-hidden.v1') === '1'
@@ -1105,6 +1127,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
     }
     if (!lineageHidden) {
+      // ...minus the pairs the user deleted one by one.
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (foldedSet.has(cardId)) continue
       const parentSessionId = sessions.byId[card.sessionId]?.parentId
@@ -1112,6 +1135,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const parentCardId = sessionIdToCardId.get(parentSessionId)
       if (parentCardId === undefined) continue
       if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue
+      // ...and the pairs the user deleted one by one.
+      if (lineageCut.includes(parentCardId + '->' + cardId)) continue
       // Provenance, not a channel: the child inherited the history and has
       // to be judged by its own timestamps.
       const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? '']
@@ -1983,14 +2008,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           close()
         },
       })
-      items.push({
-        key: 'toggle-lineage',
-        label: lineageHidden ? t('edge.showLineage') : t('edge.hideLineage'),
-        onPick: () => {
-          close()
-          setLineageHidden(!lineageHidden)
-        },
-      })
+
       items.push({
         key: 'import-ws',
         label: `${t('menu.importWs')}…`,
@@ -2140,29 +2158,21 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           materialiseEdge(edgeFrom, edgeTo)
         },
       })
-      if (lineage) {
-        items.push({
-          key: 'hide-lineage',
-          label: t('edge.hideLineage'),
-          onPick: () => {
-            close()
-            setLineageHidden(true)
-          },
-        })
-      }
-      // Stored edges only — lineage lines are derived, nothing to persist on.
-      // (Auto-sync is shelved: schema + host fan-out exist but stay
-      // unwired until the feature is wanted — see the handover doc.)
-      if (stored !== undefined) {
-        items.push({
-          key: 'delete-edge',
-          label: t('edge.delete'),
-          onPick: () => {
+
+      // One control for both kinds. A stored edge is removed; a derived fork
+      // line has nothing to delete, so the pair is remembered instead.
+      items.push({
+        key: 'delete-edge',
+        label: t('edge.delete'),
+        onPick: () => {
+          close()
+          if (stored !== undefined) {
             canvas.removeEdges([edgeId])
-            close()
-          },
-        })
-      }
+            return
+          }
+          cutLineage(edgeFrom, edgeTo)
+        },
+      })
     } else if (menu.kind === 'frame' && menu.targetId !== undefined) {
       const groupId = menu.targetId
       title = renamedWorkspaces[groupId] ?? wsTitles.get(groupId) ?? t('frame.unknown')

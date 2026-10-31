@@ -663,6 +663,19 @@ try {
   check('抽屉里的连线不超过画布上可见的连线', wireConsistency.wires <= wireConsistency.boardLines,
     JSON.stringify(wireConsistency))
 
+  // Same geometry as the board: a right-angle smoothstep path, no bezier bow.
+  const wireShapes = await page.evaluate(() => {
+    const paths = [...document.querySelectorAll('svg[class*="drawerWires"] path')]
+      .filter(path => (path.getAttribute('stroke-dasharray') ?? '') !== '')
+    return {
+      count: paths.length,
+      curved: paths.filter(path => /[CQ]/.test(path.getAttribute('d') ?? '')).length,
+    }
+  })
+  check('抽屉里的连线是折线（与画布同一算法，不是贝塞尔弯的）',
+    wireShapes.curved === 0, JSON.stringify(wireShapes))
+
+
   await page.screenshot({ path: path.join(shots, 'probe-drawer.png') })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)

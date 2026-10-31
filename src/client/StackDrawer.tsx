@@ -12,6 +12,7 @@ import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
 import { loadSearch, saveSearch } from './search-store.ts'
 import { SearchResults } from './SearchResults.tsx'
+import { getSmoothStepPath, Position } from '@xyflow/react'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -220,52 +221,58 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         const toCy = to.y + to.height / 2
         const dx = toCx - fromCx
         const dy = toCy - fromCy
-        // Same rule as the map: a facing-side line needs room to read as a
-        // line. Narrower than that and it leaves through a top/bottom face and
-        // loops around instead of becoming a 20px stub.
+        // Same rule and the same geometry as the map: an orthogonal smoothstep
+        // path (rounded right angles), not a bezier bow.
         const gapX = Math.abs(dx) - (from.width + to.width) / 2
         const gapY = Math.abs(dy) - (from.height + to.height) / 2
         const MIN_SPAN = 96
         const horizontalDominant = Math.abs(dx) >= Math.abs(dy)
 
+        let sourceX = fromCx
+        let sourceY = fromCy
+        let targetX = toCx
+        let targetY = toCy
+        let sourcePosition = Position.Right
+        let targetPosition = Position.Left
+
         if (horizontalDominant && gapX >= MIN_SPAN) {
-          // Side by side with room: leave the facing edges.
-          const x1 = dx >= 0 ? from.x + from.width : from.x
-          const x2 = dx >= 0 ? to.x : to.x + to.width
-          const bend = Math.max(24, Math.min(96, Math.abs(x2 - x1) * 0.55))
-          const sign = dx >= 0 ? 1 : -1
-          next.push({
-            d: `M ${x1} ${fromCy} C ${x1 + bend * sign} ${fromCy}, ${x2 - bend * sign} ${toCy}, ${x2} ${toCy}`,
-            ax: x2,
-            ay: toCy,
-            angle: dx >= 0 ? 0 : 180,
-          })
+          const right = dx >= 0
+          sourceX = right ? from.x + from.width : from.x
+          targetX = right ? to.x : to.x + to.width
+          sourcePosition = right ? Position.Right : Position.Left
+          targetPosition = right ? Position.Left : Position.Right
+          targetY = toCy
         } else if (!horizontalDominant && gapY >= MIN_SPAN) {
-          // Stacked with room: leave the facing edges.
-          const y1 = dy >= 0 ? from.y + from.height : from.y
-          const y2 = dy >= 0 ? to.y : to.y + to.height
-          const bend = Math.max(24, Math.min(72, Math.abs(y2 - y1) * 0.55))
-          const sign = dy >= 0 ? 1 : -1
-          next.push({
-            d: `M ${fromCx} ${y1} C ${fromCx} ${y1 + bend * sign}, ${toCx} ${y2 - bend * sign}, ${toCx} ${y2}`,
-            ax: toCx,
-            ay: y2,
-            angle: dy >= 0 ? 90 : -90,
-          })
+          const down = dy >= 0
+          sourceY = down ? from.y + from.height : from.y
+          targetY = down ? to.y : to.y + to.height
+          sourcePosition = down ? Position.Bottom : Position.Top
+          targetPosition = down ? Position.Top : Position.Bottom
+          targetX = toCx
         } else {
-          // Too close: drop out of the bottom (or top) of both cards and loop.
+          // Too close: drop out of the bottom (or top) of both cards.
           const down = from.y + from.height <= to.y + to.height
-          const y1 = down ? from.y + from.height : from.y
-          const y2 = down ? to.y + to.height : to.y
-          const dip = 26
-          const sign = down ? 1 : -1
-          next.push({
-            d: `M ${fromCx} ${y1} C ${fromCx} ${y1 + dip * sign}, ${toCx} ${y2 + dip * sign}, ${toCx} ${y2}`,
-            ax: toCx,
-            ay: y2,
-            angle: down ? -90 : 90,
-          })
+          sourceY = down ? from.y + from.height : from.y
+          targetY = down ? to.y + to.height : to.y
+          sourcePosition = down ? Position.Bottom : Position.Top
+          targetPosition = down ? Position.Bottom : Position.Top
         }
+
+        const [wirePath] = getSmoothStepPath({
+          sourceX,
+          sourceY,
+          sourcePosition,
+          targetX,
+          targetY,
+          targetPosition,
+          borderRadius: 8,
+        })
+
+        const angle = targetPosition === Position.Left ? 0
+          : targetPosition === Position.Right ? 180
+            : targetPosition === Position.Top ? 90
+              : -90
+        next.push({ d: wirePath, ax: targetX, ay: targetY, angle })
       }
       // Only touch state when something actually moved: the parent may
       // re-render for unrelated reasons, and a blind setState here loops.
