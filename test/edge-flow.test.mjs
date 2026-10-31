@@ -39,10 +39,10 @@ for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmE
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
-// 7. the drawer is clean again: no wire layer
-assert.ok(!/drawerWires/.test(bundle), 'the drawer wire layer must be gone')
-assert.ok(!/drawerWireLinks/.test(bundle), 'no drawer links are passed any more')
+// 7. the drawer draws the same links, with the same look and rule
+assert.match(bundle, /drawerWires/, "the drawer must draw its links")
+assert.match(bundle, /links: drawerWireLinks/, "the canvas must feed the drawer its links")
 
 console.log('edge-flow: 16 checks passed')
-// 7. the drawer is clean again: no wire layer
-assert.ok(!/drawerWireLinks/.test(bundle), 'no drawer links are passed any more')
+// 7. the drawer draws the same links, with the same look and rule
+assert.match(bundle, /links: drawerWireLinks/, "the canvas must feed the drawer its links")
