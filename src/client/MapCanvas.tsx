@@ -1499,7 +1499,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         return {
           sessionId: item.sessionId,
           title: item.title,
-          blocks: [[titleHit ? item.title : (item.preview ?? item.title)]],
+          // A title hit already shows its title: no second, identical line.
+          blocks: titleHit || (item.preview ?? '') === '' ? [] : [[item.preview ?? '']],
           seqs: [null],
           roles: [null],
           byTitle: titleHit,

@@ -1449,24 +1449,19 @@ function renderMarkdownInline(raw, query) {
 var import_jsx_runtime2 = require("react/jsx-runtime");
 function SearchResults(props) {
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHits"], "data-talkmap-local-results": "", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerHitsHead"], children: props.heading }),
     props.hits.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerEmpty"], children: props.empty }) : null,
     props.hits.map((hit) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHit"], "data-talkmap-search-hit": hit.sessionId, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { className: talk_map_default["drawerHitHead"], children: [
-        hit.byTitle === true ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-title-hit": "1", children: props.heading === "" ? "" : "标题" }) : null,
-        hit.agent === "subagent" ? /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("span", { className: talk_map_default["drawerAgentChip"], "data-talkmap-agent": "subagent", children: "子" }) : null,
-        /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
-          "button",
-          {
-            type: "button",
-            className: talk_map_default["drawerHitTitle"],
-            onClick: () => {
-              props.onOpenSession(hit.sessionId);
-            },
-            children: renderMarkdownInline(hit.title, props.query).nodes
-          }
-        )
-      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("div", { className: talk_map_default["drawerHitHead"], children: /* @__PURE__ */ (0, import_jsx_runtime2.jsx)(
+        "button",
+        {
+          type: "button",
+          className: talk_map_default["drawerHitTitle"],
+          onClick: () => {
+            props.onOpenSession(hit.sessionId);
+          },
+          children: renderMarkdownInline(hit.title, props.query).nodes
+        }
+      ) }),
       hit.blocks.map((block, index2) => {
         const needle = props.query.trim().toLowerCase();
         const line = block.find((entry) => entry.toLowerCase().includes(needle)) ?? block[0] ?? "";
@@ -1567,7 +1562,8 @@ function GlobalSearch(props) {
       return {
         sessionId: card.sessionId,
         title: card.workspaceTitle === "" ? card.title : card.title + " · " + card.workspaceTitle,
-        blocks: [[titleHit ? card.title : card.preview]],
+        // A title hit already shows its title: no second, identical line.
+        blocks: titleHit || card.preview === "" ? [] : [[card.preview]],
         seqs: [null],
         roles: [null],
         byTitle: titleHit
@@ -1642,7 +1638,6 @@ function GlobalSearch(props) {
             {
               query: submitted === "" ? query : submitted,
               hits,
-              heading: t("map.hits", { n: String(hits.length) }),
               empty: t("map.noHit"),
               onOpenSession: (sessionId) => {
                 props.onOpenSession(sessionId);
@@ -12707,7 +12702,6 @@ function StackDrawer(props) {
                     {
                       query,
                       hits,
-                      heading: t("map.hits", { n: String(hits.length) }),
                       empty: t("map.noHit"),
                       onOpenSession: (sessionId) => {
                         props.onOpenSession?.(sessionId);
@@ -13828,7 +13822,8 @@ function CanvasInner(props) {
       return {
         sessionId: item.sessionId,
         title: item.title,
-        blocks: [[titleHit ? item.title : item.preview ?? item.title]],
+        // A title hit already shows its title: no second, identical line.
+        blocks: titleHit || (item.preview ?? "") === "" ? [] : [[item.preview ?? ""]],
         seqs: [null],
         roles: [null],
         byTitle: titleHit

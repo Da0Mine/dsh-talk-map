@@ -442,7 +442,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 <SearchResults
                   query={query}
                   hits={hits}
-                  heading={t('map.hits', { n: String(hits.length) })}
                   empty={t('map.noHit')}
                   onOpenSession={(sessionId) => { props.onOpenSession?.(sessionId) }}
                 />

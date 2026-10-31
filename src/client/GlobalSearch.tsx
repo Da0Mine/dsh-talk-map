@@ -64,7 +64,8 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
         return {
           sessionId: card.sessionId,
           title: card.workspaceTitle === '' ? card.title : card.title + ' · ' + card.workspaceTitle,
-          blocks: [[titleHit ? card.title : card.preview]],
+          // A title hit already shows its title: no second, identical line.
+          blocks: titleHit || card.preview === '' ? [] : [[card.preview]],
           seqs: [null],
           roles: [null],
           byTitle: titleHit,
@@ -125,7 +126,6 @@ export function GlobalSearch(props: { onOpenSession: (sessionId: string, q?: str
                   <SearchResults
                     query={submitted === '' ? query : submitted}
                     hits={hits}
-                    heading={t('map.hits', { n: String(hits.length) })}
                     empty={t('map.noHit')}
                     onOpenSession={(sessionId) => { props.onOpenSession(sessionId) }}
                   />

@@ -3,7 +3,10 @@
  *
  * Both searches filter what the map has already rendered (title + body text), so
  * there is nothing to fetch: no spinner, no skeleton, no "load more", no peek.
- * Matches are highlighted and clicking a row opens that conversation.
+ *
+ * No labels either: the panel头 already says what was searched, so the list is
+ * just rows. (The old 「标题」/「子」 chips and the "N 张卡片" caption were notes
+ * nobody reads — a match shows its own text.)
  */
 import { renderMarkdownInline } from './markdown-inline.tsx'
 import styles from './talk-map.module.css'
@@ -13,16 +16,13 @@ export interface SearchHitView {
   title: string
   /** Matched lines; empty for a title-only hit (the title row already shows it). */
   blocks: string[][]
-  /** Matched by title rather than by body text. */
+  /** Matched by title rather than by body text (no longer labelled). */
   byTitle?: boolean
-  /** Sub-agent sessions carry this label. */
-  agent?: 'main' | 'subagent'
 }
 
 export interface SearchResultsProps {
   query: string
   hits: SearchHitView[]
-  heading: string
   /** Shown when the query matched nothing. */
   empty: string
   onOpenSession: (sessionId: string) => void
@@ -31,23 +31,12 @@ export interface SearchResultsProps {
 export function SearchResults(props: SearchResultsProps): React.JSX.Element {
   return (
     <div className={styles['drawerHits']} data-talkmap-local-results="">
-      <div className={styles['drawerHitsHead']}>{props.heading}</div>
       {props.hits.length === 0
         ? <div className={styles['drawerEmpty']}>{props.empty}</div>
         : null}
       {props.hits.map(hit => (
         <div key={hit.sessionId} className={styles['drawerHit']} data-talkmap-search-hit={hit.sessionId}>
           <div className={styles['drawerHitHead']}>
-            {hit.byTitle === true
-              ? (
-                  <span className={styles['drawerAgentChip']} data-talkmap-title-hit="1">
-                    {props.heading === '' ? '' : '标题'}
-                  </span>
-                )
-              : null}
-            {hit.agent === 'subagent'
-              ? <span className={styles['drawerAgentChip']} data-talkmap-agent="subagent">子</span>
-              : null}
             <button
               type="button"
               className={styles['drawerHitTitle']}
