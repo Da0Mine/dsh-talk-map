@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tasihi89/dsh-talk-map.git"
+    "url": "git+https://github.com/Da0Mine/dsh-talk-map.git"
   },
   "keywords": [
     "deepseek",
@@ -80,6 +80,11 @@
     "node": ">=22.19.0"
   },
   "publishConfig": {
-    "registry": "https://registry.npmjs.org/"
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "homepage": "https://github.com/Da0Mine/dsh-talk-map#readme",
+  "bugs": {
+    "url": "https://github.com/Da0Mine/dsh-talk-map/issues"
   }
 }
