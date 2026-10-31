@@ -147,6 +147,8 @@ const shape = await page.evaluate(() => {
   return {
     edges: groups.length,
     withMask: groups.filter(group => group.querySelector('mask') !== null).length,
+      circles: document.querySelectorAll('.react-flow__edge circle').length,
+      maskRects: [...document.querySelectorAll('.react-flow__edge mask rect')].map(r => Number(r.getAttribute('width'))).slice(0,4),
     paths: document.querySelectorAll('.react-flow__edge path').length,
   }
 })

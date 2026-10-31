@@ -37,7 +37,7 @@ assert.ok(!bundle.includes('0.95, 0.4'), 'the old asymmetric aura ramp must be g
 assert.match(bundle, /maskUnits: "userSpaceOnUse"/, 'the window must be user-space')
 assert.match(bundle, /animateTransform/, 'the window must translate')
 assert.match(bundle, /type: "translate"/, 'the window must translate, not rotate')
-assert.match(bundle, /SWEEP_S = 3\.6/, 'the sweep duration must be defined')
+assert.match(bundle, /SWEEP_S = 1\.8/, 'the sweep must run at 1.8s')
 
 // 5. the sweep follows the dominant axis, so vertical edges work too
 assert.match(bundle, /horizontal \?/, 'the sweep must pick its axis')
@@ -54,19 +54,15 @@ for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmE
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
-// 9. sparks drift along the line as well
-assert.match(bundle, /SPARKS = 9/, 'the spark count must be defined')
-assert.match(bundle, /SPARK_S = 2\.6/, 'the spark period must be defined')
-assert.match(bundle, /function noise/, 'spark jitter must be deterministic')
-assert.match(bundle, /routeId/, 'sparks need a motion route on the path')
-assert.match(bundle, /xlinkHref/, 'mpath needs the legacy attribute too')
-
-// 10. the arrowhead is drawn by the component (React Flow markers do not reach it)
+// 9. the arrowhead is drawn by the component (React Flow markers skip custom edges)
 assert.match(bundle, /M0 0 L-11 -5 L-11 5 Z/, 'the arrowhead must be drawn here')
 assert.match(bundle, /arrowAngle/, 'the arrowhead must orient to the target face')
-assert.match(bundle, /rotate\(\$\{arrowAngle\}\)|rotate\(/, 'the arrowhead must be rotated')
 
-// 11. sparks are solid, not ghostly
-assert.match(bundle, /0\.85 \+ 0\.15 \* noise/, 'sparks must be near-opaque')
+// 10. no particles any more — the light alone carries the movement
+assert.ok(!/SPARK/.test(bundle), 'spark particles must be gone')
+assert.ok(!/xlinkHref/.test(bundle), 'the spark motion route must be gone')
 
-console.log('edge-flow: 24 checks passed')
+// 10. the sweep is quick: one pass every 1.8s, like the card ring
+assert.match(bundle, /SWEEP_S = 1\.8/, 'the sweep must run at 1.8s')
+
+console.log('edge-flow: 22 checks passed')

@@ -21,8 +21,8 @@ export interface TalkMapEdgeData {
   sync?: 'synced' | 'idle'
 }
 
-/** One sweep across the line, in seconds (the card ring takes 1.8s per lap). */
-const SWEEP_S = 3.6
+/** One sweep across the line, in seconds — same tempo as the card ring. */
+const SWEEP_S = 1.8
 
 /**
  * Brightness profile across the band, as fractions → opacity.
@@ -52,21 +52,6 @@ function hashOf(value: string): number {
   return Math.abs(hash)
 }
 
-/** How many sparks drift along the line, and how long one pass takes. */
-const SPARKS = 9
-const SPARK_S = 2.6
-
-/** Deterministic 0..1 noise, so a re-render never reshuffles the sparks. */
-function noise(seed: number, salt: number): number {
-  let value = (seed + salt * 2654435761) >>> 0
-  value ^= value << 13
-  value >>>= 0
-  value ^= value >> 17
-  value ^= value << 5
-  value >>>= 0
-  return value / 4294967296
-}
-
 function prefersReducedMotion(): boolean {
   try {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -94,21 +79,8 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const uid = safeId(props.id ?? 'edge')
   const rampId = 'tmp' + uid
   const clipId = 'tmc' + uid
-  const sparkId = 'tms' + uid
-  // Invisible geometry the sparks ride on (the sweep uses a mask instead).
-  const routeId = 'tmr' + uid
   const phase = -((hashOf(props.id ?? '') % 1000) / 1000) * SWEEP_S
 
-  // Small glowing motes drifting the same way as the sweep: the line keeps a
-  // sense of movement even between two passes of the big light.
-  const seed = hashOf(props.id ?? 'edge')
-  const sparks = Array.from({ length: SPARKS }, (_, index) => ({
-    dur: SPARK_S * (0.85 + 0.3 * noise(seed, index + 1)),
-    begin: -((index / SPARKS) * SPARK_S + noise(seed, index + 11) * 0.4),
-    r: 2.6 + 2 * noise(seed, index + 21),
-    opacity: 0.85 + 0.15 * noise(seed, index + 31),
-    blur: 0.15 + 0.35 * noise(seed, index + 41),
-  }))
   const flying = synced && !prefersReducedMotion()
 
   /**
@@ -174,11 +146,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         ? (
             <>
               <defs>
-                <radialGradient id={sparkId}>
-                  <stop offset="0%" stopColor="rgba(255, 255, 255, 0.98)" />
-                  <stop offset="42%" stopColor="rgba(226, 240, 255, 0.75)" />
-                  <stop offset="100%" stopColor="rgba(190, 214, 255, 0)" />
-                </radialGradient>
                 {/* The aura's profile, as a window gradient. */}
                 <linearGradient
                   id={rampId}
@@ -230,8 +197,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
                 </mask>
               </defs>
 
-              {/* Invisible: only a route for the sparks. */}
-              <path id={routeId} d={path} fill="none" stroke="none" />
 
               <g mask={`url(#${clipId})`} style={{ pointerEvents: 'none' }}>
                 {/* Glow first, then the crisp line of light on top. */}
@@ -252,28 +217,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
                   style={{ filter: 'blur(0.7px)' }}
                 />
               </g>
-                {/* Sparks live OUTSIDE the sweep mask: they drift along the
-                    whole line, not only inside the lit window. */}
-                {/* Sparks: they ride the same path, so they stay on the line and
-                    turn the corners with it. */}
-                {sparks.map((spark, index) => (
-                  <circle
-                    key={'spark' + index}
-                    r={spark.r}
-                    fill={`url(#${sparkId})`}
-                    opacity={spark.opacity}
-                    style={{ filter: `blur(${spark.blur}px)` }}
-                  >
-                    <animateMotion
-                      dur={`${spark.dur}s`}
-                      begin={`${spark.begin}s`}
-                      repeatCount="indefinite"
-                      rotate="auto"
-                    >
-                      <mpath href={`#${routeId}`} xlinkHref={`#${routeId}`} />
-                    </animateMotion>
-                  </circle>
-                ))}
             </>
           )
         : null}

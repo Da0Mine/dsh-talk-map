@@ -11740,7 +11740,7 @@ function ContextMenu(props) {
 
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
-var SWEEP_S = 3.6;
+var SWEEP_S = 1.8;
 var LIGHT_PROFILE = [
   [0, 0],
   [0.16, 0.1],
@@ -11756,17 +11756,6 @@ function hashOf(value) {
     hash = hash * 31 + value.charCodeAt(index2) | 0;
   }
   return Math.abs(hash);
-}
-var SPARKS = 9;
-var SPARK_S = 2.6;
-function noise(seed, salt) {
-  let value = seed + salt * 2654435761 >>> 0;
-  value ^= value << 13;
-  value >>>= 0;
-  value ^= value >> 17;
-  value ^= value << 5;
-  value >>>= 0;
-  return value / 4294967296;
 }
 function prefersReducedMotion() {
   try {
@@ -11792,17 +11781,7 @@ function TalkMapEdge(props) {
   const uid = safeId(props.id ?? "edge");
   const rampId = "tmp" + uid;
   const clipId = "tmc" + uid;
-  const sparkId = "tms" + uid;
-  const routeId = "tmr" + uid;
   const phase = -(hashOf(props.id ?? "") % 1e3 / 1e3) * SWEEP_S;
-  const seed = hashOf(props.id ?? "edge");
-  const sparks = Array.from({ length: SPARKS }, (_, index2) => ({
-    dur: SPARK_S * (0.85 + 0.3 * noise(seed, index2 + 1)),
-    begin: -(index2 / SPARKS * SPARK_S + noise(seed, index2 + 11) * 0.4),
-    r: 2.6 + 2 * noise(seed, index2 + 21),
-    opacity: 0.85 + 0.15 * noise(seed, index2 + 31),
-    blur: 0.15 + 0.35 * noise(seed, index2 + 41)
-  }));
   const flying = synced && !prefersReducedMotion();
   const arrowAngle = (() => {
     const position = String(props.targetPosition ?? "left");
@@ -11850,11 +11829,6 @@ function TalkMapEdge(props) {
     ),
     flying ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("defs", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("radialGradient", { id: sparkId, children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "0%", stopColor: "rgba(255, 255, 255, 0.98)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "42%", stopColor: "rgba(226, 240, 255, 0.75)" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("stop", { offset: "100%", stopColor: "rgba(190, 214, 255, 0)" })
-        ] }),
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "linearGradient",
           {
@@ -11910,7 +11884,6 @@ function TalkMapEdge(props) {
           }
         )
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { id: routeId, d: path, fill: "none", stroke: "none" }),
       /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("g", { mask: `url(#${clipId})`, style: { pointerEvents: "none" }, children: [
         /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
           "path",
@@ -11934,27 +11907,7 @@ function TalkMapEdge(props) {
             style: { filter: "blur(0.7px)" }
           }
         )
-      ] }),
-      sparks.map((spark, index2) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-        "circle",
-        {
-          r: spark.r,
-          fill: `url(#${sparkId})`,
-          opacity: spark.opacity,
-          style: { filter: `blur(${spark.blur}px)` },
-          children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-            "animateMotion",
-            {
-              dur: `${spark.dur}s`,
-              begin: `${spark.begin}s`,
-              repeatCount: "indefinite",
-              rotate: "auto",
-              children: /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("mpath", { href: `#${routeId}`, xlinkHref: `#${routeId}` })
-            }
-          )
-        },
-        "spark" + index2
-      ))
+      ] })
     ] }) : null
   ] });
 }
