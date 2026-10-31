@@ -54,4 +54,11 @@ for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmE
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
-console.log('edge-flow: 15 checks passed')
+// 9. sparks drift along the line as well
+assert.match(bundle, /SPARKS = 9/, 'the spark count must be defined')
+assert.match(bundle, /SPARK_S = 2\.6/, 'the spark period must be defined')
+assert.match(bundle, /function noise/, 'spark jitter must be deterministic')
+assert.match(bundle, /routeId/, 'sparks need a motion route on the path')
+assert.match(bundle, /xlinkHref/, 'mpath needs the legacy attribute too')
+
+console.log('edge-flow: 20 checks passed')
