@@ -46,10 +46,8 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "lib",
-    "client",
-    "src",
-    "scripts",
+    "lib/index.js",
+    "client/client.js",
     "cordis.patch.yml",
     "LICENSE",
     "README.md",
