@@ -1011,38 +1011,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }
 
 
-  /**
-   * Links for the open drawer. Memoised: a fresh array every render would make
-   * the drawer measuring effect loop (React #185).
-   */
-  /**
-   * Lines to draw inside a stack drawer: every edge whose two cards are both in
-   * that folder. Synced ones glow; the rest stay faint.
-   */
-  const drawerLinks = (cardIds: readonly string[]): { from: string; to: string; synced: boolean }[] => {
-    const present = new Set(cardIds)
-    return Object.values(canvasState.edges)
-      .filter(edge => present.has(edge.fromCardId) && present.has(edge.toCardId))
-      .map(edge => ({
-        from: edge.fromCardId,
-        to: edge.toCardId,
-        synced: edgeSyncState({
-          kind: edge.kind,
-          ...(edge.lastPushAt !== undefined ? { lastPushAt: edge.lastPushAt } : {}),
-          ...(sessions[canvasState.cards[edge.fromCardId]?.sessionId ?? '']?.updatedAt !== undefined
-            ? { sourceUpdatedAt: sessions[canvasState.cards[edge.fromCardId]?.sessionId ?? '']?.updatedAt }
-            : {}),
-        }) === 'synced',
-      }))
-  }
-
-  const drawerWireLinks = useMemo(() => {
-    if (drawer === null) return []
-    // Folder membership lives in the layout, not on the card: shown + folded.
-    const layout = folderLayouts[drawer.groupId]
-    const cardIds = layout === undefined ? [] : [...layout.shown, ...layout.folded]
-    return drawerLinks(cardIds)
-  }, [drawer, folderLayouts, canvasState.edges, sessions])
 
   /** Faces for a stored edge, from where its two cards are right now. */
   const routingObstacles = (): Obstacle[] => Object.entries(canvasState.cards).map(([id, card]) => ({
@@ -2377,7 +2345,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             <StackDrawer
               workspaceTitle={renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t('frame.unknown')}
               items={drawerItems(drawer.groupId)}
-              links={drawerWireLinks}
               onOpenCard={(cardId) => {
                 const card = visibleCards[cardId]
                 // Deliberately NOT clearing the drawer: jumping into a

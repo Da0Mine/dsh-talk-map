@@ -33,14 +33,16 @@ assert.ok(!/maskUnits/.test(bundle), 'the sweep mask must be gone')
 assert.match(bundle, /pickFaces/, 'edges must use the routing module')
 assert.match(bundle, /computedHandles/, 'stored edges must recompute their faces')
 
-// 7. the drawer draws the same links — and skips the synced ones
-assert.match(bundle, /drawerWires/, 'the stack drawer must draw its links')
-assert.match(bundle, /links: drawerWireLinks/, 'the canvas must feed the drawer its links')
-assert.match(bundle, /=>\s*!\w+\.synced/, 'synced pairs must not draw in the drawer')
 
 // 8. no leftover looks in the stylesheet
 for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmEdgeBloom', 'tmEdgeFlow', 'tmEdgeSweep']) {
   assert.ok(!css.includes(gone), 'the ' + gone + ' rule must be gone from the stylesheet')
 }
 
+// 7. the drawer is clean again: no wire layer
+assert.ok(!/drawerWires/.test(bundle), 'the drawer wire layer must be gone')
+assert.ok(!/drawerWireLinks/.test(bundle), 'no drawer links are passed any more')
+
 console.log('edge-flow: 16 checks passed')
+// 7. the drawer is clean again: no wire layer
+assert.ok(!/drawerWireLinks/.test(bundle), 'no drawer links are passed any more')

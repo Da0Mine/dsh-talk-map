@@ -4,7 +4,7 @@
  * 100% zoom), in a multi-column grid. The wheel pages one ROW at a time, like a
  * phone's app drawer.
  */
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { mapUi } from './map-state.ts'
 import { t } from './i18n.ts'
 import { relativeTime, LAMP_CHIP } from './SessionCard.tsx'
@@ -97,13 +97,6 @@ export interface StackEntry {
   links?: { toCardId: string; title: string; kind: string; outgoing: boolean }[]
 }
 
-/** One line to draw behind the drawer cards. */
-export interface DrawerWire {
-  from: string
-  to: string
-  synced: boolean
-}
-
 export interface StackDrawerProps {
   /** Storage scope of this folder's search. */
   groupId: string
@@ -126,11 +119,6 @@ export interface StackDrawerProps {
   }>
   /** The passage around one hit — fetched on hover, not with the search. */
   onFetchContext?: (sessionId: string, seq: number, query: string) => Promise<string[]>
-  /**
-   * Card-to-card links among these items, drawn behind the cards as glowing
-   * lines — the drawer used to show nothing but text chips between rows.
-   */
-  links?: readonly DrawerWire[]
   /** A drag inside the drawer landed: `cardId` now sits at `index`. */
   onReorder?: (cardId: string, index: number) => void
   onClose: () => void
@@ -138,9 +126,6 @@ export interface StackDrawerProps {
 
 export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
-  /** Measured connector lines: curved paths in scroller coordinates. */
-  const [wires, setWires] = useState<{ d: string; synced: boolean }[]>([])
-  const [wireSize, setWireSize] = useState({ width: 0, height: 0 })
   const remembered = loadSearch<DrawerSearchHit>('drawer:' + props.groupId)
   const [query, setQuery] = useState(remembered?.query ?? '')
   const [hits, setHits] = useState<DrawerSearchHit[]>(remembered?.hits ?? [])
@@ -181,93 +166,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     ? props.items
     : props.items.filter(item => item.title.toLowerCase().includes(needle))
 
-  /**
-   * Rebuild the connector paths whenever the layout can have changed: the item
-   * list, the filter, a resize, or the font scale. Positions come from the real
-   * DOM, so the lines always match what the user sees.
-   */
-  useLayoutEffect(() => {
-    const scroller = scrollerRef.current
-    // Synced pairs show no line at all, same as on the map.
-    const links = (props.links ?? []).filter(link => !link.synced)
-    if (scroller === null || links.length === 0) {
-      setWires(current => (current.length === 0 ? current : []))
-      return
-    }
-    const measure = (): void => {
-      const boxOf = (cardId: string): DOMRect | null => {
-        const element = scroller.querySelector(`[data-card-id="${cardId}"]`)
-        if (element === null) return null
-        const rect = element.getBoundingClientRect()
-        const base = scroller.getBoundingClientRect()
-        return new DOMRect(
-          rect.left - base.left + scroller.scrollLeft,
-          rect.top - base.top + scroller.scrollTop,
-          rect.width,
-          rect.height,
-        )
-      }
-      const next: { d: string; synced: boolean }[] = []
-      for (const link of links) {
-        const from = boxOf(link.from)
-        const to = boxOf(link.to)
-        if (from === null || to === null) continue
-        const fromCx = from.x + from.width / 2
-        const fromCy = from.y + from.height / 2
-        const toCx = to.x + to.width / 2
-        const toCy = to.y + to.height / 2
-        const dx = toCx - fromCx
-        const dy = toCy - fromCy
-        let x1: number
-        let y1: number
-        let x2: number
-        let y2: number
-        let bend: number
-        if (Math.abs(dx) >= Math.abs(dy)) {
-          // Side by side: leave the facing edges, curve horizontally.
-          x1 = dx >= 0 ? from.x + from.width : from.x
-          y1 = fromCy
-          x2 = dx >= 0 ? to.x : to.x + to.width
-          y2 = toCy
-          bend = Math.max(24, Math.min(96, Math.abs(x2 - x1) * 0.55))
-          const sign = dx >= 0 ? 1 : -1
-          next.push({
-            d: `M ${x1} ${y1} C ${x1 + bend * sign} ${y1}, ${x2 - bend * sign} ${y2}, ${x2} ${y2}`,
-            synced: link.synced,
-          })
-        } else {
-          // Stacked: leave the top/bottom edges, curve vertically.
-          x1 = fromCx
-          y1 = dy >= 0 ? from.y + from.height : from.y
-          x2 = toCx
-          y2 = dy >= 0 ? to.y : to.y + to.height
-          bend = Math.max(24, Math.min(72, Math.abs(y2 - y1) * 0.55))
-          const sign = dy >= 0 ? 1 : -1
-          next.push({
-            d: `M ${x1} ${y1} C ${x1} ${y1 + bend * sign}, ${x2} ${y2 - bend * sign}, ${x2} ${y2}`,
-            synced: link.synced,
-          })
-        }
-      }
-      // Only touch state when something actually moved: the parent may
-      // re-render for unrelated reasons, and a blind setState here loops.
-      setWires((current) => {
-        if (current.length === next.length && current.every((wire, index) => wire.d === next[index]?.d && wire.synced === next[index]?.synced)) {
-          return current
-        }
-        return next
-      })
-      const width = Math.round(scroller.scrollWidth)
-      const height = Math.round(scroller.scrollHeight)
-      setWireSize((current) => (
-        current.width === width && current.height === height ? current : { width, height }
-      ))
-    }
-    measure()
-    const observer = new ResizeObserver(() => { measure() })
-    observer.observe(scroller)
-    return () => { observer.disconnect() }
-  }, [props.links, props.items, query, visibleItems.length])
   // Coming back from a conversation should land on the same rows.
   useEffect(() => {
     const scroller = scrollerRef.current
@@ -427,30 +325,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             }, 200)
           }}
         >
-          {wires.length > 0
-            ? (
-                <svg
-                  className={styles['drawerWires']}
-                  viewBox={`0 0 ${Math.max(1, wireSize.width)} ${Math.max(1, wireSize.height)}`}
-                  preserveAspectRatio="none"
-                  aria-hidden="true"
-                >
-                  {wires.map((wire, index) => (
-                    <g key={index}>
-                      <path
-                        d={wire.d}
-                        fill="none"
-                        stroke={wire.synced
-                          ? 'rgba(240, 246, 255, 0.9)'
-                          : 'rgba(200, 206, 216, 0.35)'}
-                        strokeWidth={wire.synced ? 1.6 : 1.2}
-                        strokeLinecap="round"
-                      />
-                    </g>
-                  ))}
-                </svg>
-              )
-            : null}
           {visibleItems.map(item => {
             const classNames = [styles['card'], styles['drawerCard']]
             if (item.glow !== undefined) classNames.push(styles[LAMP_CLASS[item.glow]] ?? '')
@@ -466,7 +340,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 key={item.cardId}
                 type="button"
                 data-stack-card=""
-                data-card-id={item.cardId}
                 data-talkmap-session={item.sessionId}
                 className={classNames.filter(Boolean).join(' ')}
                 draggable
