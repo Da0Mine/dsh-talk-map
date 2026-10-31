@@ -1,0 +1,18 @@
+{
+  "viewport": {
+    "width": 1920,
+    "height": 1080
+  },
+  "board-full": {
+    "file": "board-full.png"
+  },
+  "drawer": {
+    "file": "drawer.png"
+  },
+  "search": {
+    "file": "search.png"
+  },
+  "card-lamp": {
+    "file": "card-lamp.png"
+  }
+}
