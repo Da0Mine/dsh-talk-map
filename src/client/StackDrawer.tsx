@@ -188,7 +188,8 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
    */
   useLayoutEffect(() => {
     const scroller = scrollerRef.current
-    const links = props.links ?? []
+    // Synced pairs show no line at all, same as on the map.
+    const links = (props.links ?? []).filter(link => !link.synced)
     if (scroller === null || links.length === 0) {
       setWires(current => (current.length === 0 ? current : []))
       return
@@ -266,7 +267,8 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     const observer = new ResizeObserver(() => { measure() })
     observer.observe(scroller)
     return () => { observer.disconnect() }
-  }, [props.links, props.items, query, visibleItems.length])  // Coming back from a conversation should land on the same rows.
+  }, [props.links, props.items, query, visibleItems.length])
+  // Coming back from a conversation should land on the same rows.
   useEffect(() => {
     const scroller = scrollerRef.current
     if (scroller === null) return
@@ -435,18 +437,6 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 >
                   {wires.map((wire, index) => (
                     <g key={index}>
-                      {wire.synced
-                        ? (
-                            <path
-                              d={wire.d}
-                              fill="none"
-                              stroke="rgba(196, 219, 255, 0.5)"
-                              strokeWidth={6}
-                              strokeLinecap="round"
-                              style={{ filter: 'blur(3.5px)' }}
-                            />
-                          )
-                        : null}
                       <path
                         d={wire.d}
                         fill="none"

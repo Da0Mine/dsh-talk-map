@@ -11759,32 +11759,19 @@ function TalkMapEdge(props) {
     return 0;
   })();
   return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-    synced ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
-      "path",
-      {
-        d: path,
-        fill: "none",
-        stroke: "rgba(196, 219, 255, 0.55)",
-        strokeWidth: 7,
-        strokeDasharray: "6 5",
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        style: { filter: "blur(4px)", pointerEvents: "none" }
-      }
-    ) : null,
     /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(
       BaseEdge,
       {
         id: props.id,
         path,
         style: {
-          stroke: synced ? "rgba(240, 246, 255, 0.96)" : "rgba(200, 206, 216, 0.42)",
-          strokeWidth: synced ? 1.9 : 1.4,
+          stroke: "rgba(200, 206, 216, 0.45)",
+          strokeWidth: 1.4,
           strokeLinecap: "round",
           strokeLinejoin: "round",
-          // Dashed again: the light is in the halo, not in a solid core.
           strokeDasharray: "6 5",
-          ...synced ? { filter: "drop-shadow(0 0 3px rgba(190, 214, 255, 0.6))" } : {}
+          // Synced: the line simply is not there any more.
+          opacity: synced ? 0 : 1
         }
       }
     ),
@@ -11793,7 +11780,8 @@ function TalkMapEdge(props) {
       {
         d: "M0 0 L-11 -5 L-11 5 Z",
         transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
-        fill: synced ? "rgba(240, 246, 255, 0.92)" : "rgba(200, 206, 216, 0.5)",
+        fill: "rgba(200, 206, 216, 0.5)",
+        opacity: synced ? 0 : 1,
         pointerEvents: "none"
       }
     )
@@ -12399,7 +12387,7 @@ function StackDrawer(props) {
   const visibleItems = needle === "" ? props.items : props.items.filter((item) => item.title.toLowerCase().includes(needle));
   (0, import_react10.useLayoutEffect)(() => {
     const scroller = scrollerRef.current;
-    const links = props.links ?? [];
+    const links = (props.links ?? []).filter((link2) => !link2.synced);
     if (scroller === null || links.length === 0) {
       setWires((current) => current.length === 0 ? current : []);
       return;
@@ -12630,29 +12618,16 @@ function StackDrawer(props) {
                       viewBox: `0 0 ${Math.max(1, wireSize.width)} ${Math.max(1, wireSize.height)}`,
                       preserveAspectRatio: "none",
                       "aria-hidden": "true",
-                      children: wires.map((wire, index2) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("g", { children: [
-                        wire.synced ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
-                          "path",
-                          {
-                            d: wire.d,
-                            fill: "none",
-                            stroke: "rgba(196, 219, 255, 0.5)",
-                            strokeWidth: 6,
-                            strokeLinecap: "round",
-                            style: { filter: "blur(3.5px)" }
-                          }
-                        ) : null,
-                        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
-                          "path",
-                          {
-                            d: wire.d,
-                            fill: "none",
-                            stroke: wire.synced ? "rgba(240, 246, 255, 0.9)" : "rgba(200, 206, 216, 0.35)",
-                            strokeWidth: wire.synced ? 1.6 : 1.2,
-                            strokeLinecap: "round"
-                          }
-                        )
-                      ] }, index2))
+                      children: wires.map((wire, index2) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("g", { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(
+                        "path",
+                        {
+                          d: wire.d,
+                          fill: "none",
+                          stroke: wire.synced ? "rgba(240, 246, 255, 0.9)" : "rgba(200, 206, 216, 0.35)",
+                          strokeWidth: wire.synced ? 1.6 : 1.2,
+                          strokeLinecap: "round"
+                        }
+                      ) }, index2))
                     }
                   ) : null,
                   visibleItems.map((item) => {

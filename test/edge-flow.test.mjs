@@ -1,10 +1,8 @@
 /**
  * Static checks on the built client + stylesheet.
  *
- * Two looks, both static:
- *   未同步  = 细灰线，几乎不发光
- *   同步中  = 实线 + 外发光（模糊的宽描边垫底 + 亮线本体 + drop-shadow）
- * There is no travelling light any more, and no particles.
+ * 未同步 = 灰色虚线；同步中 = 整条线透明度 0（看不见）。
+ * 没有发光、没有流光、没有粒子。
  */
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -16,14 +14,10 @@ const css = fs.readFileSync('src/client/talk-map.module.css', 'utf8')
 assert.match(bundle, /type: TALK_MAP_EDGE_TYPE/, 'edges must use the custom renderer')
 assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be registered on ReactFlow')
 
-// 2. solid line, never dashed
-assert.match(bundle, /strokeWidth: synced \? 1\.9 : 1\.4/, 'the line width must depend on the state')
-assert.match(bundle, /strokeDasharray: "6 5"/, "the line must be dashed again")
+// 2. a dashed grey line, hidden entirely once synced
+assert.match(bundle, /strokeDasharray: "6 5"/, 'the line must be dashed')
+assert.match(bundle, /opacity: synced \? 0 : 1/, 'a synced line must be invisible')
 
-// 3. the glow: a wide blurred copy underneath plus a drop-shadow on the line
-assert.match(bundle, /blur\(4px\)/, 'the glow layer must be blurred')
-assert.match(bundle, /drop-shadow/, 'the crisp line must carry a drop shadow')
-assert.match(bundle, /196, 219, 255/, 'the glow must be the light blue of the ring')
 
 // 4. direction: a hand-drawn arrowhead, oriented to the target face
 assert.match(bundle, /M0 0 L-11 -5 L-11 5 Z/, 'the arrowhead must be drawn here')
@@ -38,9 +32,10 @@ assert.ok(!/maskUnits/.test(bundle), 'the sweep mask must be gone')
 assert.match(bundle, /pickFaces/, 'edges must use the routing module')
 assert.match(bundle, /computedHandles/, 'stored edges must recompute their faces')
 
-// 7. the drawer draws the same links
+// 7. the drawer draws the same links — and skips the synced ones
 assert.match(bundle, /drawerWires/, 'the stack drawer must draw its links')
-assert.match(bundle, /links: drawerWireLinks/, "the canvas must feed the drawer its links")
+assert.match(bundle, /links: drawerWireLinks/, 'the canvas must feed the drawer its links')
+assert.match(bundle, /=>\s*!\w+\.synced/, 'synced pairs must not draw in the drawer')
 
 // 8. no leftover looks in the stylesheet
 for (const gone of ['tmEdgeHead', 'tmEdgeMid', 'tmEdgeTail', 'tmEdgeComet', 'tmEdgeBloom', 'tmEdgeFlow', 'tmEdgeSweep']) {
