@@ -12,11 +12,16 @@ export interface TalkMapEdgeData {
   fromCardId?: string
   toCardId?: string
   sync?: 'synced' | 'idle'
+  /** A structural link (fork), which never hides itself. */
+  structural?: boolean
 }
 
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const data = (props.data ?? {}) as TalkMapEdgeData
   const synced = data.sync === 'synced'
+  // Only transfer lines disappear once they are in sync; a fork link is part of
+  // the map structure and stays where it is.
+  const hidden = synced && data.structural !== true
   const [path] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
@@ -50,7 +55,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
           strokeLinejoin: 'round',
           strokeDasharray: '6 5',
           // Synced: the line simply is not there any more.
-          opacity: synced ? 0 : 1,
+          opacity: hidden ? 0 : 1,
         }}
       />
 
@@ -58,7 +63,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         d="M0 0 L-11 -5 L-11 5 Z"
         transform={`translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`}
         fill="rgba(200, 206, 216, 0.5)"
-        opacity={synced ? 0 : 1}
+        opacity={hidden ? 0 : 1}
         pointerEvents="none"
       />
     </>

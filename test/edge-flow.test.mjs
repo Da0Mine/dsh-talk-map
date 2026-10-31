@@ -16,7 +16,8 @@ assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be 
 
 // 2. a dashed grey line, hidden entirely once synced
 assert.match(bundle, /strokeDasharray: "6 5"/, 'the line must be dashed')
-assert.match(bundle, /opacity: synced \? 0 : 1/, 'a synced line must be invisible')
+assert.match(bundle, /opacity: hidden \? 0 : 1/, 'a synced line must be invisible')
+assert.match(bundle, /data\.structural !== true/, "fork links must never hide themselves")
 
 
 // 4. direction: a hand-drawn arrowhead, oriented to the target face

@@ -11743,6 +11743,7 @@ var import_jsx_runtime8 = require("react/jsx-runtime");
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
+  const hidden = synced && data.structural !== true;
   const [path] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
@@ -11771,7 +11772,7 @@ function TalkMapEdge(props) {
           strokeLinejoin: "round",
           strokeDasharray: "6 5",
           // Synced: the line simply is not there any more.
-          opacity: synced ? 0 : 1
+          opacity: hidden ? 0 : 1
         }
       }
     ),
@@ -11781,7 +11782,7 @@ function TalkMapEdge(props) {
         d: "M0 0 L-11 -5 L-11 5 Z",
         transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
         fill: "rgba(200, 206, 216, 0.5)",
-        opacity: synced ? 0 : 1,
+        opacity: hidden ? 0 : 1,
         pointerEvents: "none"
       }
     )
@@ -13630,7 +13631,9 @@ function CanvasInner(props) {
           // Selectable on purpose: right-clicking it must answer "what is this",
           // and offer to hide it. It used to be un-clickable mystery wiring.
           // Same two looks as any other line.
-          data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync },
+          // structural: a fork link is part of the map, not a transfer, so it
+          // stays visible even when the pair is in sync.
+          data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync, structural: true },
           // No inline stroke: inline style beats everything the renderer draws.
           style: { opacity: 0.85 }
         });

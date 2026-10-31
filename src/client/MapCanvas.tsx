@@ -1172,7 +1172,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         // Selectable on purpose: right-clicking it must answer "what is this",
         // and offer to hide it. It used to be un-clickable mystery wiring.
         // Same two looks as any other line.
-        data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync },
+        // structural: a fork link is part of the map, not a transfer, so it
+        // stays visible even when the pair is in sync.
+        data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync, structural: true },
         // No inline stroke: inline style beats everything the renderer draws.
         style: { opacity: 0.85 },
       })
