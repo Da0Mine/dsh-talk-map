@@ -20,8 +20,9 @@ const css = fs.readFileSync('src/client/talk-map.module.css', 'utf8')
 assert.match(bundle, /type: TALK_MAP_EDGE_TYPE/, 'edges must use the custom renderer')
 assert.match(bundle, /edgeTypes=\{?\s*edgeTypes|edgeTypes:/, 'edgeTypes must be registered on ReactFlow')
 
-// 2. unsynced is the only dashed line
-assert.match(bundle, /synced \? \{\} : \{ strokeDasharray/, 'only the unsynced line is dashed')
+// 2. both states are dashed — only the light distinguishes them
+assert.match(bundle, /strokeDasharray: "6 5"/, 'the base line must always be dashed')
+assert.ok(!/synced \? \{\} : \{ strokeDasharray/.test(bundle), 'the dash must not depend on the state')
 
 // 3. the light IS the card ring's profile, stop for stop
 assert.match(bundle, /0\.16, 0\.1/, 'the band must fade in at its leading edge')

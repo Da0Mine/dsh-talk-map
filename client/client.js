@@ -11761,11 +11761,11 @@ function TalkMapEdge(props) {
         path,
         ...props.markerEnd !== void 0 ? { markerEnd: props.markerEnd } : {},
         style: {
-          // Grey-white either way: only the dash pattern and the light change.
-          stroke: synced ? "rgba(226, 232, 242, 0.6)" : "rgba(200, 206, 216, 0.34)",
+          // Both states are dashed now: the light alone says which is which.
+          stroke: synced ? "rgba(226, 232, 242, 0.55)" : "rgba(200, 206, 216, 0.34)",
           strokeWidth: 1.6,
           strokeLinecap: "round",
-          ...synced ? {} : { strokeDasharray: "6 5" }
+          strokeDasharray: "6 5"
         }
       }
     ),
