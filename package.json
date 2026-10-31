@@ -26,8 +26,7 @@
     "probe": "node test/probe.mjs",
     "test:layout": "node test/grid.test.mjs",
     "watch": "tsdown --watch",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prepack": "npm run build"
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dsh": {
     "bundle": {
