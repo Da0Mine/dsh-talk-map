@@ -12388,7 +12388,7 @@ function StackDrawer(props) {
   const visibleItems = needle === "" ? props.items : props.items.filter((item) => item.title.toLowerCase().includes(needle));
   (0, import_react10.useLayoutEffect)(() => {
     const scroller = scrollerRef.current;
-    const links = (props.links ?? []).filter((link2) => !link2.synced);
+    const links = (props.links ?? []).filter((link2) => link2.visible);
     if (scroller === null || links.length === 0) {
       setWires((current) => current.length === 0 ? current : []);
       return;
@@ -13540,24 +13540,6 @@ function CanvasInner(props) {
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
   };
-  const drawerLinks = (cardIds) => {
-    const present = new Set(cardIds);
-    return Object.values(canvasState.edges).filter((edge) => present.has(edge.fromCardId) && present.has(edge.toCardId)).map((edge) => ({
-      from: edge.fromCardId,
-      to: edge.toCardId,
-      synced: edgeSyncState({
-        kind: edge.kind,
-        ...edge.lastPushAt !== void 0 ? { lastPushAt: edge.lastPushAt } : {},
-        ...sessions[canvasState.cards[edge.fromCardId]?.sessionId ?? ""]?.updatedAt !== void 0 ? { sourceUpdatedAt: sessions[canvasState.cards[edge.fromCardId]?.sessionId ?? ""]?.updatedAt } : {}
-      }) === "synced"
-    }));
-  };
-  const drawerWireLinks = (0, import_react12.useMemo)(() => {
-    if (drawer === null) return [];
-    const layout = folderLayouts[drawer.groupId];
-    const cardIds = layout === void 0 ? [] : [...layout.shown, ...layout.folded];
-    return drawerLinks(cardIds);
-  }, [drawer, folderLayouts, canvasState.edges, sessions]);
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,
     x: card.x,
@@ -13663,6 +13645,17 @@ function CanvasInner(props) {
     }
     return out;
   }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden]);
+  const drawerWireLinks = (0, import_react12.useMemo)(() => {
+    if (drawer === null) return [];
+    const layout = folderLayouts[drawer.groupId];
+    const inFolder = new Set(layout === void 0 ? [] : [...layout.shown, ...layout.folded]);
+    const painted = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
+    return liveEdges.filter((edge) => painted.has(edge.source) && painted.has(edge.target) && inFolder.has(edge.source) && inFolder.has(edge.target)).map((edge) => {
+      const data = edge.data ?? {};
+      const visible = !(data.sync === "synced" && data.structural !== true);
+      return { from: edge.source, to: edge.target, visible };
+    });
+  }, [drawer, folderLayouts, liveEdges, visibleCards, foldedSet]);
   const nodes = isSelecting && frozenRef.current !== null ? frozenRef.current.nodes : liveNodes;
   const edges = isSelecting && frozenRef.current !== null ? frozenRef.current.edges : liveEdges;
   const onSelectionStart = () => {

@@ -651,6 +651,18 @@ try {
   check('滚轮翻页（有溢出时滚动，无溢出则整屏可见）',
     scrollBefore.overflow ? scrollAfter > scrollBefore.top : scrollAfter === scrollBefore.top,
     `overflow=${scrollBefore.overflow} ${scrollBefore.top} → ${Math.round(scrollAfter)}`)
+
+  // The drawer derives its wires from liveEdges, so it can never show more
+  // lines than the board actually paints.
+  const wireConsistency = await page.evaluate(() => {
+    const wires = document.querySelectorAll('svg[class*="drawerWires"] path').length
+    const boardLines = [...document.querySelectorAll('.react-flow__edge-path')]
+      .filter(path => Number(getComputedStyle(path).opacity) > 0.5).length
+    return { wires, boardLines }
+  })
+  check('抽屉里的连线不超过画布上可见的连线', wireConsistency.wires <= wireConsistency.boardLines,
+    JSON.stringify(wireConsistency))
+
   await page.screenshot({ path: path.join(shots, 'probe-drawer.png') })
   await page.keyboard.press('Escape')
   await page.waitForTimeout(300)

@@ -98,10 +98,12 @@ export interface StackEntry {
 }
 
 /** One line to draw behind the drawer cards. */
+/** One line to draw behind the drawer cards. */
 export interface DrawerWire {
   from: string
   to: string
-  synced: boolean
+  /** False = the canvas draws nothing for this pair, so neither do we. */
+  visible: boolean
 }
 
 export interface StackDrawerProps {
@@ -189,7 +191,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   useLayoutEffect(() => {
     const scroller = scrollerRef.current
     // Synced pairs show no line at all, same as on the map.
-    const links = (props.links ?? []).filter(link => !link.synced)
+    const links = (props.links ?? []).filter(link => link.visible)
     if (scroller === null || links.length === 0) {
       setWires(current => (current.length === 0 ? current : []))
       return
