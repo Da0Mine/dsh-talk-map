@@ -92,6 +92,8 @@ function hitsHorizontal(rects: Rect[], y: number, x1: number, x2: number): numbe
 }
 
 /** Cards crossed by a vertical run at `x` between `y1` and `y2`. */
+export function __hitsV(rects: Rect[], x: number, y1: number, y2: number): number { return hitsVertical(rects, x, y1, y2) }
+
 function hitsVertical(rects: Rect[], x: number, y1: number, y2: number): number {
   const lo = Math.min(y1, y2)
   const hi = Math.max(y1, y2)
@@ -412,7 +414,10 @@ export function routeBetween(
     return Math.max(4, Math.min(stub, half))
   }
   const startStubLength = stubFor(spaceAhead(start, startNormal))
-  const endStubLength = stubFor(spaceAhead(end, { x: -endNormal.x, y: -endNormal.y }))
+  // The arrival stub also runs *along the face normal*, outward from the card — the
+  // flipped normal measured the empty side instead, so the stub never shortened and
+  // on a 24px gap it punched straight into the neighbouring card.
+  const endStubLength = stubFor(spaceAhead(end, endNormal))
   const startStub = {
     x: start.x + startNormal.x * startStubLength,
     y: start.y + startNormal.y * startStubLength,

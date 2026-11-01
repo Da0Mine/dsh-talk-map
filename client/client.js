@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.21",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.22",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.21",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.22",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11740,8 +11740,7 @@ function ContextMenu(props) {
 
 // src/client/edge-route.ts
 var __routeDebug = {};
-var DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 };
-var CROSS_PENALTY = 2e4;
+var DEFAULTS = { margin: 4, stub: 22, minCorridor: 10 };
 function anchorOf(rect, face) {
   switch (face) {
     case "r":
@@ -11987,7 +11986,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
     return Math.max(4, Math.min(stub, half));
   };
   const startStubLength = stubFor(spaceAhead(start2, startNormal));
-  const endStubLength = stubFor(spaceAhead(end, { x: -endNormal.x, y: -endNormal.y }));
+  const endStubLength = stubFor(spaceAhead(end, endNormal));
   const startStub = {
     x: start2.x + startNormal.x * startStubLength,
     y: start2.y + startNormal.y * startStubLength
@@ -11999,7 +11998,44 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
-  const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+  __routeDebug.blockedCount = blocked.length;
+  __routeDebug.blockedFirst = blocked.slice(0, 2);
+  const makeFallback = () => {
+    if (blocked.length === 0) return simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+    const gap = margin + 8;
+    const left = Math.min(...blocked.map((rect) => rect.x)) - gap;
+    const right = Math.max(...blocked.map((rect) => rect.x + rect.w)) + gap;
+    const top = Math.min(...blocked.map((rect) => rect.y)) - gap;
+    const bottom = Math.max(...blocked.map((rect) => rect.y + rect.h)) + gap;
+    const lanesX = [.../* @__PURE__ */ new Set([left, right, ...xsTrimmed])].sort((a, b) => Math.abs(a - startStub.x) - Math.abs(b - startStub.x));
+    const lanesY = [.../* @__PURE__ */ new Set([top, bottom, ...ysTrimmed])].sort((a, b) => Math.abs(a - startStub.y) - Math.abs(b - startStub.y));
+    const candidates = [];
+    for (const lane of lanesY.slice(0, 8)) {
+      candidates.push([start2, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, end]);
+    }
+    for (const lane of lanesX.slice(0, 8)) {
+      candidates.push([start2, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, end]);
+    }
+    candidates.push([start2, startStub, { x: left, y: startStub.y }, { x: left, y: endStub.y }, endStub, end]);
+    candidates.push([start2, startStub, { x: right, y: startStub.y }, { x: right, y: endStub.y }, endStub, end]);
+    let best2;
+    let bestHits = Infinity;
+    for (const candidate of candidates) {
+      const points = simplify(candidate);
+      let hits = 0;
+      for (let index2 = 1; index2 < points.length; index2 += 1) {
+        const a = points[index2 - 1];
+        const b = points[index2];
+        hits += a.x === b.x ? hitsVertical(blocked, a.x, a.y, b.y) : hitsHorizontal(blocked, a.y, a.x, b.x);
+      }
+      if (hits < bestHits) {
+        bestHits = hits;
+        best2 = points;
+        if (hits === 0) break;
+      }
+    }
+    return best2 ?? simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+  };
   __routeDebug.last = { usedFallback: true };
   const pad = 260;
   const window2 = {
@@ -12016,7 +12052,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const ys = corridors(lanes, "y", minCorridor).filter(withinY);
   const xOuter = outerLines(lanes, "x", margin + 6).filter(withinX);
   const yOuter = outerLines(lanes, "y", margin + 6).filter(withinY);
-  const hug = margin + 6;
+  const hug = margin + 8;
   const xHug = lanes.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
   const yHug = lanes.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
   const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug]);
@@ -12045,7 +12081,11 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   };
   const startIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
   const endIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
-  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
+  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) {
+    __routeDebug.reason = "no-index";
+    __routeDebug.index = { startIndex, endIndex, xs: xsTrimmed.length, ys: ysTrimmed.length };
+    return makeFallback();
+  }
   const goal = { x: endStub.x, y: endStub.y };
   const startNode = nodeId(startIndex.x, startIndex.y);
   const goalNode = nodeId(endIndex.x, endIndex.y);
@@ -12056,7 +12096,9 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   best.set(withDir(startNode, "x"), 0);
   heap.push(0, 0, withDir(startNode, "x"));
   const estimate = (point) => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y);
+  let visited = 0;
   while (heap.size > 0) {
+    visited += 1;
     const popped = heap.pop();
     const state3 = popped.node;
     const [node, dir] = state3.split("|");
@@ -12072,6 +12114,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
       }
       path.reverse();
       __routeDebug.last = { usedFallback: false, steps: path.length };
+      __routeDebug.rawPath = path.map((point) => [Math.round(point.x), Math.round(point.y)]);
       return snapToChannels(
         simplify([start2, startStub, ...path.slice(1), endStub, end]),
         obstacles,
@@ -12092,23 +12135,24 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
       if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue;
       const next = { x: xsTrimmed[nx], y: ysTrimmed[ny] };
       const nextNode = nodeId(nx, ny);
-      const insideCost = blocked.filter((rect) => insideStrict(rect, next)).length * CROSS_PENALTY;
+      if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
       const crossing = step2.axis === "x" ? hitsHorizontal(blocked, here.y, here.x, next.x) : hitsVertical(blocked, here.x, here.y, next.y);
-      const crossCost = crossing * CROSS_PENALTY;
+      if (crossing > 0) continue;
       const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
       const onCorridor = step2.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
       const turn = dir === step2.axis ? 0 : 18;
       const prefer = onCorridor ? 0 : 40;
-      const nextCost = cost + distance2 + turn + prefer + crossCost + insideCost;
+      const nextCost = cost + distance2 + turn + prefer;
       const nextState = withDir(nextNode, step2.axis);
       const known = best.get(nextState);
       if (known !== void 0 && known <= nextCost) continue;
+      if (nextNode === goalNode) __routeDebug.goalPushed = nextState;
       best.set(nextState, nextCost);
       cameFrom.set(nextState, state3);
       heap.push(nextCost + estimate(next), nextCost, nextState);
     }
   }
-  return fallback;
+  return makeFallback();
 }
 function roundedPath(points, radius = 10) {
   if (points.length === 0) return "";
