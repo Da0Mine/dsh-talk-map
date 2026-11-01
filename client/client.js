@@ -1245,7 +1245,7 @@ function allCards() {
 }
 
 // src/client/MapOverlay.tsx
-var import_react15 = require("react");
+var import_react14 = require("react");
 
 // src/client/font-scale.ts
 var STORAGE_KEY = "dsh.talk-map.font-step";
@@ -1651,7 +1651,7 @@ function GlobalSearch(props) {
 }
 
 // src/client/MapCanvas.tsx
-var import_react13 = require("react");
+var import_react12 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
 var import_jsx_runtime4 = require("react/jsx-runtime");
@@ -10844,6 +10844,275 @@ function pickFaces(from, to, obstacles, options) {
   return { fromHandle: fromSide, toHandle: toSide };
 }
 
+// src/client/edge-route.ts
+var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
+function anchorOf(rect, face) {
+  switch (face) {
+    case "r":
+      return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
+    case "l":
+      return { x: rect.x, y: rect.y + rect.h / 2 };
+    case "t":
+      return { x: rect.x + rect.w / 2, y: rect.y };
+    default:
+      return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
+  }
+}
+function normalOf(face) {
+  switch (face) {
+    case "r":
+      return { x: 1, y: 0 };
+    case "l":
+      return { x: -1, y: 0 };
+    case "t":
+      return { x: 0, y: -1 };
+    default:
+      return { x: 0, y: 1 };
+  }
+}
+function expand(rect, by) {
+  return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
+function insideStrict(rect, point) {
+  return point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h;
+}
+function hitsHorizontal(rects, y, x1, x2) {
+  const lo = Math.min(x1, x2);
+  const hi = Math.max(x1, x2);
+  for (const rect of rects) {
+    if (y <= rect.y || y >= rect.y + rect.h) continue;
+    if (hi <= rect.x || lo >= rect.x + rect.w) continue;
+    return true;
+  }
+  return false;
+}
+function hitsVertical(rects, x, y1, y2) {
+  const lo = Math.min(y1, y2);
+  const hi = Math.max(y1, y2);
+  for (const rect of rects) {
+    if (x <= rect.x || x >= rect.x + rect.w) continue;
+    if (hi <= rect.y || lo >= rect.y + rect.h) continue;
+    return true;
+  }
+  return false;
+}
+function bands(rects, axis) {
+  const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
+  const out = [];
+  for (const span of spans) {
+    const last = out[out.length - 1];
+    if (last !== void 0 && span.start <= last.end) {
+      last.end = Math.max(last.end, span.end);
+    } else {
+      out.push({ ...span });
+    }
+  }
+  return out;
+}
+function corridors(rects, axis, minCorridor) {
+  const merged = bands(rects, axis);
+  const out = [];
+  for (let index2 = 1; index2 < merged.length; index2 += 1) {
+    const gap = merged[index2].start - merged[index2 - 1].end;
+    if (gap >= minCorridor) out.push((merged[index2 - 1].end + merged[index2].start) / 2);
+  }
+  return out;
+}
+function outerLines(rects, axis, clearance) {
+  const merged = bands(rects, axis);
+  const out = [];
+  for (const band of merged) {
+    out.push(band.start - clearance, band.end + clearance);
+  }
+  return out;
+}
+var Heap = class {
+  items = [];
+  push(cost, key, node) {
+    this.items.push({ cost, key, node });
+    let index2 = this.items.length - 1;
+    while (index2 > 0) {
+      const parent = index2 - 1 >> 1;
+      if (this.items[parent].cost <= this.items[index2].cost) break;
+      const tmp = this.items[parent];
+      this.items[parent] = this.items[index2];
+      this.items[index2] = tmp;
+      index2 = parent;
+    }
+  }
+  pop() {
+    if (this.items.length === 0) return void 0;
+    const top = this.items[0];
+    const last = this.items.pop();
+    if (this.items.length > 0) {
+      this.items[0] = last;
+      let index2 = 0;
+      for (; ; ) {
+        const left = index2 * 2 + 1;
+        const right = left + 1;
+        let smallest = index2;
+        if (left < this.items.length && this.items[left].cost < this.items[smallest].cost) smallest = left;
+        if (right < this.items.length && this.items[right].cost < this.items[smallest].cost) smallest = right;
+        if (smallest === index2) break;
+        const tmp = this.items[smallest];
+        this.items[smallest] = this.items[index2];
+        this.items[index2] = tmp;
+        index2 = smallest;
+      }
+    }
+    return { key: top.key, node: top.node };
+  }
+  get size() {
+    return this.items.length;
+  }
+};
+function dedupe(values, epsilon = 0.5) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const out = [];
+  for (const value of sorted) {
+    if (out.length === 0 || Math.abs(value - out[out.length - 1]) > epsilon) out.push(value);
+  }
+  return out;
+}
+function simplify(points) {
+  const out = [];
+  for (const point of points) {
+    const last = out[out.length - 1];
+    if (last !== void 0 && Math.abs(last.x - point.x) < 0.5 && Math.abs(last.y - point.y) < 0.5) continue;
+    out.push(point);
+  }
+  for (let index2 = 1; index2 < out.length - 1; ) {
+    const a = out[index2 - 1];
+    const b = out[index2];
+    const c = out[index2 + 1];
+    const collinear = Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5 || Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5;
+    if (collinear) out.splice(index2, 1);
+    else index2 += 1;
+  }
+  return out;
+}
+function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
+  const margin = options.margin ?? DEFAULTS.margin;
+  const stub = options.stub ?? DEFAULTS.stub;
+  const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
+  const start2 = anchorOf(from, fromFace);
+  const end = anchorOf(to, toFace);
+  const startNormal = normalOf(fromFace);
+  const endNormal = normalOf(toFace);
+  const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
+  const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
+  const blocked = obstacles.filter((rect) => rect !== from && rect !== to).map((rect) => expand(rect, margin));
+  const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+  const xs = corridors(obstacles, "x", minCorridor);
+  const ys = corridors(obstacles, "y", minCorridor);
+  const xOuter = outerLines(obstacles, "x", margin + 6);
+  const yOuter = outerLines(obstacles, "y", margin + 6);
+  const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
+  const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
+  if (xCands.length > 60 || yCands.length > 60) return fallback;
+  const corridorX = new Set(xs.map((value) => Math.round(value)));
+  const corridorY = new Set(ys.map((value) => Math.round(value)));
+  const nodeId = (ix, iy) => `${ix},${iy}`;
+  const pointAt = (id2) => {
+    const [ix, iy] = id2.split(",").map(Number);
+    return { x: xCands[ix], y: yCands[iy] };
+  };
+  const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
+  const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
+  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
+  const goal = { x: endStub.x, y: endStub.y };
+  const startNode = nodeId(startIndex.x, startIndex.y);
+  const goalNode = nodeId(endIndex.x, endIndex.y);
+  const best = /* @__PURE__ */ new Map();
+  const cameFrom = /* @__PURE__ */ new Map();
+  const heap = new Heap();
+  const withDir = (node, dir) => `${node}|${dir}`;
+  best.set(withDir(startNode, "x"), 0);
+  heap.push(0, 0, withDir(startNode, "x"));
+  const estimate = (point) => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y);
+  while (heap.size > 0) {
+    const popped = heap.pop();
+    const state3 = popped.node;
+    const [node, dir] = state3.split("|");
+    const cost = best.get(state3);
+    if (cost === void 0) continue;
+    if (node === goalNode) {
+      const path = [];
+      let cursor = state3;
+      while (cursor !== void 0) {
+        const [cell] = cursor.split("|");
+        path.push(pointAt(cell));
+        cursor = cameFrom.get(cursor);
+      }
+      path.reverse();
+      return simplify([start2, startStub, ...path.slice(1), endStub, end]);
+    }
+    const [ix, iy] = node.split(",").map(Number);
+    const here = pointAt(node);
+    const steps = [
+      { dx: 1, dy: 0, axis: "x" },
+      { dx: -1, dy: 0, axis: "x" },
+      { dx: 0, dy: 1, axis: "y" },
+      { dx: 0, dy: -1, axis: "y" }
+    ];
+    for (const step2 of steps) {
+      const nx = ix + step2.dx;
+      const ny = iy + step2.dy;
+      if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
+      const next = { x: xCands[nx], y: yCands[ny] };
+      const nextNode = nodeId(nx, ny);
+      if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
+      const clear = step2.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
+      if (!clear) continue;
+      const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
+      const onCorridor = step2.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
+      const turn = dir === step2.axis ? 0 : 18;
+      const prefer = onCorridor ? 0 : 6;
+      const nextCost = cost + distance2 + turn + prefer;
+      const nextState = withDir(nextNode, step2.axis);
+      const known = best.get(nextState);
+      if (known !== void 0 && known <= nextCost) continue;
+      best.set(nextState, nextCost);
+      cameFrom.set(nextState, state3);
+      heap.push(nextCost + estimate(next), nextCost, nextState);
+    }
+  }
+  return fallback;
+}
+function roundedPath(points, radius = 10) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${round(points[0].x)} ${round(points[0].y)}`;
+  const parts = [`M ${round(points[0].x)} ${round(points[0].y)}`];
+  for (let index2 = 1; index2 < points.length - 1; index2 += 1) {
+    const prev = points[index2 - 1];
+    const here = points[index2];
+    const next = points[index2 + 1];
+    const inLength = Math.hypot(here.x - prev.x, here.y - prev.y);
+    const outLength = Math.hypot(next.x - here.x, next.y - here.y);
+    const corner = Math.min(radius, inLength / 2, outLength / 2);
+    if (corner < 0.5) {
+      parts.push(`L ${round(here.x)} ${round(here.y)}`);
+      continue;
+    }
+    const enter = {
+      x: here.x + (prev.x - here.x) / (inLength || 1) * corner,
+      y: here.y + (prev.y - here.y) / (inLength || 1) * corner
+    };
+    const leave = {
+      x: here.x + (next.x - here.x) / (outLength || 1) * corner,
+      y: here.y + (next.y - here.y) / (outLength || 1) * corner
+    };
+    parts.push(`L ${round(enter.x)} ${round(enter.y)}`);
+    parts.push(`Q ${round(here.x)} ${round(here.y)} ${round(leave.x)} ${round(leave.y)}`);
+  }
+  const last = points[points.length - 1];
+  parts.push(`L ${round(last.x)} ${round(last.y)}`);
+  return parts.join(" ");
+}
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
 // src/client/push-log.ts
 var KEY = "dsh.talk-map.push-log.v1";
 function pairKey(fromCardId, toCardId) {
@@ -11008,7 +11277,7 @@ async function trashSessions(sessionIds, onStopping) {
     onStopping?.();
     await stopWork(ids);
     let last = error;
-    for (let round = 0; round < STOP_RETRIES; round += 1) {
+    for (let round2 = 0; round2 < STOP_RETRIES; round2 += 1) {
       await new Promise((resolve) => setTimeout(resolve, STOP_RETRY_DELAY_MS));
       try {
         return await attempt();
@@ -11744,7 +12013,9 @@ function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
   const hidden = synced && data.structural !== true;
-  const [path] = getSmoothStepPath({
+  const route = data.route;
+  const routed = route !== void 0 && route.length > 1;
+  const [smoothPath] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
     sourcePosition: props.sourcePosition,
@@ -11752,7 +12023,16 @@ function TalkMapEdge(props) {
     targetY: props.targetY,
     targetPosition: props.targetPosition
   });
+  const path = routed ? roundedPath(route, 10) : smoothPath;
   const arrowAngle = (() => {
+    if (routed) {
+      const end = route[route.length - 1];
+      const before = route[route.length - 2];
+      const dx = end.x - before.x;
+      const dy = end.y - before.y;
+      if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 180;
+      return dy >= 0 ? 90 : -90;
+    }
     const position = String(props.targetPosition ?? "left");
     if (position === "right") return 180;
     if (position === "top") return 90;
@@ -12406,59 +12686,43 @@ function StackDrawer(props) {
           rect.height
         );
       };
+      const cardsInDrawer = [...scroller.querySelectorAll("[data-card-id]")].map((element) => {
+        const box = element.getBoundingClientRect();
+        const base = scroller.getBoundingClientRect();
+        return {
+          id: element.getAttribute("data-card-id") ?? "",
+          x: box.left - base.left + scroller.scrollLeft,
+          y: box.top - base.top + scroller.scrollTop,
+          w: box.width,
+          h: box.height
+        };
+      });
       const next = [];
       for (const link2 of links) {
         const from = boxOf(link2.from);
         const to = boxOf(link2.to);
         if (from === null || to === null) continue;
-        const fromCx = from.x + from.width / 2;
-        const fromCy = from.y + from.height / 2;
-        const toCx = to.x + to.width / 2;
-        const toCy = to.y + to.height / 2;
-        const dx = toCx - fromCx;
-        const dy = toCy - fromCy;
-        const gapX = Math.abs(dx) - (from.width + to.width) / 2;
-        const gapY = Math.abs(dy) - (from.height + to.height) / 2;
-        const MIN_SPAN = 96;
-        const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
-        let sourceX = fromCx;
-        let sourceY = fromCy;
-        let targetX = toCx;
-        let targetY = toCy;
-        let sourcePosition = Position.Right;
-        let targetPosition = Position.Left;
-        if (horizontalDominant && gapX >= MIN_SPAN) {
-          const right = dx >= 0;
-          sourceX = right ? from.x + from.width : from.x;
-          targetX = right ? to.x : to.x + to.width;
-          sourcePosition = right ? Position.Right : Position.Left;
-          targetPosition = right ? Position.Left : Position.Right;
-          targetY = toCy;
-        } else if (!horizontalDominant && gapY >= MIN_SPAN) {
-          const down = dy >= 0;
-          sourceY = down ? from.y + from.height : from.y;
-          targetY = down ? to.y : to.y + to.height;
-          sourcePosition = down ? Position.Bottom : Position.Top;
-          targetPosition = down ? Position.Top : Position.Bottom;
-          targetX = toCx;
-        } else {
-          const down = from.y + from.height <= to.y + to.height;
-          sourceY = down ? from.y + from.height : from.y;
-          targetY = down ? to.y + to.height : to.y;
-          sourcePosition = down ? Position.Bottom : Position.Top;
-          targetPosition = down ? Position.Bottom : Position.Top;
-        }
-        const [wirePath] = getSmoothStepPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-          borderRadius: 8
-        });
-        const angle = targetPosition === Position.Left ? 0 : targetPosition === Position.Right ? 180 : targetPosition === Position.Top ? 90 : -90;
-        next.push({ d: wirePath, ax: targetX, ay: targetY, angle });
+        const rectOf = (box) => ({ x: box.x, y: box.y, w: box.width, h: box.height });
+        const fromRect = rectOf(from);
+        const toRect = rectOf(to);
+        const obstacles = cardsInDrawer.filter((card) => card.id !== link2.from && card.id !== link2.to).map(rectOf);
+        const faces = pickFaces(
+          { id: link2.from, x: fromRect.x, y: fromRect.y },
+          { id: link2.to, x: toRect.x, y: toRect.y },
+          cardsInDrawer.map((card) => ({ id: card.id, x: card.x, y: card.y })),
+          { cardWidth: fromRect.w, cardHeight: fromRect.h }
+        );
+        const points = routeEdge(
+          fromRect,
+          toRect,
+          faces.fromHandle,
+          faces.toHandle,
+          [fromRect, toRect, ...obstacles]
+        );
+        const tip = points[points.length - 1];
+        const prev = points[points.length - 2];
+        const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y) ? tip.x >= prev.x ? 0 : 180 : tip.y >= prev.y ? 90 : -90;
+        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle });
       }
       setWires((current) => {
         if (current.length === next.length && current.every((wire, index2) => wire.d === next[index2]?.d)) {
@@ -12825,7 +13089,7 @@ function StackNode(props) {
 }
 
 // src/client/use-dark.ts
-var import_react12 = require("react");
+var import_react11 = require("react");
 var DARK_ATTRIBUTE = "data-ds-dark-theme";
 function subscribe(listener) {
   if (typeof document === "undefined") return () => {
@@ -12841,7 +13105,7 @@ function getSnapshot() {
   return document.body.hasAttribute(DARK_ATTRIBUTE);
 }
 function useDsDarkTheme() {
-  return (0, import_react12.useSyncExternalStore)(subscribe, getSnapshot);
+  return (0, import_react11.useSyncExternalStore)(subscribe, getSnapshot);
 }
 
 // src/client/MapCanvas.tsx
@@ -12900,14 +13164,14 @@ function fitRect(members) {
 }
 function CanvasInner(props) {
   const dark = useDsDarkTheme();
-  const canvasState = (0, import_react13.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
   const sessions = props.useSessions((state3) => state3);
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
-  const alertById = (0, import_react13.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
-  const finishedById = (0, import_react13.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
-  const interruptedById = (0, import_react13.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
-  (0, import_react13.useEffect)(() => {
+  const alertById = (0, import_react12.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const finishedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
+  const interruptedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
+  (0, import_react12.useEffect)(() => {
     const onUnload = () => {
       sessionActivity.recordShutdown(statusById, sessions.byId);
     };
@@ -12916,14 +13180,14 @@ function CanvasInner(props) {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, [statusById, sessions]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     sessionActivity.beginPanelSession();
   }, []);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     sessionActivity.observe(statusById, sessions.byId);
   }, [statusById, sessions]);
-  const draftSessions = (0, import_react13.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
-  (0, import_react13.useEffect)(() => {
+  const draftSessions = (0, import_react12.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
+  (0, import_react12.useEffect)(() => {
     draftWatch.refresh();
     const timer4 = setInterval(() => {
       draftWatch.refresh();
@@ -12932,22 +13196,22 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  const [previews, setPreviews] = (0, import_react13.useState)(readPreviewTexts);
-  const previewStamp = (0, import_react13.useRef)(
+  const [previews, setPreviews] = (0, import_react12.useState)(readPreviewTexts);
+  const previewStamp = (0, import_react12.useRef)(
     // Only entries that still make a usable body count as cached: a rule fix that
     // empties an old entry must trigger a refetch, not leave a blank card.
     new Map(Object.entries(loadPreviewCache()).filter(([, entry]) => typeof entry?.text === "string" && cleanPreviewText(entry.text) !== "").map(([sessionId, entry]) => [sessionId, entry.stamp]))
   );
   const { screenToFlowPosition, zoomTo, setNodes } = useReactFlow();
-  const [selectedIds, setSelectedIds] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
-  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
-  const [connecting, setConnecting] = (0, import_react13.useState)(false);
-  const connectCancelledRef = (0, import_react13.useRef)(false);
-  const [toast, setToast] = (0, import_react13.useState)(null);
-  const toastTimer = (0, import_react13.useRef)(void 0);
-  const [pendingSpawn, setPendingSpawn] = (0, import_react13.useState)(null);
-  const [menu, setMenu] = (0, import_react13.useState)(null);
-  const [drawer, setDrawer] = (0, import_react13.useState)(() => {
+  const [selectedIds, setSelectedIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
+  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
+  const [connecting, setConnecting] = (0, import_react12.useState)(false);
+  const connectCancelledRef = (0, import_react12.useRef)(false);
+  const [toast, setToast] = (0, import_react12.useState)(null);
+  const toastTimer = (0, import_react12.useRef)(void 0);
+  const [pendingSpawn, setPendingSpawn] = (0, import_react12.useState)(null);
+  const [menu, setMenu] = (0, import_react12.useState)(null);
+  const [drawer, setDrawer] = (0, import_react12.useState)(() => {
     const remembered = drawerState.readGroup();
     return remembered === null ? null : { groupId: remembered };
   });
@@ -12955,11 +13219,11 @@ function CanvasInner(props) {
     setDrawer(null);
     drawerState.clear();
   };
-  const [digestTarget, setDigestTarget] = (0, import_react13.useState)(null);
-  const [pushEpoch, setPushEpoch] = (0, import_react13.useState)(0);
+  const [digestTarget, setDigestTarget] = (0, import_react12.useState)(null);
+  const [pushEpoch, setPushEpoch] = (0, import_react12.useState)(0);
   const LINEAGE_KEY = "dsh.talk-map.lineage-hidden.v1";
   const LINEAGE_CUT_KEY = "dsh.talk-map.lineage-cut.v1";
-  const [lineageCut, setLineageCut] = (0, import_react13.useState)(() => {
+  const [lineageCut, setLineageCut] = (0, import_react12.useState)(() => {
     try {
       const raw = window.localStorage.getItem(LINEAGE_CUT_KEY);
       const parsed = raw === null ? [] : JSON.parse(raw);
@@ -12980,7 +13244,7 @@ function CanvasInner(props) {
       return next;
     });
   };
-  const [lineageHidden, setLineageHiddenState] = (0, import_react13.useState)(() => {
+  const [lineageHidden, setLineageHiddenState] = (0, import_react12.useState)(() => {
     try {
       return localStorage.getItem("dsh.talk-map.lineage-hidden.v1") === "1";
     } catch {
@@ -12994,34 +13258,34 @@ function CanvasInner(props) {
     } catch {
     }
   };
-  const [renameTarget, setRenameTarget] = (0, import_react13.useState)(null);
-  const [renamedTitles, setRenamedTitles] = (0, import_react13.useState)({});
-  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react13.useState)({});
-  const [batchMode, setBatchMode] = (0, import_react13.useState)(false);
-  const [batchPicks, setBatchPicks] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
-  const [batchBusy, setBatchBusy] = (0, import_react13.useState)(false);
-  const wrapperRef = (0, import_react13.useRef)(null);
-  const [draggingCardId, setDraggingCardId] = (0, import_react13.useState)(null);
-  const [liveFrame, setLiveFrame] = (0, import_react13.useState)(null);
-  const [blockedFrame, setBlockedFrame] = (0, import_react13.useState)(null);
-  const [dragCenter, setDragCenter] = (0, import_react13.useState)(null);
-  const [isSelecting, setIsSelecting] = (0, import_react13.useState)(false);
-  const frozenRef = (0, import_react13.useRef)(null);
-  const locale = (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const sessionWs = (0, import_react13.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
-  const wsTitles = (0, import_react13.useMemo)(
+  const [renameTarget, setRenameTarget] = (0, import_react12.useState)(null);
+  const [renamedTitles, setRenamedTitles] = (0, import_react12.useState)({});
+  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react12.useState)({});
+  const [batchMode, setBatchMode] = (0, import_react12.useState)(false);
+  const [batchPicks, setBatchPicks] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
+  const [batchBusy, setBatchBusy] = (0, import_react12.useState)(false);
+  const wrapperRef = (0, import_react12.useRef)(null);
+  const [draggingCardId, setDraggingCardId] = (0, import_react12.useState)(null);
+  const [liveFrame, setLiveFrame] = (0, import_react12.useState)(null);
+  const [blockedFrame, setBlockedFrame] = (0, import_react12.useState)(null);
+  const [dragCenter, setDragCenter] = (0, import_react12.useState)(null);
+  const [isSelecting, setIsSelecting] = (0, import_react12.useState)(false);
+  const frozenRef = (0, import_react12.useRef)(null);
+  const locale = (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const sessionWs = (0, import_react12.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
+  const wsTitles = (0, import_react12.useMemo)(
     () => new Map(workspaces.items.map((item) => [item.workspaceId, item.title])),
     [workspaces]
   );
   const workspacesReady = workspaces.baselinesReady !== false;
-  const pinnedSessions = (0, import_react13.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
-  const boardSessionIds = (0, import_react13.useMemo)(
+  const pinnedSessions = (0, import_react12.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
+  const boardSessionIds = (0, import_react12.useMemo)(
     () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
     [canvasState.cards]
   );
   const wsFrames = canvasState.global?.wsFrames ?? {};
   const layoutVersion = canvasState.global?.layoutVersion ?? 1;
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     if (canvasState.phase !== "ready" || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return;
     const byGroup = /* @__PURE__ */ new Map();
     for (const card of Object.values(canvasState.cards)) {
@@ -13040,7 +13304,7 @@ function CanvasInner(props) {
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext });
   }, [canvasState.phase, layoutVersion, workspacesReady, canvasState.cards, canvasState.global, sessionWs]);
-  const visibleCards = (0, import_react13.useMemo)(() => {
+  const visibleCards = (0, import_react12.useMemo)(() => {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
@@ -13048,11 +13312,11 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
-  const previewInputs = (0, import_react13.useRef)({ cards: visibleCards, sessions });
+  const previewInputs = (0, import_react12.useRef)({ cards: visibleCards, sessions });
   previewInputs.current = { cards: visibleCards, sessions };
-  const previewTick = (0, import_react13.useRef)(() => {
+  const previewTick = (0, import_react12.useRef)(() => {
   });
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     const tick = () => {
       const { cards, sessions: latest } = previewInputs.current;
       const pending = [];
@@ -13084,10 +13348,10 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     previewTick.current();
   }, [visibleCards]);
-  const membersByGroup = (0, import_react13.useMemo)(() => {
+  const membersByGroup = (0, import_react12.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       const groupId = sessionWs.get(card.sessionId);
@@ -13096,7 +13360,7 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards, sessionWs]);
-  const frameRects = (0, import_react13.useMemo)(() => {
+  const frameRects = (0, import_react12.useMemo)(() => {
     const out = {};
     for (const [groupId, stored] of Object.entries(wsFrames)) {
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored;
@@ -13104,7 +13368,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [wsFrames, liveFrame]);
-  const folderLayouts = (0, import_react13.useMemo)(() => {
+  const folderLayouts = (0, import_react12.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
@@ -13136,21 +13400,21 @@ function CanvasInner(props) {
     }
     return out;
   }, [frameRects, membersByGroup, visibleCards, pinnedSessions, draggingCardId, dragCenter]);
-  const cardLayout = (0, import_react13.useMemo)(() => {
+  const cardLayout = (0, import_react12.useMemo)(() => {
     const out = {};
     for (const layout of Object.values(folderLayouts)) {
       Object.assign(out, layoutFor(layout.rect, layout.ordered));
     }
     return out;
   }, [folderLayouts]);
-  const foldedCards = (0, import_react13.useMemo)(() => {
+  const foldedCards = (0, import_react12.useMemo)(() => {
     const out = {};
     for (const [groupId, layout] of Object.entries(folderLayouts)) {
       if (layout.folded.length > 0) out[groupId] = layout.folded;
     }
     return out;
   }, [folderLayouts]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const stale = {};
@@ -13161,8 +13425,8 @@ function CanvasInner(props) {
     }
     if (Object.keys(stale).length > 0) canvas.moveCards(stale);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
-  const foldedSet = (0, import_react13.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
-  (0, import_react13.useEffect)(() => {
+  const foldedSet = (0, import_react12.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
+  (0, import_react12.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const seen = lastActivitySeen;
@@ -13197,8 +13461,8 @@ function CanvasInner(props) {
     for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
     if (Object.keys(promoted).length > 0) canvas.moveCards(promoted);
   }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame, pinnedSessions]);
-  const autoSyncedRef = (0, import_react13.useRef)(false);
-  (0, import_react13.useEffect)(() => {
+  const autoSyncedRef = (0, import_react12.useRef)(false);
+  (0, import_react12.useEffect)(() => {
     if (canvasState.phase !== "ready" || !workspacesReady || autoSyncedRef.current) return;
     autoSyncedRef.current = true;
     const remembered = canvasState.global?.layoutMemory ?? {};
@@ -13258,7 +13522,7 @@ function CanvasInner(props) {
     }
     if (Object.keys(added).length > 0) canvas.addCards(added);
   }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
     const onKeyDown = (event) => {
@@ -13279,7 +13543,7 @@ function CanvasInner(props) {
       release();
     };
   }, [connecting]);
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     const onKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.code !== "KeyZ") return;
       const target = event.target;
@@ -13294,7 +13558,7 @@ function CanvasInner(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  const liveSelectedIds = (0, import_react13.useMemo)(() => {
+  const liveSelectedIds = (0, import_react12.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedIds) {
       if (id2.startsWith("frame-")) {
@@ -13305,7 +13569,7 @@ function CanvasInner(props) {
     }
     return next;
   }, [selectedIds, visibleCards, wsFrames]);
-  const liveSelectedEdgeIds = (0, import_react13.useMemo)(() => {
+  const liveSelectedEdgeIds = (0, import_react12.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedEdgeIds) {
       if (canvasState.edges[id2] !== void 0) next.add(id2);
@@ -13313,7 +13577,7 @@ function CanvasInner(props) {
     return next;
   }, [selectedEdgeIds, canvasState.edges]);
   const hasSelection = liveSelectedIds.size > 0 || liveSelectedEdgeIds.size > 0;
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     if (!hasSelection) return;
     const release = mapUi.claimEscape("selection");
     const onKeyDown = (event) => {
@@ -13342,7 +13606,7 @@ function CanvasInner(props) {
       release();
     };
   });
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     if (!batchMode) return;
     const release = mapUi.claimEscape("batch-mode");
     const onKeyDown = (event) => {
@@ -13435,7 +13699,7 @@ function CanvasInner(props) {
     if (status?.completionUnread === true || finishedById.has(sessionId)) return "done";
     return void 0;
   };
-  const liveNodes = (0, import_react13.useMemo)(() => {
+  const liveNodes = (0, import_react12.useMemo)(() => {
     const wsColors = canvasState.global?.wsColors ?? {};
     const frameNodes = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? [];
@@ -13546,7 +13810,7 @@ function CanvasInner(props) {
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
   }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale]);
-  const sessionIdToCardId = (0, import_react13.useMemo)(() => {
+  const sessionIdToCardId = (0, import_react12.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
@@ -13564,6 +13828,22 @@ function CanvasInner(props) {
     const card = canvasState.cards[cardId];
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
+  };
+  const routeFor = (fromCardId, toCardId) => {
+    const fromCard = canvasState.cards[fromCardId];
+    const toCard = canvasState.cards[toCardId];
+    if (fromCard === void 0 || toCard === void 0) return [];
+    const faces = sideHandles(fromCardId, toCardId);
+    const fromRect = { x: fromCard.x, y: fromCard.y, w: CARD_W, h: CARD_H };
+    const toRect = { x: toCard.x, y: toCard.y, w: CARD_W, h: CARD_H };
+    const others = Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }));
+    return routeEdge(
+      fromRect,
+      toRect,
+      faces.fromHandle,
+      faces.toHandle,
+      [fromRect, toRect, ...others]
+    );
   };
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,
@@ -13589,7 +13869,7 @@ function CanvasInner(props) {
     const picked = sideHandles(fromCardId, toCardId);
     return { sourceHandle: picked.fromHandle, targetHandle: picked.toHandle };
   };
-  const liveEdges = (0, import_react13.useMemo)(() => {
+  const liveEdges = (0, import_react12.useMemo)(() => {
     const out = [];
     const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
     const explicitPairs = /* @__PURE__ */ new Set();
@@ -13614,7 +13894,12 @@ function CanvasInner(props) {
         selected: liveSelectedEdgeIds.has(edgeId),
         // Endpoints ride along for the edge context menu (id parsing would
         // be ambiguous — card ids contain dashes); `sync` drives the look.
-        data: { fromCardId: edge.fromCardId, toCardId: edge.toCardId, sync },
+        data: {
+          fromCardId: edge.fromCardId,
+          toCardId: edge.toCardId,
+          sync,
+          route: routeFor(edge.fromCardId, edge.toCardId)
+        },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
         markerEnd: {
@@ -13663,7 +13948,13 @@ function CanvasInner(props) {
           // Same two looks as any other line.
           // structural: a fork link is part of the map, not a transfer, so it
           // stays visible even when the pair is in sync.
-          data: { fromCardId: parentCardId, toCardId: cardId, sync: lineageSync, structural: true },
+          data: {
+            fromCardId: parentCardId,
+            toCardId: cardId,
+            sync: lineageSync,
+            structural: true,
+            route: routeFor(parentCardId, cardId)
+          },
           // No inline stroke: inline style beats everything the renderer draws.
           style: { opacity: 0.85 }
         });
@@ -13671,7 +13962,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden]);
-  const drawerWireLinks = (0, import_react13.useMemo)(() => {
+  const drawerWireLinks = (0, import_react12.useMemo)(() => {
     if (drawer === null) return [];
     const layout = folderLayouts[drawer.groupId];
     const inFolder = new Set(layout === void 0 ? [] : [...layout.shown, ...layout.folded]);
@@ -13801,8 +14092,8 @@ function CanvasInner(props) {
     }
     if (removedIds.length > 0) canvas.removeEdges(removedIds);
   };
-  const mountedRef = (0, import_react13.useRef)(true);
-  (0, import_react13.useEffect)(() => {
+  const mountedRef = (0, import_react12.useRef)(true);
+  (0, import_react12.useEffect)(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -13958,7 +14249,7 @@ function CanvasInner(props) {
     agent: hit.agent,
     depth: hit.depth
   });
-  (0, import_react13.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle);
     setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
       cardId,
@@ -14068,11 +14359,11 @@ function CanvasInner(props) {
       canvas.moveCard(id2, point.x, point.y);
     });
   };
-  const selectedCardIds = (0, import_react13.useMemo)(
+  const selectedCardIds = (0, import_react12.useMemo)(
     () => [...batchPicks].filter((id2) => visibleCards[id2] !== void 0),
     [batchPicks, visibleCards]
   );
-  const selectedFrameWs = (0, import_react13.useMemo)(
+  const selectedFrameWs = (0, import_react12.useMemo)(
     () => [...liveSelectedIds].filter((id2) => id2.startsWith("frame-")).map((id2) => id2.slice("frame-".length)),
     [liveSelectedIds]
   );
@@ -14209,7 +14500,7 @@ function CanvasInner(props) {
       view: "root"
     });
   };
-  const menuState = (0, import_react13.useMemo)(() => {
+  const menuState = (0, import_react12.useMemo)(() => {
     if (menu === null) return null;
     const close = () => {
       setMenu(null);
@@ -14734,8 +15025,8 @@ function BatchBar(props) {
   ] });
 }
 function MapCanvas(props) {
-  const canvasState = (0, import_react13.useSyncExternalStore)(canvas.subscribe, canvas.get);
-  (0, import_react13.useEffect)(() => {
+  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  (0, import_react12.useEffect)(() => {
     canvas.ensureLoaded();
     canvas.refresh();
     return canvas.connect();
@@ -14768,7 +15059,7 @@ function MapCanvas(props) {
 // src/client/MapOverlay.tsx
 var import_jsx_runtime16 = require("react/jsx-runtime");
 function FontSizeButtons() {
-  const step2 = (0, import_react15.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  const step2 = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
   return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
     /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
       "button",
@@ -14827,9 +15118,9 @@ function CloseIcon() {
   return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
-  (0, import_react15.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const fontStep = (0, import_react15.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  (0, import_react15.useEffect)(() => {
+  (0, import_react14.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const fontStep = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  (0, import_react14.useEffect)(() => {
     mapUi.setOpen(true);
     hideSidebarForMap();
     return () => {
@@ -14837,7 +15128,7 @@ function MapOverlay(props) {
       restoreSidebarAfterMap();
     };
   }, []);
-  (0, import_react15.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       if (mapUi.escapeClaimed()) return;
@@ -14897,7 +15188,7 @@ function MapOverlay(props) {
 }
 
 // src/client/MapToggleButton.tsx
-var import_react16 = require("react");
+var import_react15 = require("react");
 var import_jsx_runtime17 = require("react/jsx-runtime");
 function MapIcon() {
   return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
@@ -14907,10 +15198,10 @@ function MapIcon() {
   ] });
 }
 function MapToggleButton(props) {
-  const open = (0, import_react16.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  const locale = (0, import_react16.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const open = (0, import_react15.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
+  const locale = (0, import_react15.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const wide = props.wide;
-  (0, import_react16.useEffect)(() => {
+  (0, import_react15.useEffect)(() => {
     reportSidebarWide(wide);
   }, [wide]);
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];

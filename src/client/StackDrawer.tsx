@@ -12,7 +12,8 @@ import type { CardGlow } from './SessionCard.tsx'
 import { drawerState } from './drawer-state.ts'
 import { loadSearch, saveSearch } from './search-store.ts'
 import { SearchResults } from './SearchResults.tsx'
-import { getSmoothStepPath, Position } from '@xyflow/react'
+import { routeEdge, roundedPath } from './edge-route.ts'
+import { pickFaces } from './edge-routing.ts'
 import styles from './talk-map.module.css'
 const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
@@ -210,69 +211,52 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           rect.height,
         )
       }
+      // Every drawn card, as a routing obstacle and as geometry for pickFaces.
+      const cardsInDrawer = [...scroller.querySelectorAll('[data-card-id]')]
+        .map(element => {
+          const box = element.getBoundingClientRect()
+          const base = scroller.getBoundingClientRect()
+          return {
+            id: element.getAttribute('data-card-id') ?? '',
+            x: box.left - base.left + scroller.scrollLeft,
+            y: box.top - base.top + scroller.scrollTop,
+            w: box.width,
+            h: box.height,
+          }
+        })
       const next: { d: string; ax: number; ay: number; angle: number }[] = []
       for (const link of links) {
         const from = boxOf(link.from)
         const to = boxOf(link.to)
         if (from === null || to === null) continue
-        const fromCx = from.x + from.width / 2
-        const fromCy = from.y + from.height / 2
-        const toCx = to.x + to.width / 2
-        const toCy = to.y + to.height / 2
-        const dx = toCx - fromCx
-        const dy = toCy - fromCy
-        // Same rule and the same geometry as the map: an orthogonal smoothstep
-        // path (rounded right angles), not a bezier bow.
-        const gapX = Math.abs(dx) - (from.width + to.width) / 2
-        const gapY = Math.abs(dy) - (from.height + to.height) / 2
-        const MIN_SPAN = 96
-        const horizontalDominant = Math.abs(dx) >= Math.abs(dy)
-
-        let sourceX = fromCx
-        let sourceY = fromCy
-        let targetX = toCx
-        let targetY = toCy
-        let sourcePosition = Position.Right
-        let targetPosition = Position.Left
-
-        if (horizontalDominant && gapX >= MIN_SPAN) {
-          const right = dx >= 0
-          sourceX = right ? from.x + from.width : from.x
-          targetX = right ? to.x : to.x + to.width
-          sourcePosition = right ? Position.Right : Position.Left
-          targetPosition = right ? Position.Left : Position.Right
-          targetY = toCy
-        } else if (!horizontalDominant && gapY >= MIN_SPAN) {
-          const down = dy >= 0
-          sourceY = down ? from.y + from.height : from.y
-          targetY = down ? to.y : to.y + to.height
-          sourcePosition = down ? Position.Bottom : Position.Top
-          targetPosition = down ? Position.Top : Position.Bottom
-          targetX = toCx
-        } else {
-          // Too close: drop out of the bottom (or top) of both cards.
-          const down = from.y + from.height <= to.y + to.height
-          sourceY = down ? from.y + from.height : from.y
-          targetY = down ? to.y + to.height : to.y
-          sourcePosition = down ? Position.Bottom : Position.Top
-          targetPosition = down ? Position.Bottom : Position.Top
-        }
-
-        const [wirePath] = getSmoothStepPath({
-          sourceX,
-          sourceY,
-          sourcePosition,
-          targetX,
-          targetY,
-          targetPosition,
-          borderRadius: 8,
-        })
-
-        const angle = targetPosition === Position.Left ? 0
-          : targetPosition === Position.Right ? 180
-            : targetPosition === Position.Top ? 90
-              : -90
-        next.push({ d: wirePath, ax: targetX, ay: targetY, angle })
+        // Same rule and the same geometry as the map: faces from the shared
+        // rule, path from the obstacle-avoiding router (gap centres, not card
+        // bodies).
+        const rectOf = (box: DOMRect) => ({ x: box.x, y: box.y, w: box.width, h: box.height })
+        const fromRect = rectOf(from)
+        const toRect = rectOf(to)
+        const obstacles = cardsInDrawer
+          .filter(card => card.id !== link.from && card.id !== link.to)
+          .map(rectOf)
+        const faces = pickFaces(
+          { id: link.from, x: fromRect.x, y: fromRect.y },
+          { id: link.to, x: toRect.x, y: toRect.y },
+          cardsInDrawer.map(card => ({ id: card.id, x: card.x, y: card.y })),
+          { cardWidth: fromRect.w, cardHeight: fromRect.h },
+        )
+        const points = routeEdge(
+          fromRect,
+          toRect,
+          faces.fromHandle as 't' | 'r' | 'b' | 'l',
+          faces.toHandle as 't' | 'r' | 'b' | 'l',
+          [fromRect, toRect, ...obstacles],
+        )
+        const tip = points[points.length - 1]
+        const prev = points[points.length - 2]
+        const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y)
+          ? (tip.x >= prev.x ? 0 : 180)
+          : (tip.y >= prev.y ? 90 : -90)
+        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle })
       }
       // Only touch state when something actually moved: the parent may
       // re-render for unrelated reasons, and a blind setState here loops.

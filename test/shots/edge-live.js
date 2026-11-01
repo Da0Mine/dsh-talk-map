@@ -33708,12 +33708,284 @@
   }
   var NodeResizeControl = (0, import_react2.memo)(ResizeControl);
 
+  // src/client/edge-route.ts
+  var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
+  function anchorOf(rect, face) {
+    switch (face) {
+      case "r":
+        return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
+      case "l":
+        return { x: rect.x, y: rect.y + rect.h / 2 };
+      case "t":
+        return { x: rect.x + rect.w / 2, y: rect.y };
+      default:
+        return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
+    }
+  }
+  function normalOf(face) {
+    switch (face) {
+      case "r":
+        return { x: 1, y: 0 };
+      case "l":
+        return { x: -1, y: 0 };
+      case "t":
+        return { x: 0, y: -1 };
+      default:
+        return { x: 0, y: 1 };
+    }
+  }
+  function expand(rect, by) {
+    return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+  }
+  function insideStrict(rect, point) {
+    return point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h;
+  }
+  function hitsHorizontal(rects, y, x1, x2) {
+    const lo = Math.min(x1, x2);
+    const hi = Math.max(x1, x2);
+    for (const rect of rects) {
+      if (y <= rect.y || y >= rect.y + rect.h) continue;
+      if (hi <= rect.x || lo >= rect.x + rect.w) continue;
+      return true;
+    }
+    return false;
+  }
+  function hitsVertical(rects, x, y1, y2) {
+    const lo = Math.min(y1, y2);
+    const hi = Math.max(y1, y2);
+    for (const rect of rects) {
+      if (x <= rect.x || x >= rect.x + rect.w) continue;
+      if (hi <= rect.y || lo >= rect.y + rect.h) continue;
+      return true;
+    }
+    return false;
+  }
+  function bands(rects, axis) {
+    const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
+    const out = [];
+    for (const span of spans) {
+      const last = out[out.length - 1];
+      if (last !== void 0 && span.start <= last.end) {
+        last.end = Math.max(last.end, span.end);
+      } else {
+        out.push({ ...span });
+      }
+    }
+    return out;
+  }
+  function corridors(rects, axis, minCorridor) {
+    const merged = bands(rects, axis);
+    const out = [];
+    for (let index2 = 1; index2 < merged.length; index2 += 1) {
+      const gap = merged[index2].start - merged[index2 - 1].end;
+      if (gap >= minCorridor) out.push((merged[index2 - 1].end + merged[index2].start) / 2);
+    }
+    return out;
+  }
+  function outerLines(rects, axis, clearance) {
+    const merged = bands(rects, axis);
+    const out = [];
+    for (const band of merged) {
+      out.push(band.start - clearance, band.end + clearance);
+    }
+    return out;
+  }
+  var Heap = class {
+    items = [];
+    push(cost, key, node) {
+      this.items.push({ cost, key, node });
+      let index2 = this.items.length - 1;
+      while (index2 > 0) {
+        const parent = index2 - 1 >> 1;
+        if (this.items[parent].cost <= this.items[index2].cost) break;
+        const tmp = this.items[parent];
+        this.items[parent] = this.items[index2];
+        this.items[index2] = tmp;
+        index2 = parent;
+      }
+    }
+    pop() {
+      if (this.items.length === 0) return void 0;
+      const top = this.items[0];
+      const last = this.items.pop();
+      if (this.items.length > 0) {
+        this.items[0] = last;
+        let index2 = 0;
+        for (; ; ) {
+          const left = index2 * 2 + 1;
+          const right = left + 1;
+          let smallest = index2;
+          if (left < this.items.length && this.items[left].cost < this.items[smallest].cost) smallest = left;
+          if (right < this.items.length && this.items[right].cost < this.items[smallest].cost) smallest = right;
+          if (smallest === index2) break;
+          const tmp = this.items[smallest];
+          this.items[smallest] = this.items[index2];
+          this.items[index2] = tmp;
+          index2 = smallest;
+        }
+      }
+      return { key: top.key, node: top.node };
+    }
+    get size() {
+      return this.items.length;
+    }
+  };
+  function dedupe(values, epsilon = 0.5) {
+    const sorted = [...values].sort((a, b) => a - b);
+    const out = [];
+    for (const value of sorted) {
+      if (out.length === 0 || Math.abs(value - out[out.length - 1]) > epsilon) out.push(value);
+    }
+    return out;
+  }
+  function simplify(points) {
+    const out = [];
+    for (const point of points) {
+      const last = out[out.length - 1];
+      if (last !== void 0 && Math.abs(last.x - point.x) < 0.5 && Math.abs(last.y - point.y) < 0.5) continue;
+      out.push(point);
+    }
+    for (let index2 = 1; index2 < out.length - 1; ) {
+      const a = out[index2 - 1];
+      const b = out[index2];
+      const c = out[index2 + 1];
+      const collinear = Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5 || Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5;
+      if (collinear) out.splice(index2, 1);
+      else index2 += 1;
+    }
+    return out;
+  }
+  function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
+    const margin = options.margin ?? DEFAULTS.margin;
+    const stub = options.stub ?? DEFAULTS.stub;
+    const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
+    const start2 = anchorOf(from, fromFace);
+    const end = anchorOf(to, toFace);
+    const startNormal = normalOf(fromFace);
+    const endNormal = normalOf(toFace);
+    const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
+    const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
+    const blocked = obstacles.filter((rect) => rect !== from && rect !== to).map((rect) => expand(rect, margin));
+    const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+    const xs = corridors(obstacles, "x", minCorridor);
+    const ys = corridors(obstacles, "y", minCorridor);
+    const xOuter = outerLines(obstacles, "x", margin + 6);
+    const yOuter = outerLines(obstacles, "y", margin + 6);
+    const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
+    const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
+    if (xCands.length > 60 || yCands.length > 60) return fallback;
+    const corridorX = new Set(xs.map((value) => Math.round(value)));
+    const corridorY = new Set(ys.map((value) => Math.round(value)));
+    const nodeId = (ix, iy) => `${ix},${iy}`;
+    const pointAt = (id2) => {
+      const [ix, iy] = id2.split(",").map(Number);
+      return { x: xCands[ix], y: yCands[iy] };
+    };
+    const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
+    const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
+    if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
+    const goal = { x: endStub.x, y: endStub.y };
+    const startNode = nodeId(startIndex.x, startIndex.y);
+    const goalNode = nodeId(endIndex.x, endIndex.y);
+    const best = /* @__PURE__ */ new Map();
+    const cameFrom = /* @__PURE__ */ new Map();
+    const heap = new Heap();
+    const withDir = (node, dir) => `${node}|${dir}`;
+    best.set(withDir(startNode, "x"), 0);
+    heap.push(0, 0, withDir(startNode, "x"));
+    const estimate = (point) => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y);
+    while (heap.size > 0) {
+      const popped = heap.pop();
+      const state = popped.node;
+      const [node, dir] = state.split("|");
+      const cost = best.get(state);
+      if (cost === void 0) continue;
+      if (node === goalNode) {
+        const path = [];
+        let cursor = state;
+        while (cursor !== void 0) {
+          const [cell] = cursor.split("|");
+          path.push(pointAt(cell));
+          cursor = cameFrom.get(cursor);
+        }
+        path.reverse();
+        return simplify([start2, startStub, ...path.slice(1), endStub, end]);
+      }
+      const [ix, iy] = node.split(",").map(Number);
+      const here = pointAt(node);
+      const steps = [
+        { dx: 1, dy: 0, axis: "x" },
+        { dx: -1, dy: 0, axis: "x" },
+        { dx: 0, dy: 1, axis: "y" },
+        { dx: 0, dy: -1, axis: "y" }
+      ];
+      for (const step of steps) {
+        const nx = ix + step.dx;
+        const ny = iy + step.dy;
+        if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
+        const next = { x: xCands[nx], y: yCands[ny] };
+        const nextNode = nodeId(nx, ny);
+        if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
+        const clear = step.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
+        if (!clear) continue;
+        const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
+        const onCorridor = step.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
+        const turn = dir === step.axis ? 0 : 18;
+        const prefer = onCorridor ? 0 : 6;
+        const nextCost = cost + distance2 + turn + prefer;
+        const nextState = withDir(nextNode, step.axis);
+        const known = best.get(nextState);
+        if (known !== void 0 && known <= nextCost) continue;
+        best.set(nextState, nextCost);
+        cameFrom.set(nextState, state);
+        heap.push(nextCost + estimate(next), nextCost, nextState);
+      }
+    }
+    return fallback;
+  }
+  function roundedPath(points, radius = 10) {
+    if (points.length === 0) return "";
+    if (points.length === 1) return `M ${round(points[0].x)} ${round(points[0].y)}`;
+    const parts = [`M ${round(points[0].x)} ${round(points[0].y)}`];
+    for (let index2 = 1; index2 < points.length - 1; index2 += 1) {
+      const prev = points[index2 - 1];
+      const here = points[index2];
+      const next = points[index2 + 1];
+      const inLength = Math.hypot(here.x - prev.x, here.y - prev.y);
+      const outLength = Math.hypot(next.x - here.x, next.y - here.y);
+      const corner = Math.min(radius, inLength / 2, outLength / 2);
+      if (corner < 0.5) {
+        parts.push(`L ${round(here.x)} ${round(here.y)}`);
+        continue;
+      }
+      const enter = {
+        x: here.x + (prev.x - here.x) / (inLength || 1) * corner,
+        y: here.y + (prev.y - here.y) / (inLength || 1) * corner
+      };
+      const leave = {
+        x: here.x + (next.x - here.x) / (outLength || 1) * corner,
+        y: here.y + (next.y - here.y) / (outLength || 1) * corner
+      };
+      parts.push(`L ${round(enter.x)} ${round(enter.y)}`);
+      parts.push(`Q ${round(here.x)} ${round(here.y)} ${round(leave.x)} ${round(leave.y)}`);
+    }
+    const last = points[points.length - 1];
+    parts.push(`L ${round(last.x)} ${round(last.y)}`);
+    return parts.join(" ");
+  }
+  function round(value) {
+    return Math.round(value * 100) / 100;
+  }
+
   // src/client/TalkMapEdge.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
   function TalkMapEdge(props) {
     const data = props.data ?? {};
     const synced = data.sync === "synced";
-    const [path] = getSmoothStepPath({
+    const hidden = synced && data.structural !== true;
+    const route = data.route;
+    const routed = route !== void 0 && route.length > 1;
+    const [smoothPath] = getSmoothStepPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
       sourcePosition: props.sourcePosition,
@@ -33721,7 +33993,16 @@
       targetY: props.targetY,
       targetPosition: props.targetPosition
     });
+    const path = routed ? roundedPath(route, 10) : smoothPath;
     const arrowAngle = (() => {
+      if (routed) {
+        const end = route[route.length - 1];
+        const before = route[route.length - 2];
+        const dx = end.x - before.x;
+        const dy = end.y - before.y;
+        if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 180;
+        return dy >= 0 ? 90 : -90;
+      }
       const position = String(props.targetPosition ?? "left");
       if (position === "right") return 180;
       if (position === "top") return 90;
@@ -33741,7 +34022,7 @@
             strokeLinejoin: "round",
             strokeDasharray: "6 5",
             // Synced: the line simply is not there any more.
-            opacity: synced ? 0 : 1
+            opacity: hidden ? 0 : 1
           }
         }
       ),
@@ -33751,7 +34032,7 @@
           d: "M0 0 L-11 -5 L-11 5 Z",
           transform: `translate(${props.targetX} ${props.targetY}) rotate(${arrowAngle})`,
           fill: "rgba(200, 206, 216, 0.5)",
-          opacity: synced ? 0 : 1,
+          opacity: hidden ? 0 : 1,
           pointerEvents: "none"
         }
       )
@@ -33848,13 +34129,34 @@
     const faces = pickFaces(from, to, placed, { cardWidth: CARD_W, cardHeight: CARD_H });
     return { sourceHandle: faces.fromHandle, targetHandle: faces.toHandle };
   };
+  var blocker = { ...card("w", 296, 96, "W"), type: "card" };
+  var allNodes = [...nodes, blocker];
+  var allPlaced = allNodes.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }));
+  var rectOf = (id2) => {
+    const item = allPlaced.find((entry) => entry.id === id2);
+    return { x: item.x, y: item.y, w: CARD_W, h: CARD_H };
+  };
+  var routeFor = (fromId, toId) => {
+    const faces = faceFor(fromId, toId);
+    return routeEdge(
+      rectOf(fromId),
+      rectOf(toId),
+      faces.sourceHandle,
+      faces.targetHandle,
+      [
+        rectOf(fromId),
+        rectOf(toId),
+        ...allPlaced.filter((entry) => entry.id !== fromId && entry.id !== toId).map((entry) => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))
+      ]
+    );
+  };
   var edges = [
-    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced" }, ...faceFor("a", "b") },
-    { id: "idle", source: "b", target: "a", type: "talkMap", data: { sync: "idle" }, ...faceFor("b", "a") },
-    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced" }, ...faceFor("c", "d") }
+    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced", route: routeFor("a", "b") }, ...faceFor("a", "b") },
+    { id: "idle", source: "a", target: "b", type: "talkMap", data: { sync: "idle", route: routeFor("a", "b") }, ...faceFor("a", "b") },
+    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced", route: routeFor("c", "d") }, ...faceFor("c", "d") }
   ];
   (0, import_client.createRoot)(document.getElementById("root")).render(
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 820, height: 560 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes, edges, edgeTypes, nodeTypes, connectionMode: ConnectionMode.Loose, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 820, height: 560 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes: allNodes, edges, edgeTypes, nodeTypes, connectionMode: ConnectionMode.Loose, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })
   );
 })();
 /*! Bundled license information:

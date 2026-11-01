@@ -3,6 +3,7 @@ import { ReactFlow, ReactFlowProvider, Background, Handle, Position, ConnectionM
 import '@xyflow/react/dist/style.css'
 import { edgeTypes } from '../src/client/TalkMapEdge.tsx'
 import { pickFaces } from '../src/client/edge-routing.ts'
+import { routeEdge } from '../src/client/edge-route.ts'
 
 const CARD_W = 224
 const CARD_H = 120
@@ -41,16 +42,33 @@ const faceFor = (fromId, toId) => {
   return { sourceHandle: faces.fromHandle, targetHandle: faces.toHandle }
 }
 
+// A card parked right between A and B: the line must route around it, through
+// the middle of the gap, instead of cutting across the card body.
+const blocker = { ...card('w', 296, 96, 'W'), type: 'card' }
+const allNodes = [...nodes, blocker]
+const allPlaced = allNodes.map(node => ({ id: node.id, x: node.position.x, y: node.position.y }))
+const rectOf = id => {
+  const item = allPlaced.find(entry => entry.id === id)
+  return { x: item.x, y: item.y, w: CARD_W, h: CARD_H }
+}
+const routeFor = (fromId, toId) => {
+  const faces = faceFor(fromId, toId)
+  return routeEdge(rectOf(fromId), rectOf(toId), faces.sourceHandle, faces.targetHandle,
+    [rectOf(fromId), rectOf(toId),
+     ...allPlaced.filter(entry => entry.id !== fromId && entry.id !== toId)
+       .map(entry => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))])
+}
+
 const edges = [
-  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'synced' }, ...faceFor('a', 'b') },
-  { id: 'idle', source: 'b', target: 'a', type: 'talkMap', data: { sync: 'idle' }, ...faceFor('b', 'a') },
-  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: { sync: 'synced' }, ...faceFor('c', 'd') },
+  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'synced', route: routeFor('a', 'b') }, ...faceFor('a', 'b') },
+  { id: 'idle', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'idle', route: routeFor('a', 'b') }, ...faceFor('a', 'b') },
+  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: { sync: 'synced', route: routeFor('c', 'd') }, ...faceFor('c', 'd') },
 ]
 
 createRoot(document.getElementById('root')!).render(
   <div style={{ width: 820, height: 560 }}>
     <ReactFlowProvider>
-      <ReactFlow nodes={nodes} edges={edges} edgeTypes={edgeTypes} nodeTypes={nodeTypes} connectionMode={ConnectionMode.Loose} fitView proOptions={{ hideAttribution: true }}>
+      <ReactFlow nodes={allNodes} edges={edges} edgeTypes={edgeTypes} nodeTypes={nodeTypes} connectionMode={ConnectionMode.Loose} fitView proOptions={{ hideAttribution: true }}>
         <Background />
       </ReactFlow>
     </ReactFlowProvider>
