@@ -8,11 +8,16 @@
 
 打开演示页时，harness 整体换成虚构数据集，**不含任何真实会话内容**：
 
-- 4 个工作区：产品设计 / 内容运营 / 灵感速记 / 团队共享
-- 17 张卡片（官网改版、周报汇总、海报文案、投放复盘……）
-- 1 条父子分叉线 + 1 条存储连线（未同步 → 虚线可见）
+- 6 个工作区：产品设计 / 内容运营 / 灵感速记 / 物理备课 / 旅行计划 / 团队共享
+- 25 张卡片（官网改版、周报汇总、力的合成课件、长沙行程……），其中 3 张是不属于任何框架的自由卡
+- 3 条连线：2 条存储线（未同步 → 虚线可见）+ 1 条父子分叉线（物理备课框架内）
 - 灯牌覆盖：运行中（白光环流光）、等待回复（黄）、待查看（绿）、异常（红）
+- **待发送示例**：两张卡带「待发送」chip（板上的"长沙行程规划"、抽屉里的"海报文案三选一"）——harness 直接往 `dsh.conversation.<id>` 里预置了未发送草稿，和真实输入框行为一致
 - 摘要（digest）也整体替换为虚构内容
+
+### 布局自动保存
+
+演示页把每次写操作（拖卡、挪框架、连线、删除…）镜像进 localStorage（`dsh-talk-map.demo-state.v1`），**刷新/重开后布局保持**。想恢复出厂演示布局，清掉这个键即可（F12 → Application → Local Storage）。
 
 探针（`node test/probe.mjs`，不带 demo 参数）仍用原 fixture，150/150 不受影响。
 
@@ -34,14 +39,17 @@
 ## 验证
 
 ```
-node demo/verify-file.mjs
+node demo/verify-file.mjs      # file:// 打开、元素计数、抽屉 + 全局搜索
+node demo/verify-drafts.mjs    # 待发送 chip：板上 1 + 抽屉 1
+node demo/verify-persist.mjs   # 拖卡 → 刷新 → 位置保持（自动保存）
 ```
 
-无头 Edge 以 file:// 打开演示页，统计元素并跑抽屉 + 搜索，截图写到 `demo/shots/`。当前基线：
+当前基线：
 
 ```
-{"cards":17,"edges":1,"lamps":4,"drawerCards":8,"gsHits":3}
-errors: none
+{"cards":28,"edges":3,"lamps":4,"drawerCards":8,"gsHits":3}   errors: none
+{"boardDrafts":1,"drawerDrafts":1}
+{"held":true,"saved":true}
 ```
 
 ## 改了插件代码之后
