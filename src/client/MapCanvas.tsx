@@ -1174,7 +1174,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     // the user made, all of them with the one edge style. These derived lines were
     // also the ones that kept running through cards, and they are not something the
     // user ever asked to see.
-    if (DRAW_LINEAGE_LINKS) {
+    if (DRAW_LINEAGE_LINKS && !lineageHidden) {
       // ...minus the pairs the user deleted one by one.
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (foldedSet.has(cardId)) continue
@@ -1212,14 +1212,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         type: TALK_MAP_EDGE_TYPE,
         // Selectable on purpose: right-clicking it must answer "what is this",
         // and offer to hide it. It used to be un-clickable mystery wiring.
-        // Same two looks as any other line.
-        // structural: a fork link is part of the map, not a transfer, so it
-        // stays visible even when the pair is in sync.
+        // 血缘线就按“一条还没同步的普通连线”渲染：同样的虚线、同样的箭头、
+        // 同样的避障规则，没有单独样式，也不参与同步状态。
         data: {
           fromCardId: parentCardId,
           toCardId: cardId,
-          sync: lineageSync,
-          structural: true,
+          sync: 'idle',
           obstacles: obstaclesFor(parentCardId, cardId),
           ...(boxOf(parentCardId) !== undefined ? { fromRect: boxOf(parentCardId) } : {}),
           ...(boxOf(cardId) !== undefined ? { toRect: boxOf(cardId) } : {}),
@@ -2545,7 +2543,7 @@ function BatchBar(props: {
 }
 
 /** Derived fork links are not drawn: one kind of line, the ones the user made. */
-const DRAW_LINEAGE_LINKS = false
+const DRAW_LINEAGE_LINKS = true
 
 export function MapCanvas(props: RootSlotStandardProps): React.JSX.Element {
   const canvasState = useSyncExternalStore(canvas.subscribe, canvas.get)
