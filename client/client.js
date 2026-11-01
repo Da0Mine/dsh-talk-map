@@ -11740,7 +11740,7 @@ function ContextMenu(props) {
 
 // src/client/edge-route.ts
 var __routeDebug = {};
-var DEFAULTS = { margin: 14, stub: 22, minCorridor: 28 };
+var DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 };
 function anchorOf(rect, face) {
   switch (face) {
     case "r":
@@ -11963,8 +11963,36 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const end = ends.end;
   const startNormal = normalOf(ends.startFace);
   const endNormal = normalOf(ends.endFace);
-  const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
-  const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
+  const spaceAhead = (point, normal) => {
+    let best2 = 240;
+    for (const raw of obstacles) {
+      const rect = expand(raw, margin);
+      if (normal.x !== 0) {
+        if (point.y <= rect.y || point.y >= rect.y + rect.h) continue;
+        if (normal.x > 0 && rect.x >= point.x) best2 = Math.min(best2, rect.x - point.x);
+        if (normal.x < 0 && rect.x + rect.w <= point.x) best2 = Math.min(best2, point.x - (rect.x + rect.w));
+      } else {
+        if (point.x <= rect.x || point.x >= rect.x + rect.w) continue;
+        if (normal.y > 0 && rect.y >= point.y) best2 = Math.min(best2, rect.y - point.y);
+        if (normal.y < 0 && rect.y + rect.h <= point.y) best2 = Math.min(best2, point.y - (rect.y + rect.h));
+      }
+    }
+    return best2;
+  };
+  const stubFor = (space) => {
+    const half = Math.max(0, (space - margin * 2) / 2);
+    return Math.max(4, Math.min(stub, half));
+  };
+  const startStubLength = stubFor(spaceAhead(start2, startNormal));
+  const endStubLength = stubFor(spaceAhead(end, { x: -endNormal.x, y: -endNormal.y }));
+  const startStub = {
+    x: start2.x + startNormal.x * startStubLength,
+    y: start2.y + startNormal.y * startStubLength
+  };
+  const endStub = {
+    x: end.x + endNormal.x * endStubLength,
+    y: end.y + endNormal.y * endStubLength
+  };
   const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).filter((rect) => !overlaps(rect, from) && !overlaps(rect, to)).map((rect) => expand(rect, margin));
@@ -11984,7 +12012,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const ys = corridors(near, "y", minCorridor).filter(withinY);
   const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
   const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
-  const hug = margin + 10;
+  const hug = margin + 6;
   const xHug = near.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
   const yHug = near.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
   const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug]);
@@ -12133,12 +12161,27 @@ function TalkMapEdge(props) {
       end: { x: props.targetX, y: props.targetY },
       endFace: faceOf(props.targetPosition)
     },
-    // Endpoint bodies for the corridor maths; the router skips them by value.
-    { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
-    { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+    // The endpoints' real boxes: the router excludes them from the obstacle
+    // set by geometry. A degenerate 0×0 box never matches, so the endpoints
+    // used to block their own handles and every line fell back to a straight L.
+    data.fromRect ?? { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+    data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
     obstacles
   );
   const routed = route !== void 0 && route.length > 1;
+  if (typeof window !== "undefined") {
+    const w = window;
+    w.__edgeDebug = w.__edgeDebug ?? [];
+    w.__edgeDebug.push({
+      id: props.id,
+      obstacles: obstacles?.length ?? null,
+      fromRect: data.fromRect ?? null,
+      toRect: data.toRect ?? null,
+      src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },
+      dst: { x: props.targetX, y: props.targetY, pos: String(props.targetPosition) },
+      points: route ?? null
+    });
+  }
   const [smoothPath] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,
@@ -13954,6 +13997,12 @@ function CanvasInner(props) {
     return sessions.byId[card.sessionId]?.updatedAt;
   };
   const obstaclesFor = (fromCardId, toCardId) => Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }));
+  const boxOf = (cardId) => {
+    const card = canvasState.cards[cardId];
+    if (card === void 0) return void 0;
+    const slot = cardLayout[cardId];
+    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H };
+  };
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,
     x: card.x,
@@ -14007,7 +14056,9 @@ function CanvasInner(props) {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
-          obstacles: obstaclesFor(edge.fromCardId, edge.toCardId)
+          obstacles: obstaclesFor(edge.fromCardId, edge.toCardId),
+          ...boxOf(edge.fromCardId) !== void 0 ? { fromRect: boxOf(edge.fromCardId) } : {},
+          ...boxOf(edge.toCardId) !== void 0 ? { toRect: boxOf(edge.toCardId) } : {}
         },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
@@ -14062,7 +14113,9 @@ function CanvasInner(props) {
             toCardId: cardId,
             sync: lineageSync,
             structural: true,
-            obstacles: obstaclesFor(parentCardId, cardId)
+            obstacles: obstaclesFor(parentCardId, cardId),
+            ...boxOf(parentCardId) !== void 0 ? { fromRect: boxOf(parentCardId) } : {},
+            ...boxOf(cardId) !== void 0 ? { toRect: boxOf(cardId) } : {}
           },
           // No inline stroke: inline style beats everything the renderer draws.
           style: { opacity: 0.85 }

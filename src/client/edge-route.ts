@@ -35,7 +35,7 @@ export interface RouteOptions {
   minCorridor?: number
 }
 
-const DEFAULTS = { margin: 14, stub: 22, minCorridor: 28 }
+const DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 }
 
 /** Middle of the face an edge leaves from. */
 export function anchorOf(rect: Rect, face: Face): Point {
@@ -367,8 +367,46 @@ export function routeBetween(
   const end = ends.end
   const startNormal = normalOf(ends.startFace)
   const endNormal = normalOf(ends.endFace)
-  const startStub = { x: start.x + startNormal.x * stub, y: start.y + startNormal.y * stub }
-  const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub }
+
+  /**
+   * How much room there is straight out of a handle before the next card.
+   *
+   * The stub used to be a fixed 22px; on a tight layout that put the first turn
+   * *inside* the neighbouring card's clearance box, the search had no legal move,
+   * and the whole edge fell back to a straight line through cards.
+   */
+  const spaceAhead = (point: Point, normal: Point): number => {
+    let best = 240
+    // expanded boxes — the clearance the router will actually enforce
+    for (const raw of obstacles as Rect[]) {
+      const rect = expand(raw, margin)
+      if (normal.x !== 0) {
+        if (point.y <= rect.y || point.y >= rect.y + rect.h) continue
+        if (normal.x > 0 && rect.x >= point.x) best = Math.min(best, rect.x - point.x)
+        if (normal.x < 0 && rect.x + rect.w <= point.x) best = Math.min(best, point.x - (rect.x + rect.w))
+      } else {
+        if (point.x <= rect.x || point.x >= rect.x + rect.w) continue
+        if (normal.y > 0 && rect.y >= point.y) best = Math.min(best, rect.y - point.y)
+        if (normal.y < 0 && rect.y + rect.h <= point.y) best = Math.min(best, point.y - (rect.y + rect.h))
+      }
+    }
+    return best
+  }
+  const stubFor = (space: number): number => {
+    // half the free lane minus a margin at each side: the turn lands mid-gap
+    const half = Math.max(0, (space - margin * 2) / 2)
+    return Math.max(4, Math.min(stub, half))
+  }
+  const startStubLength = stubFor(spaceAhead(start, startNormal))
+  const endStubLength = stubFor(spaceAhead(end, { x: -endNormal.x, y: -endNormal.y }))
+  const startStub = {
+    x: start.x + startNormal.x * startStubLength,
+    y: start.y + startNormal.y * startStubLength,
+  }
+  const endStub = {
+    x: end.x + endNormal.x * endStubLength,
+    y: end.y + endNormal.y * endStubLength,
+  }
 
   // Blocked bodies: everything except the two endpoints themselves.
   //
@@ -419,7 +457,7 @@ export function routeBetween(
   // Lanes hugging each nearby card, so a block that spans a whole channel still
   // leaves somewhere to slip past. Without these, a dense board gives A* nothing
   // and the edge degrades into a straight line through everything.
-  const hug = margin + 10
+  const hug = margin + 6
   const xHug = (near as Rect[]).flatMap(rect => [rect.x - hug, rect.x + rect.w + hug])
   const yHug = (near as Rect[]).flatMap(rect => [rect.y - hug, rect.y + rect.h + hug])
   const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug])

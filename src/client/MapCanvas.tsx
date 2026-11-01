@@ -1049,6 +1049,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .filter(([id]) => !foldedSet.has(id))
       .map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }))
 
+  /** One card's box, preferring the slot it actually sits in. */
+  const boxOf = (cardId: string): { x: number; y: number; w: number; h: number } | undefined => {
+    const card = canvasState.cards[cardId]
+    if (card === undefined) return undefined
+    const slot = cardLayout[cardId]
+    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H }
+  }
+
   /** Faces for a stored edge, from where its two cards are right now. */
   const routingObstacles = (): Obstacle[] => Object.entries(canvasState.cards).map(([id, card]) => ({
     id,
@@ -1122,6 +1130,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           toCardId: edge.toCardId,
           sync,
           obstacles: obstaclesFor(edge.fromCardId, edge.toCardId),
+          ...(boxOf(edge.fromCardId) !== undefined ? { fromRect: boxOf(edge.fromCardId) } : {}),
+          ...(boxOf(edge.toCardId) !== undefined ? { toRect: boxOf(edge.toCardId) } : {}),
         },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
@@ -1193,6 +1203,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           sync: lineageSync,
           structural: true,
           obstacles: obstaclesFor(parentCardId, cardId),
+          ...(boxOf(parentCardId) !== undefined ? { fromRect: boxOf(parentCardId) } : {}),
+          ...(boxOf(cardId) !== undefined ? { toRect: boxOf(cardId) } : {}),
         },
         // No inline stroke: inline style beats everything the renderer draws.
         style: { opacity: 0.85 },

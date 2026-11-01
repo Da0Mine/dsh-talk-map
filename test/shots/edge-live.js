@@ -33709,7 +33709,8 @@
   var NodeResizeControl = (0, import_react2.memo)(ResizeControl);
 
   // src/client/edge-route.ts
-  var DEFAULTS = { margin: 14, stub: 14, minCorridor: 28 };
+  var __routeDebug = {};
+  var DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 };
   function normalOf(face) {
     switch (face) {
       case "r":
@@ -33845,18 +33846,27 @@
   }
   function snapToChannels(points, obstacles, margin) {
     if (points.length < 3) return points;
-    const out = points.map((point) => ({ ...point }));
-    const rowBands = bands(obstacles, "y");
-    const colBands = bands(obstacles, "x");
-    const channelFor = (value, bandsList) => {
-      for (let index2 = 1; index2 < bandsList.length; index2 += 1) {
-        const lo = bandsList[index2 - 1].end;
-        const hi = bandsList[index2].start;
-        if (hi - lo < margin * 2 + 8) continue;
-        if (value > lo && value < hi) return (lo + hi) / 2;
+    const rects = obstacles;
+    const centreFor = (horizontal, fixed, lo, hi) => {
+      let low = -Infinity;
+      let high = Infinity;
+      for (const rect of rects) {
+        if (horizontal) {
+          if (rect.x + rect.w <= lo || rect.x >= hi) continue;
+          if (rect.y + rect.h <= fixed + 0.5) low = Math.max(low, rect.y + rect.h);
+          else if (rect.y >= fixed - 0.5) high = Math.min(high, rect.y);
+        } else {
+          if (rect.y + rect.h <= lo || rect.y >= hi) continue;
+          if (rect.x + rect.w <= fixed + 0.5) low = Math.max(low, rect.x + rect.w);
+          else if (rect.x >= fixed - 0.5) high = Math.min(high, rect.x);
+        }
       }
-      return void 0;
+      if (!Number.isFinite(low) || !Number.isFinite(high)) return void 0;
+      const gap = high - low;
+      if (gap < margin * 2 + 6) return void 0;
+      return (low + high) / 2;
     };
+    const out = points.map((point) => ({ ...point }));
     const last = out.length - 1;
     const horizontalSegment = (index2) => Math.abs(out[index2 - 1].y - out[index2].y) < 0.6;
     const fromStubHorizontal = horizontalSegment(1);
@@ -33867,21 +33877,32 @@
       const horizontalRun = Math.abs(a.y - b.y) < 0.6;
       if (index2 === 1 && horizontalRun === fromStubHorizontal) continue;
       if (index2 === last - 1 && horizontalRun === toStubHorizontal) continue;
+      const lo = horizontalRun ? Math.min(a.x, b.x) : Math.min(a.y, b.y);
+      const hi = horizontalRun ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
+      const centre = centreFor(horizontalRun, horizontalRun ? a.y : a.x, lo, hi);
+      if (centre === void 0) continue;
       if (horizontalRun) {
-        const centre = channelFor(a.y, rowBands);
-        if (centre !== void 0 && Math.abs(centre - a.y) > 0.6) {
-          a.y = centre;
-          b.y = centre;
-        }
+        if (Math.abs(centre - a.y) < 0.6) continue;
+        a.y = centre;
+        b.y = centre;
       } else {
-        const centre = channelFor(a.x, colBands);
-        if (centre !== void 0 && Math.abs(centre - a.x) > 0.6) {
-          a.x = centre;
-          b.x = centre;
-        }
+        if (Math.abs(centre - a.x) < 0.6) continue;
+        a.x = centre;
+        b.x = centre;
       }
     }
-    return simplify(out);
+    const candidate = simplify(out);
+    const sameRectSet = (point) => rects.some((rect) => point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h);
+    for (let index2 = 1; index2 < candidate.length; index2 += 1) {
+      const a = candidate[index2 - 1];
+      const b = candidate[index2];
+      const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 4));
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps;
+        if (sameRectSet({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })) return points;
+      }
+    }
+    return candidate;
   }
   function routeBetween(ends, from, to, obstacles, options = {}) {
     const margin = options.margin ?? DEFAULTS.margin;
@@ -33891,11 +33912,41 @@
     const end = ends.end;
     const startNormal = normalOf(ends.startFace);
     const endNormal = normalOf(ends.endFace);
-    const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
-    const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
+    const spaceAhead = (point, normal) => {
+      let best2 = 240;
+      for (const raw of obstacles) {
+        const rect = expand(raw, margin);
+        if (normal.x !== 0) {
+          if (point.y <= rect.y || point.y >= rect.y + rect.h) continue;
+          if (normal.x > 0 && rect.x >= point.x) best2 = Math.min(best2, rect.x - point.x);
+          if (normal.x < 0 && rect.x + rect.w <= point.x) best2 = Math.min(best2, point.x - (rect.x + rect.w));
+        } else {
+          if (point.x <= rect.x || point.x >= rect.x + rect.w) continue;
+          if (normal.y > 0 && rect.y >= point.y) best2 = Math.min(best2, rect.y - point.y);
+          if (normal.y < 0 && rect.y + rect.h <= point.y) best2 = Math.min(best2, point.y - (rect.y + rect.h));
+        }
+      }
+      return best2;
+    };
+    const stubFor = (space) => {
+      const half = Math.max(0, (space - margin * 2) / 2);
+      return Math.max(4, Math.min(stub, half));
+    };
+    const startStubLength = stubFor(spaceAhead(start2, startNormal));
+    const endStubLength = stubFor(spaceAhead(end, { x: -endNormal.x, y: -endNormal.y }));
+    const startStub = {
+      x: start2.x + startNormal.x * startStubLength,
+      y: start2.y + startNormal.y * startStubLength
+    };
+    const endStub = {
+      x: end.x + endNormal.x * endStubLength,
+      y: end.y + endNormal.y * endStubLength
+    };
     const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
-    const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
+    const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).filter((rect) => !overlaps(rect, from) && !overlaps(rect, to)).map((rect) => expand(rect, margin));
     const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+    __routeDebug.last = { usedFallback: true };
     const pad = 260;
     const window2 = {
       x1: Math.min(start2.x, end.x) - pad,
@@ -33910,18 +33961,35 @@
     const ys = corridors(near, "y", minCorridor).filter(withinY);
     const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
     const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
-    const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
-    const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
-    if (xCands.length > 96 || yCands.length > 96) return fallback;
+    const hug = margin + 6;
+    const xHug = near.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
+    const yHug = near.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
+    const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug]);
+    const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter, ...yHug]);
+    const trim = (values, mustKeep, limit) => {
+      if (values.length <= limit) return values;
+      const keep = new Set(mustKeep);
+      const rest = values.filter((value) => !keep.has(value));
+      const slots = Math.max(1, limit - keep.size);
+      const stride = Math.max(1, Math.floor(rest.length / slots));
+      for (let index2 = 0; index2 < rest.length && keep.size < limit; index2 += stride) {
+        keep.add(rest[index2]);
+      }
+      return values.filter((value) => keep.has(value));
+    };
+    const MAX_LINES = 72;
+    const xsTrimmed = xCands.length > MAX_LINES ? trim(xCands, [start2.x, end.x, startStub.x, endStub.x], MAX_LINES) : xCands;
+    const ysTrimmed = yCands.length > MAX_LINES ? trim(yCands, [start2.y, end.y, startStub.y, endStub.y], MAX_LINES) : yCands;
+    __routeDebug.candidates = { x: xsTrimmed.length, y: ysTrimmed.length, near: near.length };
     const corridorX = new Set(xs.map((value) => Math.round(value)));
     const corridorY = new Set(ys.map((value) => Math.round(value)));
     const nodeId = (ix, iy) => `${ix},${iy}`;
     const pointAt = (id2) => {
       const [ix, iy] = id2.split(",").map(Number);
-      return { x: xCands[ix], y: yCands[iy] };
+      return { x: xsTrimmed[ix], y: ysTrimmed[iy] };
     };
-    const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
-    const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
+    const startIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
+    const endIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
     if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
     const goal = { x: endStub.x, y: endStub.y };
     const startNode = nodeId(startIndex.x, startIndex.y);
@@ -33948,6 +34016,7 @@
           cursor = cameFrom.get(cursor);
         }
         path.reverse();
+        __routeDebug.last = { usedFallback: false, steps: path.length };
         return snapToChannels(
           simplify([start2, startStub, ...path.slice(1), endStub, end]),
           obstacles,
@@ -33965,8 +34034,8 @@
       for (const step of steps) {
         const nx = ix + step.dx;
         const ny = iy + step.dy;
-        if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
-        const next = { x: xCands[nx], y: yCands[ny] };
+        if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue;
+        const next = { x: xsTrimmed[nx], y: ysTrimmed[ny] };
         const nextNode = nodeId(nx, ny);
         if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
         const clear = step.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
@@ -34041,12 +34110,27 @@
         end: { x: props.targetX, y: props.targetY },
         endFace: faceOf(props.targetPosition)
       },
-      // Endpoint bodies for the corridor maths; the router skips them by value.
-      { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
-      { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+      // The endpoints' real boxes: the router excludes them from the obstacle
+      // set by geometry. A degenerate 0×0 box never matches, so the endpoints
+      // used to block their own handles and every line fell back to a straight L.
+      data.fromRect ?? { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+      data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
       obstacles
     );
     const routed = route !== void 0 && route.length > 1;
+    if (typeof window !== "undefined") {
+      const w = window;
+      w.__edgeDebug = w.__edgeDebug ?? [];
+      w.__edgeDebug.push({
+        id: props.id,
+        obstacles: obstacles?.length ?? null,
+        fromRect: data.fromRect ?? null,
+        toRect: data.toRect ?? null,
+        src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },
+        dst: { x: props.targetX, y: props.targetY, pos: String(props.targetPosition) },
+        points: route ?? null
+      });
+    }
     const [smoothPath] = getSmoothStepPath({
       sourceX: props.sourceX,
       sourceY: props.sourceY,
@@ -34194,11 +34278,21 @@
   var blocker = { ...card("w", 296, 96, "W"), type: "card" };
   var allNodes = [...nodes, blocker];
   var allPlaced = allNodes.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }));
+  var rectOf = (id2) => {
+    const item = allPlaced.find((entry) => entry.id === id2);
+    return { x: item.x, y: item.y, w: CARD_W, h: CARD_H };
+  };
   var obstaclesFor = (fromId, toId) => allPlaced.filter((entry) => entry.id !== fromId && entry.id !== toId).map((entry) => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }));
+  var dataFor = (fromId, toId, sync) => ({
+    sync,
+    obstacles: obstaclesFor(fromId, toId),
+    fromRect: rectOf(fromId),
+    toRect: rectOf(toId)
+  });
   var edges = [
-    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced", obstacles: obstaclesFor("a", "b") }, ...faceFor("a", "b") },
-    { id: "idle", source: "a", target: "b", type: "talkMap", data: { sync: "idle", obstacles: obstaclesFor("a", "b") }, ...faceFor("a", "b") },
-    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced", obstacles: obstaclesFor("c", "d") }, ...faceFor("c", "d") }
+    { id: "sync", source: "a", target: "b", type: "talkMap", data: dataFor("a", "b", "synced"), ...faceFor("a", "b") },
+    { id: "idle", source: "a", target: "b", type: "talkMap", data: dataFor("a", "b", "idle"), ...faceFor("a", "b") },
+    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: dataFor("c", "d", "synced"), ...faceFor("c", "d") }
   ];
   (0, import_client.createRoot)(document.getElementById("root")).render(
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 820, height: 560 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes: allNodes, edges, edgeTypes, nodeTypes, connectionMode: ConnectionMode.Loose, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })

@@ -17,6 +17,9 @@ export interface TalkMapEdgeData {
   structural?: boolean
   /** Every other painted card, in flow coordinates — the line must avoid them. */
   obstacles?: readonly Rect[]
+  /** The two endpoint cards' real boxes (used to exclude them from obstacles). */
+  fromRect?: Rect
+  toRect?: Rect
 }
 
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
@@ -47,12 +50,28 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
           end: { x: props.targetX, y: props.targetY },
           endFace: faceOf(props.targetPosition),
         },
-        // Endpoint bodies for the corridor maths; the router skips them by value.
-        { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
-        { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+        // The endpoints' real boxes: the router excludes them from the obstacle
+        // set by geometry. A degenerate 0×0 box never matches, so the endpoints
+        // used to block their own handles and every line fell back to a straight L.
+        data.fromRect ?? { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+        data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
         obstacles,
       )
   const routed = route !== undefined && route.length > 1
+  // 调试钩子：渲染脚本据此核对组件实际拿到的数据（生产环境无副作用）
+  if (typeof window !== 'undefined') {
+    const w = window as unknown as { __edgeDebug?: unknown[] }
+    w.__edgeDebug = w.__edgeDebug ?? []
+    ;(w.__edgeDebug as unknown[]).push({
+      id: props.id,
+      obstacles: obstacles?.length ?? null,
+      fromRect: data.fromRect ?? null,
+      toRect: data.toRect ?? null,
+      src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },
+      dst: { x: props.targetX, y: props.targetY, pos: String(props.targetPosition) },
+      points: route ?? null,
+    })
+  }
   const [smoothPath] = getSmoothStepPath({
     sourceX: props.sourceX,
     sourceY: props.sourceY,

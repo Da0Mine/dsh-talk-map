@@ -47,14 +47,27 @@ const faceFor = (fromId, toId) => {
 const blocker = { ...card('w', 296, 96, 'W'), type: 'card' }
 const allNodes = [...nodes, blocker]
 const allPlaced = allNodes.map(node => ({ id: node.id, x: node.position.x, y: node.position.y }))
+const rectOf = id => {
+  const item = allPlaced.find(entry => entry.id === id)
+  return { x: item.x, y: item.y, w: CARD_W, h: CARD_H }
+}
 const obstaclesFor = (fromId, toId) => allPlaced
   .filter(entry => entry.id !== fromId && entry.id !== toId)
   .map(entry => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))
 
+// The app hands the renderer the two endpoint boxes as well, so the router can
+// exclude them from the obstacles (that is what makes routing work at all).
+const dataFor = (fromId, toId, sync) => ({
+  sync,
+  obstacles: obstaclesFor(fromId, toId),
+  fromRect: rectOf(fromId),
+  toRect: rectOf(toId),
+})
+
 const edges = [
-  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'synced', obstacles: obstaclesFor('a', 'b') }, ...faceFor('a', 'b') },
-  { id: 'idle', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'idle', obstacles: obstaclesFor('a', 'b') }, ...faceFor('a', 'b') },
-  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: { sync: 'synced', obstacles: obstaclesFor('c', 'd') }, ...faceFor('c', 'd') },
+  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: dataFor('a', 'b', 'synced'), ...faceFor('a', 'b') },
+  { id: 'idle', source: 'a', target: 'b', type: 'talkMap', data: dataFor('a', 'b', 'idle'), ...faceFor('a', 'b') },
+  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: dataFor('c', 'd', 'synced'), ...faceFor('c', 'd') },
 ]
 
 createRoot(document.getElementById('root')!).render(
