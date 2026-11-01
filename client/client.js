@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.12",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.13",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.12",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.13",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13999,16 +13999,16 @@ function CanvasInner(props) {
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
   };
-  const obstaclesFor = (fromCardId, toCardId) => Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([id2, card]) => {
-    const slot = cardLayout[id2];
-    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H };
-  });
-  const boxOf = (cardId) => {
-    const card = canvasState.cards[cardId];
-    if (card === void 0) return void 0;
-    const slot = cardLayout[cardId];
-    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H };
+  const renderedBoxes = () => {
+    const out = {};
+    for (const node of liveNodes) {
+      if (node.type !== "sessionCard" || node.hidden === true) continue;
+      out[node.id] = { x: node.position.x, y: node.position.y, w: CARD_W, h: CARD_H };
+    }
+    return out;
   };
+  const obstaclesFor = (fromCardId, toCardId) => Object.entries(renderedBoxes()).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, box]) => box);
+  const boxOf = (cardId) => renderedBoxes()[cardId];
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,
     x: card.x,
@@ -14129,7 +14129,7 @@ function CanvasInner(props) {
       }
     }
     return out;
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden]);
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden, liveNodes]);
   const drawerWireLinks = (0, import_react12.useMemo)(() => {
     if (drawer === null) return [];
     const layout = folderLayouts[drawer.groupId];

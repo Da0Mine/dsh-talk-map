@@ -1042,27 +1042,34 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    * taller neighbour. The renderer anchors the line on the real handles and does
    * the routing itself.
    */
+  /**
+   * Canvas boxes exactly as the nodes are rendered.
+   *
+   * `liveNodes` is the single source of truth for node positions (it is what React
+   * Flow draws and what the edge anchors are computed from). Routing against any
+   * other coordinate — the stored x/y, or a layout slot that may not exist for this
+   * folder — puts the obstacles in a different space than the anchors, and the line
+   * then dodges empty space while cutting through the card that is really there.
+   */
+  const renderedBoxes = (): Record<string, { x: number; y: number; w: number; h: number }> => {
+    const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
+    for (const node of liveNodes) {
+      if (node.type !== 'sessionCard' || node.hidden === true) continue
+      out[node.id] = { x: node.position.x, y: node.position.y, w: CARD_W, h: CARD_H }
+    }
+    return out
+  }
+
   const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] =>
-    Object.entries(canvasState.cards)
+    Object.entries(renderedBoxes())
       .filter(([id]) => id !== fromCardId && id !== toCardId)
       // A folded card is not painted, so it must not push lines around either.
       .filter(([id]) => !foldedSet.has(id))
-      .map(([id, card]) => {
-        // The folder layout puts cards on freshly computed slots; the stored x/y
-        // can be stale after a re-arrange, and routing against stale boxes makes
-        // lines dodge empty space while cutting through the cards that are really
-        // there.
-        const slot = cardLayout[id]
-        return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H }
-      })
+      .map(([, box]) => box)
 
-  /** One card's box, preferring the slot it actually sits in. */
-  const boxOf = (cardId: string): { x: number; y: number; w: number; h: number } | undefined => {
-    const card = canvasState.cards[cardId]
-    if (card === undefined) return undefined
-    const slot = cardLayout[cardId]
-    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H }
-  }
+  /** One card's box, exactly as rendered. */
+  const boxOf = (cardId: string): { x: number; y: number; w: number; h: number } | undefined =>
+    renderedBoxes()[cardId]
 
   /** Faces for a stored edge, from where its two cards are right now. */
   const routingObstacles = (): Obstacle[] => Object.entries(canvasState.cards).map(([id, card]) => ({
@@ -1219,7 +1226,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
     }
     return out
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden])
+    // liveNodes is in the deps on purpose: routes are built from the rendered
+    // positions, so a drag has to rebuild them.
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden, liveNodes])
 
   /**
    * Links for the open drawer.
