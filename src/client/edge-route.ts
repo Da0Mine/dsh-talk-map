@@ -23,6 +23,9 @@ export interface Point {
   y: number
 }
 
+/** 诊断用：最近一次路由的内部计数（仅调试脚本读取）。 */
+export const __routeDebug: Record<string, unknown> = {}
+
 export interface RouteOptions {
   /** Clearance kept between a line and any card. */
   margin?: number
@@ -377,11 +380,19 @@ export function routeBetween(
     && Math.abs(a.y - b.y) < 0.5
     && Math.abs(a.w - b.w) < 0.5
     && Math.abs(a.h - b.h) < 0.5
+  // A card that physically overlaps one of the endpoints cannot be avoided by any
+  // route — the two bodies are in the same place. Treat it as part of the endpoint
+  // rather than letting the whole search fail (which used to fall back to a straight
+  // line through everything).
+  const overlaps = (a: Rect, b: Rect): boolean =>
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
   const blocked = obstacles
     .filter(rect => !sameRect(rect, from) && !sameRect(rect, to))
+    .filter(rect => !overlaps(rect, from) && !overlaps(rect, to))
     .map(rect => expand(rect, margin))
 
   const fallback = simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])
+  __routeDebug.last = { usedFallback: true }
 
   // Channels between cards, plus lines just outside the whole cluster so a card
   // sitting on the direct run can still be walked around.
@@ -405,21 +416,49 @@ export function routeBetween(
   const ys = corridors(near, 'y', minCorridor).filter(withinY)
   const xOuter = outerLines(near, 'x', margin + 6).filter(withinX)
   const yOuter = outerLines(near, 'y', margin + 6).filter(withinY)
-  const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter])
-  const yCands = dedupe([start.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter])
-  // A* is cheap (a few hundred nodes); this cap only guards pathological boards.
-  if (xCands.length > 96 || yCands.length > 96) return fallback
+  // Lanes hugging each nearby card, so a block that spans a whole channel still
+  // leaves somewhere to slip past. Without these, a dense board gives A* nothing
+  // and the edge degrades into a straight line through everything.
+  const hug = margin + 10
+  const xHug = (near as Rect[]).flatMap(rect => [rect.x - hug, rect.x + rect.w + hug])
+  const yHug = (near as Rect[]).flatMap(rect => [rect.y - hug, rect.y + rect.h + hug])
+  const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug])
+  const yCands = dedupe([start.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter, ...yHug])
+  // Long lines (a fork whose two cards live in different folders) make the window
+  // huge, and a hard cap used to bail out to a straight L — which then cut
+  // Keep the four anchor coordinates, then sample the rest evenly across the whole
+  // span. Keeping only the "closest" lines dropped everything near the far end, so
+  // the goal node became unreachable and the edge fell back to a straight line.
+  const trim = (values: number[], mustKeep: readonly number[], limit: number): number[] => {
+    if (values.length <= limit) return values
+    const keep = new Set<number>(mustKeep)
+    const rest = values.filter(value => !keep.has(value))
+    const slots = Math.max(1, limit - keep.size)
+    const stride = Math.max(1, Math.floor(rest.length / slots))
+    for (let index = 0; index < rest.length && keep.size < limit; index += stride) {
+      keep.add(rest[index]!)
+    }
+    return values.filter(value => keep.has(value))
+  }
+  const MAX_LINES = 72
+  const xsTrimmed = xCands.length > MAX_LINES
+    ? trim(xCands, [start.x, end.x, startStub.x, endStub.x], MAX_LINES)
+    : xCands
+  const ysTrimmed = yCands.length > MAX_LINES
+    ? trim(yCands, [start.y, end.y, startStub.y, endStub.y], MAX_LINES)
+    : yCands
 
+  __routeDebug.candidates = { x: xsTrimmed.length, y: ysTrimmed.length, near: near.length }
   const corridorX = new Set(xs.map(value => Math.round(value)))
   const corridorY = new Set(ys.map(value => Math.round(value)))
   const nodeId = (ix: number, iy: number): string => `${ix},${iy}`
   const pointAt = (id: string): Point => {
     const [ix, iy] = id.split(',').map(Number)
-    return { x: xCands[ix]!, y: yCands[iy]! }
+    return { x: xsTrimmed[ix]!, y: ysTrimmed[iy]! }
   }
 
-  const startIndex = { x: xCands.findIndex(value => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex(value => Math.abs(value - startStub.y) < 0.5) }
-  const endIndex = { x: xCands.findIndex(value => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex(value => Math.abs(value - endStub.y) < 0.5) }
+  const startIndex = { x: xsTrimmed.findIndex(value => Math.abs(value - startStub.x) < 0.5), y: ysTrimmed.findIndex(value => Math.abs(value - startStub.y) < 0.5) }
+  const endIndex = { x: xsTrimmed.findIndex(value => Math.abs(value - endStub.x) < 0.5), y: ysTrimmed.findIndex(value => Math.abs(value - endStub.y) < 0.5) }
   if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback
 
   const goal = { x: endStub.x, y: endStub.y }
@@ -452,6 +491,7 @@ export function routeBetween(
         cursor = cameFrom.get(cursor)
       }
       path.reverse()
+      __routeDebug.last = { usedFallback: false, steps: path.length }
       return snapToChannels(
         simplify([start, startStub, ...path.slice(1), endStub, end]),
         obstacles as Rect[],
@@ -470,8 +510,8 @@ export function routeBetween(
     for (const step of steps) {
       const nx = ix + step.dx
       const ny = iy + step.dy
-      if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue
-      const next = { x: xCands[nx]!, y: yCands[ny]! }
+      if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue
+      const next = { x: xsTrimmed[nx]!, y: ysTrimmed[ny]! }
       const nextNode = nodeId(nx, ny)
       if (nextNode !== goalNode && blocked.some(rect => insideStrict(rect, next))) continue
 

@@ -152,6 +152,29 @@ for (const [fromId, toId] of pairs) {
   assert.ok(off <= 8, `horizontal run should sit near y=${expected}, got ${JSON.stringify(horizontals)}`)
 }
 
+// --- 9. a long line across a whole board still avoids every card ------------
+// (this is the shape of a fork whose cards sit in different folders: the search
+// window becomes huge, and the old code gave up and drew a straight L)
+{
+  const board = []
+  for (let row = 0; row < 5; row += 1) {
+    for (let col = 0; col < 6; col += 1) {
+      board.push({ id: `g${row}-${col}`, x: col * 272, y: row * 176, w: CARD_W, h: CARD_H })
+    }
+  }
+  const from = board[0]                                  // top-left
+  const to = board[board.length - 1]                     // bottom-right
+  const others = board.filter(card => card !== from && card !== to)
+  const points = routeEdge(from, to, 'r', 'l', [from, to, ...others])
+  let worst = Infinity
+  for (let index = 1; index < points.length; index += 1) {
+    for (const card of others) {
+      worst = Math.min(worst, segmentClearance(points[index - 1], points[index], card))
+    }
+  }
+  assert.ok(worst > 2, `a long line must still dodge cards, closest approach ${worst.toFixed(1)}px`)
+}
+
 assert.equal(failures.length, 0, 'routing problems:\n  ' + failures.join('\n  '))
 assert.ok(worstClearance >= 12, `closest approach ${worstClearance.toFixed(1)}px should be ≥ 12px`)
 assert.ok(worstOffset <= 0.35, `worst check across gaps ${(worstOffset * 100).toFixed(0)}%`)

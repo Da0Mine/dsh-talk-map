@@ -11739,6 +11739,7 @@ function ContextMenu(props) {
 }
 
 // src/client/edge-route.ts
+var __routeDebug = {};
 var DEFAULTS = { margin: 14, stub: 22, minCorridor: 28 };
 function anchorOf(rect, face) {
   switch (face) {
@@ -11965,8 +11966,10 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
   const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
   const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
-  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
+  const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).filter((rect) => !overlaps(rect, from) && !overlaps(rect, to)).map((rect) => expand(rect, margin));
   const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+  __routeDebug.last = { usedFallback: true };
   const pad = 260;
   const window2 = {
     x1: Math.min(start2.x, end.x) - pad,
@@ -11981,18 +11984,35 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const ys = corridors(near, "y", minCorridor).filter(withinY);
   const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
   const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
-  const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
-  const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
-  if (xCands.length > 96 || yCands.length > 96) return fallback;
+  const hug = margin + 10;
+  const xHug = near.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
+  const yHug = near.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
+  const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug]);
+  const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter, ...yHug]);
+  const trim = (values, mustKeep, limit) => {
+    if (values.length <= limit) return values;
+    const keep = new Set(mustKeep);
+    const rest = values.filter((value) => !keep.has(value));
+    const slots = Math.max(1, limit - keep.size);
+    const stride = Math.max(1, Math.floor(rest.length / slots));
+    for (let index2 = 0; index2 < rest.length && keep.size < limit; index2 += stride) {
+      keep.add(rest[index2]);
+    }
+    return values.filter((value) => keep.has(value));
+  };
+  const MAX_LINES = 72;
+  const xsTrimmed = xCands.length > MAX_LINES ? trim(xCands, [start2.x, end.x, startStub.x, endStub.x], MAX_LINES) : xCands;
+  const ysTrimmed = yCands.length > MAX_LINES ? trim(yCands, [start2.y, end.y, startStub.y, endStub.y], MAX_LINES) : yCands;
+  __routeDebug.candidates = { x: xsTrimmed.length, y: ysTrimmed.length, near: near.length };
   const corridorX = new Set(xs.map((value) => Math.round(value)));
   const corridorY = new Set(ys.map((value) => Math.round(value)));
   const nodeId = (ix, iy) => `${ix},${iy}`;
   const pointAt = (id2) => {
     const [ix, iy] = id2.split(",").map(Number);
-    return { x: xCands[ix], y: yCands[iy] };
+    return { x: xsTrimmed[ix], y: ysTrimmed[iy] };
   };
-  const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
-  const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
+  const startIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
+  const endIndex = { x: xsTrimmed.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: ysTrimmed.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
   if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
   const goal = { x: endStub.x, y: endStub.y };
   const startNode = nodeId(startIndex.x, startIndex.y);
@@ -12019,6 +12039,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
         cursor = cameFrom.get(cursor);
       }
       path.reverse();
+      __routeDebug.last = { usedFallback: false, steps: path.length };
       return snapToChannels(
         simplify([start2, startStub, ...path.slice(1), endStub, end]),
         obstacles,
@@ -12036,8 +12057,8 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
     for (const step2 of steps) {
       const nx = ix + step2.dx;
       const ny = iy + step2.dy;
-      if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
-      const next = { x: xCands[nx], y: yCands[ny] };
+      if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue;
+      const next = { x: xsTrimmed[nx], y: ysTrimmed[ny] };
       const nextNode = nodeId(nx, ny);
       if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
       const clear = step2.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
