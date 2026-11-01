@@ -438,7 +438,9 @@ export function routeBetween(
     a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
   const blocked = obstacles
     .filter(rect => !sameRect(rect, from) && !sameRect(rect, to))
-    .filter(rect => !overlaps(rect, from) && !overlaps(rect, to))
+    // (no "overlaps an endpoint" escape hatch: with real cards being larger than the
+    // layout constants, plenty of *adjacent* cards overlap the endpoint box — dropping
+    // them from the obstacle set opened exactly the lanes the lines then ran through.)
     .map(rect => expand(rect, margin))
 
   const fallback = simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])

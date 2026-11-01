@@ -85,6 +85,8 @@ const report = await page.evaluate(() => {
   }
 })
 
+const shot = process.argv.includes('--shot') ? process.argv[process.argv.indexOf('--shot') + 1] : 'test/shots/demo-verify.png'
+await page.screenshot({ path: shot, fullPage: false })
 const zoomCheck = await page.evaluate(async () => {
   const read = () => [...document.querySelectorAll('.react-flow__edge-path')].map(el => el.getAttribute('d'))
   const before = read()
@@ -99,8 +101,7 @@ const zoomCheck = await page.evaluate(async () => {
   return { same: JSON.stringify(before) === JSON.stringify(after), before: before.slice(0, 2), after: after.slice(0, 2) }
 })
 console.log('ZOOM', JSON.stringify({ stable: zoomCheck.same, before: zoomCheck.before?.[0]?.slice(0, 60), after: zoomCheck.after?.[0]?.slice(0, 60) }))
-const shot = process.argv.includes('--shot') ? process.argv[process.argv.indexOf('--shot') + 1] : 'test/shots/demo-verify.png'
-await page.screenshot({ path: shot, fullPage: false })
+
 await browser.close()
 child.kill()
 
