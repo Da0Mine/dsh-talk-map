@@ -2203,3 +2203,11 @@
   position: relative;
   z-index: 1;
 }
+
+/* 连线永远在卡片下面：万一某条线路径压到卡片，它会被卡片挡住，而不是浮在卡片上 */
+.canvas :global(.react-flow__edges) {
+  z-index: 0 !important;
+}
+.canvas :global(.react-flow__nodes) {
+  z-index: 1 !important;
+}
