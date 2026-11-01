@@ -35,45 +35,34 @@ const boardCache: { at: number; boxes: Rect[] } = { at: 0, boxes: [] }
 function boardBoxes(): Rect[] {
   if (typeof document === 'undefined') return []
   const now = Date.now()
-  if (now - boardCache.at < 80) return boardCache.boxes
+  if (now - boardCache.at < 60) return boardCache.boxes
   const viewport = document.querySelector('.react-flow__viewport') as HTMLElement | null
-  // The viewport element is itself translated and scaled, so its own rect already
-  // contains the pan: every child sits at  rect.left = viewportRect.left + flow*zoom.
-  // Using the viewport rect as the origin needs no separate translate at all — and
-  // that is what removes the 320px offset the old pane-based maths introduced.
-  const viewportRect = viewport?.getBoundingClientRect()
-  let scale = 1
-  if (viewport !== null) {
-    const matrix = getComputedStyle(viewport).transform
-    const parsed = /matrix\(([^)]+)\)/.exec(matrix)
-    if (parsed !== null) {
-      const values = parsed[1]!.split(',').map(Number)
-      scale = values[0] === undefined || values[0] === 0 ? 1 : values[0]
-    }
-  }
+  if (viewport === null) return boardCache.boxes
   const boxes: Rect[] = []
   for (const element of document.querySelectorAll('[data-talkmap-session]')) {
-    const rect = element.getBoundingClientRect()
-    if (rect.width < 8 || rect.height < 8) continue
-    // The CSS transform already places the viewport inside the pane, so the pane's
-    // own offset must NOT be subtracted again — doing that shifted every measured
-    // box one screen-sidebar to the left (Δ ≈ −320px / zoom).
-    boxes.push({
-      x: (rect.left - (viewportRect?.left ?? 0)) / scale,
-      y: (rect.top - (viewportRect?.top ?? 0)) / scale,
-      w: rect.width / scale,
-      h: rect.height / scale,
-    })
+    const node = element as HTMLElement
+    // offsetLeft/offsetTop are LAYOUT pixels — untransformed — so they are flow
+    // coordinates already, and they do not change when the canvas is zoomed. Using
+    // getBoundingClientRect() here made the geometry zoom-dependent, which is why a
+    // vertical line flipped between the two sides of a gap while zooming.
+    let x = 0
+    let y = 0
+    let cursor: HTMLElement | null = node
+    while (cursor !== null && cursor !== viewport) {
+      x += cursor.offsetLeft
+      y += cursor.offsetTop
+      cursor = cursor.offsetParent as HTMLElement | null
+    }
+    if (cursor === null) continue                    // not inside the canvas
+    if (node.offsetWidth < 8 || node.offsetHeight < 8) continue
+    boxes.push({ x, y, w: node.offsetWidth, h: node.offsetHeight })
   }
-  // Do not cache an empty measurement: the first render can run before the nodes
-  // are mounted, and caching that would leave every later edge blind.
   if (boxes.length > 0) {
     boardCache.at = now
     boardCache.boxes = boxes
   }
   return boxes
 }
-
 /** Union of two box lists, ignoring near-duplicates. */
 function mergeBoxes(a: readonly Rect[], b: readonly Rect[]): Rect[] {
   const out: Rect[] = []
@@ -131,11 +120,16 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // position and therefore identical in the data and in the DOM measurement. Anchor
   // geometry is not reliable for this: the anchor sits on the border and the
   // viewport transform is only pixel-accurate.
+
+  // Obstacles measured here in LAYOUT pixels (zoom independent), falling back to the
+  // list the canvas passed. The measured boxes carry the card's real size, which is
+  // what the router needs to keep clear of.
+  const measuredBoxes = boardBoxes()
   const sameCorner = (box: Rect, other: Rect | undefined): boolean =>
-    other !== undefined && Math.abs(box.x - other.x) < 3 && Math.abs(box.y - other.y) < 3
-  // Obstacles come from the canvas, which measures them in LAYOUT pixels (zoom
-  // independent). Measuring the screen rect here made the geometry zoom-dependent.
-  const merged = obstacles ?? []
+    other !== undefined && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6
+  const merged = (measuredBoxes.length > 0 ? measuredBoxes : (obstacles ?? []))
+    .filter(box => !sameCorner(box, data.fromRect))
+    .filter(box => !sameCorner(box, data.toRect))
     .filter(box => !sameCorner(box, data.fromRect))
     .filter(box => !sameCorner(box, data.toRect))
     .filter(box => !containsPoint(box, props.sourceX, props.sourceY))

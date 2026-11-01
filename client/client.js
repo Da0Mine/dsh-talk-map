@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.20",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.21",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.20",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.21",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11998,7 +11998,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   };
   const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).filter((rect) => !overlaps(rect, from) && !overlaps(rect, to)).map((rect) => expand(rect, margin));
+  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
   const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
   __routeDebug.last = { usedFallback: true };
   const pad = 260;
@@ -12150,28 +12150,23 @@ var boardCache = { at: 0, boxes: [] };
 function boardBoxes() {
   if (typeof document === "undefined") return [];
   const now2 = Date.now();
-  if (now2 - boardCache.at < 80) return boardCache.boxes;
+  if (now2 - boardCache.at < 60) return boardCache.boxes;
   const viewport = document.querySelector(".react-flow__viewport");
-  const viewportRect = viewport?.getBoundingClientRect();
-  let scale = 1;
-  if (viewport !== null) {
-    const matrix = getComputedStyle(viewport).transform;
-    const parsed = /matrix\(([^)]+)\)/.exec(matrix);
-    if (parsed !== null) {
-      const values = parsed[1].split(",").map(Number);
-      scale = values[0] === void 0 || values[0] === 0 ? 1 : values[0];
-    }
-  }
+  if (viewport === null) return boardCache.boxes;
   const boxes = [];
   for (const element of document.querySelectorAll("[data-talkmap-session]")) {
-    const rect = element.getBoundingClientRect();
-    if (rect.width < 8 || rect.height < 8) continue;
-    boxes.push({
-      x: (rect.left - (viewportRect?.left ?? 0)) / scale,
-      y: (rect.top - (viewportRect?.top ?? 0)) / scale,
-      w: rect.width / scale,
-      h: rect.height / scale
-    });
+    const node = element;
+    let x = 0;
+    let y = 0;
+    let cursor = node;
+    while (cursor !== null && cursor !== viewport) {
+      x += cursor.offsetLeft;
+      y += cursor.offsetTop;
+      cursor = cursor.offsetParent;
+    }
+    if (cursor === null) continue;
+    if (node.offsetWidth < 8 || node.offsetHeight < 8) continue;
+    boxes.push({ x, y, w: node.offsetWidth, h: node.offsetHeight });
   }
   if (boxes.length > 0) {
     boardCache.at = now2;
@@ -12195,8 +12190,9 @@ function TalkMapEdge(props) {
     return "l";
   };
   const obstacles = data.obstacles;
-  const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 3 && Math.abs(box.y - other.y) < 3;
-  const merged = obstacles ?? [].filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
+  const measuredBoxes = boardBoxes();
+  const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
+  const merged = (measuredBoxes.length > 0 ? measuredBoxes : obstacles ?? []).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
   const route = merged.length === 0 ? void 0 : routeBetween(
     {
       start: { x: props.sourceX, y: props.sourceY },
