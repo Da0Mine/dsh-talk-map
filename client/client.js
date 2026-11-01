@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.17",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.18",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.17",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.18",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12011,13 +12011,14 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   const near = obstacles.filter((rect) => rect.x + rect.w >= window2.x1 && rect.x <= window2.x2 && rect.y + rect.h >= window2.y1 && rect.y <= window2.y2);
   const withinX = (value) => value >= window2.x1 && value <= window2.x2;
   const withinY = (value) => value >= window2.y1 && value <= window2.y2;
-  const xs = corridors(near, "x", minCorridor).filter(withinX);
-  const ys = corridors(near, "y", minCorridor).filter(withinY);
-  const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
-  const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
+  const lanes = obstacles;
+  const xs = corridors(lanes, "x", minCorridor).filter(withinX);
+  const ys = corridors(lanes, "y", minCorridor).filter(withinY);
+  const xOuter = outerLines(lanes, "x", margin + 6).filter(withinX);
+  const yOuter = outerLines(lanes, "y", margin + 6).filter(withinY);
   const hug = margin + 6;
-  const xHug = near.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
-  const yHug = near.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
+  const xHug = lanes.flatMap((rect) => [rect.x - hug, rect.x + rect.w + hug]);
+  const yHug = lanes.flatMap((rect) => [rect.y - hug, rect.y + rect.h + hug]);
   const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug]);
   const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter, ...yHug]);
   const trim = (values, mustKeep, limit) => {

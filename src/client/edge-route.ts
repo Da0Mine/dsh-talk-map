@@ -462,16 +462,20 @@ export function routeBetween(
   const withinX = (value: number): boolean => value >= window.x1 && value <= window.x2
   const withinY = (value: number): boolean => value >= window.y1 && value <= window.y2
 
-  const xs = corridors(near, 'x', minCorridor).filter(withinX)
-  const ys = corridors(near, 'y', minCorridor).filter(withinY)
-  const xOuter = outerLines(near, 'x', margin + 6).filter(withinX)
-  const yOuter = outerLines(near, 'y', margin + 6).filter(withinY)
+  // Lanes come from *every* card, not just the ones inside the search window: a
+  // long edge that must dodge two screens away had no lane to dodge to, so the
+  // search was forced through the card instead.
+  const lanes = obstacles as Rect[]
+  const xs = corridors(lanes, 'x', minCorridor).filter(withinX)
+  const ys = corridors(lanes, 'y', minCorridor).filter(withinY)
+  const xOuter = outerLines(lanes, 'x', margin + 6).filter(withinX)
+  const yOuter = outerLines(lanes, 'y', margin + 6).filter(withinY)
   // Lanes hugging each nearby card, so a block that spans a whole channel still
   // leaves somewhere to slip past. Without these, a dense board gives A* nothing
   // and the edge degrades into a straight line through everything.
   const hug = margin + 6
-  const xHug = (near as Rect[]).flatMap(rect => [rect.x - hug, rect.x + rect.w + hug])
-  const yHug = (near as Rect[]).flatMap(rect => [rect.y - hug, rect.y + rect.h + hug])
+  const xHug = (lanes as Rect[]).flatMap(rect => [rect.x - hug, rect.x + rect.w + hug])
+  const yHug = (lanes as Rect[]).flatMap(rect => [rect.y - hug, rect.y + rect.h + hug])
   const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug])
   const yCands = dedupe([start.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter, ...yHug])
   // Long lines (a fork whose two cards live in different folders) make the window
