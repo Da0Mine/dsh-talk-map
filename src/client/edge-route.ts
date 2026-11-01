@@ -449,13 +449,6 @@ export function routeBetween(
     // layout constants, plenty of *adjacent* cards overlap the endpoint box — dropping
     // them from the obstacle set opened exactly the lanes the lines then ran through.)
     .map(rect => expand(rect, margin))
-  // Endpoint bodies count as obstacles as well — except for the moves that touch the
-  // stub point itself. Without this a route could reach a left face by running through
-  // the card body from the right (looked like the line entering its own card).
-  const blockedAll = [
-    ...blocked,
-    ...(sameRect(from, to) ? [] : [from, to].map(rect => expand(rect, margin))),
-  ]
   __routeDebug.blockedCount = blocked.length
   __routeDebug.blockedFirst = blocked.slice(0, 2)
 
@@ -492,12 +485,12 @@ export function routeBetween(
     for (const candidate of candidates) {
       const points = simplify(candidate)
       let hits = 0
-      for (let index = 2; index < points.length - 1; index += 1) {
+      for (let index = 1; index < points.length; index += 1) {
         const a = points[index - 1]!
         const b = points[index]!
         hits += a.x === b.x
-          ? hitsVertical(blockedAll, a.x, a.y, b.y)
-          : hitsHorizontal(blockedAll, a.y, a.x, b.x)
+          ? hitsVertical(blocked, a.x, a.y, b.y)
+          : hitsHorizontal(blocked, a.y, a.x, b.x)
       }
       if (hits < bestHits) {
         bestHits = hits
@@ -638,16 +631,10 @@ export function routeBetween(
       // Hard obstacles: a move into a card, or a run that crosses one, is simply not
       // available. Soft costs were tried and lost — on a tight board every candidate
       // was "expensive", so the cheapest path was the straight line through the card.
-      //
-      // The endpoint bodies are obstacles too, but only for moves that do *not* touch
-      // the stub point: the stub has to start on the card's border, so exempting just
-      // those two nodes is what stops a route from entering its own card elsewhere.
-      const incident = node === startNode || nextNode === startNode || node === goalNode || nextNode === goalNode
-      const rects = incident ? blocked : blockedAll
-      if (nextNode !== goalNode && rects.some(rect => insideStrict(rect, next))) continue
+      if (nextNode !== goalNode && blocked.some(rect => insideStrict(rect, next))) continue
       const crossing = step.axis === 'x'
-        ? hitsHorizontal(rects, here.y, here.x, next.x)
-        : hitsVertical(rects, here.x, here.y, next.y)
+        ? hitsHorizontal(blocked, here.y, here.x, next.x)
+        : hitsVertical(blocked, here.x, here.y, next.y)
       if (crossing > 0) continue
 
       const distance = Math.abs(next.x - here.x) + Math.abs(next.y - here.y)
