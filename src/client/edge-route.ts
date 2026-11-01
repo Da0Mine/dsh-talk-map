@@ -583,7 +583,9 @@ export function routeBetween(
 
   const estimate = (point: Point): number => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y)
 
+  let visited = 0
   while (heap.size > 0) {
+    visited += 1
     const popped = heap.pop()!
     const state = popped.node
     const [node, dir] = state.split('|')
@@ -621,15 +623,14 @@ export function routeBetween(
       if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue
       const next = { x: xsTrimmed[nx]!, y: ysTrimmed[ny]! }
       const nextNode = nodeId(nx, ny)
-      // Soft obstacles: putting the line through a card stays legal but is priced
-      // out of reach, so a clean route always wins — and when the board leaves no
-      // clean route at all we still get the least-bad polyline instead of the old
-      // straight line through everything.
-      const insideCost = blocked.filter(rect => insideStrict(rect, next)).length * CROSS_PENALTY
+      // Hard obstacles: a move into a card, or a run that crosses one, is simply not
+      // available. Soft costs were tried and lost — on a tight board every candidate
+      // was "expensive", so the cheapest path was the straight line through the card.
+      if (nextNode !== goalNode && blocked.some(rect => insideStrict(rect, next))) continue
       const crossing = step.axis === 'x'
         ? hitsHorizontal(blocked, here.y, here.x, next.x)
         : hitsVertical(blocked, here.x, here.y, next.y)
-      const crossCost = crossing * CROSS_PENALTY
+      if (crossing > 0) continue
 
       const distance = Math.abs(next.x - here.x) + Math.abs(next.y - here.y)
       const onCorridor = step.axis === 'x'
@@ -640,10 +641,11 @@ export function routeBetween(
       // short way ends up hugging a card's border (2–3px away), which reads as
       // "the line overlaps the card". Price that heavily.
       const prefer = onCorridor ? 0 : 40
-      const nextCost = cost + distance + turn + prefer + crossCost + insideCost
+      const nextCost = cost + distance + turn + prefer
       const nextState = withDir(nextNode, step.axis)
       const known = best.get(nextState)
       if (known !== undefined && known <= nextCost) continue
+      if (nextNode === goalNode) __routeDebug.goalPushed = nextState
       best.set(nextState, nextCost)
       cameFrom.set(nextState, state)
       heap.push(nextCost + estimate(next), nextCost, nextState)
