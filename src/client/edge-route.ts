@@ -32,7 +32,7 @@ export interface RouteOptions {
   minCorridor?: number
 }
 
-const DEFAULTS = { margin: 14, stub: 14, minCorridor: 28 }
+const DEFAULTS = { margin: 14, stub: 22, minCorridor: 28 }
 
 /** Middle of the face an edge leaves from. */
 export function anchorOf(rect: Rect, face: Face): Point {

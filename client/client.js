@@ -11739,7 +11739,7 @@ function ContextMenu(props) {
 }
 
 // src/client/edge-route.ts
-var DEFAULTS = { margin: 14, stub: 14, minCorridor: 28 };
+var DEFAULTS = { margin: 14, stub: 22, minCorridor: 28 };
 function anchorOf(rect, face) {
   switch (face) {
     case "r":
