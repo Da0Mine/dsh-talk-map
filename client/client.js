@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文），回车开始",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.12",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map (title/body), Enter",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.12",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11741,6 +11741,7 @@ function ContextMenu(props) {
 // src/client/edge-route.ts
 var __routeDebug = {};
 var DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 };
+var CROSS_PENALTY = 2e4;
 function anchorOf(rect, face) {
   switch (face) {
     case "r":
@@ -11774,22 +11775,24 @@ function insideStrict(rect, point) {
 function hitsHorizontal(rects, y, x1, x2) {
   const lo = Math.min(x1, x2);
   const hi = Math.max(x1, x2);
+  let count = 0;
   for (const rect of rects) {
     if (y <= rect.y || y >= rect.y + rect.h) continue;
     if (hi <= rect.x || lo >= rect.x + rect.w) continue;
-    return true;
+    count += 1;
   }
-  return false;
+  return count;
 }
 function hitsVertical(rects, x, y1, y2) {
   const lo = Math.min(y1, y2);
   const hi = Math.max(y1, y2);
+  let count = 0;
   for (const rect of rects) {
     if (x <= rect.x || x >= rect.x + rect.w) continue;
     if (hi <= rect.y || lo >= rect.y + rect.h) continue;
-    return true;
+    count += 1;
   }
-  return false;
+  return count;
 }
 function bands(rects, axis) {
   const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
@@ -12088,14 +12091,14 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
       if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue;
       const next = { x: xsTrimmed[nx], y: ysTrimmed[ny] };
       const nextNode = nodeId(nx, ny);
-      if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
-      const clear = step2.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
-      if (!clear) continue;
+      const insideCost = blocked.filter((rect) => insideStrict(rect, next)).length * CROSS_PENALTY;
+      const crossing = step2.axis === "x" ? hitsHorizontal(blocked, here.y, here.x, next.x) : hitsVertical(blocked, here.x, here.y, next.y);
+      const crossCost = crossing * CROSS_PENALTY;
       const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
       const onCorridor = step2.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
       const turn = dir === step2.axis ? 0 : 18;
       const prefer = onCorridor ? 0 : 40;
-      const nextCost = cost + distance2 + turn + prefer;
+      const nextCost = cost + distance2 + turn + prefer + crossCost + insideCost;
       const nextState = withDir(nextNode, step2.axis);
       const known = best.get(nextState);
       if (known !== void 0 && known <= nextCost) continue;
@@ -13996,7 +13999,10 @@ function CanvasInner(props) {
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
   };
-  const obstaclesFor = (fromCardId, toCardId) => Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }));
+  const obstaclesFor = (fromCardId, toCardId) => Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([id2, card]) => {
+    const slot = cardLayout[id2];
+    return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H };
+  });
   const boxOf = (cardId) => {
     const card = canvasState.cards[cardId];
     if (card === void 0) return void 0;

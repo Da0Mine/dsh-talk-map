@@ -1047,7 +1047,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .filter(([id]) => id !== fromCardId && id !== toCardId)
       // A folded card is not painted, so it must not push lines around either.
       .filter(([id]) => !foldedSet.has(id))
-      .map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }))
+      .map(([id, card]) => {
+        // The folder layout puts cards on freshly computed slots; the stored x/y
+        // can be stale after a re-arrange, and routing against stale boxes makes
+        // lines dodge empty space while cutting through the cards that are really
+        // there.
+        const slot = cardLayout[id]
+        return { x: slot?.x ?? card.x, y: slot?.y ?? card.y, w: CARD_W, h: CARD_H }
+      })
 
   /** One card's box, preferring the slot it actually sits in. */
   const boxOf = (cardId: string): { x: number; y: number; w: number; h: number } | undefined => {

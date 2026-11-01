@@ -37,6 +37,9 @@ export interface RouteOptions {
 
 const DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 }
 
+/** Cost of putting the line through a card. Large enough to never be preferred. */
+const CROSS_PENALTY = 20000
+
 /** Middle of the face an edge leaves from. */
 export function anchorOf(rect: Rect, face: Face): Point {
   switch (face) {
@@ -67,27 +70,36 @@ function insideStrict(rect: Rect, point: Point): boolean {
 }
 
 /** Does a horizontal run at `y` between `x1` and `x2` hit any rect? */
-function hitsHorizontal(rects: Rect[], y: number, x1: number, x2: number): boolean {
+/**
+ * How many cards a run crosses.
+ *
+ * Counting (instead of a hard yes/no) lets the search treat a crossing as a legal
+ * but ruinously expensive move: with no clean route left the edge still comes out
+ * as the least-bad polyline, never the old straight line through everything.
+ */
+function hitsHorizontal(rects: Rect[], y: number, x1: number, x2: number): number {
   const lo = Math.min(x1, x2)
   const hi = Math.max(x1, x2)
+  let count = 0
   for (const rect of rects) {
     if (y <= rect.y || y >= rect.y + rect.h) continue
     if (hi <= rect.x || lo >= rect.x + rect.w) continue
-    return true
+    count += 1
   }
-  return false
+  return count
 }
 
-/** Does a vertical run at `x` between `y1` and `y2` hit any rect? */
-function hitsVertical(rects: Rect[], x: number, y1: number, y2: number): boolean {
+/** Cards crossed by a vertical run at `x` between `y1` and `y2`. */
+function hitsVertical(rects: Rect[], x: number, y1: number, y2: number): number {
   const lo = Math.min(y1, y2)
   const hi = Math.max(y1, y2)
+  let count = 0
   for (const rect of rects) {
     if (x <= rect.x || x >= rect.x + rect.w) continue
     if (hi <= rect.y || lo >= rect.y + rect.h) continue
-    return true
+    count += 1
   }
-  return false
+  return count
 }
 
 /**
@@ -551,12 +563,15 @@ export function routeBetween(
       if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue
       const next = { x: xsTrimmed[nx]!, y: ysTrimmed[ny]! }
       const nextNode = nodeId(nx, ny)
-      if (nextNode !== goalNode && blocked.some(rect => insideStrict(rect, next))) continue
-
-      const clear = step.axis === 'x'
-        ? !hitsHorizontal(blocked, here.y, here.x, next.x)
-        : !hitsVertical(blocked, here.x, here.y, next.y)
-      if (!clear) continue
+      // Soft obstacles: putting the line through a card stays legal but is priced
+      // out of reach, so a clean route always wins — and when the board leaves no
+      // clean route at all we still get the least-bad polyline instead of the old
+      // straight line through everything.
+      const insideCost = blocked.filter(rect => insideStrict(rect, next)).length * CROSS_PENALTY
+      const crossing = step.axis === 'x'
+        ? hitsHorizontal(blocked, here.y, here.x, next.x)
+        : hitsVertical(blocked, here.x, here.y, next.y)
+      const crossCost = crossing * CROSS_PENALTY
 
       const distance = Math.abs(next.x - here.x) + Math.abs(next.y - here.y)
       const onCorridor = step.axis === 'x'
@@ -567,7 +582,7 @@ export function routeBetween(
       // short way ends up hugging a card's border (2–3px away), which reads as
       // "the line overlaps the card". Price that heavily.
       const prefer = onCorridor ? 0 : 40
-      const nextCost = cost + distance + turn + prefer
+      const nextCost = cost + distance + turn + prefer + crossCost + insideCost
       const nextState = withDir(nextNode, step.axis)
       const known = best.get(nextState)
       if (known !== undefined && known <= nextCost) continue

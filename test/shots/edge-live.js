@@ -33711,6 +33711,7 @@
   // src/client/edge-route.ts
   var __routeDebug = {};
   var DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 };
+  var CROSS_PENALTY = 2e4;
   function normalOf(face) {
     switch (face) {
       case "r":
@@ -33732,22 +33733,24 @@
   function hitsHorizontal(rects, y, x1, x2) {
     const lo = Math.min(x1, x2);
     const hi = Math.max(x1, x2);
+    let count = 0;
     for (const rect of rects) {
       if (y <= rect.y || y >= rect.y + rect.h) continue;
       if (hi <= rect.x || lo >= rect.x + rect.w) continue;
-      return true;
+      count += 1;
     }
-    return false;
+    return count;
   }
   function hitsVertical(rects, x, y1, y2) {
     const lo = Math.min(y1, y2);
     const hi = Math.max(y1, y2);
+    let count = 0;
     for (const rect of rects) {
       if (x <= rect.x || x >= rect.x + rect.w) continue;
       if (hi <= rect.y || lo >= rect.y + rect.h) continue;
-      return true;
+      count += 1;
     }
-    return false;
+    return count;
   }
   function bands(rects, axis) {
     const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
@@ -34037,14 +34040,14 @@
         if (nx < 0 || ny < 0 || nx >= xsTrimmed.length || ny >= ysTrimmed.length) continue;
         const next = { x: xsTrimmed[nx], y: ysTrimmed[ny] };
         const nextNode = nodeId(nx, ny);
-        if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
-        const clear = step.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
-        if (!clear) continue;
+        const insideCost = blocked.filter((rect) => insideStrict(rect, next)).length * CROSS_PENALTY;
+        const crossing = step.axis === "x" ? hitsHorizontal(blocked, here.y, here.x, next.x) : hitsVertical(blocked, here.x, here.y, next.y);
+        const crossCost = crossing * CROSS_PENALTY;
         const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
         const onCorridor = step.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
         const turn = dir === step.axis ? 0 : 18;
         const prefer = onCorridor ? 0 : 40;
-        const nextCost = cost + distance2 + turn + prefer;
+        const nextCost = cost + distance2 + turn + prefer + crossCost + insideCost;
         const nextState = withDir(nextNode, step.axis);
         const known = best.get(nextState);
         if (known !== void 0 && known <= nextCost) continue;
