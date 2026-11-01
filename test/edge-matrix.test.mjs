@@ -1,26 +1,40 @@
 /**
- * The routing matrix.
+ * The routing matrix — every combination the map can produce.
  *
- * Every face pair (4×4), every relative arrangement (side by side, stacked,
- * diagonal, one card in between, two cards in between), on both the standard
- * 48×56 gap and a tight 32/40 gap — routed with the real router and sampled
- * against every non-endpoint card.
+ * Sweeps:
+ *   • all 16 face pairs (r/l/t/b × r/l/t/b)
+ *   • 3 card sizes   (224×120 layout constant, 250×129 painted box, 224×160 tall)
+ *   • 3 grid widths  (2 / 4 / 6 columns — real folders have 1–6)
+ *   • 2 gap sets     (48×56 standard, 24×32 tight)
+ *   • 7 arrangements (neighbour right/below, diagonal, one card between horizontally
+ *                     and vertically, two between, far diagonal)
+ *
+ * For every case it routes with the real router, clips the way the renderer does,
+ * and asserts:
+ *   1. no point inside another card          (the user's complaint)
+ *   2. no point inside its own endpoint card (renderer clips, so this must be 0)
+ *   3. every leg is axis-aligned
+ *   4. no absurd detour
  *
  *   node test/edge-matrix.test.mjs
- *
- * Any combination that puts a point inside a card, or comes closer than
- * MIN_CLEARANCE to one, is reported and fails the run.
  */
 import assert from 'node:assert/strict'
 import { routeBetween, clipToRects } from '../src/client/edge-route.ts'
 
-const CARD_W = 224
-const CARD_H = 120
 const MIN_CLEARANCE = 8
-
 const FACES = ['r', 'l', 't', 'b']
 
-/** Anchor point on a card face, in the same space the canvas uses. */
+const SIZES = [
+  { name: '224×120 const', w: 224, h: 120 },
+  { name: '250×129 painted', w: 250, h: 129 },
+  { name: '224×160 tall', w: 224, h: 160 },
+]
+const GRID_COLS = [2, 4, 6]
+const GAPS = [
+  { name: '48×56', gapX: 48, gapY: 56 },
+  { name: '24×32', gapX: 24, gapY: 32 },
+]
+
 function anchorOf(box, face) {
   if (face === 'r') return { x: box.x + box.w, y: box.y + box.h / 2 }
   if (face === 'l') return { x: box.x, y: box.y + box.h / 2 }
@@ -31,185 +45,137 @@ function anchorOf(box, face) {
 const inside = (point, box) => point.x > box.x + 0.5 && point.x < box.x + box.w - 0.5
   && point.y > box.y + 0.5 && point.y < box.y + box.h - 0.5
 
-/**
- * Free room straight out of a face, before the next card. A face with no room can
- * not start a line at all — the canvas never picks one (pickFaces skips it), so the
- * matrix skips those combinations too instead of demanding the impossible.
- */
-function spaceAhead(box, face, obstacles, margin = 4) {
-  const anchor = anchorOf(box, face)
-  const normal = face === 'r' ? { x: 1, y: 0 } : face === 'l' ? { x: -1, y: 0 }
-    : face === 't' ? { x: 0, y: -1 } : { x: 0, y: 1 }
-  let best = 240
-  for (const other of obstacles) {
-    const rect = { x: other.x - margin, y: other.y - margin, w: other.w + margin * 2, h: other.h + margin * 2 }
-    if (normal.x !== 0) {
-      if (anchor.y <= rect.y || anchor.y >= rect.y + rect.h) continue
-      if (normal.x > 0 && rect.x >= anchor.x) best = Math.min(best, rect.x - anchor.x)
-      if (normal.x < 0 && rect.x + rect.w <= anchor.x) best = Math.min(best, anchor.x - (rect.x + rect.w))
-    } else {
-      if (anchor.x <= rect.x || anchor.x >= rect.x + rect.w) continue
-      if (normal.y > 0 && rect.y >= anchor.y) best = Math.min(best, rect.y - anchor.y)
-      if (normal.y < 0 && rect.y + rect.h <= anchor.y) best = Math.min(best, anchor.y - (rect.y + rect.h))
-    }
-  }
-  return best
-}
-
 function clearance(point, box) {
   const dx = Math.max(box.x - point.x, 0, point.x - (box.x + box.w))
   const dy = Math.max(box.y - point.y, 0, point.y - (box.y + box.h))
   return Math.hypot(dx, dy)
 }
 
-function inspect(points, obstacles) {
-  let hits = 0
-  let worst = Infinity
-  for (let index = 1; index < points.length; index += 1) {
-    const a = points[index - 1]
-    const b = points[index]
-    const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
-    for (let step = 0; step <= steps; step += 1) {
-      const t = step / steps
-      const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
-      for (const box of obstacles) {
-        const away = clearance(point, box)
-        if (away < worst) worst = away
-        if (inside(point, box)) hits += 1
+function sampleSegments(subpaths, visit) {
+  for (const subpath of subpaths) {
+    for (let index = 1; index < subpath.length; index += 1) {
+      const a = subpath[index - 1]
+      const b = subpath[index]
+      const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps
+        visit({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })
       }
     }
   }
-  return { hits, worst }
 }
 
-/** A board of cards at the given grid pitch, one card per slot. */
-function board({ pitchX, pitchY, cols, rows }) {
+function board({ cols, rows, w, h, gapX, gapY }) {
   const cards = []
   for (let row = 0; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
-      cards.push({ id: `c${row}_${col}`, x: col * pitchX, y: row * pitchY, w: CARD_W, h: CARD_H })
+      cards.push({ id: `c${row}_${col}`, x: col * (w + gapX), y: row * (h + gapY), w, h })
     }
   }
   return cards
 }
 
-const LAYOUTS = [
-  { name: 'standard 48×56', pitchX: CARD_W + 48, pitchY: CARD_H + 56 },
-  { name: 'tight 24×32', pitchX: CARD_W + 24, pitchY: CARD_H + 32 },
-]
-
-// the arrangements the user cares about: neighbours, one card in between,
-// two cards in between, and diagonal
-const PAIRS = [
-  { name: 'right neighbour', from: 'c1_0', to: 'c1_1' },
-  { name: 'below neighbour', from: 'c1_0', to: 'c2_0' },
-  { name: 'diagonal', from: 'c1_0', to: 'c2_1' },
-  { name: 'one card right', from: 'c1_0', to: 'c1_2' },
-  { name: 'one card below', from: 'c1_0', to: 'c3_0' },
-  { name: 'two cards below', from: 'c0_0', to: 'c3_0' },
-  { name: 'far diagonal', from: 'c0_0', to: 'c3_3' },
-]
+/** Arrangements, clamped to the grid that is actually there. */
+function pairsFor(cols) {
+  const last = cols - 1
+  return [
+    { name: 'right neighbour', from: 'c1_0', to: 'c1_1', needs: 2 },
+    { name: 'below neighbour', from: 'c1_0', to: 'c2_0', needs: 1 },
+    { name: 'diagonal', from: 'c1_0', to: 'c2_1', needs: 2 },
+    { name: 'one card right', from: 'c1_0', to: `c1_${Math.min(2, last)}`, needs: 3 },
+    { name: 'one card below', from: 'c1_0', to: 'c3_0', needs: 1 },
+    { name: 'two cards below', from: 'c0_0', to: 'c3_0', needs: 1 },
+    { name: 'far diagonal', from: 'c0_0', to: `c3_${last}`, needs: 2 },
+  ]
+}
 
 let cases = 0
-const ownCardClips = []
 let skipped = 0
 const failures = []
 let worstClearance = Infinity
 
-for (const layout of LAYOUTS) {
-  const cards = board({ ...layout, cols: 4, rows: 5 })
-  for (const pair of PAIRS) {
-    const from = cards.find(card => card.id === pair.from)
-    const to = cards.find(card => card.id === pair.to)
-    const others = cards.filter(card => card !== from && card !== to)
-    for (const fromFace of FACES) {
-      for (const toFace of FACES) {
-        if (spaceAhead(from, fromFace, others) < 6 || spaceAhead(to, toFace, others) < 6) { skipped += 1; continue }
-        cases += 1
-        const start = anchorOf(from, fromFace)
-        const end = anchorOf(to, toFace)
-        const points = routeBetween(
-          { start, startFace: fromFace, end, endFace: toFace },
-          from,
-          to,
-          others.map(card => ({ x: card.x, y: card.y, w: card.w, h: card.h })),
-        )
-        const { hits, worst } = inspect(points, others)
+for (const size of SIZES) {
+  for (const gaps of GAPS) {
+    for (const cols of GRID_COLS) {
+      const cards = board({ cols, rows: 5, w: size.w, h: size.h, gapX: gaps.gapX, gapY: gaps.gapY })
+      for (const pair of pairsFor(cols)) {
+        if (cols < pair.needs) { skipped += 1; continue }
+        const from = cards.find(card => card.id === pair.from)
+        const to = cards.find(card => card.id === pair.to)
+        if (from === undefined || to === undefined) { skipped += 1; continue }
+        const others = cards.filter(card => card !== from && card !== to)
+        for (const fromFace of FACES) {
+          for (const toFace of FACES) {
+            cases += 1
+            const start = anchorOf(from, fromFace)
+            const end = anchorOf(to, toFace)
+            const points = routeBetween(
+              { start, startFace: fromFace, end, endFace: toFace },
+              from,
+              to,
+              others.map(card => ({ x: card.x, y: card.y, w: card.w, h: card.h })),
+            )
+            const where = `${size.name} · ${gaps.name} · ${cols}col · ${pair.name} · ${fromFace}→${toFace}`
 
-        // 1) orthogonality: every leg must be axis-aligned
-        let skew = 0
-        for (let index = 1; index < points.length; index += 1) {
-          const a = points[index - 1]
-          const b = points[index]
-          if (Math.abs(a.x - b.x) > 0.5 && Math.abs(a.y - b.y) > 0.5) skew += 1
-        }
-        if (skew > 0) {
-          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'diagonal leg', hits: skew })
-        }
+            // 1) another card
+            let hits = 0
+            sampleSegments([points], point => {
+              for (const card of others) {
+                const away = clearance(point, card)
+                if (away < worstClearance) worstClearance = away
+                if (inside(point, card)) hits += 1
+              }
+            })
+            if (hits > 0) failures.push({ where, reason: 'crosses another card', hits })
 
-        // 2) the drawn line must not run through its own endpoint cards. The renderer
-        //    clips the polyline against those two boxes first, so the check runs on the
-        //    clipped result — exactly what ends up on screen.
-        const drawn = clipToRects(points, [from, to])
-        let ownHits = 0
-        for (const subpath of drawn) {
-          for (let index = 1; index < subpath.length; index += 1) {
-            const a = subpath[index - 1]
-            const b = subpath[index]
-            const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
-            for (let step = 0; step <= steps; step += 1) {
-              const t = step / steps
-              const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+            // 2) its own endpoint card, measured on the clipped path the renderer draws
+            const drawn = clipToRects(points, [from, to])
+            let own = 0
+            sampleSegments(drawn, point => {
               const nearStart = Math.hypot(point.x - start.x, point.y - start.y) <= 26
               const nearEnd = Math.hypot(point.x - end.x, point.y - end.y) <= 26
-              if (nearStart || nearEnd) continue
-              if (inside(point, from) || inside(point, to)) ownHits += 1
-            }
-          }
-        }
-        if (ownHits > 0) {
-          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'through its own card', hits: ownHits })
-        }
+              if (nearStart || nearEnd) return
+              if (inside(point, from) || inside(point, to)) own += 1
+            })
+            if (own > 0) failures.push({ where, reason: 'crosses its own card', hits: own })
 
-        // 3) no absurd detour (the line should not tour the whole board)
-        let length = 0
-        for (let index = 1; index < points.length; index += 1) {
-          length += Math.abs(points[index].x - points[index - 1].x) + Math.abs(points[index].y - points[index - 1].y)
-        }
-        const direct = Math.abs(end.x - start.x) + Math.abs(end.y - start.y)
-        if (length > direct * 6 + 400) {
-          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'absurd detour', hits: Math.round(length - direct) })
-        }
-        if (worst < worstClearance) worstClearance = worst
-        if (hits > 0) {
-          failures.push({
-            layout: layout.name,
-            pair: pair.name,
-            faces: `${fromFace}→${toFace}`,
-            hits,
-            waypoints: points.length,
-            path: points.map(point => [Math.round(point.x), Math.round(point.y)]),
-          })
+            // 3) orthogonal legs
+            let skew = 0
+            for (let index = 1; index < points.length; index += 1) {
+              const a = points[index - 1]
+              const b = points[index]
+              if (Math.abs(a.x - b.x) > 0.5 && Math.abs(a.y - b.y) > 0.5) skew += 1
+            }
+            if (skew > 0) failures.push({ where, reason: 'diagonal leg', hits: skew })
+
+            // 4) detour sanity
+            let length = 0
+            for (let index = 1; index < points.length; index += 1) {
+              length += Math.abs(points[index].x - points[index - 1].x) + Math.abs(points[index].y - points[index - 1].y)
+            }
+            const direct = Math.abs(end.x - start.x) + Math.abs(end.y - start.y)
+            if (length > direct * 6 + 400) failures.push({ where, reason: 'absurd detour', hits: Math.round(length - direct) })
+          }
         }
       }
     }
   }
 }
+
+const byReason = failures.reduce((acc, failure) => {
+  acc[failure.reason] = (acc[failure.reason] ?? 0) + 1
+  return acc
+}, {})
 
 console.log(JSON.stringify({
   cases,
   skipped,
   failed: failures.length,
   worstClearance: Math.round(worstClearance * 10) / 10,
-  firstFailure: failures[0],
-  ownCardClips: ownCardClips.length,
-  firstClip: ownCardClips[0],
-  byReason: failures.reduce((acc, failure) => { acc[failure.reason ?? 'other card'] = (acc[failure.reason ?? 'other card'] ?? 0) + 1; return acc }, {}),
-  byPair: [...new Set(failures.map(failure => failure.pair))],
-  byFaces: [...new Set(failures.map(failure => failure.faces))].slice(0, 10),
-  sample: failures.slice(0, 4),
+  byReason,
+  sample: failures.slice(0, 5),
 }, null, 1))
 
-assert.equal(failures.length, 0, `${failures.length}/${cases} combinations put the line inside a card`)
+assert.equal(failures.length, 0, `${failures.length}/${cases} combinations failed`)
 assert.ok(worstClearance >= MIN_CLEARANCE, `worst clearance ${worstClearance.toFixed(1)}px < ${MIN_CLEARANCE}px`)
 console.log(`edge-matrix: ${cases} combinations clean (worst clearance ${worstClearance.toFixed(1)}px)`)

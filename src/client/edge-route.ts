@@ -704,8 +704,8 @@ function round(value: number): number {
 export function clipToRects(points: Point[], rects: readonly Rect[]): Point[][] {
   if (points.length < 2) return [points]
   const insideAny = (point: Point): boolean => rects.some(rect =>
-    point.x > rect.x + 1.5 && point.x < rect.x + rect.w - 1.5
-    && point.y > rect.y + 1.5 && point.y < rect.y + rect.h - 1.5)
+    point.x > rect.x + 0.5 && point.x < rect.x + rect.w - 0.5
+    && point.y > rect.y + 0.5 && point.y < rect.y + rect.h - 0.5)
   const subpaths: Point[][] = []
   let current: Point[] = []
   const flush = (): void => {
