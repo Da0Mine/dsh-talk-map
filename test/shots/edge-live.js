@@ -33709,7 +33709,7 @@
   var NodeResizeControl = (0, import_react2.memo)(ResizeControl);
 
   // src/client/edge-route.ts
-  var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
+  var DEFAULTS = { margin: 14, stub: 14, minCorridor: 28 };
   function normalOf(face) {
     switch (face) {
       case "r":
@@ -33843,6 +33843,46 @@
     }
     return out;
   }
+  function snapToChannels(points, obstacles, margin) {
+    if (points.length < 3) return points;
+    const out = points.map((point) => ({ ...point }));
+    const rowBands = bands(obstacles, "y");
+    const colBands = bands(obstacles, "x");
+    const channelFor = (value, bandsList) => {
+      for (let index2 = 1; index2 < bandsList.length; index2 += 1) {
+        const lo = bandsList[index2 - 1].end;
+        const hi = bandsList[index2].start;
+        if (hi - lo < margin * 2 + 8) continue;
+        if (value > lo && value < hi) return (lo + hi) / 2;
+      }
+      return void 0;
+    };
+    const last = out.length - 1;
+    const horizontalSegment = (index2) => Math.abs(out[index2 - 1].y - out[index2].y) < 0.6;
+    const fromStubHorizontal = horizontalSegment(1);
+    const toStubHorizontal = horizontalSegment(last);
+    for (let index2 = 1; index2 < last; index2 += 1) {
+      const a = out[index2 - 1];
+      const b = out[index2];
+      const horizontalRun = Math.abs(a.y - b.y) < 0.6;
+      if (index2 === 1 && horizontalRun === fromStubHorizontal) continue;
+      if (index2 === last - 1 && horizontalRun === toStubHorizontal) continue;
+      if (horizontalRun) {
+        const centre = channelFor(a.y, rowBands);
+        if (centre !== void 0 && Math.abs(centre - a.y) > 0.6) {
+          a.y = centre;
+          b.y = centre;
+        }
+      } else {
+        const centre = channelFor(a.x, colBands);
+        if (centre !== void 0 && Math.abs(centre - a.x) > 0.6) {
+          a.x = centre;
+          b.x = centre;
+        }
+      }
+    }
+    return simplify(out);
+  }
   function routeBetween(ends, from, to, obstacles, options = {}) {
     const margin = options.margin ?? DEFAULTS.margin;
     const stub = options.stub ?? DEFAULTS.stub;
@@ -33908,7 +33948,11 @@
           cursor = cameFrom.get(cursor);
         }
         path.reverse();
-        return simplify([start2, startStub, ...path.slice(1), endStub, end]);
+        return snapToChannels(
+          simplify([start2, startStub, ...path.slice(1), endStub, end]),
+          obstacles,
+          margin
+        );
       }
       const [ix, iy] = node.split(",").map(Number);
       const here = pointAt(node);
@@ -33930,7 +33974,7 @@
         const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
         const onCorridor = step.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
         const turn = dir === step.axis ? 0 : 18;
-        const prefer = onCorridor ? 0 : 6;
+        const prefer = onCorridor ? 0 : 40;
         const nextCost = cost + distance2 + turn + prefer;
         const nextState = withDir(nextNode, step.axis);
         const known = best.get(nextState);

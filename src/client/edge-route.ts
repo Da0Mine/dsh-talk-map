@@ -32,7 +32,7 @@ export interface RouteOptions {
   minCorridor?: number
 }
 
-const DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 }
+const DEFAULTS = { margin: 14, stub: 14, minCorridor: 28 }
 
 /** Middle of the face an edge leaves from. */
 export function anchorOf(rect: Rect, face: Face): Point {
@@ -250,6 +250,65 @@ export interface RouteEnds {
  * cards' rendered height is content-driven — deriving anchors from the layout
  * constants put the lines a dozen pixels above the actual card edge.
  */
+/**
+ * Nudge every interior run onto the middle of the gap it travels through.
+ *
+ * The A* result is already orthogonal and clear of cards, but its first turn can
+ * land wherever the stub ends — a run at 50% off the gap centre still looks like
+ * "the line is hugging a card". Moving whole segments keeps the path orthogonal.
+ */
+export function snapToChannels(
+  points: Point[],
+  obstacles: readonly Rect[],
+  margin: number,
+): Point[] {
+  if (points.length < 3) return points
+  const out = points.map(point => ({ ...point }))
+  const rowBands = bands(obstacles as Rect[], 'y')
+  const colBands = bands(obstacles as Rect[], 'x')
+
+  const channelFor = (value: number, bandsList: { start: number; end: number }[]): number | undefined => {
+    for (let index = 1; index < bandsList.length; index += 1) {
+      const lo = bandsList[index - 1]!.end
+      const hi = bandsList[index]!.start
+      if (hi - lo < margin * 2 + 8) continue          // too tight to centre a line in
+      if (value > lo && value < hi) return (lo + hi) / 2
+    }
+    return undefined
+  }
+
+  const last = out.length - 1
+  const horizontalSegment = (index: number): boolean =>
+    Math.abs(out[index - 1]!.y - out[index]!.y) < 0.6
+  const fromStubHorizontal = horizontalSegment(1)
+  const toStubHorizontal = horizontalSegment(last)
+
+  for (let index = 1; index < last; index += 1) {
+    const a = out[index - 1]!
+    const b = out[index]!
+    const horizontalRun = Math.abs(a.y - b.y) < 0.6
+    // Never move a segment that *is* a stub, and never move the one that shares a
+    // point with a stub in the same direction — that would shear the stub off the
+    // handle. A run perpendicular to a stub may move freely: it only lengthens it.
+    if (index === 1 && horizontalRun === fromStubHorizontal) continue
+    if (index === last - 1 && horizontalRun === toStubHorizontal) continue
+    if (horizontalRun) {
+      const centre = channelFor(a.y, rowBands)
+      if (centre !== undefined && Math.abs(centre - a.y) > 0.6) {
+        a.y = centre
+        b.y = centre
+      }
+    } else {
+      const centre = channelFor(a.x, colBands)
+      if (centre !== undefined && Math.abs(centre - a.x) > 0.6) {
+        a.x = centre
+        b.x = centre
+      }
+    }
+  }
+  return simplify(out)
+}
+
 export function routeBetween(
   ends: RouteEnds,
   from: Rect,
@@ -353,7 +412,11 @@ export function routeBetween(
         cursor = cameFrom.get(cursor)
       }
       path.reverse()
-      return simplify([start, startStub, ...path.slice(1), endStub, end])
+      return snapToChannels(
+        simplify([start, startStub, ...path.slice(1), endStub, end]),
+        obstacles as Rect[],
+        margin,
+      )
     }
     const [ix, iy] = node.split(',').map(Number)
     const here = pointAt(node)
@@ -382,7 +445,10 @@ export function routeBetween(
         ? corridorY.has(Math.round(here.y))
         : corridorX.has(Math.round(here.x))
       const turn = dir === step.axis ? 0 : 18
-      const prefer = onCorridor ? 0 : 6
+      // Travelling along a channel is the whole point: a line that merely takes the
+      // short way ends up hugging a card's border (2–3px away), which reads as
+      // "the line overlaps the card". Price that heavily.
+      const prefer = onCorridor ? 0 : 40
       const nextCost = cost + distance + turn + prefer
       const nextState = withDir(nextNode, step.axis)
       const known = best.get(nextState)
