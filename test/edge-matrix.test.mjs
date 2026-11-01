@@ -209,6 +209,7 @@ console.log(JSON.stringify({
   worstClearance: Math.round(worstClearance * 10) / 10,
   firstFailure: failures[0],
   ownCardClips: ownCardClips.length,
+  firstClip: ownCardClips[0],
   byReason: failures.reduce((acc, failure) => { acc[failure.reason ?? 'other card'] = (acc[failure.reason ?? 'other card'] ?? 0) + 1; return acc }, {}),
   byPair: [...new Set(failures.map(failure => failure.pair))],
   byFaces: [...new Set(failures.map(failure => failure.faces))].slice(0, 10),

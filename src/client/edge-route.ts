@@ -413,11 +413,15 @@ export function routeBetween(
     const half = Math.max(0, (space - margin * 2) / 2)
     return Math.max(4, Math.min(stub, half))
   }
-  const startStubLength = stubFor(spaceAhead(start, startNormal))
-  // The arrival stub also runs *along the face normal*, outward from the card — the
+  // At least margin+3 long, so the stub point sits outside the endpoint card's
+  // expanded box — otherwise the first grid point is unreachable and the search
+  // collapses to the fallback.
+  const minStub = margin + 3
+  const startStubLength = Math.max(stubFor(spaceAhead(start, startNormal)), minStub)
+  // expanded box — otherwise the first grid point is unreachable and the whole
   // flipped normal measured the empty side instead, so the stub never shortened and
   // on a 24px gap it punched straight into the neighbouring card.
-  const endStubLength = stubFor(spaceAhead(end, endNormal))
+  const endStubLength = Math.max(stubFor(spaceAhead(end, endNormal)), minStub)
   const startStub = {
     x: start.x + startNormal.x * startStubLength,
     y: start.y + startNormal.y * startStubLength,
@@ -443,11 +447,10 @@ export function routeBetween(
   // line through everything).
   const overlaps = (a: Rect, b: Rect): boolean =>
     a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
-  const blocked = obstacles
-    .filter(rect => !sameRect(rect, from) && !sameRect(rect, to))
-    // (no "overlaps an endpoint" escape hatch: with real cards being larger than the
-    // layout constants, plenty of *adjacent* cards overlap the endpoint box — dropping
-    // them from the obstacle set opened exactly the lanes the lines then ran through.)
+  // The endpoints are obstacles too: the only place a line may be inside them is
+  // the stub (drawn separately, never routed). Excluding them let a route reach a
+  // left face by running through the card body from the right.
+  const blocked = [...obstacles, ...(sameRect(from, to) ? [] : [from, to])]
     .map(rect => expand(rect, margin))
   __routeDebug.blockedCount = blocked.length
   __routeDebug.blockedFirst = blocked.slice(0, 2)

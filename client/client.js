@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.23",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.24",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.23",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.24",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11985,8 +11985,9 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
     const half = Math.max(0, (space - margin * 2) / 2);
     return Math.max(4, Math.min(stub, half));
   };
-  const startStubLength = stubFor(spaceAhead(start2, startNormal));
-  const endStubLength = stubFor(spaceAhead(end, endNormal));
+  const minStub = margin + 3;
+  const startStubLength = Math.max(stubFor(spaceAhead(start2, startNormal)), minStub);
+  const endStubLength = Math.max(stubFor(spaceAhead(end, endNormal)), minStub);
   const startStub = {
     x: start2.x + startNormal.x * startStubLength,
     y: start2.y + startNormal.y * startStubLength
@@ -11997,7 +11998,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
   };
   const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
   const overlaps = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
+  const blocked = [...obstacles, ...sameRect(from, to) ? [] : [from, to]].map((rect) => expand(rect, margin));
   __routeDebug.blockedCount = blocked.length;
   __routeDebug.blockedFirst = blocked.slice(0, 2);
   const makeFallback = () => {
