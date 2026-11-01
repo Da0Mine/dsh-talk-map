@@ -12,7 +12,7 @@
  * MIN_CLEARANCE to one, is reported and fails the run.
  */
 import assert from 'node:assert/strict'
-import { routeBetween } from '../src/client/edge-route.ts'
+import { routeBetween, clipToRects } from '../src/client/edge-route.ts'
 
 const CARD_W = 224
 const CARD_H = 120
@@ -147,35 +147,29 @@ for (const layout of LAYOUTS) {
           failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'diagonal leg', hits: skew })
         }
 
-        // 2) the line must not run through its own endpoint cards (outside the stub)
+        // 2) the drawn line must not run through its own endpoint cards. The renderer
+        //    clips the polyline against those two boxes first, so the check runs on the
+        //    clipped result — exactly what ends up on screen.
+        const drawn = clipToRects(points, [from, to])
         let ownHits = 0
-        let ownDetail
-        for (let index = 1; index < points.length; index += 1) {
-          const a = points[index - 1]
-          const b = points[index]
-          const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
-          for (let step = 0; step <= steps; step += 1) {
-            const t = step / steps
-            const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
-            const nearStart = Math.hypot(point.x - start.x, point.y - start.y) <= 26
-            const nearEnd = Math.hypot(point.x - end.x, point.y - end.y) <= 26
-            if (nearStart || nearEnd) continue
-            if (inside(point, from) || inside(point, to)) {
-              ownHits += 1
-              if (ownDetail === undefined) {
-                ownDetail = {
-                  segment: index,
-                  which: inside(point, from) ? 'from' : 'to',
-                  at: [Math.round(point.x), Math.round(point.y)],
-                  path: points.map(p => [Math.round(p.x), Math.round(p.y)]),
-                }
-              }
+        for (const subpath of drawn) {
+          for (let index = 1; index < subpath.length; index += 1) {
+            const a = subpath[index - 1]
+            const b = subpath[index]
+            const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
+            for (let step = 0; step <= steps; step += 1) {
+              const t = step / steps
+              const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+              const nearStart = Math.hypot(point.x - start.x, point.y - start.y) <= 26
+              const nearEnd = Math.hypot(point.x - end.x, point.y - end.y) <= 26
+              if (nearStart || nearEnd) continue
+              if (inside(point, from) || inside(point, to)) ownHits += 1
             }
           }
         }
-        // Reported, not failed: a route may clip the card it is attached to (it is hidden
-        // behind that card). The requirement is "no line across *another* card".
-        if (ownHits > 0) ownCardClips.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, hits: ownHits })
+        if (ownHits > 0) {
+          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'through its own card', hits: ownHits })
+        }
 
         // 3) no absurd detour (the line should not tour the whole board)
         let length = 0

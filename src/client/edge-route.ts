@@ -699,3 +699,54 @@ export function roundedPath(points: Point[], radius = 10): string {
 function round(value: number): number {
   return Math.round(value * 100) / 100
 }
+
+/** 把折线裁剪到给定矩形之外：返回若干子路径（每段至少两个点）。 */
+export function clipToRects(points: Point[], rects: readonly Rect[]): Point[][] {
+  if (points.length < 2) return [points]
+  const insideAny = (point: Point): boolean => rects.some(rect =>
+    point.x > rect.x + 1.5 && point.x < rect.x + rect.w - 1.5
+    && point.y > rect.y + 1.5 && point.y < rect.y + rect.h - 1.5)
+  const subpaths: Point[][] = []
+  let current: Point[] = []
+  const flush = (): void => {
+    if (current.length >= 2) subpaths.push(current)
+    current = []
+  }
+  for (let index = 1; index < points.length; index += 1) {
+    const a = points[index - 1]!
+    const b = points[index]!
+    const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps
+      const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+      if (insideAny(point)) {
+        flush()
+      } else {
+        const last = current[current.length - 1]
+        if (last === undefined || Math.abs(last.x - point.x) > 0.4 || Math.abs(last.y - point.y) > 0.4) {
+          current.push(point)
+        }
+      }
+    }
+  }
+  flush()
+  if (subpaths.length === 0) return [points]
+  // Round and drop collinear samples: a fine-grained polyline would otherwise make the
+  // SVG path jitter between renders (and look like a zig-zag).
+  return subpaths.map(subpath => {
+    const rounded = subpath.map(point => ({ x: Math.round(point.x * 2) / 2, y: Math.round(point.y * 2) / 2 }))
+    const out: Point[] = []
+    for (const point of rounded) {
+      const last = out[out.length - 1]
+      if (last !== undefined && last.x === point.x && last.y === point.y) continue
+      const before = out[out.length - 2]
+      if (before !== undefined && last !== undefined
+        && ((before.x === last.x && last.x === point.x) || (before.y === last.y && last.y === point.y))) {
+        out[out.length - 1] = point
+        continue
+      }
+      out.push(point)
+    }
+    return out
+  }).filter(subpath => subpath.length >= 2)
+}

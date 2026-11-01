@@ -7,7 +7,7 @@
  * 没有发光、没有流光、没有粒子：线要么在，要么不在。箭头跟着线一起隐藏。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
-import { routeBetween, roundedPath, type Face, type Point, type Rect } from './edge-route.ts'
+import { clipToRects, routeBetween, roundedPath, type Face, type Point, type Rect } from './edge-route.ts'
 
 export interface TalkMapEdgeData {
   fromCardId?: string
@@ -216,8 +216,14 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     const p2 = { x: props.targetX + b.x * length, y: props.targetY + b.y * length }
     return `M ${props.sourceX} ${props.sourceY} L ${p1.x} ${p1.y} M ${props.targetX} ${props.targetY} L ${p2.x} ${p2.y}`
   })()
+  // Clip the polyline against the two endpoint cards: a route may pass through the
+  // card it is attached to (it is hidden behind that card), and drawing it would still
+  // put ink inside the card. Clipping keeps exactly the visible part.
+  const endpointBoxes = [data.fromRect, data.toRect].filter((box): box is Rect => box !== undefined)
   const path = safeRoute !== undefined
-    ? roundedPath(safeRoute, 10)
+    ? (endpointBoxes.length === 0
+        ? roundedPath(safeRoute, 10)
+        : clipToRects(safeRoute, endpointBoxes).map(subpath => roundedPath(subpath, 10)).join(' '))
     : blockedRoute ? stubPath : smoothPath
 
   /**
