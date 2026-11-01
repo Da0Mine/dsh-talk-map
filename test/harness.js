@@ -53,7 +53,17 @@
     // Imported folder whose session has no card yet: the auto-sync on open must add it.
     { workspaceId: 'ws-sync', title: '自动同步', path: 'D:/Projects/sync', sessionIds: ['s10'] },
   ]
-  const titles = {
+  /** demo=1: fictional showcase data — no real session titles leak into the demo page. */
+  const demoMode = new URLSearchParams(location.search).get('demo') === '1' || window.__talkMapDemo === true
+
+  const DEMO_TITLES = {
+    s1: '产品官网重构', s2: '周报自动汇总', s3: '客户反馈分析',
+    s4: '插画素材整理', s5: '竞品功能对比',
+    s6: '移动端适配清单', s7: '埋点方案设计', s8: '发布会筹备',
+    s9: '本地模型评测', s10: '共享日历接入',
+  }
+
+  const titles = demoMode === true ? DEMO_TITLES : {
     s1: '对话地图插件改版', s2: '桌面自动化脚本清理', s3: 'DSH 会话日志解析',
     s4: 'Matter.js 物理参数换算', s5: '云盘同步目录整理',
     s6: '医学影像标注流程', s7: '标注工具离线化', s8: '数据集切分脚本',
@@ -180,6 +190,98 @@
     s1: '把卡片改成网格槽位，含退让与补位动画',
     s2: '清理一下临时截图和旧脚本',
   }
+  // ---- demo=1: fictional showcase data ------------------------------------
+  // Everything a first-time viewer sees on the demo page is invented here:
+  // workspace names, session titles, card bodies, digests. The probe runs
+  // without the flag and keeps its own fixtures untouched.
+  if (demoMode === true) {
+    const wsNames = {
+      'ws-daily': '产品设计', 'ws-medkit': '内容运营',
+      'ws-lab': '灵感速记', 'ws-sync': '团队共享',
+    }
+    for (const ws of workspaceList) {
+      ws.title = wsNames[ws.workspaceId] ?? ws.title
+      ws.path = 'D:/Demo/' + ws.workspaceId
+    }
+    // More conversations so the folders and the stack drawer feel lived-in.
+    sessionRows.s11 = session('s11', '官网改版方案', { updatedAt: T0 - 3 * MIN })
+    sessionRows.s12 = session('s12', '官网改版方案（分叉）', { updatedAt: T0 - MIN, parentId: 's11' })
+    sessionRows.s13 = session('s13', '海报文案三选一', { updatedAt: T0 - 20 * MIN })
+    sessionRows.s14 = session('s14', '短视频脚本打磨', { updatedAt: T0 - 45 * MIN })
+    sessionRows.s15 = session('s15', '投放数据复盘', { updatedAt: T0 - 3 * 60 * MIN, completed: true })
+    sessionRows.s16 = session('s16', '选题灵感池', { updatedAt: T0 - 6 * MIN })
+    workspaceList[0].sessionIds.push('s11', 's12', 's13')
+    workspaceList[1].sessionIds.push('s14', 's15')
+    workspaceList[2].sessionIds.push('s16')
+    // Frames grow a row so the showcase cards have real slots (the fold
+    // stack still appears where cards genuinely overflow).
+    const grow = (id, extra) => { frames[id].height += extra * (CARD_H + GAP_Y) }
+    grow('ws-daily', 1)
+    // ws-lab grows a row too; push the shared folder below it so the two
+    // frames never overlap on the demo board.
+    frames['ws-sync'].y += 180
+    FRAME_SHAPE['ws-daily'] = { cols: 3, rows: 2 }
+    FRAME_SHAPE['ws-medkit'] = { cols: 2, rows: 2 }
+    FRAME_SHAPE['ws-lab'] = { cols: 1, rows: 2 }
+    grow('ws-medkit', 1)
+    grow('ws-lab', 1)
+    // Place each demo card in a free slot: frame grid is cols-wide, row-major.
+    const demoAdd = (sessionId, wsId, col, row) => {
+      const rect = frames[wsId]
+      cards[`card-${++counter}`] = {
+        boardId: 'inbox',
+        sessionId,
+        x: rect.x + PAD + col * (CARD_W + GAP_X),
+        y: rect.y + PAD + LABEL + row * (CARD_H + GAP_Y),
+        createdAt: T0,
+      }
+    }
+    demoAdd('s11', 'ws-daily', 0, 1)
+    demoAdd('s12', 'ws-daily', 1, 1)
+    demoAdd('s13', 'ws-daily', 2, 1)
+    demoAdd('s14', 'ws-medkit', 0, 1)
+    demoAdd('s15', 'ws-medkit', 1, 1)
+    demoAdd('s16', 'ws-lab', 0, 1)
+    // One stored edge between two visible cards so the dashed line shows;
+    // never pushed → not synced → the line is visible (and the fork line
+    // between s11 and s12 renders through the derived lineage rule).
+    cards['card-demo-a'] = undefined
+    delete cards['card-demo-a']
+    const demoFrom = Object.entries(cards).find(([, card]) => card?.sessionId === 's13')
+    const demoTo = Object.entries(cards).find(([, card]) => card?.sessionId === 's11')
+    if (demoFrom !== undefined && demoTo !== undefined) {
+      edges[`edge-demo-${demoFrom[0]}-${demoTo[0]}`] = {
+        boardId: 'inbox',
+        fromCardId: demoFrom[0],
+        toCardId: demoTo[0],
+        injection: { kind: 'digest', autoPush: false },
+      }
+    }
+    sessionsState = { ids: Object.keys(sessionRows), byId: sessionRows }
+    // Fictional card bodies (the last human message) for the showcase.
+    Object.assign(userMessages, {
+      s1: '把首页改成瀑布流布局，移动端的断点要单独调',
+      s2: '把这周的数据汇总成周报，重点看留存和转化两条曲线',
+      s3: '客户反馈按功能归类，标出出现三次以上的关键词',
+      s4: '插画按风格分文件夹，命名统一加日期前缀',
+      s5: '竞品的新功能逐条对比，输出一张差异表',
+      s11: '官网首屏文案换三版轮播，先做静态页验证',
+      s12: '分叉自官网改版：只讨论配色与字体，不动布局',
+      s13: '海报主视觉用插画风，标题字要够大够克制',
+    })
+    // The probe digests quote real sessions; in demo mode they are all
+    // fictional. Replace the whole table instead of patching entries.
+    for (const key of Object.keys(digests)) delete digests[key]
+    Object.assign(digests, {
+      s11: { atSeq: 6, summary: '首屏轮播三版文案定稿，静态页已可预览。', keyFindings: [], nextStep: '接入真实图片后走查断点', generatedAt: T0 - 2 * MIN },
+      s12: { atSeq: 3, summary: '配色候选：墨绿 / 暖灰 / 靛蓝，字体沿用系统栈。', keyFindings: [], nextStep: '出两版对比稿', generatedAt: T0 - MIN },
+      s1: { atSeq: 9, summary: '首页瀑布流布局完成桌面端，断点待调。', keyFindings: [], nextStep: '移动端走查', generatedAt: T0 - MIN },
+      s2: { atSeq: 4, summary: '周报模板定稿：留存、转化两图加一段结论。', keyFindings: [], nextStep: '补上周环比', generatedAt: T0 - 10 * MIN },
+    })
+    // One more lamp so the drawer shows a green card as well.
+    statusById.set('s15', { completionUnread: true })
+  }
+
   const globalState = {
     version: 1,
     activeBoard: 'inbox',
