@@ -4,27 +4,18 @@
 <meta charset="utf-8" />
 <link rel="icon" href="data:," />
 <title>对话地图 · 交互演示（真实插件渲染）</title>
+<!-- The real DSH theme, extracted from the installed app.asar by
+     scripts/extract-theme.mjs (see test/dsh-theme.css). Dark palette via
+     data-ds-dark-theme on <body>, exactly like the shell. -->
+<link rel="stylesheet" href="../test/dsh-theme.css" />
 <style>
-  html, body { margin: 0; height: 100%; background: #1b1d21; color: #e7e9ee;
+  html, body { margin: 0; height: 100%; background: var(--dsw-alias-bg-base, #151517);
+    color: var(--dsw-alias-label-primary, #f5f6f7);
     font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; }
   #host { position: relative; height: 100vh; }
-  :root {
-    --dsw-alias-bg-base: #1b1d21;
-    --dsw-alias-bg-layer-1: #23252a;
-    --dsw-alias-bg-mask-2: rgba(0, 0, 0, .45);
-    --dsw-alias-label-primary: #e7e9ee;
-    --dsw-alias-label-secondary: #a9aeb9;
-    --dsw-alias-label-tertiary: #7d828d;
-    --dsw-alias-border-l1: #33363d;
-    --dsw-alias-border-l2: #3d4047;
-    --dsw-alias-border-l3: #4a4e57;
-    --dsw-alias-brand-primary: #6f8dff;
-    --dsw-alias-interactive-bg-hover: rgba(255, 255, 255, .07);
-    --dsw-alias-interactive-bg-active: rgba(255, 255, 255, .12);
-  }
 </style>
 </head>
-<body>
+<body data-ds-dark-theme>
   <div id="host"></div>
   <script>window.__talkMapDemo = true</script>
   <script src="../node_modules/react/umd/react.production.min.js"></script>
