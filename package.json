@@ -1,6 +1,6 @@
 {
   "name": "dsh-talk-map",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Visual conversation map for DeepSeek Harness: an infinite whiteboard where every session is a card — drag to arrange, double-click to start a chat in place, draw an edge to fork a new session with injected context. Built for ADHD-friendly spatial memory. · DSH 可视化对话地图：会话即卡片，双击即聊，连线分叉带上下文的新对话。",
   "type": "module",
   "main": "lib/index.js",
@@ -10,14 +10,13 @@
     "url": "git+https://github.com/Da0Mine/dsh-talk-map.git"
   },
   "keywords": [
-    "deepseek",
-    "harness",
     "dsh",
     "dsh-plugin",
-    "canvas",
-    "whiteboard",
+    "deepseek-harness",
+    "talk-map",
     "conversation-map",
-    "adhd"
+    "whiteboard",
+    "session-manager"
   ],
   "scripts": {
     "build": "tsdown && node scripts/normalize-client-banner.mjs",
@@ -74,7 +73,8 @@
     "typescript": "^7.0.2"
   },
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=22.19.0",
+    "dsh": ">=0.2.1-rc.1 <0.3.0-0"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",

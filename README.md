@@ -4,22 +4,28 @@ English | [中文](README.zh.md)
 
 A visual conversation map plugin for DeepSeek Harness (dsh): every session becomes a card on an infinite whiteboard.
 
+![Workspaces, pinned cards and live status](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/workspaces-and-pins.png)
+
+![Cards connected by links, with running / waiting / unread lamps](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/cards-and-links.png)
+
 - **Spatial memory instead of working memory**: free placement + grid snapping, and nothing ever rearranges your cards — if you remember "that conversation was bottom-left", it stays bottom-left. Designed for ADHD users, useful for everyone.
+- **Folders stay readable**: a workspace becomes a frame that auto-expands or folds its overflow into a stack cell you can open as a drawer; pinned cards stay in front.
 - **Double-click to chat**: double-click empty canvas to start a new session; the card is born exactly where you clicked.
 - **Draw an edge to fork**: drag a line from a card onto empty space, preview (and edit) the context digest to inject, confirm — a new session starts *knowing* the old conversation.
-- **Card front = resume surface**: title, the digest's "next step", relative time, running state. One glance tells you what to do next.
-- **Automatic digests**: after a session goes idle, a three-field digest (summary / key findings / next step) is generated with your deployment's default model; hit ⟳ on a card to regenerate manually.
-- **Bilingual interface**: the map's own copy renders in Chinese or English. The pill in the map header cycles Auto → 中文 → English; Auto follows dsh's own language, and the choice is remembered across restarts. (Digests stay in the language of the conversation they summarise.)
-- **Provenance visible**: dsh's native fork/subagent lineage renders as dashed edges; your injection edges are solid.
+- **Card front = resume surface**: title, the last thing you said, relative time and a status lamp (running / finished / unread / waiting / interrupted). One glance tells you what to do next.
+- **Lines mean something**: a link whose context is still up to date disappears; one that has fallen behind stays visible as a dashed line with an arrow. Fork lineage is always drawn.
+- **Automatic digests**: a three-field digest (summary / key findings / next step) is generated on demand through your deployment's default model; hit ⟳ on a card to regenerate.
+- **Bilingual interface**: the map's own copy renders in Chinese or English. The pill in the map header cycles Auto → 中文 → English; Auto follows dsh's own language, and the choice is remembered across restarts.
 
 ## Install
 
 ```sh
-# GitHub (built artifacts are committed — no build step, no allowBuilds needed)
-dsh plugin --profile web add github:Tasihi89/dsh-talk-map
-```
+# npm (recommended)
+dsh plugin add dsh-talk-map
 
-npm package (`dsh plugin --profile web add dsh-talk-map`) coming soon.
+# or straight from GitHub — built artifacts are committed, so there is no build step
+dsh plugin add github:Da0Mine/dsh-talk-map
+```
 
 Restart `dsh web`; a map button appears at the sidebar foot.
 
@@ -31,8 +37,10 @@ Restart `dsh web`; a map button appears at the sidebar foot.
 | Drag a card | place it (16px grid snap, persisted) |
 | Double-click empty space | create a session there and enter it |
 | Double-click a card | open that session |
-| Drag from a card's right handle to empty space | preview injection → fork a new session |
+| Drag from a card handle to empty space | preview injection → fork a new session |
+| Click a stack cell | open the drawer listing the folded conversations |
 | ⟳ on a card | regenerate the digest |
+| Right-click a card / a line / a folder | pin, rename, mark unread, archive, delete, push switch, delete line |
 | Language pill in the map header | cycle Auto → 中文 → English |
 
 ## Where data lives
@@ -43,19 +51,19 @@ Restart `dsh web`; a map button appears at the sidebar foot.
 
 ## Compatibility
 
-Built against deepseek-harness `0.1.0-rc.6` (rc-stage APIs may drift). The structural contracts live in `src/client/dsh.ts` and `src/host/dsh-host.ts` — start there when upgrading.
+Built and tested against DeepSeek Harness `0.2.1-rc.3`. The structural contracts live in `src/client/dsh.ts` and `src/host/dsh-host.ts` — start there when upgrading.
 
 ## Roadmap
 
-Multi-board shelf (project = board, WIP limit) · whole-board archive/shelve · timeline view (camera fly-back) · alias cards · multi-parent merge UI · selection-level injection · quick-ask on card · two-week fade.
+Multi-board shelf (project = board, WIP limit) · whole-board archive/shelve · timeline view (camera fly-back) · alias cards · multi-parent merge UI · selection-level injection · quick-ask on card.
 
 ## Development
 
 ```sh
 pnpm install
 pnpm run build        # host → lib/, client → client/client.js
+pnpm run probe        # headless end-to-end probe (150 checks)
 dsh plugin --profile dev add /abs/path/dsh-talk-map
-dsh --profile dev     # add a profile patch to change the port and coexist with your main instance
 ```
 
 MIT License.
