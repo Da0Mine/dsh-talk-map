@@ -11896,18 +11896,27 @@ function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
 }
 function snapToChannels(points, obstacles, margin) {
   if (points.length < 3) return points;
-  const out = points.map((point) => ({ ...point }));
-  const rowBands = bands(obstacles, "y");
-  const colBands = bands(obstacles, "x");
-  const channelFor = (value, bandsList) => {
-    for (let index2 = 1; index2 < bandsList.length; index2 += 1) {
-      const lo = bandsList[index2 - 1].end;
-      const hi = bandsList[index2].start;
-      if (hi - lo < margin * 2 + 8) continue;
-      if (value > lo && value < hi) return (lo + hi) / 2;
+  const rects = obstacles;
+  const centreFor = (horizontal, fixed, lo, hi) => {
+    let low = -Infinity;
+    let high = Infinity;
+    for (const rect of rects) {
+      if (horizontal) {
+        if (rect.x + rect.w <= lo || rect.x >= hi) continue;
+        if (rect.y + rect.h <= fixed + 0.5) low = Math.max(low, rect.y + rect.h);
+        else if (rect.y >= fixed - 0.5) high = Math.min(high, rect.y);
+      } else {
+        if (rect.y + rect.h <= lo || rect.y >= hi) continue;
+        if (rect.x + rect.w <= fixed + 0.5) low = Math.max(low, rect.x + rect.w);
+        else if (rect.x >= fixed - 0.5) high = Math.min(high, rect.x);
+      }
     }
-    return void 0;
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return void 0;
+    const gap = high - low;
+    if (gap < margin * 2 + 6) return void 0;
+    return (low + high) / 2;
   };
+  const out = points.map((point) => ({ ...point }));
   const last = out.length - 1;
   const horizontalSegment = (index2) => Math.abs(out[index2 - 1].y - out[index2].y) < 0.6;
   const fromStubHorizontal = horizontalSegment(1);
@@ -11918,21 +11927,32 @@ function snapToChannels(points, obstacles, margin) {
     const horizontalRun = Math.abs(a.y - b.y) < 0.6;
     if (index2 === 1 && horizontalRun === fromStubHorizontal) continue;
     if (index2 === last - 1 && horizontalRun === toStubHorizontal) continue;
+    const lo = horizontalRun ? Math.min(a.x, b.x) : Math.min(a.y, b.y);
+    const hi = horizontalRun ? Math.max(a.x, b.x) : Math.max(a.y, b.y);
+    const centre = centreFor(horizontalRun, horizontalRun ? a.y : a.x, lo, hi);
+    if (centre === void 0) continue;
     if (horizontalRun) {
-      const centre = channelFor(a.y, rowBands);
-      if (centre !== void 0 && Math.abs(centre - a.y) > 0.6) {
-        a.y = centre;
-        b.y = centre;
-      }
+      if (Math.abs(centre - a.y) < 0.6) continue;
+      a.y = centre;
+      b.y = centre;
     } else {
-      const centre = channelFor(a.x, colBands);
-      if (centre !== void 0 && Math.abs(centre - a.x) > 0.6) {
-        a.x = centre;
-        b.x = centre;
-      }
+      if (Math.abs(centre - a.x) < 0.6) continue;
+      a.x = centre;
+      b.x = centre;
     }
   }
-  return simplify(out);
+  const candidate = simplify(out);
+  const sameRectSet = (point) => rects.some((rect) => point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h);
+  for (let index2 = 1; index2 < candidate.length; index2 += 1) {
+    const a = candidate[index2 - 1];
+    const b = candidate[index2];
+    const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 4));
+    for (let step2 = 0; step2 <= steps; step2 += 1) {
+      const t2 = step2 / steps;
+      if (sameRectSet({ x: a.x + (b.x - a.x) * t2, y: a.y + (b.y - a.y) * t2 })) return points;
+    }
+  }
+  return candidate;
 }
 function routeBetween(ends, from, to, obstacles, options = {}) {
   const margin = options.margin ?? DEFAULTS.margin;

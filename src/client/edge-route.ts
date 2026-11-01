@@ -257,26 +257,53 @@ export interface RouteEnds {
  * land wherever the stub ends — a run at 50% off the gap centre still looks like
  * "the line is hugging a card". Moving whole segments keeps the path orthogonal.
  */
+/**
+ * Centre every interior run in the gap it actually passes through.
+ *
+ * The global band model is useless on a busy board: cards from different folders
+ * sit at different heights, their row spans merge into one continuous band, and
+ * then there is no channel anywhere to align to — lines end up running along the
+ * 14px stub, i.e. hugging a card border.
+ *
+ * So this works per run: look at the nearest card above and below (for a
+ * horizontal run) whose span overlaps the run itself, and move the run to the
+ * midpoint between them. A run that no longer fits is left alone.
+ */
 export function snapToChannels(
   points: Point[],
   obstacles: readonly Rect[],
   margin: number,
 ): Point[] {
   if (points.length < 3) return points
-  const out = points.map(point => ({ ...point }))
-  const rowBands = bands(obstacles as Rect[], 'y')
-  const colBands = bands(obstacles as Rect[], 'x')
+  const rects = obstacles as Rect[]
 
-  const channelFor = (value: number, bandsList: { start: number; end: number }[]): number | undefined => {
-    for (let index = 1; index < bandsList.length; index += 1) {
-      const lo = bandsList[index - 1]!.end
-      const hi = bandsList[index]!.start
-      if (hi - lo < margin * 2 + 8) continue          // too tight to centre a line in
-      if (value > lo && value < hi) return (lo + hi) / 2
+  const centreFor = (
+    horizontal: boolean,
+    fixed: number,
+    lo: number,
+    hi: number,
+  ): number | undefined => {
+    let low = -Infinity      // card edge on the "before" side
+    let high = Infinity      // card edge on the "after" side
+    for (const rect of rects) {
+      // does the card overlap the run's own span?
+      if (horizontal) {
+        if (rect.x + rect.w <= lo || rect.x >= hi) continue
+        if (rect.y + rect.h <= fixed + 0.5) low = Math.max(low, rect.y + rect.h)
+        else if (rect.y >= fixed - 0.5) high = Math.min(high, rect.y)
+      } else {
+        if (rect.y + rect.h <= lo || rect.y >= hi) continue
+        if (rect.x + rect.w <= fixed + 0.5) low = Math.max(low, rect.x + rect.w)
+        else if (rect.x >= fixed - 0.5) high = Math.min(high, rect.x)
+      }
     }
-    return undefined
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return undefined
+    const gap = high - low
+    if (gap < margin * 2 + 6) return undefined
+    return (low + high) / 2
   }
 
+  const out = points.map(point => ({ ...point }))
   const last = out.length - 1
   const horizontalSegment = (index: number): boolean =>
     Math.abs(out[index - 1]!.y - out[index]!.y) < 0.6
@@ -287,28 +314,41 @@ export function snapToChannels(
     const a = out[index - 1]!
     const b = out[index]!
     const horizontalRun = Math.abs(a.y - b.y) < 0.6
-    // Never move a segment that *is* a stub, and never move the one that shares a
-    // point with a stub in the same direction — that would shear the stub off the
-    // handle. A run perpendicular to a stub may move freely: it only lengthens it.
     if (index === 1 && horizontalRun === fromStubHorizontal) continue
     if (index === last - 1 && horizontalRun === toStubHorizontal) continue
+
+    const lo = horizontalRun ? Math.min(a.x, b.x) : Math.min(a.y, b.y)
+    const hi = horizontalRun ? Math.max(a.x, b.x) : Math.max(a.y, b.y)
+    const centre = centreFor(horizontalRun, horizontalRun ? a.y : a.x, lo, hi)
+    if (centre === undefined) continue
     if (horizontalRun) {
-      const centre = channelFor(a.y, rowBands)
-      if (centre !== undefined && Math.abs(centre - a.y) > 0.6) {
-        a.y = centre
-        b.y = centre
-      }
+      if (Math.abs(centre - a.y) < 0.6) continue
+      a.y = centre
+      b.y = centre
     } else {
-      const centre = channelFor(a.x, colBands)
-      if (centre !== undefined && Math.abs(centre - a.x) > 0.6) {
-        a.x = centre
-        b.x = centre
-      }
+      if (Math.abs(centre - a.x) < 0.6) continue
+      a.x = centre
+      b.x = centre
     }
   }
-  return simplify(out)
-}
 
+  const candidate = simplify(out)
+
+  // Safety net: a centred run must still not touch a card. If moving broke that,
+  // keep the original path.
+  const sameRectSet = (point: Point): boolean => rects.some(rect =>
+    point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h)
+  for (let index = 1; index < candidate.length; index += 1) {
+    const a = candidate[index - 1]!
+    const b = candidate[index]!
+    const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 4))
+    for (let step = 0; step <= steps; step += 1) {
+      const t = step / steps
+      if (sameRectSet({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t })) return points
+    }
+  }
+  return candidate
+}
 export function routeBetween(
   ends: RouteEnds,
   from: Rect,

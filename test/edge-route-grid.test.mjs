@@ -122,6 +122,36 @@ for (const [fromId, toId] of pairs) {
   }
 }
 
+// --- 8. local centring survives a board whose global row/column bands merge ---
+// Two cards side by side, plus a third card far away sitting at the same height:
+// the *global* row band is one continuous strip, so only local neighbours can
+// tell the router where the middle of this gap is.
+{
+  const left = { id: 'L', x: 0, y: 0, w: CARD_W, h: CARD_H }
+  const right = { id: 'Rt', x: 272, y: 0, w: CARD_W, h: CARD_H }
+  const faraway = { id: 'F', x: 900, y: 40, w: CARD_W, h: CARD_H }
+  const below = { id: 'B', x: 272, y: 400, w: CARD_W, h: CARD_H }
+  const points = routeEdge(left, below, 'b', 't', [left, right, faraway, below])
+  const verticals = []
+  for (let index = 1; index < points.length; index += 1) {
+    const a = points[index - 1]
+    const b = points[index]
+    if (Math.abs(a.x - b.x) < 0.6 && Math.abs(a.y - b.y) > 2) verticals.push(a.x)
+  }
+  // the vertical legs are the handle stubs (they must stay on the anchors); what
+  // has to be centred is the horizontal run between the two rows
+  const horizontals = []
+  for (let index = 1; index < points.length; index += 1) {
+    const a = points[index - 1]
+    const b = points[index]
+    if (Math.abs(a.y - b.y) < 0.6 && Math.abs(a.x - b.x) > 2) horizontals.push(a.y)
+  }
+  const expected = (CARD_H + 400) / 2   // middle of the gap between row 0 and the card at y=400
+  const off = Math.min(...horizontals.map(y => Math.abs(y - expected)))
+  assert.ok(horizontals.length > 0, 'the route has a horizontal run: ' + JSON.stringify(points))
+  assert.ok(off <= 8, `horizontal run should sit near y=${expected}, got ${JSON.stringify(horizontals)}`)
+}
+
 assert.equal(failures.length, 0, 'routing problems:\n  ' + failures.join('\n  '))
 assert.ok(worstClearance >= 12, `closest approach ${worstClearance.toFixed(1)}px should be ≥ 12px`)
 assert.ok(worstOffset <= 0.35, `worst check across gaps ${(worstOffset * 100).toFixed(0)}%`)

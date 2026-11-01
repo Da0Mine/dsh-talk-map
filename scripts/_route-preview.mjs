@@ -16,7 +16,21 @@ const CARD_W = 224
 const CARD_H = 120
 const raw = JSON.parse(fs.readFileSync(path.join(os.homedir(), '.dsh', 'storages', 'talk_map.json'), 'utf8'))
 
-const cards = Object.entries(raw.tables.cards).map(([id, card]) => ({
+// `--synthetic` renders a board shaped like the reported case: a parent card, a
+// child two rows below in the same column, a neighbouring column, and a far-off
+// card at an offset height so the global row bands merge.
+const SYNTHETIC = process.argv.includes('--synthetic')
+const synthCards = [
+  { id: 'L1', boardId: 'syn', x: 0, y: 0, w: CARD_W, h: CARD_H, title: 'left-1' },
+  { id: 'L2', boardId: 'syn', x: 0, y: 176, w: CARD_W, h: CARD_H, title: 'left-2' },
+  { id: 'P', boardId: 'syn', x: 272, y: 0, w: CARD_W, h: CARD_H, title: 'PARENT' },
+  { id: 'M', boardId: 'syn', x: 272, y: 176, w: CARD_W, h: CARD_H, title: 'middle' },
+  { id: 'C', boardId: 'syn', x: 272, y: 352, w: CARD_W, h: CARD_H, title: 'CHILD' },
+  { id: 'F', boardId: 'syn', x: 900, y: 88, w: CARD_W, h: CARD_H, title: 'far' },
+]
+const synthEdges = [{ id: 'edge-syn', boardId: 'syn', fromCardId: 'P', toCardId: 'C' }]
+
+const cards = SYNTHETIC ? synthCards : Object.entries(raw.tables.cards).map(([id, card]) => ({
   id,
   boardId: card.boardId ?? 'inbox',
   x: card.x,
@@ -25,7 +39,7 @@ const cards = Object.entries(raw.tables.cards).map(([id, card]) => ({
   h: CARD_H,
   title: String(card.sessionId ?? id).slice(0, 8),
 }))
-const edges = Object.entries(raw.tables.edges).map(([id, edge]) => ({ id, ...edge }))
+const edges = SYNTHETIC ? synthEdges : Object.entries(raw.tables.edges).map(([id, edge]) => ({ id, ...edge }))
 
 // one board, the one with the most cards
 const byBoard = new Map()
