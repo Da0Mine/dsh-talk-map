@@ -34095,6 +34095,57 @@
 
   // src/client/TalkMapEdge.tsx
   var import_jsx_runtime2 = __toESM(require_jsx_runtime(), 1);
+  var boardCache = { at: 0, boxes: [] };
+  function boardBoxes() {
+    if (typeof document === "undefined") return [];
+    const now2 = Date.now();
+    if (now2 - boardCache.at < 80) return boardCache.boxes;
+    const viewport = document.querySelector(".react-flow__viewport");
+    const pane = document.querySelector(".react-flow__pane")?.getBoundingClientRect();
+    let scale = 1;
+    let tx = 0;
+    let ty = 0;
+    if (viewport !== null) {
+      const matrix = getComputedStyle(viewport).transform;
+      const parsed = /matrix\(([^)]+)\)/.exec(matrix);
+      if (parsed !== null) {
+        const values = parsed[1].split(",").map(Number);
+        scale = values[0] === void 0 || values[0] === 0 ? 1 : values[0];
+        tx = values[4] ?? 0;
+        ty = values[5] ?? 0;
+      }
+    }
+    const left = pane?.left ?? 0;
+    const top = pane?.top ?? 0;
+    const boxes = [];
+    for (const element of document.querySelectorAll("[data-talkmap-session]")) {
+      const rect = element.getBoundingClientRect();
+      if (rect.width < 8 || rect.height < 8) continue;
+      boxes.push({
+        x: (rect.left - tx) / scale,
+        y: (rect.top - ty) / scale,
+        w: rect.width / scale,
+        h: rect.height / scale
+      });
+    }
+    if (boxes.length > 0) {
+      boardCache.at = now2;
+      boardCache.boxes = boxes;
+    }
+    return boxes;
+  }
+  function mergeBoxes(a, b) {
+    const out = [];
+    for (const box of [...a, ...b]) {
+      const duplicate = out.some((other) => Math.abs(other.x - box.x) < 2 && Math.abs(other.y - box.y) < 2 && Math.abs(other.w - box.w) < 2 && Math.abs(other.h - box.h) < 2);
+      if (!duplicate) out.push(box);
+    }
+    return out;
+  }
+  function containsPoint(box, x, y) {
+    const pad = 40;
+    return x >= box.x - pad && x <= box.x + box.w + pad && y >= box.y - pad && y <= box.y + box.h + pad;
+  }
   function TalkMapEdge(props) {
     const data = props.data ?? {};
     const synced = data.sync === "synced";
@@ -34107,7 +34158,9 @@
       return "l";
     };
     const obstacles = data.obstacles;
-    const route = obstacles === void 0 ? void 0 : routeBetween(
+    const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 3 && Math.abs(box.y - other.y) < 3;
+    const merged = mergeBoxes(obstacles ?? [], boardBoxes()).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
+    const route = merged.length === 0 ? void 0 : routeBetween(
       {
         start: { x: props.sourceX, y: props.sourceY },
         startFace: faceOf(props.sourcePosition),
@@ -34115,11 +34168,10 @@
         endFace: faceOf(props.targetPosition)
       },
       // The endpoints' real boxes: the router excludes them from the obstacle
-      // set by geometry. A degenerate 0×0 box never matches, so the endpoints
-      // used to block their own handles and every line fell back to a straight L.
+      // set by geometry.
       data.fromRect ?? { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
       data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
-      obstacles
+      merged
     );
     const routed = route !== void 0 && route.length > 1;
     const routeHitsCard = (points, rects) => {
@@ -34139,13 +34191,21 @@
       }
       return false;
     };
-    const blockedRoute = routeHitsCard(route, obstacles ?? data.obstacles);
+    const measuredForGuard = boardBoxes();
+    const guardSource = measuredForGuard.length > 0 ? mergeBoxes(merged, measuredForGuard) : obstacles ?? [];
+    const guardBoxes = guardSource.filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
+    const blockedRoute = routeHitsCard(route, guardBoxes);
     if (typeof window !== "undefined") {
       const w = window;
       w.__edgeDebug = w.__edgeDebug ?? [];
       w.__edgeDebug.push({
         id: props.id,
         obstacles: obstacles?.length ?? null,
+        merged: merged.length,
+        measured: boardBoxes().length,
+        measuredFirst: boardBoxes().slice(0, 2),
+        fromRect: data.fromRect ?? null,
+        toRect: data.toRect ?? null,
         fromRect: data.fromRect ?? null,
         toRect: data.toRect ?? null,
         src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },
@@ -34271,7 +34331,7 @@
   var CARD_H = 120;
   var scene = { "nodes": [{ "id": "card-36dfcda1-8374-4e10-bf40-ee839958830b", "x": -288, "y": -514 }, { "id": "card-2327435a-a8bc-46d3-b997-8903d1cc04a1", "x": 256, "y": -514 }, { "id": "card-8165bacf-05f0-4946-993b-6b4227963f34", "x": 528, "y": -514 }, { "id": "card-4fb0f01e-58fd-4c2e-8360-c7308a5b7e45", "x": -16, "y": -514 }], "pairs": [["card-36dfcda1-8374-4e10-bf40-ee839958830b", "card-2327435a-a8bc-46d3-b997-8903d1cc04a1"], ["card-36dfcda1-8374-4e10-bf40-ee839958830b", "card-8165bacf-05f0-4946-993b-6b4227963f34"], ["card-36dfcda1-8374-4e10-bf40-ee839958830b", "card-4fb0f01e-58fd-4c2e-8360-c7308a5b7e45"], ["card-2327435a-a8bc-46d3-b997-8903d1cc04a1", "card-8165bacf-05f0-4946-993b-6b4227963f34"], ["card-2327435a-a8bc-46d3-b997-8903d1cc04a1", "card-4fb0f01e-58fd-4c2e-8360-c7308a5b7e45"], ["card-8165bacf-05f0-4946-993b-6b4227963f34", "card-4fb0f01e-58fd-4c2e-8360-c7308a5b7e45"]] };
   var nodeTypes = {
-    card: ({ data }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-card-id": data.id, style: {
+    card: ({ data }) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-card-id": data.id, "data-talkmap-session": data.id, style: {
       width: CARD_W,
       height: CARD_H,
       background: "#23262d",
@@ -34314,7 +34374,8 @@
       targetHandle: faces.toHandle,
       data: {
         sync: "idle",
-        obstacles: placed.filter((n) => n.id !== from && n.id !== to).map((n) => ({ x: n.x, y: n.y, w: CARD_W, h: CARD_H })),
+        // deliberately empty: the renderer must fall back to measuring the DOM
+        obstacles: [],
         fromRect: rectOf(from),
         toRect: rectOf(to)
       }

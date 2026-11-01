@@ -81,7 +81,7 @@ const scene = ${JSON.stringify(scene)}
 
 const nodeTypes = {
   card: ({ data }) => (
-    <div data-card-id={data.id} style={{ width: CARD_W, height: CARD_H, background: '#23262d', color: '#cfd6e3',
+    <div data-card-id={data.id} data-talkmap-session={data.id} style={{ width: CARD_W, height: CARD_H, background: '#23262d', color: '#cfd6e3',
       border: '1px solid #333a45', borderRadius: 10 }}>
       <Handle id="t" type="source" position={Position.Top} />
       <Handle id="r" type="source" position={Position.Right} />
@@ -109,7 +109,8 @@ const edges = scene.pairs.map(([from, to], index) => {
     sourceHandle: faces.fromHandle, targetHandle: faces.toHandle,
     data: {
       sync: 'idle',
-      obstacles: placed.filter(n => n.id !== from && n.id !== to).map(n => ({ x: n.x, y: n.y, w: CARD_W, h: CARD_H })),
+      // deliberately empty: the renderer must fall back to measuring the DOM
+      obstacles: [],
       fromRect: rectOf(from), toRect: rectOf(to),
     },
   }
@@ -192,13 +193,14 @@ const report = await page.evaluate(() => {
     }
     out.push({ id: group.getAttribute('data-id'), pair: pairs[index], d: el.getAttribute('d').slice(0, 80), inside, closest: Math.round(worst * 10) / 10 })
   }
-  return { cards: cards.length, paths: out }
+  return { debug: (window.__edgeDebug ?? []).slice(0, 1).map(d => ({ id: d.id, merged: d.merged, measured: d.measured, first: d.measuredFirst, from: d.fromRect, to: d.toRect })), cards: cards.length, sessionEls: document.querySelectorAll('[data-talkmap-session]').length, viewport: !!document.querySelector('.react-flow__viewport'), transform: getComputedStyle(document.querySelector('.react-flow__viewport')).transform, paths: out }
 })
 await page.screenshot({ path: FOCUS ? 'test/shots/board-sim-focus.png' : 'test/shots/board-sim.png', fullPage: true })
 await browser.close()
 child.kill()
 
 const bad = report.paths.filter(entry => entry.inside > 0)
-console.log('edge sample:', JSON.stringify(report.paths.slice(0, 2)))
+console.log('EDGES', JSON.stringify(report.paths.map(e => ({ id: e.id, inside: e.inside, d: e.d.slice(0, 70) })), null, 1))
+console.log('META', JSON.stringify({ sessionEls: report.sessionEls, transform: report.transform, debug: report.debug }))
 console.log(JSON.stringify({ cards: report.cards, edges: report.paths.length, crossing: bad.length,
   worst: Math.min(...report.paths.map(entry => entry.closest)), sample: bad.slice(0, 3) }, null, 1))

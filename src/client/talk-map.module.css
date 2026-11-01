@@ -366,6 +366,10 @@
 
 .card {
   position: relative;
+  /* border-box on purpose: the router places lines against a 224×120 box, so the
+     painted card must be that size too. With content-box it measured 250×129 and
+     left a 26px strip on the right (and 9px at the bottom) that lines ran through. */
+  box-sizing: border-box;
   width: 224px;
   min-height: 104px;
   display: flex;

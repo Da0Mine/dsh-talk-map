@@ -11,7 +11,7 @@ const scene = {"nodes":[{"id":"card-36dfcda1-8374-4e10-bf40-ee839958830b","x":-2
 
 const nodeTypes = {
   card: ({ data }) => (
-    <div data-card-id={data.id} style={{ width: CARD_W, height: CARD_H, background: '#23262d', color: '#cfd6e3',
+    <div data-card-id={data.id} data-talkmap-session={data.id} style={{ width: CARD_W, height: CARD_H, background: '#23262d', color: '#cfd6e3',
       border: '1px solid #333a45', borderRadius: 10 }}>
       <Handle id="t" type="source" position={Position.Top} />
       <Handle id="r" type="source" position={Position.Right} />
@@ -39,7 +39,8 @@ const edges = scene.pairs.map(([from, to], index) => {
     sourceHandle: faces.fromHandle, targetHandle: faces.toHandle,
     data: {
       sync: 'idle',
-      obstacles: placed.filter(n => n.id !== from && n.id !== to).map(n => ({ x: n.x, y: n.y, w: CARD_W, h: CARD_H })),
+      // deliberately empty: the renderer must fall back to measuring the DOM
+      obstacles: [],
       fromRect: rectOf(from), toRect: rectOf(to),
     },
   }

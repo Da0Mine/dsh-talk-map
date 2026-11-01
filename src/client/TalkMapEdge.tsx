@@ -22,6 +22,91 @@ export interface TalkMapEdgeData {
   toRect?: Rect
 }
 
+/**
+ * Every painted card, measured from the DOM.
+ *
+ * The obstacle list arrives through edge data, and when that list is missing a
+ * card the router happily draws through it. The DOM cannot be wrong about what is
+ * painted, so the boxes are measured here as well and merged in. Measuring costs a
+ * layout pass, so the result is cached briefly.
+ */
+const boardCache: { at: number; boxes: Rect[] } = { at: 0, boxes: [] }
+
+function boardBoxes(): Rect[] {
+  if (typeof document === 'undefined') return []
+  const now = Date.now()
+  if (now - boardCache.at < 80) return boardCache.boxes
+  const viewport = document.querySelector('.react-flow__viewport') as HTMLElement | null
+  const pane = document.querySelector('.react-flow__pane')?.getBoundingClientRect()
+  let scale = 1
+  let tx = 0
+  let ty = 0
+  if (viewport !== null) {
+    const matrix = getComputedStyle(viewport).transform
+    const parsed = /matrix\(([^)]+)\)/.exec(matrix)
+    if (parsed !== null) {
+      const values = parsed[1]!.split(',').map(Number)
+      scale = values[0] === undefined || values[0] === 0 ? 1 : values[0]
+      tx = values[4] ?? 0
+      ty = values[5] ?? 0
+    }
+  }
+  const left = pane?.left ?? 0
+  const top = pane?.top ?? 0
+  const boxes: Rect[] = []
+  for (const element of document.querySelectorAll('[data-talkmap-session]')) {
+    const rect = element.getBoundingClientRect()
+    if (rect.width < 8 || rect.height < 8) continue
+    // The CSS transform already places the viewport inside the pane, so the pane's
+    // own offset must NOT be subtracted again — doing that shifted every measured
+    // box one screen-sidebar to the left (Δ ≈ −320px / zoom).
+    boxes.push({
+      x: (rect.left - tx) / scale,
+      y: (rect.top - ty) / scale,
+      w: rect.width / scale,
+      h: rect.height / scale,
+    })
+  }
+  // Do not cache an empty measurement: the first render can run before the nodes
+  // are mounted, and caching that would leave every later edge blind.
+  if (boxes.length > 0) {
+    boardCache.at = now
+    boardCache.boxes = boxes
+  }
+  return boxes
+}
+
+/** Union of two box lists, ignoring near-duplicates. */
+function mergeBoxes(a: readonly Rect[], b: readonly Rect[]): Rect[] {
+  const out: Rect[] = []
+  for (const box of [...a, ...b]) {
+    const duplicate = out.some(other => Math.abs(other.x - box.x) < 2
+      && Math.abs(other.y - box.y) < 2
+      && Math.abs(other.w - box.w) < 2
+      && Math.abs(other.h - box.h) < 2)
+    if (!duplicate) out.push(box)
+  }
+  return out
+}
+
+/** Is this box one of the two cards the edge is attached to? */
+function isEndpoint(box: Rect, x: number, y: number): boolean {
+  // 40px halo: the anchor sits on the card border and the DOM/viewport transform
+  // is only pixel-accurate, so a tight tolerance leaves the endpoint card in the
+  // obstacle set — and then the search cannot even start.
+  const pad = 40
+  return x >= box.x - pad && x <= box.x + box.w + pad && y >= box.y - pad && y <= box.y + box.h + pad
+}
+
+/** Is this point inside (or on) the box? */
+function containsPoint(box: Rect, x: number, y: number): boolean {
+  // 40px halo: the anchor sits on the card border and the DOM/viewport transform
+  // is only pixel-accurate, so a tight tolerance leaves the endpoint card in the
+  // obstacle set — and then the search cannot even start.
+  const pad = 40
+  return x >= box.x - pad && x <= box.x + box.w + pad && y >= box.y - pad && y <= box.y + box.h + pad
+}
+
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const data = (props.data ?? {}) as TalkMapEdgeData
   const synced = data.sync === 'synced'
@@ -41,7 +126,21 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     return 'l'
   }
   const obstacles = data.obstacles
-  const route = obstacles === undefined
+  // Obstacles from the edge data *plus* everything the DOM says is painted. A card
+  // that is missing from the data used to be invisible to the router, which then
+  // drew straight through it — that is the crossing this map kept showing.
+  // Identify the two endpoint boxes by their TOP-LEFT corner, which is the node
+  // position and therefore identical in the data and in the DOM measurement. Anchor
+  // geometry is not reliable for this: the anchor sits on the border and the
+  // viewport transform is only pixel-accurate.
+  const sameCorner = (box: Rect, other: Rect | undefined): boolean =>
+    other !== undefined && Math.abs(box.x - other.x) < 3 && Math.abs(box.y - other.y) < 3
+  const merged = mergeBoxes(obstacles ?? [], boardBoxes())
+    .filter(box => !sameCorner(box, data.fromRect))
+    .filter(box => !sameCorner(box, data.toRect))
+    .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
+    .filter(box => !containsPoint(box, props.targetX, props.targetY))
+  const route = merged.length === 0
     ? undefined
     : routeBetween(
         {
@@ -51,11 +150,10 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
           endFace: faceOf(props.targetPosition),
         },
         // The endpoints' real boxes: the router excludes them from the obstacle
-        // set by geometry. A degenerate 0×0 box never matches, so the endpoints
-        // used to block their own handles and every line fell back to a straight L.
+        // set by geometry.
         data.fromRect ?? { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
         data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
-        obstacles,
+        merged,
       )
   const routed = route !== undefined && route.length > 1
 
@@ -81,7 +179,14 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     }
     return false
   }
-  const blockedRoute = routeHitsCard(route, obstacles ?? data.obstacles)
+  // The guard judges against the *measured* board, not the data: if the data is
+  // what is wrong, judging by it would pass a crossing route.
+  const measuredForGuard = boardBoxes()
+  const guardSource = measuredForGuard.length > 0 ? mergeBoxes(merged, measuredForGuard) : (obstacles ?? [])
+  const guardBoxes = guardSource
+    .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
+    .filter(box => !containsPoint(box, props.targetX, props.targetY))
+  const blockedRoute = routeHitsCard(route, guardBoxes)
   // 调试钩子：渲染脚本据此核对组件实际拿到的数据（生产环境无副作用）
   if (typeof window !== 'undefined') {
     const w = window as unknown as { __edgeDebug?: unknown[] }
@@ -89,6 +194,11 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     ;(w.__edgeDebug as unknown[]).push({
       id: props.id,
       obstacles: obstacles?.length ?? null,
+      merged: merged.length,
+      measured: boardBoxes().length,
+      measuredFirst: boardBoxes().slice(0, 2),
+      fromRect: data.fromRect ?? null,
+      toRect: data.toRect ?? null,
       fromRect: data.fromRect ?? null,
       toRect: data.toRect ?? null,
       src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },

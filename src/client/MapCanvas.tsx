@@ -1055,10 +1055,29 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
     for (const node of liveNodes) {
       if (node.type !== 'sessionCard' || node.hidden === true) continue
-      out[node.id] = { x: node.position.x, y: node.position.y, w: CARD_W, h: CARD_H }
+      // Use the box React Flow actually measured. The card is content-box with
+      // padding and a 1px border, so the painted box is bigger than CARD_W×CARD_H
+      // (≈250×129 in the harness) — routing against the small constants leaves a
+      // strip along the right and bottom edge that the router believes is empty,
+      // which is exactly where lines cut through the card.
+      const measured = (node as unknown as { measured?: { width?: number; height?: number } }).measured
+      out[node.id] = {
+        x: node.position.x,
+        y: node.position.y,
+        w: measured?.width ?? CARD_W,
+        h: measured?.height ?? CARD_H,
+      }
     }
     return out
   }
+
+  // One extra pass after the first paint: edges render before the cards are
+  // measured, and a route built before that has no obstacle to avoid.
+  const [boardTick, setBoardTick] = useState(0)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setBoardTick(value => value + 1), 150)
+    return () => window.clearTimeout(timer)
+  }, [])
 
   const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] =>
     Object.entries(renderedBoxes())
@@ -1230,7 +1249,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return out
     // liveNodes is in the deps on purpose: routes are built from the rendered
     // positions, so a drag has to rebuild them.
-  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden, liveNodes])
+  }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden, liveNodes, boardTick])
 
   /**
    * Links for the open drawer.
