@@ -1170,7 +1170,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             }),
       })
     }
-    if (!lineageHidden) {
+    // Derived fork ("lineage") links are off: the map draws only the connections
+    // the user made, all of them with the one edge style. These derived lines were
+    // also the ones that kept running through cards, and they are not something the
+    // user ever asked to see.
+    if (DRAW_LINEAGE_LINKS) {
       // ...minus the pairs the user deleted one by one.
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (foldedSet.has(cardId)) continue
@@ -2539,6 +2543,9 @@ function BatchBar(props: {
     </div>
   )
 }
+
+/** Derived fork links are not drawn: one kind of line, the ones the user made. */
+const DRAW_LINEAGE_LINKS = false
 
 export function MapCanvas(props: RootSlotStandardProps): React.JSX.Element {
   const canvasState = useSyncExternalStore(canvas.subscribe, canvas.get)

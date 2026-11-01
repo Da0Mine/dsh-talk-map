@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.15",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.16",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.15",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.16",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14109,7 +14109,7 @@ function CanvasInner(props) {
         }
       });
     }
-    if (!lineageHidden) {
+    if (DRAW_LINEAGE_LINKS) {
       for (const [cardId, card] of Object.entries(visibleCards)) {
         if (foldedSet.has(cardId)) continue;
         const parentSessionId = sessions.byId[card.sessionId]?.parentId;
@@ -15220,6 +15220,7 @@ function BatchBar(props) {
     )
   ] });
 }
+var DRAW_LINEAGE_LINKS = false;
 function MapCanvas(props) {
   const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
   (0, import_react12.useEffect)(() => {
