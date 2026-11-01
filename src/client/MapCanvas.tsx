@@ -26,7 +26,6 @@ import { COLOR_TAGS } from './colors.ts'
 import { buildPushText, digestIsEmpty } from './digest-text.ts'
 import { edgeSyncState, lineageSyncState } from './edge-sync.ts'
 import { pickFaces, type Obstacle } from './edge-routing.ts'
-import { routeEdge, type Point as RoutePoint } from './edge-route.ts'
 import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
@@ -1036,32 +1035,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
 
   /**
-   * Waypoints for one edge, routed around every other painted card.
+   * Cards the line must not cross, in flow coordinates.
    *
-   * Faces come from the same rule as before; the path between them is now an
-   * orthogonal search over the gaps, so a line never crosses a card and prefers
-   * the middle of the gap it travels through.
+   * A card grows with its content (the stylesheet only sets a min-height), so the
+   * box reserves a little extra height — otherwise a line shaves the bottom of a
+   * taller neighbour. The renderer anchors the line on the real handles and does
+   * the routing itself.
    */
-  const routeFor = (fromCardId: string, toCardId: string): RoutePoint[] => {
-    const fromCard = canvasState.cards[fromCardId]
-    const toCard = canvasState.cards[toCardId]
-    if (fromCard === undefined || toCard === undefined) return []
-    const faces = sideHandles(fromCardId, toCardId)
-    const fromRect = { x: fromCard.x, y: fromCard.y, w: CARD_W, h: CARD_H }
-    const toRect = { x: toCard.x, y: toCard.y, w: CARD_W, h: CARD_H }
-    const others = Object.entries(canvasState.cards)
+  const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] =>
+    Object.entries(canvasState.cards)
       .filter(([id]) => id !== fromCardId && id !== toCardId)
       // A folded card is not painted, so it must not push lines around either.
       .filter(([id]) => !foldedSet.has(id))
       .map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }))
-    return routeEdge(
-      fromRect,
-      toRect,
-      faces.fromHandle as 't' | 'r' | 'b' | 'l',
-      faces.toHandle as 't' | 'r' | 'b' | 'l',
-      [fromRect, toRect, ...others],
-    )
-  }
 
   /** Faces for a stored edge, from where its two cards are right now. */
   const routingObstacles = (): Obstacle[] => Object.entries(canvasState.cards).map(([id, card]) => ({
@@ -1135,7 +1121,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
-          route: routeFor(edge.fromCardId, edge.toCardId),
+          obstacles: obstaclesFor(edge.fromCardId, edge.toCardId),
         },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
@@ -1206,7 +1192,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           toCardId: cardId,
           sync: lineageSync,
           structural: true,
-          route: routeFor(parentCardId, cardId),
+          obstacles: obstaclesFor(parentCardId, cardId),
         },
         // No inline stroke: inline style beats everything the renderer draws.
         style: { opacity: 0.85 },

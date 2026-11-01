@@ -33710,18 +33710,6 @@
 
   // src/client/edge-route.ts
   var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
-  function anchorOf(rect, face) {
-    switch (face) {
-      case "r":
-        return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
-      case "l":
-        return { x: rect.x, y: rect.y + rect.h / 2 };
-      case "t":
-        return { x: rect.x + rect.w / 2, y: rect.y };
-      default:
-        return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
-    }
-  }
   function normalOf(face) {
     switch (face) {
       case "r":
@@ -33855,25 +33843,36 @@
     }
     return out;
   }
-  function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
+  function routeBetween(ends, from, to, obstacles, options = {}) {
     const margin = options.margin ?? DEFAULTS.margin;
     const stub = options.stub ?? DEFAULTS.stub;
     const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
-    const start2 = anchorOf(from, fromFace);
-    const end = anchorOf(to, toFace);
-    const startNormal = normalOf(fromFace);
-    const endNormal = normalOf(toFace);
+    const start2 = ends.start;
+    const end = ends.end;
+    const startNormal = normalOf(ends.startFace);
+    const endNormal = normalOf(ends.endFace);
     const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
     const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
-    const blocked = obstacles.filter((rect) => rect !== from && rect !== to).map((rect) => expand(rect, margin));
+    const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
+    const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
     const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
-    const xs = corridors(obstacles, "x", minCorridor);
-    const ys = corridors(obstacles, "y", minCorridor);
-    const xOuter = outerLines(obstacles, "x", margin + 6);
-    const yOuter = outerLines(obstacles, "y", margin + 6);
+    const pad = 260;
+    const window2 = {
+      x1: Math.min(start2.x, end.x) - pad,
+      x2: Math.max(start2.x, end.x) + pad,
+      y1: Math.min(start2.y, end.y) - pad,
+      y2: Math.max(start2.y, end.y) + pad
+    };
+    const near = obstacles.filter((rect) => rect.x + rect.w >= window2.x1 && rect.x <= window2.x2 && rect.y + rect.h >= window2.y1 && rect.y <= window2.y2);
+    const withinX = (value) => value >= window2.x1 && value <= window2.x2;
+    const withinY = (value) => value >= window2.y1 && value <= window2.y2;
+    const xs = corridors(near, "x", minCorridor).filter(withinX);
+    const ys = corridors(near, "y", minCorridor).filter(withinY);
+    const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
+    const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
     const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
     const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
-    if (xCands.length > 60 || yCands.length > 60) return fallback;
+    if (xCands.length > 96 || yCands.length > 96) return fallback;
     const corridorX = new Set(xs.map((value) => Math.round(value)));
     const corridorY = new Set(ys.map((value) => Math.round(value)));
     const nodeId = (ix, iy) => `${ix},${iy}`;
@@ -33983,7 +33982,26 @@
     const data = props.data ?? {};
     const synced = data.sync === "synced";
     const hidden = synced && data.structural !== true;
-    const route = data.route;
+    const faceOf = (position) => {
+      const name = String(position ?? "left");
+      if (name === "right") return "r";
+      if (name === "top") return "t";
+      if (name === "bottom") return "b";
+      return "l";
+    };
+    const obstacles = data.obstacles;
+    const route = obstacles === void 0 ? void 0 : routeBetween(
+      {
+        start: { x: props.sourceX, y: props.sourceY },
+        startFace: faceOf(props.sourcePosition),
+        end: { x: props.targetX, y: props.targetY },
+        endFace: faceOf(props.targetPosition)
+      },
+      // Endpoint bodies for the corridor maths; the router skips them by value.
+      { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+      { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+      obstacles
+    );
     const routed = route !== void 0 && route.length > 1;
     const [smoothPath] = getSmoothStepPath({
       sourceX: props.sourceX,
@@ -34132,28 +34150,11 @@
   var blocker = { ...card("w", 296, 96, "W"), type: "card" };
   var allNodes = [...nodes, blocker];
   var allPlaced = allNodes.map((node) => ({ id: node.id, x: node.position.x, y: node.position.y }));
-  var rectOf = (id2) => {
-    const item = allPlaced.find((entry) => entry.id === id2);
-    return { x: item.x, y: item.y, w: CARD_W, h: CARD_H };
-  };
-  var routeFor = (fromId, toId) => {
-    const faces = faceFor(fromId, toId);
-    return routeEdge(
-      rectOf(fromId),
-      rectOf(toId),
-      faces.sourceHandle,
-      faces.targetHandle,
-      [
-        rectOf(fromId),
-        rectOf(toId),
-        ...allPlaced.filter((entry) => entry.id !== fromId && entry.id !== toId).map((entry) => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))
-      ]
-    );
-  };
+  var obstaclesFor = (fromId, toId) => allPlaced.filter((entry) => entry.id !== fromId && entry.id !== toId).map((entry) => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }));
   var edges = [
-    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced", route: routeFor("a", "b") }, ...faceFor("a", "b") },
-    { id: "idle", source: "a", target: "b", type: "talkMap", data: { sync: "idle", route: routeFor("a", "b") }, ...faceFor("a", "b") },
-    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced", route: routeFor("c", "d") }, ...faceFor("c", "d") }
+    { id: "sync", source: "a", target: "b", type: "talkMap", data: { sync: "synced", obstacles: obstaclesFor("a", "b") }, ...faceFor("a", "b") },
+    { id: "idle", source: "a", target: "b", type: "talkMap", data: { sync: "idle", obstacles: obstaclesFor("a", "b") }, ...faceFor("a", "b") },
+    { id: "adjacent", source: "c", target: "d", type: "talkMap", data: { sync: "synced", obstacles: obstaclesFor("c", "d") }, ...faceFor("c", "d") }
   ];
   (0, import_client.createRoot)(document.getElementById("root")).render(
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { width: 820, height: 560 }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(index, { nodes: allNodes, edges, edgeTypes, nodeTypes, connectionMode: ConnectionMode.Loose, fitView: true, proOptions: { hideAttribution: true }, children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(Background, {}) }) }) })

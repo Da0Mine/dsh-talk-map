@@ -227,33 +227,89 @@ export function routeEdge(
   obstacles: readonly Rect[],
   options: RouteOptions = {},
 ): Point[] {
+  return routeBetween(
+    { start: anchorOf(from, fromFace), startFace: fromFace, end: anchorOf(to, toFace), endFace: toFace },
+    from,
+    to,
+    obstacles,
+    options,
+  )
+}
+
+export interface RouteEnds {
+  start: Point
+  startFace: Face
+  end: Point
+  endFace: Face
+}
+
+/**
+ * Same search, but with the anchor points handed in.
+ *
+ * The canvas knows the real handle position (React Flow reports it) while the
+ * cards' rendered height is content-driven — deriving anchors from the layout
+ * constants put the lines a dozen pixels above the actual card edge.
+ */
+export function routeBetween(
+  ends: RouteEnds,
+  from: Rect,
+  to: Rect,
+  obstacles: readonly Rect[],
+  options: RouteOptions = {},
+): Point[] {
   const margin = options.margin ?? DEFAULTS.margin
   const stub = options.stub ?? DEFAULTS.stub
   const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor
 
-  const start = anchorOf(from, fromFace)
-  const end = anchorOf(to, toFace)
-  const startNormal = normalOf(fromFace)
-  const endNormal = normalOf(toFace)
+  const start = ends.start
+  const end = ends.end
+  const startNormal = normalOf(ends.startFace)
+  const endNormal = normalOf(ends.endFace)
   const startStub = { x: start.x + startNormal.x * stub, y: start.y + startNormal.y * stub }
   const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub }
 
   // Blocked bodies: everything except the two endpoints themselves.
+  //
+  // Compared by geometry, not identity: callers routinely pass a fresh object for
+  // the same card (one for the anchor maths, one inside the obstacle list), and an
+  // identity check then treats the endpoints as obstacles — the search finds no
+  // legal first move and every line falls back to a straight L through the board.
+  const sameRect = (a: Rect, b: Rect): boolean => Math.abs(a.x - b.x) < 0.5
+    && Math.abs(a.y - b.y) < 0.5
+    && Math.abs(a.w - b.w) < 0.5
+    && Math.abs(a.h - b.h) < 0.5
   const blocked = obstacles
-    .filter(rect => rect !== from && rect !== to)
+    .filter(rect => !sameRect(rect, from) && !sameRect(rect, to))
     .map(rect => expand(rect, margin))
 
   const fallback = simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])
 
   // Channels between cards, plus lines just outside the whole cluster so a card
   // sitting on the direct run can still be walked around.
-  const xs = corridors(obstacles as Rect[], 'x', minCorridor)
-  const ys = corridors(obstacles as Rect[], 'y', minCorridor)
-  const xOuter = outerLines(obstacles as Rect[], 'x', margin + 6)
-  const yOuter = outerLines(obstacles as Rect[], 'y', margin + 6)
+  // Only lines inside the window the route can plausibly use. On a real board (60+
+  // cards across several folders) the full candidate set is huge, and bailing out
+  // to the fallback was exactly what let lines cut through cards.
+  const pad = 260
+  const window = {
+    x1: Math.min(start.x, end.x) - pad,
+    x2: Math.max(start.x, end.x) + pad,
+    y1: Math.min(start.y, end.y) - pad,
+    y2: Math.max(start.y, end.y) + pad,
+  }
+  const near = (obstacles as Rect[]).filter(rect =>
+    rect.x + rect.w >= window.x1 && rect.x <= window.x2
+    && rect.y + rect.h >= window.y1 && rect.y <= window.y2)
+  const withinX = (value: number): boolean => value >= window.x1 && value <= window.x2
+  const withinY = (value: number): boolean => value >= window.y1 && value <= window.y2
+
+  const xs = corridors(near, 'x', minCorridor).filter(withinX)
+  const ys = corridors(near, 'y', minCorridor).filter(withinY)
+  const xOuter = outerLines(near, 'x', margin + 6).filter(withinX)
+  const yOuter = outerLines(near, 'y', margin + 6).filter(withinY)
   const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter])
   const yCands = dedupe([start.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter])
-  if (xCands.length > 60 || yCands.length > 60) return fallback
+  // A* is cheap (a few hundred nodes); this cap only guards pathological boards.
+  if (xCands.length > 96 || yCands.length > 96) return fallback
 
   const corridorX = new Set(xs.map(value => Math.round(value)))
   const corridorY = new Set(ys.map(value => Math.round(value)))

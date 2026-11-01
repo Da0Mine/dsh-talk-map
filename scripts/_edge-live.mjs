@@ -14,7 +14,7 @@ import { ReactFlow, ReactFlowProvider, Background, Handle, Position, ConnectionM
 import '@xyflow/react/dist/style.css'
 import { edgeTypes } from '../src/client/TalkMapEdge.tsx'
 import { pickFaces } from '../src/client/edge-routing.ts'
-import { routeEdge } from '../src/client/edge-route.ts'
+import { routeBetween } from '../src/client/edge-route.ts'
 
 const CARD_W = 224
 const CARD_H = 120
@@ -58,22 +58,14 @@ const faceFor = (fromId, toId) => {
 const blocker = { ...card('w', 296, 96, 'W'), type: 'card' }
 const allNodes = [...nodes, blocker]
 const allPlaced = allNodes.map(node => ({ id: node.id, x: node.position.x, y: node.position.y }))
-const rectOf = id => {
-  const item = allPlaced.find(entry => entry.id === id)
-  return { x: item.x, y: item.y, w: CARD_W, h: CARD_H }
-}
-const routeFor = (fromId, toId) => {
-  const faces = faceFor(fromId, toId)
-  return routeEdge(rectOf(fromId), rectOf(toId), faces.sourceHandle, faces.targetHandle,
-    [rectOf(fromId), rectOf(toId),
-     ...allPlaced.filter(entry => entry.id !== fromId && entry.id !== toId)
-       .map(entry => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))])
-}
+const obstaclesFor = (fromId, toId) => allPlaced
+  .filter(entry => entry.id !== fromId && entry.id !== toId)
+  .map(entry => ({ x: entry.x, y: entry.y, w: CARD_W, h: CARD_H }))
 
 const edges = [
-  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'synced', route: routeFor('a', 'b') }, ...faceFor('a', 'b') },
-  { id: 'idle', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'idle', route: routeFor('a', 'b') }, ...faceFor('a', 'b') },
-  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: { sync: 'synced', route: routeFor('c', 'd') }, ...faceFor('c', 'd') },
+  { id: 'sync', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'synced', obstacles: obstaclesFor('a', 'b') }, ...faceFor('a', 'b') },
+  { id: 'idle', source: 'a', target: 'b', type: 'talkMap', data: { sync: 'idle', obstacles: obstaclesFor('a', 'b') }, ...faceFor('a', 'b') },
+  { id: 'adjacent', source: 'c', target: 'd', type: 'talkMap', data: { sync: 'synced', obstacles: obstaclesFor('c', 'd') }, ...faceFor('c', 'd') },
 ]
 
 createRoot(document.getElementById('root')!).render(
@@ -196,6 +188,7 @@ for (const [index, delay] of [0, 900, 900].entries()) {
 // Hard evidence instead of eyeballing: walk every rendered edge path and check
 // that no sampled point lands inside a card, and report the clearance.
 const avoidance = await page.evaluate(() => {
+  const ends = { sync: ['a', 'b'], idle: ['a', 'b'], adjacent: ['c', 'd'] }
   const cards = [...document.querySelectorAll('.react-flow__node')].map(node => {
     const box = node.getBoundingClientRect()
     return { id: node.getAttribute('data-id'), left: box.left, top: box.top, right: box.right, bottom: box.bottom }
@@ -218,7 +211,8 @@ const avoidance = await page.evaluate(() => {
     const startScreen = toScreen(first)
     const endScreen = toScreen(last)
     const contains = (card, point) => point.x > card.left - 2 && point.x < card.right + 2 && point.y > card.top - 2 && point.y < card.bottom + 2
-    const endCards = cards.filter(card => contains(card, startScreen) || contains(card, endScreen))
+    const own = ends[group.getAttribute('data-id') ?? ''] ?? []
+    const endCards = cards.filter(card => own.includes(card.id))
     const samples = 400
     for (let index = 0; index <= samples; index += 1) {
       const point = path.getPointAtLength((total * index) / samples)

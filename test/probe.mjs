@@ -272,6 +272,25 @@ try {
   await openMap()
   check('再次打开仍会收起侧栏', (await page.evaluate(() => window.__harness.sidebarState())).collapsed === true)
 
+
+  // 卡片真实渲染尺寸：布局常量是 224×120，但高度由内容决定——连线避障要用真实值
+  const nodeSizes = await page.evaluate(() => {
+    const sizes = [...document.querySelectorAll('.react-flow__node')]
+      .filter(node => node.querySelector('[data-talkmap-session]') !== null)
+      .map(node => {
+        const box = node.getBoundingClientRect()
+        return { w: Math.round(box.width), h: Math.round(box.height) }
+      })
+    const heights = sizes.map(size => size.h)
+    return {
+      count: sizes.length,
+      widths: [...new Set(sizes.map(size => size.w))].slice(0, 4),
+      min: heights.length > 0 ? Math.min(...heights) : null,
+      max: heights.length > 0 ? Math.max(...heights) : null,
+    }
+  })
+  check('卡片真实尺寸（连线避障的依据）', nodeSizes.count > 0, JSON.stringify(nodeSizes))
+
   // ---- 3. grid ---------------------------------------------------------
   const grid = await page.evaluate(() => {
     const cards = []
@@ -1763,4 +1782,17 @@ if (failed.length > 0) {
   for (const entry of failed) console.log(`  - ${entry.name}: ${entry.detail ?? ''}`)
 }
 process.exit(failures === 0 ? 0 : 1)
+
+  // 卡片在画布上的真实渲染尺寸（布局常量是 224x120，但卡片高度随内容变化）
+  const nodeSizes = await page.evaluate(() => {
+    const sizes = [...document.querySelectorAll('.react-flow__node')].map(node => {
+      const box = node.getBoundingClientRect()
+      const scale = window.__probeScale ?? 1
+      return { w: Math.round(box.width / scale), h: Math.round(box.height / scale) }
+    })
+    const heights = sizes.map(size => size.h).filter(value => value > 0)
+    return { count: sizes.length, widths: [...new Set(sizes.map(size => size.w))], min: Math.min(...heights), max: Math.max(...heights) }
+  })
+  check('卡片真实尺寸（用于连线避障）', nodeSizes.count > 0, JSON.stringify(nodeSizes))
+
 

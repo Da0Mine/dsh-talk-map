@@ -10844,275 +10844,6 @@ function pickFaces(from, to, obstacles, options) {
   return { fromHandle: fromSide, toHandle: toSide };
 }
 
-// src/client/edge-route.ts
-var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
-function anchorOf(rect, face) {
-  switch (face) {
-    case "r":
-      return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
-    case "l":
-      return { x: rect.x, y: rect.y + rect.h / 2 };
-    case "t":
-      return { x: rect.x + rect.w / 2, y: rect.y };
-    default:
-      return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
-  }
-}
-function normalOf(face) {
-  switch (face) {
-    case "r":
-      return { x: 1, y: 0 };
-    case "l":
-      return { x: -1, y: 0 };
-    case "t":
-      return { x: 0, y: -1 };
-    default:
-      return { x: 0, y: 1 };
-  }
-}
-function expand(rect, by) {
-  return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
-}
-function insideStrict(rect, point) {
-  return point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h;
-}
-function hitsHorizontal(rects, y, x1, x2) {
-  const lo = Math.min(x1, x2);
-  const hi = Math.max(x1, x2);
-  for (const rect of rects) {
-    if (y <= rect.y || y >= rect.y + rect.h) continue;
-    if (hi <= rect.x || lo >= rect.x + rect.w) continue;
-    return true;
-  }
-  return false;
-}
-function hitsVertical(rects, x, y1, y2) {
-  const lo = Math.min(y1, y2);
-  const hi = Math.max(y1, y2);
-  for (const rect of rects) {
-    if (x <= rect.x || x >= rect.x + rect.w) continue;
-    if (hi <= rect.y || lo >= rect.y + rect.h) continue;
-    return true;
-  }
-  return false;
-}
-function bands(rects, axis) {
-  const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
-  const out = [];
-  for (const span of spans) {
-    const last = out[out.length - 1];
-    if (last !== void 0 && span.start <= last.end) {
-      last.end = Math.max(last.end, span.end);
-    } else {
-      out.push({ ...span });
-    }
-  }
-  return out;
-}
-function corridors(rects, axis, minCorridor) {
-  const merged = bands(rects, axis);
-  const out = [];
-  for (let index2 = 1; index2 < merged.length; index2 += 1) {
-    const gap = merged[index2].start - merged[index2 - 1].end;
-    if (gap >= minCorridor) out.push((merged[index2 - 1].end + merged[index2].start) / 2);
-  }
-  return out;
-}
-function outerLines(rects, axis, clearance) {
-  const merged = bands(rects, axis);
-  const out = [];
-  for (const band of merged) {
-    out.push(band.start - clearance, band.end + clearance);
-  }
-  return out;
-}
-var Heap = class {
-  items = [];
-  push(cost, key, node) {
-    this.items.push({ cost, key, node });
-    let index2 = this.items.length - 1;
-    while (index2 > 0) {
-      const parent = index2 - 1 >> 1;
-      if (this.items[parent].cost <= this.items[index2].cost) break;
-      const tmp = this.items[parent];
-      this.items[parent] = this.items[index2];
-      this.items[index2] = tmp;
-      index2 = parent;
-    }
-  }
-  pop() {
-    if (this.items.length === 0) return void 0;
-    const top = this.items[0];
-    const last = this.items.pop();
-    if (this.items.length > 0) {
-      this.items[0] = last;
-      let index2 = 0;
-      for (; ; ) {
-        const left = index2 * 2 + 1;
-        const right = left + 1;
-        let smallest = index2;
-        if (left < this.items.length && this.items[left].cost < this.items[smallest].cost) smallest = left;
-        if (right < this.items.length && this.items[right].cost < this.items[smallest].cost) smallest = right;
-        if (smallest === index2) break;
-        const tmp = this.items[smallest];
-        this.items[smallest] = this.items[index2];
-        this.items[index2] = tmp;
-        index2 = smallest;
-      }
-    }
-    return { key: top.key, node: top.node };
-  }
-  get size() {
-    return this.items.length;
-  }
-};
-function dedupe(values, epsilon = 0.5) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const out = [];
-  for (const value of sorted) {
-    if (out.length === 0 || Math.abs(value - out[out.length - 1]) > epsilon) out.push(value);
-  }
-  return out;
-}
-function simplify(points) {
-  const out = [];
-  for (const point of points) {
-    const last = out[out.length - 1];
-    if (last !== void 0 && Math.abs(last.x - point.x) < 0.5 && Math.abs(last.y - point.y) < 0.5) continue;
-    out.push(point);
-  }
-  for (let index2 = 1; index2 < out.length - 1; ) {
-    const a = out[index2 - 1];
-    const b = out[index2];
-    const c = out[index2 + 1];
-    const collinear = Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5 || Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5;
-    if (collinear) out.splice(index2, 1);
-    else index2 += 1;
-  }
-  return out;
-}
-function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
-  const margin = options.margin ?? DEFAULTS.margin;
-  const stub = options.stub ?? DEFAULTS.stub;
-  const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
-  const start2 = anchorOf(from, fromFace);
-  const end = anchorOf(to, toFace);
-  const startNormal = normalOf(fromFace);
-  const endNormal = normalOf(toFace);
-  const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
-  const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
-  const blocked = obstacles.filter((rect) => rect !== from && rect !== to).map((rect) => expand(rect, margin));
-  const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
-  const xs = corridors(obstacles, "x", minCorridor);
-  const ys = corridors(obstacles, "y", minCorridor);
-  const xOuter = outerLines(obstacles, "x", margin + 6);
-  const yOuter = outerLines(obstacles, "y", margin + 6);
-  const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
-  const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
-  if (xCands.length > 60 || yCands.length > 60) return fallback;
-  const corridorX = new Set(xs.map((value) => Math.round(value)));
-  const corridorY = new Set(ys.map((value) => Math.round(value)));
-  const nodeId = (ix, iy) => `${ix},${iy}`;
-  const pointAt = (id2) => {
-    const [ix, iy] = id2.split(",").map(Number);
-    return { x: xCands[ix], y: yCands[iy] };
-  };
-  const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
-  const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
-  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
-  const goal = { x: endStub.x, y: endStub.y };
-  const startNode = nodeId(startIndex.x, startIndex.y);
-  const goalNode = nodeId(endIndex.x, endIndex.y);
-  const best = /* @__PURE__ */ new Map();
-  const cameFrom = /* @__PURE__ */ new Map();
-  const heap = new Heap();
-  const withDir = (node, dir) => `${node}|${dir}`;
-  best.set(withDir(startNode, "x"), 0);
-  heap.push(0, 0, withDir(startNode, "x"));
-  const estimate = (point) => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y);
-  while (heap.size > 0) {
-    const popped = heap.pop();
-    const state3 = popped.node;
-    const [node, dir] = state3.split("|");
-    const cost = best.get(state3);
-    if (cost === void 0) continue;
-    if (node === goalNode) {
-      const path = [];
-      let cursor = state3;
-      while (cursor !== void 0) {
-        const [cell] = cursor.split("|");
-        path.push(pointAt(cell));
-        cursor = cameFrom.get(cursor);
-      }
-      path.reverse();
-      return simplify([start2, startStub, ...path.slice(1), endStub, end]);
-    }
-    const [ix, iy] = node.split(",").map(Number);
-    const here = pointAt(node);
-    const steps = [
-      { dx: 1, dy: 0, axis: "x" },
-      { dx: -1, dy: 0, axis: "x" },
-      { dx: 0, dy: 1, axis: "y" },
-      { dx: 0, dy: -1, axis: "y" }
-    ];
-    for (const step2 of steps) {
-      const nx = ix + step2.dx;
-      const ny = iy + step2.dy;
-      if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
-      const next = { x: xCands[nx], y: yCands[ny] };
-      const nextNode = nodeId(nx, ny);
-      if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
-      const clear = step2.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
-      if (!clear) continue;
-      const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
-      const onCorridor = step2.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
-      const turn = dir === step2.axis ? 0 : 18;
-      const prefer = onCorridor ? 0 : 6;
-      const nextCost = cost + distance2 + turn + prefer;
-      const nextState = withDir(nextNode, step2.axis);
-      const known = best.get(nextState);
-      if (known !== void 0 && known <= nextCost) continue;
-      best.set(nextState, nextCost);
-      cameFrom.set(nextState, state3);
-      heap.push(nextCost + estimate(next), nextCost, nextState);
-    }
-  }
-  return fallback;
-}
-function roundedPath(points, radius = 10) {
-  if (points.length === 0) return "";
-  if (points.length === 1) return `M ${round(points[0].x)} ${round(points[0].y)}`;
-  const parts = [`M ${round(points[0].x)} ${round(points[0].y)}`];
-  for (let index2 = 1; index2 < points.length - 1; index2 += 1) {
-    const prev = points[index2 - 1];
-    const here = points[index2];
-    const next = points[index2 + 1];
-    const inLength = Math.hypot(here.x - prev.x, here.y - prev.y);
-    const outLength = Math.hypot(next.x - here.x, next.y - here.y);
-    const corner = Math.min(radius, inLength / 2, outLength / 2);
-    if (corner < 0.5) {
-      parts.push(`L ${round(here.x)} ${round(here.y)}`);
-      continue;
-    }
-    const enter = {
-      x: here.x + (prev.x - here.x) / (inLength || 1) * corner,
-      y: here.y + (prev.y - here.y) / (inLength || 1) * corner
-    };
-    const leave = {
-      x: here.x + (next.x - here.x) / (outLength || 1) * corner,
-      y: here.y + (next.y - here.y) / (outLength || 1) * corner
-    };
-    parts.push(`L ${round(enter.x)} ${round(enter.y)}`);
-    parts.push(`Q ${round(here.x)} ${round(here.y)} ${round(leave.x)} ${round(leave.y)}`);
-  }
-  const last = points[points.length - 1];
-  parts.push(`L ${round(last.x)} ${round(last.y)}`);
-  return parts.join(" ");
-}
-function round(value) {
-  return Math.round(value * 100) / 100;
-}
-
 // src/client/push-log.ts
 var KEY = "dsh.talk-map.push-log.v1";
 function pairKey(fromCardId, toCardId) {
@@ -12007,13 +11738,321 @@ function ContextMenu(props) {
   );
 }
 
+// src/client/edge-route.ts
+var DEFAULTS = { margin: 10, stub: 14, minCorridor: 28 };
+function anchorOf(rect, face) {
+  switch (face) {
+    case "r":
+      return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
+    case "l":
+      return { x: rect.x, y: rect.y + rect.h / 2 };
+    case "t":
+      return { x: rect.x + rect.w / 2, y: rect.y };
+    default:
+      return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
+  }
+}
+function normalOf(face) {
+  switch (face) {
+    case "r":
+      return { x: 1, y: 0 };
+    case "l":
+      return { x: -1, y: 0 };
+    case "t":
+      return { x: 0, y: -1 };
+    default:
+      return { x: 0, y: 1 };
+  }
+}
+function expand(rect, by) {
+  return { x: rect.x - by, y: rect.y - by, w: rect.w + by * 2, h: rect.h + by * 2 };
+}
+function insideStrict(rect, point) {
+  return point.x > rect.x && point.x < rect.x + rect.w && point.y > rect.y && point.y < rect.y + rect.h;
+}
+function hitsHorizontal(rects, y, x1, x2) {
+  const lo = Math.min(x1, x2);
+  const hi = Math.max(x1, x2);
+  for (const rect of rects) {
+    if (y <= rect.y || y >= rect.y + rect.h) continue;
+    if (hi <= rect.x || lo >= rect.x + rect.w) continue;
+    return true;
+  }
+  return false;
+}
+function hitsVertical(rects, x, y1, y2) {
+  const lo = Math.min(y1, y2);
+  const hi = Math.max(y1, y2);
+  for (const rect of rects) {
+    if (x <= rect.x || x >= rect.x + rect.w) continue;
+    if (hi <= rect.y || lo >= rect.y + rect.h) continue;
+    return true;
+  }
+  return false;
+}
+function bands(rects, axis) {
+  const spans = rects.map((rect) => axis === "x" ? { start: rect.x, end: rect.x + rect.w } : { start: rect.y, end: rect.y + rect.h }).sort((a, b) => a.start - b.start);
+  const out = [];
+  for (const span of spans) {
+    const last = out[out.length - 1];
+    if (last !== void 0 && span.start <= last.end) {
+      last.end = Math.max(last.end, span.end);
+    } else {
+      out.push({ ...span });
+    }
+  }
+  return out;
+}
+function corridors(rects, axis, minCorridor) {
+  const merged = bands(rects, axis);
+  const out = [];
+  for (let index2 = 1; index2 < merged.length; index2 += 1) {
+    const gap = merged[index2].start - merged[index2 - 1].end;
+    if (gap >= minCorridor) out.push((merged[index2 - 1].end + merged[index2].start) / 2);
+  }
+  return out;
+}
+function outerLines(rects, axis, clearance) {
+  const merged = bands(rects, axis);
+  const out = [];
+  for (const band of merged) {
+    out.push(band.start - clearance, band.end + clearance);
+  }
+  return out;
+}
+var Heap = class {
+  items = [];
+  push(cost, key, node) {
+    this.items.push({ cost, key, node });
+    let index2 = this.items.length - 1;
+    while (index2 > 0) {
+      const parent = index2 - 1 >> 1;
+      if (this.items[parent].cost <= this.items[index2].cost) break;
+      const tmp = this.items[parent];
+      this.items[parent] = this.items[index2];
+      this.items[index2] = tmp;
+      index2 = parent;
+    }
+  }
+  pop() {
+    if (this.items.length === 0) return void 0;
+    const top = this.items[0];
+    const last = this.items.pop();
+    if (this.items.length > 0) {
+      this.items[0] = last;
+      let index2 = 0;
+      for (; ; ) {
+        const left = index2 * 2 + 1;
+        const right = left + 1;
+        let smallest = index2;
+        if (left < this.items.length && this.items[left].cost < this.items[smallest].cost) smallest = left;
+        if (right < this.items.length && this.items[right].cost < this.items[smallest].cost) smallest = right;
+        if (smallest === index2) break;
+        const tmp = this.items[smallest];
+        this.items[smallest] = this.items[index2];
+        this.items[index2] = tmp;
+        index2 = smallest;
+      }
+    }
+    return { key: top.key, node: top.node };
+  }
+  get size() {
+    return this.items.length;
+  }
+};
+function dedupe(values, epsilon = 0.5) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const out = [];
+  for (const value of sorted) {
+    if (out.length === 0 || Math.abs(value - out[out.length - 1]) > epsilon) out.push(value);
+  }
+  return out;
+}
+function simplify(points) {
+  const out = [];
+  for (const point of points) {
+    const last = out[out.length - 1];
+    if (last !== void 0 && Math.abs(last.x - point.x) < 0.5 && Math.abs(last.y - point.y) < 0.5) continue;
+    out.push(point);
+  }
+  for (let index2 = 1; index2 < out.length - 1; ) {
+    const a = out[index2 - 1];
+    const b = out[index2];
+    const c = out[index2 + 1];
+    const collinear = Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5 || Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5;
+    if (collinear) out.splice(index2, 1);
+    else index2 += 1;
+  }
+  return out;
+}
+function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
+  return routeBetween(
+    { start: anchorOf(from, fromFace), startFace: fromFace, end: anchorOf(to, toFace), endFace: toFace },
+    from,
+    to,
+    obstacles,
+    options
+  );
+}
+function routeBetween(ends, from, to, obstacles, options = {}) {
+  const margin = options.margin ?? DEFAULTS.margin;
+  const stub = options.stub ?? DEFAULTS.stub;
+  const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
+  const start2 = ends.start;
+  const end = ends.end;
+  const startNormal = normalOf(ends.startFace);
+  const endNormal = normalOf(ends.endFace);
+  const startStub = { x: start2.x + startNormal.x * stub, y: start2.y + startNormal.y * stub };
+  const endStub = { x: end.x + endNormal.x * stub, y: end.y + endNormal.y * stub };
+  const sameRect = (a, b) => Math.abs(a.x - b.x) < 0.5 && Math.abs(a.y - b.y) < 0.5 && Math.abs(a.w - b.w) < 0.5 && Math.abs(a.h - b.h) < 0.5;
+  const blocked = obstacles.filter((rect) => !sameRect(rect, from) && !sameRect(rect, to)).map((rect) => expand(rect, margin));
+  const fallback = simplify([start2, startStub, { x: endStub.x, y: startStub.y }, endStub, end]);
+  const pad = 260;
+  const window2 = {
+    x1: Math.min(start2.x, end.x) - pad,
+    x2: Math.max(start2.x, end.x) + pad,
+    y1: Math.min(start2.y, end.y) - pad,
+    y2: Math.max(start2.y, end.y) + pad
+  };
+  const near = obstacles.filter((rect) => rect.x + rect.w >= window2.x1 && rect.x <= window2.x2 && rect.y + rect.h >= window2.y1 && rect.y <= window2.y2);
+  const withinX = (value) => value >= window2.x1 && value <= window2.x2;
+  const withinY = (value) => value >= window2.y1 && value <= window2.y2;
+  const xs = corridors(near, "x", minCorridor).filter(withinX);
+  const ys = corridors(near, "y", minCorridor).filter(withinY);
+  const xOuter = outerLines(near, "x", margin + 6).filter(withinX);
+  const yOuter = outerLines(near, "y", margin + 6).filter(withinY);
+  const xCands = dedupe([start2.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter]);
+  const yCands = dedupe([start2.y, end.y, startStub.y, endStub.y, ...ys, ...yOuter]);
+  if (xCands.length > 96 || yCands.length > 96) return fallback;
+  const corridorX = new Set(xs.map((value) => Math.round(value)));
+  const corridorY = new Set(ys.map((value) => Math.round(value)));
+  const nodeId = (ix, iy) => `${ix},${iy}`;
+  const pointAt = (id2) => {
+    const [ix, iy] = id2.split(",").map(Number);
+    return { x: xCands[ix], y: yCands[iy] };
+  };
+  const startIndex = { x: xCands.findIndex((value) => Math.abs(value - startStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - startStub.y) < 0.5) };
+  const endIndex = { x: xCands.findIndex((value) => Math.abs(value - endStub.x) < 0.5), y: yCands.findIndex((value) => Math.abs(value - endStub.y) < 0.5) };
+  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback;
+  const goal = { x: endStub.x, y: endStub.y };
+  const startNode = nodeId(startIndex.x, startIndex.y);
+  const goalNode = nodeId(endIndex.x, endIndex.y);
+  const best = /* @__PURE__ */ new Map();
+  const cameFrom = /* @__PURE__ */ new Map();
+  const heap = new Heap();
+  const withDir = (node, dir) => `${node}|${dir}`;
+  best.set(withDir(startNode, "x"), 0);
+  heap.push(0, 0, withDir(startNode, "x"));
+  const estimate = (point) => Math.abs(point.x - goal.x) + Math.abs(point.y - goal.y);
+  while (heap.size > 0) {
+    const popped = heap.pop();
+    const state3 = popped.node;
+    const [node, dir] = state3.split("|");
+    const cost = best.get(state3);
+    if (cost === void 0) continue;
+    if (node === goalNode) {
+      const path = [];
+      let cursor = state3;
+      while (cursor !== void 0) {
+        const [cell] = cursor.split("|");
+        path.push(pointAt(cell));
+        cursor = cameFrom.get(cursor);
+      }
+      path.reverse();
+      return simplify([start2, startStub, ...path.slice(1), endStub, end]);
+    }
+    const [ix, iy] = node.split(",").map(Number);
+    const here = pointAt(node);
+    const steps = [
+      { dx: 1, dy: 0, axis: "x" },
+      { dx: -1, dy: 0, axis: "x" },
+      { dx: 0, dy: 1, axis: "y" },
+      { dx: 0, dy: -1, axis: "y" }
+    ];
+    for (const step2 of steps) {
+      const nx = ix + step2.dx;
+      const ny = iy + step2.dy;
+      if (nx < 0 || ny < 0 || nx >= xCands.length || ny >= yCands.length) continue;
+      const next = { x: xCands[nx], y: yCands[ny] };
+      const nextNode = nodeId(nx, ny);
+      if (nextNode !== goalNode && blocked.some((rect) => insideStrict(rect, next))) continue;
+      const clear = step2.axis === "x" ? !hitsHorizontal(blocked, here.y, here.x, next.x) : !hitsVertical(blocked, here.x, here.y, next.y);
+      if (!clear) continue;
+      const distance2 = Math.abs(next.x - here.x) + Math.abs(next.y - here.y);
+      const onCorridor = step2.axis === "x" ? corridorY.has(Math.round(here.y)) : corridorX.has(Math.round(here.x));
+      const turn = dir === step2.axis ? 0 : 18;
+      const prefer = onCorridor ? 0 : 6;
+      const nextCost = cost + distance2 + turn + prefer;
+      const nextState = withDir(nextNode, step2.axis);
+      const known = best.get(nextState);
+      if (known !== void 0 && known <= nextCost) continue;
+      best.set(nextState, nextCost);
+      cameFrom.set(nextState, state3);
+      heap.push(nextCost + estimate(next), nextCost, nextState);
+    }
+  }
+  return fallback;
+}
+function roundedPath(points, radius = 10) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${round(points[0].x)} ${round(points[0].y)}`;
+  const parts = [`M ${round(points[0].x)} ${round(points[0].y)}`];
+  for (let index2 = 1; index2 < points.length - 1; index2 += 1) {
+    const prev = points[index2 - 1];
+    const here = points[index2];
+    const next = points[index2 + 1];
+    const inLength = Math.hypot(here.x - prev.x, here.y - prev.y);
+    const outLength = Math.hypot(next.x - here.x, next.y - here.y);
+    const corner = Math.min(radius, inLength / 2, outLength / 2);
+    if (corner < 0.5) {
+      parts.push(`L ${round(here.x)} ${round(here.y)}`);
+      continue;
+    }
+    const enter = {
+      x: here.x + (prev.x - here.x) / (inLength || 1) * corner,
+      y: here.y + (prev.y - here.y) / (inLength || 1) * corner
+    };
+    const leave = {
+      x: here.x + (next.x - here.x) / (outLength || 1) * corner,
+      y: here.y + (next.y - here.y) / (outLength || 1) * corner
+    };
+    parts.push(`L ${round(enter.x)} ${round(enter.y)}`);
+    parts.push(`Q ${round(here.x)} ${round(here.y)} ${round(leave.x)} ${round(leave.y)}`);
+  }
+  const last = points[points.length - 1];
+  parts.push(`L ${round(last.x)} ${round(last.y)}`);
+  return parts.join(" ");
+}
+function round(value) {
+  return Math.round(value * 100) / 100;
+}
+
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
   const hidden = synced && data.structural !== true;
-  const route = data.route;
+  const faceOf = (position) => {
+    const name2 = String(position ?? "left");
+    if (name2 === "right") return "r";
+    if (name2 === "top") return "t";
+    if (name2 === "bottom") return "b";
+    return "l";
+  };
+  const obstacles = data.obstacles;
+  const route = obstacles === void 0 ? void 0 : routeBetween(
+    {
+      start: { x: props.sourceX, y: props.sourceY },
+      startFace: faceOf(props.sourcePosition),
+      end: { x: props.targetX, y: props.targetY },
+      endFace: faceOf(props.targetPosition)
+    },
+    // Endpoint bodies for the corridor maths; the router skips them by value.
+    { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+    { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+    obstacles
+  );
   const routed = route !== void 0 && route.length > 1;
   const [smoothPath] = getSmoothStepPath({
     sourceX: props.sourceX,
@@ -13829,22 +13868,7 @@ function CanvasInner(props) {
     if (card === void 0) return void 0;
     return sessions.byId[card.sessionId]?.updatedAt;
   };
-  const routeFor = (fromCardId, toCardId) => {
-    const fromCard = canvasState.cards[fromCardId];
-    const toCard = canvasState.cards[toCardId];
-    if (fromCard === void 0 || toCard === void 0) return [];
-    const faces = sideHandles(fromCardId, toCardId);
-    const fromRect = { x: fromCard.x, y: fromCard.y, w: CARD_W, h: CARD_H };
-    const toRect = { x: toCard.x, y: toCard.y, w: CARD_W, h: CARD_H };
-    const others = Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }));
-    return routeEdge(
-      fromRect,
-      toRect,
-      faces.fromHandle,
-      faces.toHandle,
-      [fromRect, toRect, ...others]
-    );
-  };
+  const obstaclesFor = (fromCardId, toCardId) => Object.entries(canvasState.cards).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).filter(([id2]) => !foldedSet.has(id2)).map(([, card]) => ({ x: card.x, y: card.y, w: CARD_W, h: CARD_H }));
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,
     x: card.x,
@@ -13898,7 +13922,7 @@ function CanvasInner(props) {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
-          route: routeFor(edge.fromCardId, edge.toCardId)
+          obstacles: obstaclesFor(edge.fromCardId, edge.toCardId)
         },
         // Every line carries its direction now: 「推送摘要」 always travels
         // source → target, so a link edge gets a lighter arrow instead of none.
@@ -13953,7 +13977,7 @@ function CanvasInner(props) {
             toCardId: cardId,
             sync: lineageSync,
             structural: true,
-            route: routeFor(parentCardId, cardId)
+            obstacles: obstaclesFor(parentCardId, cardId)
           },
           // No inline stroke: inline style beats everything the renderer draws.
           style: { opacity: 0.85 }

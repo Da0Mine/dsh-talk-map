@@ -7,7 +7,7 @@
  * 没有发光、没有流光、没有粒子：线要么在，要么不在。箭头跟着线一起隐藏。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
-import { roundedPath, type Point } from './edge-route.ts'
+import { routeBetween, roundedPath, type Face, type Point, type Rect } from './edge-route.ts'
 
 export interface TalkMapEdgeData {
   fromCardId?: string
@@ -15,8 +15,8 @@ export interface TalkMapEdgeData {
   sync?: 'synced' | 'idle'
   /** A structural link (fork), which never hides itself. */
   structural?: boolean
-  /** Waypoints computed on the canvas, so the line goes around cards. */
-  route?: readonly Point[]
+  /** Every other painted card, in flow coordinates — the line must avoid them. */
+  obstacles?: readonly Rect[]
 }
 
 export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
@@ -25,9 +25,33 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // Only transfer lines disappear once they are in sync; a fork link is part of
   // the map structure and stays where it is.
   const hidden = synced && data.structural !== true
-  // The canvas routes every line on an orthogonal grid that avoids card bodies;
-  // the smoothstep fallback only matters if a route is missing.
-  const route = data.route
+  /**
+   * Route here rather than on the canvas: React Flow hands us the *real* handle
+   * positions, and the cards' rendered height is content-driven, so anchors
+   * computed from the layout constants sit above the actual card edge.
+   */
+  const faceOf = (position: unknown): Face => {
+    const name = String(position ?? 'left')
+    if (name === 'right') return 'r'
+    if (name === 'top') return 't'
+    if (name === 'bottom') return 'b'
+    return 'l'
+  }
+  const obstacles = data.obstacles
+  const route = obstacles === undefined
+    ? undefined
+    : routeBetween(
+        {
+          start: { x: props.sourceX, y: props.sourceY },
+          startFace: faceOf(props.sourcePosition),
+          end: { x: props.targetX, y: props.targetY },
+          endFace: faceOf(props.targetPosition),
+        },
+        // Endpoint bodies for the corridor maths; the router skips them by value.
+        { x: props.sourceX, y: props.sourceY, w: 0, h: 0 },
+        { x: props.targetX, y: props.targetY, w: 0, h: 0 },
+        obstacles,
+      )
   const routed = route !== undefined && route.length > 1
   const [smoothPath] = getSmoothStepPath({
     sourceX: props.sourceX,
