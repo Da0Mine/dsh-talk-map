@@ -36,6 +36,8 @@ const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
 const page = browser.contexts()[0].pages()[0] ?? await browser.contexts()[0].newPage()
 await page.setViewportSize({ width: 1700, height: 1050 })
 await page.goto('file:///' + path.resolve('demo/index.html').replace(/\\/g, '/') + '?demo=1')
+page.on('pageerror', error => console.log('PAGE ERROR:', String(error).slice(0, 220)))
+page.on('console', message => { if (message.type() === 'error') console.log('CONSOLE:', message.text().slice(0, 220)) })
 await page.waitForTimeout(2500)
 
 const report = await page.evaluate(() => {
@@ -83,6 +85,20 @@ const report = await page.evaluate(() => {
   }
 })
 
+const zoomCheck = await page.evaluate(async () => {
+  const read = () => [...document.querySelectorAll('.react-flow__edge-path')].map(el => el.getAttribute('d'))
+  const before = read()
+  const pane = document.querySelector('.react-flow__pane')
+  const box = pane.getBoundingClientRect()
+  for (const delta of [-300, -300, 600, 600]) {
+    pane.dispatchEvent(new WheelEvent('wheel', { deltaY: delta, ctrlKey: true, clientX: box.left + box.width / 2, clientY: box.top + box.height / 2, bubbles: true, cancelable: true }))
+    await new Promise(resolve => setTimeout(resolve, 120))
+  }
+  await new Promise(resolve => setTimeout(resolve, 400))
+  const after = read()
+  return { same: JSON.stringify(before) === JSON.stringify(after), before: before.slice(0, 2), after: after.slice(0, 2) }
+})
+console.log('ZOOM', JSON.stringify({ stable: zoomCheck.same, before: zoomCheck.before?.[0]?.slice(0, 60), after: zoomCheck.after?.[0]?.slice(0, 60) }))
 const shot = process.argv.includes('--shot') ? process.argv[process.argv.indexOf('--shot') + 1] : 'test/shots/demo-verify.png'
 await page.screenshot({ path: shot, fullPage: false })
 await browser.close()

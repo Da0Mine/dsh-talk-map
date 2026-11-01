@@ -1055,17 +1055,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
     for (const node of liveNodes) {
       if (node.type !== 'sessionCard' || node.hidden === true) continue
-      // Use the box React Flow actually measured. The card is content-box with
-      // padding and a 1px border, so the painted box is bigger than CARD_W×CARD_H
-      // (≈250×129 in the harness) — routing against the small constants leaves a
-      // strip along the right and bottom edge that the router believes is empty,
-      // which is exactly where lines cut through the card.
-      const measured = (node as unknown as { measured?: { width?: number; height?: number } }).measured
+      // offsetWidth/offsetHeight are LAYOUT pixels: unaffected by the canvas zoom,
+      // unlike getBoundingClientRect(). Measuring the screen rect made the boxes
+      // depend on the zoom, which is why a vertical line flipped between the left and
+      // the right side of the gap while zooming.
+      const sessionId = canvasState.cards[node.id]?.sessionId
+      const element = sessionId === undefined
+        ? null
+        : document.querySelector(`[data-talkmap-session="${sessionId}"]`)
       out[node.id] = {
         x: node.position.x,
         y: node.position.y,
-        w: measured?.width ?? CARD_W,
-        h: measured?.height ?? CARD_H,
+        w: element?.offsetWidth ?? CARD_W,
+        h: element?.offsetHeight ?? CARD_H,
       }
     }
     return out

@@ -28146,10 +28146,10 @@
   function isAttributionVisible(library) {
     if (typeof document === "undefined")
       return true;
-    const pane = document.querySelector(`.${library}-flow__pane`);
-    if (!pane || !pane.isConnected)
+    const pane2 = document.querySelector(`.${library}-flow__pane`);
+    if (!pane2 || !pane2.isConnected)
       return true;
-    const paneStyle = getComputedStyle(pane);
+    const paneStyle = getComputedStyle(pane2);
     if (paneStyle.display === "none")
       return true;
     if (paneStyle.visibility === "hidden" || paneStyle.visibility === "collapse")
@@ -28158,7 +28158,7 @@
       return true;
     if (paneStyle.width === "0" && paneStyle.height === "0")
       return true;
-    const paneRect = pane.getBoundingClientRect();
+    const paneRect = pane2.getBoundingClientRect();
     if (paneRect.width === 0 && paneRect.height === 0)
       return true;
     const attr = document.querySelector(`.${library}-flow__attribution`);
@@ -32812,8 +32812,8 @@
     (0, import_react2.useEffect)(() => {
       if (true) {
         if (!checked.current) {
-          const pane = document.querySelector(".react-flow__pane");
-          if (pane && !(window.getComputedStyle(pane).zIndex === "1")) {
+          const pane2 = document.querySelector(".react-flow__pane");
+          if (pane2 && !(window.getComputedStyle(pane2).zIndex === "1")) {
             store.getState().onError?.("013", errorMessages["error013"]("react"));
           }
           checked.current = true;
@@ -34101,7 +34101,7 @@
     const now2 = Date.now();
     if (now2 - boardCache.at < 80) return boardCache.boxes;
     const viewport = document.querySelector(".react-flow__viewport");
-    const pane = document.querySelector(".react-flow__pane")?.getBoundingClientRect();
+    const viewportRect = viewport?.getBoundingClientRect();
     let scale = 1;
     let tx = 0;
     let ty = 0;
@@ -34122,8 +34122,8 @@
       const rect = element.getBoundingClientRect();
       if (rect.width < 8 || rect.height < 8) continue;
       boxes.push({
-        x: (rect.left - tx) / scale,
-        y: (rect.top - ty) / scale,
+        x: (rect.left - (viewportRect?.left ?? 0)) / scale,
+        y: (rect.top - (viewportRect?.top ?? 0)) / scale,
         w: rect.width / scale,
         h: rect.height / scale
       });

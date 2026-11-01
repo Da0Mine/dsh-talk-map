@@ -37,22 +37,20 @@ function boardBoxes(): Rect[] {
   const now = Date.now()
   if (now - boardCache.at < 80) return boardCache.boxes
   const viewport = document.querySelector('.react-flow__viewport') as HTMLElement | null
-  const pane = document.querySelector('.react-flow__pane')?.getBoundingClientRect()
+  // The viewport element is itself translated and scaled, so its own rect already
+  // contains the pan: every child sits at  rect.left = viewportRect.left + flow*zoom.
+  // Using the viewport rect as the origin needs no separate translate at all — and
+  // that is what removes the 320px offset the old pane-based maths introduced.
+  const viewportRect = viewport?.getBoundingClientRect()
   let scale = 1
-  let tx = 0
-  let ty = 0
   if (viewport !== null) {
     const matrix = getComputedStyle(viewport).transform
     const parsed = /matrix\(([^)]+)\)/.exec(matrix)
     if (parsed !== null) {
       const values = parsed[1]!.split(',').map(Number)
       scale = values[0] === undefined || values[0] === 0 ? 1 : values[0]
-      tx = values[4] ?? 0
-      ty = values[5] ?? 0
     }
   }
-  const left = pane?.left ?? 0
-  const top = pane?.top ?? 0
   const boxes: Rect[] = []
   for (const element of document.querySelectorAll('[data-talkmap-session]')) {
     const rect = element.getBoundingClientRect()
@@ -61,8 +59,8 @@ function boardBoxes(): Rect[] {
     // own offset must NOT be subtracted again — doing that shifted every measured
     // box one screen-sidebar to the left (Δ ≈ −320px / zoom).
     boxes.push({
-      x: (rect.left - tx) / scale,
-      y: (rect.top - ty) / scale,
+      x: (rect.left - (viewportRect?.left ?? 0)) / scale,
+      y: (rect.top - (viewportRect?.top ?? 0)) / scale,
       w: rect.width / scale,
       h: rect.height / scale,
     })
@@ -135,7 +133,9 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // viewport transform is only pixel-accurate.
   const sameCorner = (box: Rect, other: Rect | undefined): boolean =>
     other !== undefined && Math.abs(box.x - other.x) < 3 && Math.abs(box.y - other.y) < 3
-  const merged = mergeBoxes(obstacles ?? [], boardBoxes())
+  // Obstacles come from the canvas, which measures them in LAYOUT pixels (zoom
+  // independent). Measuring the screen rect here made the geometry zoom-dependent.
+  const merged = obstacles ?? []
     .filter(box => !sameCorner(box, data.fromRect))
     .filter(box => !sameCorner(box, data.toRect))
     .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
@@ -181,9 +181,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   }
   // The guard judges against the *measured* board, not the data: if the data is
   // what is wrong, judging by it would pass a crossing route.
-  const measuredForGuard = boardBoxes()
-  const guardSource = measuredForGuard.length > 0 ? mergeBoxes(merged, measuredForGuard) : (obstacles ?? [])
-  const guardBoxes = guardSource
+  const guardBoxes = merged
     .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
     .filter(box => !containsPoint(box, props.targetX, props.targetY))
   const blockedRoute = routeHitsCard(route, guardBoxes)
@@ -197,10 +195,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
       merged: merged.length,
       measured: boardBoxes().length,
       measuredFirst: boardBoxes().slice(0, 2),
-      fromRect: data.fromRect ?? null,
-      toRect: data.toRect ?? null,
-      fromRect: data.fromRect ?? null,
-      toRect: data.toRect ?? null,
       src: { x: props.sourceX, y: props.sourceY, pos: String(props.sourcePosition) },
       dst: { x: props.targetX, y: props.targetY, pos: String(props.targetPosition) },
       points: route ?? null,
