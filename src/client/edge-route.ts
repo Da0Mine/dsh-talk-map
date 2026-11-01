@@ -449,6 +449,13 @@ export function routeBetween(
     // layout constants, plenty of *adjacent* cards overlap the endpoint box — dropping
     // them from the obstacle set opened exactly the lanes the lines then ran through.)
     .map(rect => expand(rect, margin))
+  // Endpoint bodies count as obstacles as well — except for the moves that touch the
+  // stub point itself. Without this a route could reach a left face by running through
+  // the card body from the right (looked like the line entering its own card).
+  const blockedAll = [
+    ...blocked,
+    ...(sameRect(from, to) ? [] : [from, to].map(rect => expand(rect, margin))),
+  ]
   __routeDebug.blockedCount = blocked.length
   __routeDebug.blockedFirst = blocked.slice(0, 2)
 

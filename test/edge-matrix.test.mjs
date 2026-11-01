@@ -134,6 +134,46 @@ for (const layout of LAYOUTS) {
           others.map(card => ({ x: card.x, y: card.y, w: card.w, h: card.h })),
         )
         const { hits, worst } = inspect(points, others)
+
+        // 1) orthogonality: every leg must be axis-aligned
+        let skew = 0
+        for (let index = 1; index < points.length; index += 1) {
+          const a = points[index - 1]
+          const b = points[index]
+          if (Math.abs(a.x - b.x) > 0.5 && Math.abs(a.y - b.y) > 0.5) skew += 1
+        }
+        if (skew > 0) {
+          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'diagonal leg', hits: skew })
+        }
+
+        // 2) the line must not run through its own endpoint cards (outside the stub)
+        let ownHits = 0
+        for (let index = 1; index < points.length; index += 1) {
+          const a = points[index - 1]
+          const b = points[index]
+          const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
+          for (let step = 0; step <= steps; step += 1) {
+            const t = step / steps
+            const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+            const nearStart = Math.hypot(point.x - start.x, point.y - start.y) <= 26
+            const nearEnd = Math.hypot(point.x - end.x, point.y - end.y) <= 26
+            if (nearStart || nearEnd) continue
+            if (inside(point, from) || inside(point, to)) ownHits += 1
+          }
+        }
+        if (ownHits > 0) {
+          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'through its own card', hits: ownHits })
+        }
+
+        // 3) no absurd detour (the line should not tour the whole board)
+        let length = 0
+        for (let index = 1; index < points.length; index += 1) {
+          length += Math.abs(points[index].x - points[index - 1].x) + Math.abs(points[index].y - points[index - 1].y)
+        }
+        const direct = Math.abs(end.x - start.x) + Math.abs(end.y - start.y)
+        if (length > direct * 6 + 400) {
+          failures.push({ layout: layout.name, pair: pair.name, faces: `${fromFace}→${toFace}`, reason: 'absurd detour', hits: Math.round(length - direct) })
+        }
         if (worst < worstClearance) worstClearance = worst
         if (hits > 0) {
           failures.push({
@@ -155,6 +195,7 @@ console.log(JSON.stringify({
   skipped,
   failed: failures.length,
   worstClearance: Math.round(worstClearance * 10) / 10,
+  byReason: failures.reduce((acc, failure) => { acc[failure.reason ?? 'other card'] = (acc[failure.reason ?? 'other card'] ?? 0) + 1; return acc }, {}),
   byPair: [...new Set(failures.map(failure => failure.pair))],
   byFaces: [...new Set(failures.map(failure => failure.faces))].slice(0, 10),
   sample: failures.slice(0, 4),
