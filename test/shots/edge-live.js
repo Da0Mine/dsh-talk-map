@@ -34121,6 +34121,24 @@
       obstacles
     );
     const routed = route !== void 0 && route.length > 1;
+    const routeHitsCard = (points, rects) => {
+      if (points === void 0 || rects === void 0) return false;
+      for (let index2 = 1; index2 < points.length; index2 += 1) {
+        const a = points[index2 - 1];
+        const b = points[index2];
+        const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 3));
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps;
+          const x = a.x + (b.x - a.x) * t;
+          const y = a.y + (b.y - a.y) * t;
+          for (const rect of rects) {
+            if (x > rect.x + 1 && x < rect.x + rect.w - 1 && y > rect.y + 1 && y < rect.y + rect.h - 1) return true;
+          }
+        }
+      }
+      return false;
+    };
+    const blockedRoute = routeHitsCard(route, obstacles ?? data.obstacles);
     if (typeof window !== "undefined") {
       const w = window;
       w.__edgeDebug = w.__edgeDebug ?? [];
@@ -34142,7 +34160,17 @@
       targetY: props.targetY,
       targetPosition: props.targetPosition
     });
-    const path = routed ? roundedPath(route, 10) : smoothPath;
+    const safeRoute = routed && !blockedRoute ? route : void 0;
+    const stubPath = (() => {
+      const normal = (face) => face === "r" ? { x: 1, y: 0 } : face === "l" ? { x: -1, y: 0 } : face === "t" ? { x: 0, y: -1 } : { x: 0, y: 1 };
+      const length = 16;
+      const a = normal(faceOf(props.sourcePosition));
+      const b = normal(faceOf(props.targetPosition));
+      const p1 = { x: props.sourceX + a.x * length, y: props.sourceY + a.y * length };
+      const p2 = { x: props.targetX + b.x * length, y: props.targetY + b.y * length };
+      return `M ${props.sourceX} ${props.sourceY} L ${p1.x} ${p1.y} M ${props.targetX} ${props.targetY} L ${p2.x} ${p2.y}`;
+    })();
+    const path = safeRoute !== void 0 ? roundedPath(safeRoute, 10) : blockedRoute ? stubPath : smoothPath;
     const arrowAngle = (() => {
       if (routed) {
         const end = route[route.length - 1];

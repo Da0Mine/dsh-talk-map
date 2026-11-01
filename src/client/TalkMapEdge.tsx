@@ -58,6 +58,30 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         obstacles,
       )
   const routed = route !== undefined && route.length > 1
+
+  /**
+   * Last line of defence: if the computed polyline still touches a card, do not
+   * draw it. A dashed line through a card reads as a bug; two short stubs with
+   * their arrow read as "this connection exists but the map is too tight here".
+   */
+  const routeHitsCard = (points: readonly Point[] | undefined, rects: readonly Rect[] | undefined): boolean => {
+    if (points === undefined || rects === undefined) return false
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1]!
+      const b = points[index]!
+      const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 3))
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps
+        const x = a.x + (b.x - a.x) * t
+        const y = a.y + (b.y - a.y) * t
+        for (const rect of rects) {
+          if (x > rect.x + 1 && x < rect.x + rect.w - 1 && y > rect.y + 1 && y < rect.y + rect.h - 1) return true
+        }
+      }
+    }
+    return false
+  }
+  const blockedRoute = routeHitsCard(route, obstacles ?? data.obstacles)
   // 调试钩子：渲染脚本据此核对组件实际拿到的数据（生产环境无副作用）
   if (typeof window !== 'undefined') {
     const w = window as unknown as { __edgeDebug?: unknown[] }
@@ -80,7 +104,23 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     targetY: props.targetY,
     targetPosition: props.targetPosition,
   })
-  const path = routed ? roundedPath(route as Point[], 10) : smoothPath
+  const safeRoute = routed && !blockedRoute ? (route as Point[]) : undefined
+  // When even the router's best effort would run through a card, draw only the
+  // two stubs: the connection is still visible, and nothing is drawn over a card.
+  const stubPath = (() => {
+    const normal = (face: Face): Point => (face === 'r' ? { x: 1, y: 0 }
+      : face === 'l' ? { x: -1, y: 0 }
+        : face === 't' ? { x: 0, y: -1 } : { x: 0, y: 1 })
+    const length = 16
+    const a = normal(faceOf(props.sourcePosition))
+    const b = normal(faceOf(props.targetPosition))
+    const p1 = { x: props.sourceX + a.x * length, y: props.sourceY + a.y * length }
+    const p2 = { x: props.targetX + b.x * length, y: props.targetY + b.y * length }
+    return `M ${props.sourceX} ${props.sourceY} L ${p1.x} ${p1.y} M ${props.targetX} ${props.targetY} L ${p2.x} ${p2.y}`
+  })()
+  const path = safeRoute !== undefined
+    ? roundedPath(safeRoute, 10)
+    : blockedRoute ? stubPath : smoothPath
 
   /**
    * Which way the arrow points: the last leg of the route (or, without one, the
