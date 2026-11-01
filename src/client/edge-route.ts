@@ -35,10 +35,10 @@ export interface RouteOptions {
   minCorridor?: number
 }
 
-const DEFAULTS = { margin: 8, stub: 22, minCorridor: 18 }
+const DEFAULTS = { margin: 4, stub: 22, minCorridor: 10 }
 
 /** Cost of putting the line through a card. Large enough to never be preferred. */
-const CROSS_PENALTY = 20000
+const CROSS_PENALTY = 5_000_000
 
 /** Middle of the face an edge leaves from. */
 export function anchorOf(rect: Rect, face: Face): Point {
@@ -77,6 +77,8 @@ function insideStrict(rect: Rect, point: Point): boolean {
  * but ruinously expensive move: with no clean route left the edge still comes out
  * as the least-bad polyline, never the old straight line through everything.
  */
+export function __hitsH(rects: Rect[], y: number, x1: number, x2: number): number { return hitsHorizontal(rects, y, x1, x2) }
+
 function hitsHorizontal(rects: Rect[], y: number, x1: number, x2: number): number {
   const lo = Math.min(x1, x2)
   const hi = Math.max(x1, x2)
@@ -442,8 +444,57 @@ export function routeBetween(
     // layout constants, plenty of *adjacent* cards overlap the endpoint box — dropping
     // them from the obstacle set opened exactly the lanes the lines then ran through.)
     .map(rect => expand(rect, margin))
+  __routeDebug.blockedCount = blocked.length
+  __routeDebug.blockedFirst = blocked.slice(0, 2)
 
-  const fallback = simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])
+  /**
+   * Obstacle-aware last resort.
+   *
+   * If the grid search finds nothing, do not draw a straight line through the
+   * board: try the four "go around the outside of everything" shapes and keep the
+   * first one that crosses nothing, else the one with the fewest crossings.
+   */
+  const makeFallback = (): Point[] => {
+    if (blocked.length === 0) return simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])
+    const gap = margin + 8
+    const left = Math.min(...blocked.map(rect => rect.x)) - gap
+    const right = Math.max(...blocked.map(rect => rect.x + rect.w)) + gap
+    const top = Math.min(...blocked.map(rect => rect.y)) - gap
+    const bottom = Math.max(...blocked.map(rect => rect.y + rect.h)) + gap
+    // Z shapes through every candidate lane (the gutters between cards), then the
+    // four "around the outside" shapes. The gutters are what makes this work on a
+    // tight board: the outside lanes are usually blocked by the endpoints' own row.
+    const lanesX = [...new Set([left, right, ...xsTrimmed])].sort((a, b) => Math.abs(a - startStub.x) - Math.abs(b - startStub.x))
+    const lanesY = [...new Set([top, bottom, ...ysTrimmed])].sort((a, b) => Math.abs(a - startStub.y) - Math.abs(b - startStub.y))
+    const candidates: Point[][] = []
+    for (const lane of lanesY.slice(0, 8)) {
+      candidates.push([start, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, end])
+    }
+    for (const lane of lanesX.slice(0, 8)) {
+      candidates.push([start, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, end])
+    }
+    candidates.push([start, startStub, { x: left, y: startStub.y }, { x: left, y: endStub.y }, endStub, end])
+    candidates.push([start, startStub, { x: right, y: startStub.y }, { x: right, y: endStub.y }, endStub, end])
+    let best: Point[] | undefined
+    let bestHits = Infinity
+    for (const candidate of candidates) {
+      const points = simplify(candidate)
+      let hits = 0
+      for (let index = 1; index < points.length; index += 1) {
+        const a = points[index - 1]!
+        const b = points[index]!
+        hits += a.x === b.x
+          ? hitsVertical(blocked, a.x, a.y, b.y)
+          : hitsHorizontal(blocked, a.y, a.x, b.x)
+      }
+      if (hits < bestHits) {
+        bestHits = hits
+        best = points
+        if (hits === 0) break
+      }
+    }
+    return best ?? simplify([start, startStub, { x: endStub.x, y: startStub.y }, endStub, end])
+  }
   __routeDebug.last = { usedFallback: true }
 
   // Channels between cards, plus lines just outside the whole cluster so a card
@@ -475,7 +526,7 @@ export function routeBetween(
   // Lanes hugging each nearby card, so a block that spans a whole channel still
   // leaves somewhere to slip past. Without these, a dense board gives A* nothing
   // and the edge degrades into a straight line through everything.
-  const hug = margin + 6
+  const hug = margin + 8
   const xHug = (lanes as Rect[]).flatMap(rect => [rect.x - hug, rect.x + rect.w + hug])
   const yHug = (lanes as Rect[]).flatMap(rect => [rect.y - hug, rect.y + rect.h + hug])
   const xCands = dedupe([start.x, end.x, startStub.x, endStub.x, ...xs, ...xOuter, ...xHug])
@@ -515,7 +566,7 @@ export function routeBetween(
 
   const startIndex = { x: xsTrimmed.findIndex(value => Math.abs(value - startStub.x) < 0.5), y: ysTrimmed.findIndex(value => Math.abs(value - startStub.y) < 0.5) }
   const endIndex = { x: xsTrimmed.findIndex(value => Math.abs(value - endStub.x) < 0.5), y: ysTrimmed.findIndex(value => Math.abs(value - endStub.y) < 0.5) }
-  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) return fallback
+  if (startIndex.x < 0 || startIndex.y < 0 || endIndex.x < 0 || endIndex.y < 0) { __routeDebug.reason = 'no-index'; __routeDebug.index = { startIndex, endIndex, xs: xsTrimmed.length, ys: ysTrimmed.length }; return makeFallback() }
 
   const goal = { x: endStub.x, y: endStub.y }
   const startNode = nodeId(startIndex.x, startIndex.y)
@@ -548,6 +599,7 @@ export function routeBetween(
       }
       path.reverse()
       __routeDebug.last = { usedFallback: false, steps: path.length }
+      __routeDebug.rawPath = path.map(point => [Math.round(point.x), Math.round(point.y)])
       return snapToChannels(
         simplify([start, startStub, ...path.slice(1), endStub, end]),
         obstacles as Rect[],
@@ -598,7 +650,7 @@ export function routeBetween(
     }
   }
 
-  return fallback
+  return makeFallback()
 }
 
 /** Orthogonal polyline → SVG path with rounded corners. */
