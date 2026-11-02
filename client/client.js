@@ -13103,13 +13103,48 @@ function StackDrawer(props) {
           cardsInDrawer.map((card) => ({ id: card.id, x: card.x, y: card.y })),
           { cardWidth: fromRect.w, cardHeight: fromRect.h }
         );
-        const points = routeEdge(
+        const dirty = (candidate) => {
+          let hits2 = 0;
+          for (let index2 = 1; index2 < candidate.length; index2 += 1) {
+            const a = candidate[index2 - 1];
+            const b = candidate[index2];
+            const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2));
+            for (let step2 = 0; step2 <= steps; step2 += 1) {
+              const ratio = step2 / steps;
+              const point = { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio };
+              for (const box of obstacles) {
+                if (point.x > box.x + 1 && point.x < box.x + box.w - 1 && point.y > box.y + 1 && point.y < box.y + box.h - 1) hits2 += 1;
+              }
+            }
+          }
+          return hits2;
+        };
+        const FACES = ["t", "r", "b", "l"];
+        let points = routeEdge(
           fromRect,
           toRect,
           faces.fromHandle,
           faces.toHandle,
           [fromRect, toRect, ...obstacles]
         );
+        let bestDirty = dirty(points);
+        if (bestDirty > 0) {
+          let bestPoints = points;
+          for (const fromFace of FACES) {
+            for (const toFace of FACES) {
+              if (fromFace === faces.fromHandle && toFace === faces.toHandle) continue;
+              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles]);
+              const attemptDirty = dirty(attempt);
+              if (attemptDirty < bestDirty) {
+                bestDirty = attemptDirty;
+                bestPoints = attempt;
+                if (bestDirty === 0) break;
+              }
+            }
+            if (bestDirty === 0) break;
+          }
+          points = bestPoints;
+        }
         const tip = points[points.length - 1];
         const prev = points[points.length - 2];
         const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y) ? tip.x >= prev.x ? 0 : 180 : tip.y >= prev.y ? 90 : -90;
@@ -13130,8 +13165,12 @@ function StackDrawer(props) {
       measure();
     });
     observer.observe(scroller);
+    const settle = [60, 160, 320, 600].map((delay) => window.setTimeout(() => {
+      measure();
+    }, delay));
     return () => {
       observer.disconnect();
+      for (const timer4 of settle) window.clearTimeout(timer4);
     };
   }, [props.links, props.items, query, visibleItems.length]);
   (0, import_react10.useEffect)(() => {

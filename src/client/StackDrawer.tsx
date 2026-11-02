@@ -244,13 +244,52 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           cardsInDrawer.map(card => ({ id: card.id, x: card.x, y: card.y })),
           { cardWidth: fromRect.w, cardHeight: fromRect.h },
         )
-        const points = routeEdge(
+        // Verify the drawn line; if it would touch a card, sweep every face pair. The
+        // drawer's grid is dense and the geometry-only face rule is not always the pair
+        // that can actually get there without crossing.
+        const dirty = (candidate: { x: number; y: number }[]): number => {
+          let hits = 0
+          for (let index = 1; index < candidate.length; index += 1) {
+            const a = candidate[index - 1]!
+            const b = candidate[index]!
+            const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2))
+            for (let step = 0; step <= steps; step += 1) {
+              const ratio = step / steps
+              const point = { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio }
+              for (const box of obstacles) {
+                if (point.x > box.x + 1 && point.x < box.x + box.w - 1
+                  && point.y > box.y + 1 && point.y < box.y + box.h - 1) hits += 1
+              }
+            }
+          }
+          return hits
+        }
+        const FACES: ('t' | 'r' | 'b' | 'l')[] = ['t', 'r', 'b', 'l']
+        let points = routeEdge(
           fromRect,
           toRect,
           faces.fromHandle as 't' | 'r' | 'b' | 'l',
           faces.toHandle as 't' | 'r' | 'b' | 'l',
           [fromRect, toRect, ...obstacles],
         )
+        let bestDirty = dirty(points)
+        if (bestDirty > 0) {
+          let bestPoints = points
+          for (const fromFace of FACES) {
+            for (const toFace of FACES) {
+              if (fromFace === faces.fromHandle && toFace === faces.toHandle) continue
+              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles])
+              const attemptDirty = dirty(attempt)
+              if (attemptDirty < bestDirty) {
+                bestDirty = attemptDirty
+                bestPoints = attempt
+                if (bestDirty === 0) break
+              }
+            }
+            if (bestDirty === 0) break
+          }
+          points = bestPoints
+        }
         const tip = points[points.length - 1]
         const prev = points[points.length - 2]
         const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y)
@@ -275,7 +314,14 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     measure()
     const observer = new ResizeObserver(() => { measure() })
     observer.observe(scroller)
-    return () => { observer.disconnect() }
+    // The drawer animates open, so the first measurement can land on mid-transition
+    // geometry — and a wire computed from that keeps its wrong shape until something
+    // else re-measures. Re-measure a few times while it settles.
+    const settle = [60, 160, 320, 600].map(delay => window.setTimeout(() => { measure() }, delay))
+    return () => {
+      observer.disconnect()
+      for (const timer of settle) window.clearTimeout(timer)
+    }
   }, [props.links, props.items, query, visibleItems.length])
   // Coming back from a conversation should land on the same rows.
   useEffect(() => {
