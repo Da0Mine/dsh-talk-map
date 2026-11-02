@@ -24730,7 +24730,7 @@
     "digest.empty": "\u8FD9\u6761\u5BF9\u8BDD\u8FD8\u6CA1\u6709\u6458\u8981\uFF0C\u5148\u5237\u65B0\u6458\u8981\u518D\u6765\u770B\u3002",
     "digest.copy": "\u590D\u5236",
     "digest.close": "\u5173\u95ED",
-    "global.searchPlaceholder": "b49 \xB7 \u641C\u5730\u56FE\u4E0A\u7684\u5361\u7247\uFF08\u6807\u9898/\u6B63\u6587\uFF09",
+    "global.searchPlaceholder": "b50 \xB7 \u641C\u5730\u56FE\u4E0A\u7684\u5361\u7247\uFF08\u6807\u9898/\u6B63\u6587\uFF09",
     "global.searchRun": "\u641C\u7D22",
     "global.searchTitle": "\u641C\u7D22\u5730\u56FE",
     "font.group": "\u6587\u5B57\u5927\u5C0F",
@@ -24881,7 +24881,7 @@
     "menu.noGroup": "Remove from group (free card)",
     "menu.open": "Open conversation",
     "menu.markUnread": "Mark as unread",
-    "global.searchPlaceholder": "b49 \xB7 Search cards on the map",
+    "global.searchPlaceholder": "b50 \xB7 Search cards on the map",
     "global.searchRun": "Search",
     "global.searchTitle": "Search the map",
     "font.group": "Text size",
@@ -25330,6 +25330,7 @@
           };
         });
         const next = [];
+        let wireIndex = 0;
         for (const link of links2) {
           const from = boxOf(link.from);
           const to = boxOf(link.to);
@@ -25493,23 +25494,26 @@
             const lanesX = bands(cardsInDrawer.map((card) => ({ start: card.x, end: card.x + card.w }))).sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX));
             const startStub = { x: startPoint.x + startNormal.x * 12, y: startPoint.y + startNormal.y * 12 };
             const endStub = { x: endPoint.x + endNormal.x * 12, y: endPoint.y + endNormal.y * 12 };
+            const laneOffset = (wireIndex % 7 - 3) * 1.3;
             const shapes = [];
             for (const lane of lanesY) {
+              const at = lane + laneOffset;
               shapes.push([
                 startPoint,
                 startStub,
-                { x: startStub.x, y: lane },
-                { x: endStub.x, y: lane },
+                { x: startStub.x, y: at },
+                { x: endStub.x, y: at },
                 endStub,
                 endPoint
               ]);
             }
             for (const lane of lanesX) {
+              const at = lane + laneOffset;
               shapes.push([
                 startPoint,
                 startStub,
-                { x: lane, y: startStub.y },
-                { x: lane, y: endStub.y },
+                { x: at, y: startStub.y },
+                { x: at, y: endStub.y },
                 endStub,
                 endPoint
               ]);
@@ -25526,10 +25530,11 @@
           }
           const angle = Math.abs(arrival.x) < 0.5 && Math.abs(arrival.y) < 0.5 ? toSide === "l" ? 180 : toSide === "r" ? 0 : toSide === "t" ? -90 : 90 : Math.abs(arrival.x) >= Math.abs(arrival.y) ? arrival.x >= 0 ? 0 : 180 : arrival.y >= 0 ? 90 : -90;
           const arrowAngle = angle;
+          wireIndex += 1;
           next.push({
             d: bestD ?? "M " + startPoint.x + " " + startPoint.y + " L " + endPoint.x + " " + endPoint.y,
-            ax: endPoint.x,
-            ay: endPoint.y,
+            ax: endPoint.x - endNormal.x * 2.5,
+            ay: endPoint.y - endNormal.y * 2.5,
             angle: arrowAngle,
             from: link.from,
             to: link.to

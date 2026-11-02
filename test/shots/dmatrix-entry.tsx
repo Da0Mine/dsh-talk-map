@@ -20,11 +20,21 @@ const items = Array.from({ length: count }, (_, index) => ({
   preview: body[mixed ? index % body.length : 0],
   updatedAt: Date.now() - index * 3600_000,
 }))
+const only = params.get('only')
 const links = []
-for (let a = 0; a < count; a += 1) {
-  for (let b = 0; b < count; b += 1) {
-    if (a === b) continue
+if (only === 'a-few') {
+  // What a real drawer looks like: a couple of neighbours, one diagonal, one long.
+  const pairs = [[0, 1], [1, 2], [0, 4], [3, 5]]
+  for (const [a, b] of pairs) {
+    if (a >= count || b >= count) continue
     links.push({ from: 'c' + a, to: 'c' + b, visible: true })
+  }
+} else {
+  for (let a = 0; a < count; a += 1) {
+    for (let b = 0; b < count; b += 1) {
+      if (a === b) continue
+      links.push({ from: 'c' + a, to: 'c' + b, visible: true })
+    }
   }
 }
 

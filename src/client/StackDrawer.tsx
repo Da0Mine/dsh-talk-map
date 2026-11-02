@@ -225,6 +225,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           }
         })
       const next: { d: string; ax: number; ay: number; angle: number; from?: string; to?: string }[] = []
+      let wireIndex = 0
       for (const link of links) {
         const from = boxOf(link.from)
         const to = boxOf(link.to)
@@ -444,15 +445,22 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           // card's own edge and the arrow ends up pointing out of the card.
           const startStub = { x: startPoint.x + startNormal.x * 12, y: startPoint.y + startNormal.y * 12 }
           const endStub = { x: endPoint.x + endNormal.x * 12, y: endPoint.y + endNormal.y * 12 }
+          // Wires that pick the same gutter would be drawn on top of each other, which reads
+          // as one thick line. Give each one a stable small offset inside the gap.
+          // Spread by position in the list: neighbouring links then never share a lane,
+          // which is what made several wires look like one thick line.
+          const laneOffset = ((wireIndex % 7) - 3) * 1.3
           const shapes: { x: number; y: number }[][] = []
           for (const lane of lanesY) {
+            const at = lane + laneOffset
             shapes.push([
-              startPoint, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, endPoint,
+              startPoint, startStub, { x: startStub.x, y: at }, { x: endStub.x, y: at }, endStub, endPoint,
             ])
           }
           for (const lane of lanesX) {
+            const at = lane + laneOffset
             shapes.push([
-              startPoint, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, endPoint,
+              startPoint, startStub, { x: at, y: startStub.y }, { x: at, y: endStub.y }, endStub, endPoint,
             ])
           }
           for (const shape of shapes) {
@@ -478,10 +486,11 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         // travel direction points it into the card.
         const arrowAngle = angle
 
+        wireIndex += 1
         next.push({
           d: bestD ?? ('M ' + startPoint.x + ' ' + startPoint.y + ' L ' + endPoint.x + ' ' + endPoint.y),
-          ax: endPoint.x,
-          ay: endPoint.y,
+          ax: endPoint.x - endNormal.x * 2.5,
+          ay: endPoint.y - endNormal.y * 2.5,
           angle: arrowAngle,
           from: link.from,
           to: link.to,
