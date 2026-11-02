@@ -12208,7 +12208,7 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
     }
     return count;
   };
-  if (hits(raw, [from, to]) === 0) return raw;
+  if (hits(raw, [from, to, ...obstacles]) === 0) return raw;
   const spread = margin + 24;
   const boxTop = Math.min(from.y, to.y) - spread;
   const boxBottom = Math.max(from.y + from.h, to.y + to.h) + spread;

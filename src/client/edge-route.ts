@@ -814,7 +814,10 @@ export function routeBetween(
     return count
   }
 
-  if (hits(raw, [from, to]) === 0) return raw
+  // Verify against *every* card, not just the two endpoints: the grid search usually
+  // dodges them, but when it falls back (a dense board, a long line) the result can run
+  // through a third card, and that is exactly what the drawer showed.
+  if (hits(raw, [from, to, ...obstacles]) === 0) return raw
 
   const spread = margin + 24
   const boxTop = Math.min(from.y, to.y) - spread
