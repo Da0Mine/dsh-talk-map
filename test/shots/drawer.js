@@ -2387,9 +2387,9 @@
           if (typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ !== "undefined" && typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart === "function") {
             __REACT_DEVTOOLS_GLOBAL_HOOK__.registerInternalModuleStart(new Error());
           }
-          var React = require_react();
+          var React2 = require_react();
           var Scheduler = require_scheduler();
-          var ReactSharedInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React2.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           var suppressWarning = false;
           function setSuppressWarning(newSuppressWarning) {
             {
@@ -3996,7 +3996,7 @@
             {
               if (props.value == null) {
                 if (typeof props.children === "object" && props.children !== null) {
-                  React.Children.forEach(props.children, function(child) {
+                  React2.Children.forEach(props.children, function(child) {
                     if (child == null) {
                       return;
                     }
@@ -23592,7 +23592,7 @@
       if (true) {
         (function() {
           "use strict";
-          var React = require_react();
+          var React2 = require_react();
           var REACT_ELEMENT_TYPE = /* @__PURE__ */ Symbol.for("react.element");
           var REACT_PORTAL_TYPE = /* @__PURE__ */ Symbol.for("react.portal");
           var REACT_FRAGMENT_TYPE = /* @__PURE__ */ Symbol.for("react.fragment");
@@ -23618,7 +23618,7 @@
             }
             return null;
           }
-          var ReactSharedInternals = React.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
+          var ReactSharedInternals = React2.__SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED;
           function error(format) {
             {
               {
@@ -24491,6 +24491,7 @@
   });
 
   // test/shots/drawer-entry.tsx
+  var import_react = __toESM(require_react(), 1);
   var import_client = __toESM(require_client(), 1);
 
   // src/client/edge-route.ts
@@ -25091,7 +25092,41 @@
     { from: "c1_0", to: "c0_0" },
     { from: "c2_1", to: "c0_1" }
   ];
+  var STALE = true;
   function Panel() {
+    const [scale, setScale] = import_react.default.useState(STALE ? 0.9 : 1);
+    const [, setTick] = import_react.default.useState(0);
+    import_react.default.useEffect(() => {
+      if (!STALE) return;
+      const started = performance.now();
+      const step = () => {
+        const t = Math.min(1, (performance.now() - started) / 300);
+        setScale(0.9 + 0.1 * t);
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, []);
+    import_react.default.useEffect(() => {
+      if (STALE) return;
+      let stable = 0;
+      let last = "";
+      let frame = 0;
+      let handle = 0;
+      const tick = () => {
+        const scroller = document.querySelector("[data-scroller]");
+        const signature = scroller === null ? "" : [...scroller.querySelectorAll("[data-card-id]")].map((element) => {
+          const r = element.getBoundingClientRect();
+          return Math.round(r.width) + "x" + Math.round(r.height);
+        }).join("|");
+        stable = signature === last ? stable + 1 : 0;
+        last = signature;
+        frame += 1;
+        setTick((value) => value + 1);
+        if (stable < 3 || frame < 12) handle = requestAnimationFrame(tick);
+      };
+      handle = requestAnimationFrame(tick);
+      return () => cancelAnimationFrame(handle);
+    }, []);
     const contentWidth = COLS * (CARD_W + GAP_X) - GAP_X;
     const contentHeight = ROWS * (CARD_H + GAP_Y) - GAP_Y;
     const wires = LINKS.map((link) => {
@@ -25185,7 +25220,7 @@
       ))
     ] }) });
   }
-  (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Panel, {}));
+  (0, import_client.createRoot)(document.getElementById("root")).render(/* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { style: { transform: "scale(1)", transformOrigin: "0 0" }, children: /* @__PURE__ */ (0, import_jsx_runtime.jsx)(Panel, {}) }));
 })();
 /*! Bundled license information:
 

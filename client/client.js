@@ -13170,12 +13170,26 @@ function StackDrawer(props) {
       measure();
     });
     observer.observe(scroller);
-    const settle = [60, 160, 320, 600].map((delay) => window.setTimeout(() => {
+    let signature = "";
+    let stableFrames = 0;
+    let frame2 = 0;
+    const tick = () => {
       measure();
-    }, delay));
+      const next = [...scroller.querySelectorAll("[data-card-id]")].map((element) => {
+        const r = element.getBoundingClientRect();
+        return `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}`;
+      }).join("|");
+      stableFrames = next === signature ? stableFrames + 1 : 0;
+      signature = next;
+      frame2 += 1;
+      if (stableFrames < 3 || frame2 < 12) {
+        raf = window.requestAnimationFrame(tick);
+      }
+    };
+    let raf = window.requestAnimationFrame(tick);
     return () => {
       observer.disconnect();
-      for (const timer4 of settle) window.clearTimeout(timer4);
+      window.cancelAnimationFrame(raf);
     };
   }, [props.links, props.items, query, visibleItems.length]);
   (0, import_react10.useEffect)(() => {

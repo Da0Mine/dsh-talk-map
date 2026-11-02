@@ -322,16 +322,28 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
     measure()
     const observer = new ResizeObserver(() => { measure() })
     observer.observe(scroller)
-    // The drawer animates open, so the first measurement can land on mid-transition
-    // geometry — and a wire computed from that keeps its wrong shape until something
-    // else re-measures. Re-measure a few times while it settles.
-    const settle = [60, 160, 320, 600].map(delay => window.setTimeout(() => { measure() }, delay))
+    // Measure every frame until the geometry stops moving: the drawer animates open,
+    // and a wire computed from mid-animation rects keeps its wrong shape for ever
+    // (that is the "错位" — the arrow ends tens of pixels away from its card).
+    let signature = ''
+    let stableFrames = 0
+    let frame = 0
+    const tick = (): void => {
+      measure()
+      const next = [...scroller.querySelectorAll('[data-card-id]')]
+        .map(element => { const r = element.getBoundingClientRect(); return `${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)},${Math.round(r.height)}` })
+        .join('|')
+      stableFrames = next === signature ? stableFrames + 1 : 0
+      signature = next
+      frame += 1
+      if (stableFrames < 3 || frame < 12) { raf = window.requestAnimationFrame(tick) }
+    }
+    let raf = window.requestAnimationFrame(tick)
     return () => {
       observer.disconnect()
-      for (const timer of settle) window.clearTimeout(timer)
+      window.cancelAnimationFrame(raf)
     }
   }, [props.links, props.items, query, visibleItems.length])
-  // Coming back from a conversation should land on the same rows.
   useEffect(() => {
     const scroller = scrollerRef.current
     if (scroller === null) return

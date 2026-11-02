@@ -46,7 +46,44 @@ const LINKS = [
   { from: 'c2_1', to: 'c0_1' },
 ]
 
+const STALE = ${process.argv.includes('--stale')}
+
 function Panel() {
+  // The drawer animates open: a container that starts at scale 0.9 and settles at 1 over
+  // ~300ms. getBoundingClientRect returns SCALED values inside it, so a wire measured
+  // once at mount is permanently off by that factor — the "错位" being reported.
+  const [scale, setScale] = React.useState(STALE ? 0.9 : 1)
+  const [, setTick] = React.useState(0)
+  React.useEffect(() => {
+    if (!STALE) return
+    const started = performance.now()
+    const step = () => {
+      const t = Math.min(1, (performance.now() - started) / 300)
+      setScale(0.9 + 0.1 * t)
+      if (t < 1) requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  }, [])
+  React.useEffect(() => {
+    if (STALE) return
+    // Re-measure every frame until the geometry stops moving (what the drawer now does).
+    let stable = 0
+    let last = ''
+    let frame = 0
+    let handle = 0
+    const tick = () => {
+      const scroller = document.querySelector('[data-scroller]')
+      const signature = scroller === null ? '' : [...scroller.querySelectorAll('[data-card-id]')]
+        .map(element => { const r = element.getBoundingClientRect(); return Math.round(r.width) + "x" + Math.round(r.height) }).join("|")
+      stable = signature === last ? stable + 1 : 0
+      last = signature
+      frame += 1
+      setTick(value => value + 1)
+      if (stable < 3 || frame < 12) handle = requestAnimationFrame(tick)
+    }
+    handle = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(handle)
+  }, [])
   const contentWidth = COLS * (CARD_W + GAP_X) - GAP_X
   const contentHeight = ROWS * (CARD_H + GAP_Y) - GAP_Y
 
@@ -114,7 +151,7 @@ function Panel() {
   )
 }
 
-createRoot(document.getElementById('root')).render(<Panel />)
+createRoot(document.getElementById('root')).render(<div style={{ transform: 'scale(' + 1 + ')', transformOrigin: '0 0' }}><Panel /></div>)
 `
 
 fs.mkdirSync('test/shots', { recursive: true })
