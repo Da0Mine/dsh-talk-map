@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.27",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.28",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.27",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.28",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14174,7 +14174,15 @@ function CanvasInner(props) {
     const timer4 = window.setTimeout(() => setBoardTick((value) => value + 1), 150);
     return () => window.clearTimeout(timer4);
   }, []);
-  const obstaclesFor = (fromCardId, toCardId) => Object.entries(renderedBoxes()).filter(([id2]) => id2 !== fromCardId && id2 !== toCardId).map(([, box]) => box);
+  const obstaclesFor = (fromCardId, toCardId) => {
+    const rendered = renderedBoxes();
+    const boxes = { ...rendered };
+    for (const [id2, card] of Object.entries(canvasState.cards)) {
+      if (boxes[id2] !== void 0) continue;
+      boxes[id2] = { x: card.x, y: card.y, w: CARD_W, h: CARD_H };
+    }
+    return Object.entries(boxes).map(([, box]) => box);
+  };
   const boxOf = (cardId) => renderedBoxes()[cardId];
   const routingObstacles = () => Object.entries(canvasState.cards).map(([id2, card]) => ({
     id: id2,

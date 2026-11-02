@@ -1081,14 +1081,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return () => window.clearTimeout(timer)
   }, [])
 
-  const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] =>
-    Object.entries(renderedBoxes())
-      .filter(([id]) => id !== fromCardId && id !== toCardId)
-      // Folded cards are NOT excluded: a card can count as "folded" by the layout
-      // yet still be painted, and then it was invisible to the router — exactly the
-      // card the line ran through in the reported screenshot.
+  const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] => {
+    // Union of "what the canvas paints" and "what the store says exists": either
+    // source alone can miss a card, and one missing box is exactly what lets a line
+    // run through that card (reproduced in scripts/_draw-connect.mjs).
+    const rendered = renderedBoxes()
+    const boxes: Record<string, { x: number; y: number; w: number; h: number }> = { ...rendered }
+    for (const [id, card] of Object.entries(canvasState.cards)) {
+      if (boxes[id] !== undefined) continue
+      boxes[id] = { x: card.x, y: card.y, w: CARD_W, h: CARD_H }
+    }
+    return Object.entries(boxes)
       .map(([, box]) => box)
-
+  }
   /** One card's box, exactly as rendered. */
   const boxOf = (cardId: string): { x: number; y: number; w: number; h: number } | undefined =>
     renderedBoxes()[cardId]
