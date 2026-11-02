@@ -162,6 +162,62 @@ for (const size of SIZES) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Real-board scenarios: shapes taken from screenshots of the actual map.
+// A column of three cards where the middle one is wider/offset (a real card is
+// 250×129 while the layout box is 224×120) — the reported crossing.
+// ---------------------------------------------------------------------------
+const SCENARIOS = [
+  {
+    name: 'stacked column, wider middle card',
+    cards: [
+      { id: 'top', x: 0, y: 0, w: 224, h: 120 },
+      { id: 'mid', x: 4, y: 176, w: 250, h: 129 },
+      { id: 'bottom', x: 0, y: 352, w: 224, h: 120 },
+    ],
+    pairs: [['top', 'bottom']],
+  },
+  {
+    name: 'stacked column, middle card offset right',
+    cards: [
+      { id: 'top', x: 0, y: 0, w: 224, h: 120 },
+      { id: 'mid', x: 20, y: 176, w: 224, h: 129 },
+      { id: 'bottom', x: 0, y: 352, w: 224, h: 120 },
+    ],
+    pairs: [['top', 'bottom']],
+  },
+]
+
+for (const scenario of SCENARIOS) {
+  for (const [fromId, toId] of scenario.pairs) {
+    const from = scenario.cards.find(card => card.id === fromId)
+    const to = scenario.cards.find(card => card.id === toId)
+    const others = scenario.cards.filter(card => card !== from && card !== to)
+    for (const fromFace of FACES) {
+      for (const toFace of FACES) {
+        cases += 1
+        const start = anchorOf(from, fromFace)
+        const end = anchorOf(to, toFace)
+        const points = routeBetween(
+          { start, startFace: fromFace, end, endFace: toFace },
+          from,
+          to,
+          others.map(card => ({ x: card.x, y: card.y, w: card.w, h: card.h })),
+        )
+        let hits = 0
+        sampleSegments([points], point => {
+          for (const card of others) {
+            const away = clearance(point, card)
+            if (away < worstClearance) worstClearance = away
+            if (inside(point, card)) hits += 1
+          }
+        })
+        if (hits > 0) failures.push({ where: `${scenario.name} · ${fromFace}→${toFace}`, reason: 'crosses another card', hits })
+      }
+    }
+  }
+}
+
 const byReason = failures.reduce((acc, failure) => {
   acc[failure.reason] = (acc[failure.reason] ?? 0) + 1
   return acc

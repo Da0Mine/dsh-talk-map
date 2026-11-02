@@ -1084,8 +1084,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const obstaclesFor = (fromCardId: string, toCardId: string): { x: number; y: number; w: number; h: number }[] =>
     Object.entries(renderedBoxes())
       .filter(([id]) => id !== fromCardId && id !== toCardId)
-      // A folded card is not painted, so it must not push lines around either.
-      .filter(([id]) => !foldedSet.has(id))
+      // Folded cards are NOT excluded: a card can count as "folded" by the layout
+      // yet still be painted, and then it was invisible to the router — exactly the
+      // card the line ran through in the reported screenshot.
       .map(([, box]) => box)
 
   /** One card's box, exactly as rendered. */
