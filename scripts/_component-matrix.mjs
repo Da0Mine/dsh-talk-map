@@ -189,10 +189,14 @@ const report = await page.evaluate(() => {
     const pathElement = scene.querySelector('svg path')
     if (pathElement === null) { out.push({ key, error: 'no path' }); continue }
     const total = pathElement.getTotalLength()
+    // Path points live in the SVG's own coordinate space; the cards are measured on
+    // screen. Convert before comparing, or every scene looks shifted by the offset.
+    const matrix = pathElement.getScreenCTM()
+    const toScreen = point => (matrix === null ? point : point.matrixTransform(matrix))
     let inside = 0
     const hits = new Set()
     for (let distance = 0; distance <= total; distance += 2) {
-      const point = pathElement.getPointAtLength(distance)
+      const point = toScreen(pathElement.getPointAtLength(distance))
       for (const card of cards) {
         if (point.x > card.x + 1 && point.x < card.x + card.w - 1 && point.y > card.y + 1 && point.y < card.y + card.h - 1) {
           inside += 1

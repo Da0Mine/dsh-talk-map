@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.31",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.32",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.31",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.32",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11957,7 +11957,7 @@ function snapToChannels(points, obstacles, margin) {
   }
   return candidate;
 }
-function routeBetween(ends, from, to, obstacles, options = {}) {
+function routeRaw(ends, from, to, obstacles, options = {}) {
   const margin = options.margin ?? DEFAULTS.margin;
   const stub = options.stub ?? DEFAULTS.stub;
   const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
@@ -12019,12 +12019,20 @@ function routeBetween(ends, from, to, obstacles, options = {}) {
     }
     candidates.push([start2, startStub, { x: left, y: startStub.y }, { x: left, y: endStub.y }, endStub, end]);
     candidates.push([start2, startStub, { x: right, y: startStub.y }, { x: right, y: endStub.y }, endStub, end]);
+    const pairTop = Math.min(from.y, to.y) - margin - 8;
+    const pairBottom = Math.max(from.y + from.h, to.y + to.h) + margin + 8;
+    const pairLeft = Math.min(from.x, to.x) - margin - 8;
+    const pairRight = Math.max(from.x + from.w, to.x + to.w) + margin + 8;
+    candidates.push([start2, startStub, { x: startStub.x, y: pairTop }, { x: endStub.x, y: pairTop }, endStub, end]);
+    candidates.push([start2, startStub, { x: startStub.x, y: pairBottom }, { x: endStub.x, y: pairBottom }, endStub, end]);
+    candidates.push([start2, startStub, { x: pairLeft, y: startStub.y }, { x: pairLeft, y: endStub.y }, endStub, end]);
+    candidates.push([start2, startStub, { x: pairRight, y: startStub.y }, { x: pairRight, y: endStub.y }, endStub, end]);
     let best2;
     let bestHits = Infinity;
     for (const candidate of candidates) {
       const points = simplify(candidate);
       let hits = 0;
-      for (let index2 = 1; index2 < points.length; index2 += 1) {
+      for (let index2 = 2; index2 < points.length - 1; index2 += 1) {
         const a = points[index2 - 1];
         const b = points[index2];
         hits += a.x === b.x ? hitsVertical(blocked, a.x, a.y, b.y) : hitsHorizontal(blocked, a.y, a.x, b.x);
@@ -12188,6 +12196,76 @@ function roundedPath(points, radius = 10) {
 function round(value) {
   return Math.round(value * 100) / 100;
 }
+function routeBetween(ends, from, to, obstacles, options = {}) {
+  const raw = routeRaw(ends, from, to, obstacles, options);
+  const margin = options.margin ?? DEFAULTS.margin;
+  const near = (point, anchor) => Math.abs(point.x - anchor.x) <= 26 && Math.abs(point.y - anchor.y) <= 26;
+  const hits = (points, boxes) => {
+    let count = 0;
+    for (let index2 = 1; index2 < points.length; index2 += 1) {
+      const a = points[index2 - 1];
+      const b = points[index2];
+      const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 3));
+      for (let step2 = 0; step2 <= steps; step2 += 1) {
+        const t2 = step2 / steps;
+        const point = { x: a.x + (b.x - a.x) * t2, y: a.y + (b.y - a.y) * t2 };
+        if (near(point, ends.start) || near(point, ends.end)) continue;
+        for (const box of boxes) {
+          const inside = point.x > box.x + 1 && point.x < box.x + box.w - 1 && point.y > box.y + 1 && point.y < box.y + box.h - 1;
+          if (inside) {
+            count += 1;
+            continue;
+          }
+          const dx = Math.max(box.x - point.x, 0, point.x - (box.x + box.w));
+          const dy = Math.max(box.y - point.y, 0, point.y - (box.y + box.h));
+          if (Math.hypot(dx, dy) < 8) count += 1;
+        }
+      }
+    }
+    return count;
+  };
+  if (hits(raw, [from, to]) === 0) return raw;
+  const spread = margin + 24;
+  const boxTop = Math.min(from.y, to.y) - spread;
+  const boxBottom = Math.max(from.y + from.h, to.y + to.h) + spread;
+  const boxLeft = Math.min(from.x, to.x) - spread;
+  const boxRight = Math.max(from.x + from.w, to.x + to.w) + spread;
+  const startNormal = normalOf(ends.startFace);
+  const endNormal = normalOf(ends.endFace);
+  const stubLength = Math.max(options.stub ?? DEFAULTS.stub, margin + 3);
+  const startStub = {
+    x: ends.start.x + startNormal.x * stubLength,
+    y: ends.start.y + startNormal.y * stubLength
+  };
+  const endStub = {
+    x: ends.end.x + endNormal.x * stubLength,
+    y: ends.end.y + endNormal.y * stubLength
+  };
+  const wraps = [
+    [ends.start, startStub, { x: startStub.x, y: boxTop }, { x: endStub.x, y: boxTop }, endStub, ends.end],
+    [ends.start, startStub, { x: startStub.x, y: boxBottom }, { x: endStub.x, y: boxBottom }, endStub, ends.end],
+    [ends.start, startStub, { x: boxLeft, y: startStub.y }, { x: boxLeft, y: endStub.y }, endStub, ends.end],
+    [ends.start, startStub, { x: boxRight, y: startStub.y }, { x: boxRight, y: endStub.y }, endStub, ends.end]
+  ];
+  let best;
+  let bestHits = Infinity;
+  let bestLength = Infinity;
+  for (const wrap of wraps) {
+    const points = simplify(wrap);
+    const wrapped = hits(points, [from, to, ...obstacles]);
+    let length = 0;
+    for (let index2 = 1; index2 < points.length; index2 += 1) {
+      length += Math.abs(points[index2].x - points[index2 - 1].x) + Math.abs(points[index2].y - points[index2 - 1].y);
+    }
+    if (wrapped < bestHits || wrapped === bestHits && length < bestLength) {
+      best = points;
+      bestHits = wrapped;
+      bestLength = length;
+    }
+    if (wrapped === 0) break;
+  }
+  return bestHits === 0 && best !== void 0 ? best : raw;
+}
 
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
@@ -12234,7 +12312,7 @@ function TalkMapEdge(props) {
   const measuredBoxes = boardBoxes();
   const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
   const merged = (obstacles !== void 0 && obstacles.length > 0 ? obstacles : measuredBoxes).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect));
-  const route = merged.length === 0 ? void 0 : routeBetween(
+  const route = data.fromRect === void 0 || data.toRect === void 0 ? void 0 : routeBetween(
     {
       // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,
       // which shifted the clipped endpoints by a pixel between renders.
@@ -12249,7 +12327,51 @@ function TalkMapEdge(props) {
     data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
     merged
   );
-  const routed = route !== void 0 && route.length > 1;
+  let finalRoute = route;
+  if (route !== void 0 && route.length > 1 && data.fromRect !== void 0 && data.toRect !== void 0) {
+    const boxesForHit = [
+      ...data.fromRect === void 0 ? [] : [data.fromRect],
+      ...data.toRect === void 0 ? [] : [data.toRect],
+      ...merged
+    ];
+    const nearAnchor = (point) => Math.hypot(point.x - props.sourceX, point.y - props.sourceY) <= 26 || Math.hypot(point.x - props.targetX, point.y - props.targetY) <= 26;
+    const hitsCard = (points) => {
+      for (let index2 = 1; index2 < points.length; index2 += 1) {
+        const a = points[index2 - 1];
+        const b = points[index2];
+        const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 4));
+        for (let step2 = 0; step2 <= steps; step2 += 1) {
+          const t2 = step2 / steps;
+          const point = { x: a.x + (b.x - a.x) * t2, y: a.y + (b.y - a.y) * t2 };
+          if (nearAnchor(point)) continue;
+          if (boxesForHit.some((box) => point.x > box.x + 1 && point.x < box.x + box.w - 1 && point.y > box.y + 1 && point.y < box.y + box.h - 1)) return true;
+        }
+      }
+      return false;
+    };
+    const sameSide = faceOf(props.sourcePosition) === faceOf(props.targetPosition);
+    if (hitsCard(route) || route.length <= 2 && sameSide) {
+      const faces = pickFaces(
+        { id: "from", x: data.fromRect.x, y: data.fromRect.y },
+        { id: "to", x: data.toRect.x, y: data.toRect.y },
+        merged.map((box, index2) => ({ id: `o${index2}`, x: box.x, y: box.y })),
+        { cardWidth: data.fromRect.w, cardHeight: data.fromRect.h }
+      );
+      const retry = routeBetween(
+        {
+          start: { x: Math.round(props.sourceX), y: Math.round(props.sourceY) },
+          startFace: faces.fromHandle,
+          end: { x: Math.round(props.targetX), y: Math.round(props.targetY) },
+          endFace: faces.toHandle
+        },
+        data.fromRect,
+        data.toRect,
+        merged
+      );
+      if (retry.length > 1 && !hitsCard(retry)) finalRoute = retry;
+    }
+  }
+  const routed = finalRoute !== void 0 && finalRoute.length > 1;
   const routeHitsCard = (points, rects) => {
     if (points === void 0 || rects === void 0) return false;
     for (let index2 = 1; index2 < points.length; index2 += 1) {
@@ -12291,7 +12413,7 @@ function TalkMapEdge(props) {
     targetY: props.targetY,
     targetPosition: props.targetPosition
   });
-  const safeRoute = routed ? route : void 0;
+  const safeRoute = routed ? finalRoute : void 0;
   const path = safeRoute !== void 0 ? roundedPath(safeRoute, 10) : smoothPath;
   const arrowAngle = (() => {
     if (routed) {

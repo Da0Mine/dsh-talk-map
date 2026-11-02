@@ -368,7 +368,7 @@ export function snapToChannels(
   }
   return candidate
 }
-export function routeBetween(
+function routeRaw(
   ends: RouteEnds,
   from: Rect,
   to: Rect,
@@ -763,4 +763,102 @@ export function clipToRects(points: Point[], rects: readonly Rect[]): Point[][] 
     }
     return out
   }).filter(subpath => subpath.length >= 2)
+}
+
+/**
+ * Every route the canvas draws goes through here.
+ *
+ * `routeRaw` is the grid search. On a real board some face pairs simply cannot be joined
+ * by it: two faces pointing the same way (right→right), or away from each other (left→right),
+ * force the line through one of the two cards — and the search happily does that because the
+ * endpoints are excluded from the obstacle set.
+ *
+ * So the result is verified: if it runs through either endpoint card, four "around the pair's
+ * bounding box" shapes are tried instead. Those always start and end on the requested anchors
+ * (the stub is unchanged), they just take the long way round.
+ */
+export function routeBetween(
+  ends: RouteEnds,
+  from: Rect,
+  to: Rect,
+  obstacles: readonly Rect[],
+  options: RouteOptions = {},
+): Point[] {
+  const raw = routeRaw(ends, from, to, obstacles, options)
+  const margin = options.margin ?? DEFAULTS.margin
+
+  const near = (point: Point, anchor: Point): boolean =>
+    Math.abs(point.x - anchor.x) <= 26 && Math.abs(point.y - anchor.y) <= 26
+  const hits = (points: readonly Point[], boxes: readonly Rect[]): number => {
+    let count = 0
+    for (let index = 1; index < points.length; index += 1) {
+      const a = points[index - 1]!
+      const b = points[index]!
+      const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 3))
+      for (let step = 0; step <= steps; step += 1) {
+        const t = step / steps
+        const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+        if (near(point, ends.start) || near(point, ends.end)) continue
+        for (const box of boxes) {
+          const inside = point.x > box.x + 1 && point.x < box.x + box.w - 1
+            && point.y > box.y + 1 && point.y < box.y + box.h - 1
+          if (inside) { count += 1; continue }
+          // "Close" counts too: a wrap that squeezes 2px past a card looks as broken as
+          // one that crosses it.
+          const dx = Math.max(box.x - point.x, 0, point.x - (box.x + box.w))
+          const dy = Math.max(box.y - point.y, 0, point.y - (box.y + box.h))
+          if (Math.hypot(dx, dy) < 8) count += 1
+        }
+      }
+    }
+    return count
+  }
+
+  if (hits(raw, [from, to]) === 0) return raw
+
+  const spread = margin + 24
+  const boxTop = Math.min(from.y, to.y) - spread
+  const boxBottom = Math.max(from.y + from.h, to.y + to.h) + spread
+  const boxLeft = Math.min(from.x, to.x) - spread
+  const boxRight = Math.max(from.x + from.w, to.x + to.w) + spread
+
+  const startNormal = normalOf(ends.startFace)
+  const endNormal = normalOf(ends.endFace)
+  const stubLength = Math.max(options.stub ?? DEFAULTS.stub, margin + 3)
+  const startStub = {
+    x: ends.start.x + startNormal.x * stubLength,
+    y: ends.start.y + startNormal.y * stubLength,
+  }
+  const endStub = {
+    x: ends.end.x + endNormal.x * stubLength,
+    y: ends.end.y + endNormal.y * stubLength,
+  }
+
+  const wraps: Point[][] = [
+    [ends.start, startStub, { x: startStub.x, y: boxTop }, { x: endStub.x, y: boxTop }, endStub, ends.end],
+    [ends.start, startStub, { x: startStub.x, y: boxBottom }, { x: endStub.x, y: boxBottom }, endStub, ends.end],
+    [ends.start, startStub, { x: boxLeft, y: startStub.y }, { x: boxLeft, y: endStub.y }, endStub, ends.end],
+    [ends.start, startStub, { x: boxRight, y: startStub.y }, { x: boxRight, y: endStub.y }, endStub, ends.end],
+  ]
+
+  let best: Point[] | undefined
+  let bestHits = Infinity
+  let bestLength = Infinity
+  for (const wrap of wraps) {
+    const points = simplify(wrap)
+    const wrapped = hits(points, [from, to, ...obstacles])
+    let length = 0
+    for (let index = 1; index < points.length; index += 1) {
+      length += Math.abs(points[index]!.x - points[index - 1]!.x) + Math.abs(points[index]!.y - points[index - 1]!.y)
+    }
+    if (wrapped < bestHits || (wrapped === bestHits && length < bestLength)) {
+      best = points
+      bestHits = wrapped
+      bestLength = length
+    }
+    if (wrapped === 0) break
+  }
+  // Take the wrap whenever it beats the raw route: it is verified against the cards, so
+  // at worst it runs close to one — never through it.
+  return bestHits === 0 && best !== undefined ? best : raw
 }

@@ -33906,7 +33906,7 @@
     }
     return candidate;
   }
-  function routeBetween(ends, from, to, obstacles, options = {}) {
+  function routeRaw(ends, from, to, obstacles, options = {}) {
     const margin = options.margin ?? DEFAULTS.margin;
     const stub = options.stub ?? DEFAULTS.stub;
     const minCorridor = options.minCorridor ?? DEFAULTS.minCorridor;
@@ -34145,6 +34145,76 @@
   function round(value) {
     return Math.round(value * 100) / 100;
   }
+  function routeBetween(ends, from, to, obstacles, options = {}) {
+    const raw = routeRaw(ends, from, to, obstacles, options);
+    const margin = options.margin ?? DEFAULTS.margin;
+    const near = (point, anchor) => Math.abs(point.x - anchor.x) <= 26 && Math.abs(point.y - anchor.y) <= 26;
+    const hits = (points, boxes) => {
+      let count = 0;
+      for (let index2 = 1; index2 < points.length; index2 += 1) {
+        const a = points[index2 - 1];
+        const b = points[index2];
+        const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 3));
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps;
+          const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+          if (near(point, ends.start) || near(point, ends.end)) continue;
+          for (const box of boxes) {
+            const inside = point.x > box.x + 1 && point.x < box.x + box.w - 1 && point.y > box.y + 1 && point.y < box.y + box.h - 1;
+            if (inside) {
+              count += 1;
+              continue;
+            }
+            const dx = Math.max(box.x - point.x, 0, point.x - (box.x + box.w));
+            const dy = Math.max(box.y - point.y, 0, point.y - (box.y + box.h));
+            if (Math.hypot(dx, dy) < 8) count += 1;
+          }
+        }
+      }
+      return count;
+    };
+    if (hits(raw, [from, to]) === 0) return raw;
+    const spread = margin + 24;
+    const boxTop = Math.min(from.y, to.y) - spread;
+    const boxBottom = Math.max(from.y + from.h, to.y + to.h) + spread;
+    const boxLeft = Math.min(from.x, to.x) - spread;
+    const boxRight = Math.max(from.x + from.w, to.x + to.w) + spread;
+    const startNormal = normalOf(ends.startFace);
+    const endNormal = normalOf(ends.endFace);
+    const stubLength = Math.max(options.stub ?? DEFAULTS.stub, margin + 3);
+    const startStub = {
+      x: ends.start.x + startNormal.x * stubLength,
+      y: ends.start.y + startNormal.y * stubLength
+    };
+    const endStub = {
+      x: ends.end.x + endNormal.x * stubLength,
+      y: ends.end.y + endNormal.y * stubLength
+    };
+    const wraps = [
+      [ends.start, startStub, { x: startStub.x, y: boxTop }, { x: endStub.x, y: boxTop }, endStub, ends.end],
+      [ends.start, startStub, { x: startStub.x, y: boxBottom }, { x: endStub.x, y: boxBottom }, endStub, ends.end],
+      [ends.start, startStub, { x: boxLeft, y: startStub.y }, { x: boxLeft, y: endStub.y }, endStub, ends.end],
+      [ends.start, startStub, { x: boxRight, y: startStub.y }, { x: boxRight, y: endStub.y }, endStub, ends.end]
+    ];
+    let best;
+    let bestHits = Infinity;
+    let bestLength = Infinity;
+    for (const wrap of wraps) {
+      const points = simplify(wrap);
+      const wrapped = hits(points, [from, to, ...obstacles]);
+      let length = 0;
+      for (let index2 = 1; index2 < points.length; index2 += 1) {
+        length += Math.abs(points[index2].x - points[index2 - 1].x) + Math.abs(points[index2].y - points[index2 - 1].y);
+      }
+      if (wrapped < bestHits || wrapped === bestHits && length < bestLength) {
+        best = points;
+        bestHits = wrapped;
+        bestLength = length;
+      }
+      if (wrapped === 0) break;
+    }
+    return bestHits === 0 && best !== void 0 ? best : raw;
+  }
 
   // src/client/edge-routing.ts
   var DEFAULT_MIN_SPAN = 96;
@@ -34238,7 +34308,7 @@
     const measuredBoxes = boardBoxes();
     const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
     const merged = (obstacles !== void 0 && obstacles.length > 0 ? obstacles : measuredBoxes).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect));
-    const route = merged.length === 0 ? void 0 : routeBetween(
+    const route = data.fromRect === void 0 || data.toRect === void 0 ? void 0 : routeBetween(
       {
         // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,
         // which shifted the clipped endpoints by a pixel between renders.

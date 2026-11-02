@@ -135,7 +135,9 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     .filter(box => !sameCorner(box, data.toRect))
     .filter(box => !sameCorner(box, data.fromRect))
     .filter(box => !sameCorner(box, data.toRect))
-  const route = merged.length === 0
+  // Always route when the two boxes are known. The old "no obstacles → smooth-step"
+  // shortcut drew a straight line through the target card on a two-card board.
+  const route = data.fromRect === undefined || data.toRect === undefined
     ? undefined
     : routeBetween(
         {
