@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b49 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b50 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b49 · Search cards on the map",
+  "global.searchPlaceholder": "b50 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13143,6 +13143,7 @@ function StackDrawer(props) {
         };
         let bestD;
         let bestCost = Number.POSITIVE_INFINITY;
+        let arrival = { x: endPoint.x - startPoint.x, y: endPoint.y - startPoint.y };
         const tryCurve = (control1, control2) => {
           const u1 = (t2) => (1 - t2) * (1 - t2) * (1 - t2);
           const u2 = (t2) => 3 * (1 - t2) * (1 - t2) * t2;
@@ -13156,6 +13157,7 @@ function StackDrawer(props) {
           if (cost < bestCost) {
             bestCost = cost;
             bestD = "M " + startPoint.x + " " + startPoint.y + " C " + control1.x + " " + control1.y + ", " + control2.x + " " + control2.y + ", " + endPoint.x + " " + endPoint.y;
+            arrival = { x: endPoint.x - control2.x, y: endPoint.y - control2.y };
           }
         };
         for (const bow of [0.15, 0.3, 0.5, 0.75, 1.1]) {
@@ -13185,16 +13187,18 @@ function StackDrawer(props) {
           }
         }
         if (bestCost > 0) {
-          const bands2 = (values, size) => {
-            const unique = [...new Set(values.map((value) => Math.round(value)))].sort((a, b) => a - b);
+          const bands2 = (edges) => {
+            const sorted = [...edges].sort((a, b) => a.start - b.start);
             const lanes = [];
-            for (let index2 = 1; index2 < unique.length; index2 += 1) {
-              lanes.push((unique[index2 - 1] + size + unique[index2]) / 2);
+            let reach = Number.NEGATIVE_INFINITY;
+            for (const edge of sorted) {
+              if (edge.start > reach && Number.isFinite(reach)) lanes.push((reach + edge.start) / 2);
+              reach = Math.max(reach, edge.end);
             }
-            const first = unique[0];
-            const last = unique[unique.length - 1];
-            if (first !== void 0) lanes.unshift(Math.max(8, first - 14));
-            if (last !== void 0) lanes.push(last + size + 14);
+            if (sorted.length > 0) {
+              lanes.unshift(Math.max(8, sorted[0].start - 14));
+              lanes.push(reach + 14);
+            }
             return lanes;
           };
           const samplePolyline = (points) => (t2) => {
@@ -13218,30 +13222,48 @@ function StackDrawer(props) {
           };
           const midY = (startPoint.y + endPoint.y) / 2;
           const midX = (startPoint.x + endPoint.x) / 2;
-          const lanesY = bands2(cardsInDrawer.map((card) => card.y), 104).sort((a, b) => Math.abs(a - midY) - Math.abs(b - midY));
-          const lanesX = bands2(cardsInDrawer.map((card) => card.x), 224).sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX));
+          const lanesY = bands2(cardsInDrawer.map((card) => ({ start: card.y, end: card.y + card.h }))).sort((a, b) => Math.abs(a - midY) - Math.abs(b - midY));
+          const lanesX = bands2(cardsInDrawer.map((card) => ({ start: card.x, end: card.x + card.w }))).sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX));
+          const startStub = { x: startPoint.x + startNormal.x * 12, y: startPoint.y + startNormal.y * 12 };
+          const endStub = { x: endPoint.x + endNormal.x * 12, y: endPoint.y + endNormal.y * 12 };
           const shapes = [];
           for (const lane of lanesY) {
-            shapes.push([startPoint, { x: startPoint.x, y: lane }, { x: endPoint.x, y: lane }, endPoint]);
+            shapes.push([
+              startPoint,
+              startStub,
+              { x: startStub.x, y: lane },
+              { x: endStub.x, y: lane },
+              endStub,
+              endPoint
+            ]);
           }
           for (const lane of lanesX) {
-            shapes.push([startPoint, { x: lane, y: startPoint.y }, { x: lane, y: endPoint.y }, endPoint]);
+            shapes.push([
+              startPoint,
+              startStub,
+              { x: lane, y: startStub.y },
+              { x: lane, y: endStub.y },
+              endStub,
+              endPoint
+            ]);
           }
           for (const shape of shapes) {
             const cost = badness(samplePolyline(shape));
             if (cost < bestCost) {
               bestCost = cost;
               bestD = roundedPath(shape, 10);
+              arrival = { x: endPoint.x - endStub.x, y: endPoint.y - endStub.y };
               if (cost === 0) break;
             }
           }
         }
-        const angle = toSide === "l" ? 180 : toSide === "r" ? 0 : toSide === "t" ? -90 : 90;
+        const angle = Math.abs(arrival.x) < 0.5 && Math.abs(arrival.y) < 0.5 ? toSide === "l" ? 180 : toSide === "r" ? 0 : toSide === "t" ? -90 : 90 : Math.abs(arrival.x) >= Math.abs(arrival.y) ? arrival.x >= 0 ? 0 : 180 : arrival.y >= 0 ? 90 : -90;
+        const arrowAngle = angle;
         next.push({
           d: bestD ?? "M " + startPoint.x + " " + startPoint.y + " L " + endPoint.x + " " + endPoint.y,
           ax: endPoint.x,
           ay: endPoint.y,
-          angle,
+          angle: arrowAngle,
           from: link2.from,
           to: link2.to
         });

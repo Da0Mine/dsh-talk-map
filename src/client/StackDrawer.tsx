@@ -341,6 +341,8 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         //      left / right (needed when another card sits between the two).
         let bestD: string | undefined
         let bestCost = Number.POSITIVE_INFINITY
+        // Direction of travel at the very end of the chosen shape (pointing into the card).
+        let arrival = { x: endPoint.x - startPoint.x, y: endPoint.y - startPoint.y }
         const tryCurve = (
           control1: { x: number; y: number },
           control2: { x: number; y: number },
@@ -359,6 +361,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             bestD = 'M ' + startPoint.x + ' ' + startPoint.y
               + ' C ' + control1.x + ' ' + control1.y + ', ' + control2.x + ' ' + control2.y
               + ', ' + endPoint.x + ' ' + endPoint.y
+            arrival = { x: endPoint.x - control2.x, y: endPoint.y - control2.y }
           }
         }
 
@@ -396,16 +399,20 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         // fills the whole span, so the line has to run in a gutter first. Keep the curve
         // for the pretty cases, fall back to a gutter polyline when it is not clean.
         if (bestCost > 0) {
-          const bands = (values: number[], size: number): number[] => {
-            const unique = [...new Set(values.map(value => Math.round(value)))].sort((a, b) => a - b)
+          // Lanes from the real boxes: rows are as tall as their tallest card, so the gap
+          // has to be measured between a row's bottom edge and the next row's top edge.
+          const bands = (edges: { start: number; end: number }[]): number[] => {
+            const sorted = [...edges].sort((a, b) => a.start - b.start)
             const lanes: number[] = []
-            for (let index = 1; index < unique.length; index += 1) {
-              lanes.push((unique[index - 1]! + size + unique[index]!) / 2)
+            let reach = Number.NEGATIVE_INFINITY
+            for (const edge of sorted) {
+              if (edge.start > reach && Number.isFinite(reach)) lanes.push((reach + edge.start) / 2)
+              reach = Math.max(reach, edge.end)
             }
-            const first = unique[0]
-            const last = unique[unique.length - 1]
-            if (first !== undefined) lanes.unshift(Math.max(8, first - 14))
-            if (last !== undefined) lanes.push(last + size + 14)
+            if (sorted.length > 0) {
+              lanes.unshift(Math.max(8, sorted[0]!.start - 14))
+              lanes.push(reach + 14)
+            }
             return lanes
           }
           const samplePolyline = (points: { x: number; y: number }[]) => (t: number) => {
@@ -429,33 +436,53 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           }
           const midY = (startPoint.y + endPoint.y) / 2
           const midX = (startPoint.x + endPoint.x) / 2
-          const lanesY = bands(cardsInDrawer.map(card => card.y), 104)
+          const lanesY = bands(cardsInDrawer.map(card => ({ start: card.y, end: card.y + card.h })))
             .sort((a, b) => Math.abs(a - midY) - Math.abs(b - midY))
-          const lanesX = bands(cardsInDrawer.map(card => card.x), 224)
+          const lanesX = bands(cardsInDrawer.map(card => ({ start: card.x, end: card.x + card.w })))
             .sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX))
+          // Stubs along the face normals: without them the first/last leg can run along a
+          // card's own edge and the arrow ends up pointing out of the card.
+          const startStub = { x: startPoint.x + startNormal.x * 12, y: startPoint.y + startNormal.y * 12 }
+          const endStub = { x: endPoint.x + endNormal.x * 12, y: endPoint.y + endNormal.y * 12 }
           const shapes: { x: number; y: number }[][] = []
           for (const lane of lanesY) {
-            shapes.push([startPoint, { x: startPoint.x, y: lane }, { x: endPoint.x, y: lane }, endPoint])
+            shapes.push([
+              startPoint, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, endPoint,
+            ])
           }
           for (const lane of lanesX) {
-            shapes.push([startPoint, { x: lane, y: startPoint.y }, { x: lane, y: endPoint.y }, endPoint])
+            shapes.push([
+              startPoint, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, endPoint,
+            ])
           }
           for (const shape of shapes) {
             const cost = badness(samplePolyline(shape))
             if (cost < bestCost) {
               bestCost = cost
               bestD = roundedPath(shape as never, 10)
+              arrival = { x: endPoint.x - endStub.x, y: endPoint.y - endStub.y }
               if (cost === 0) break
             }
           }
         }
 
-        const angle = toSide === 'l' ? 180 : toSide === 'r' ? 0 : toSide === 't' ? -90 : 90
+        // Arrow direction straight from the chosen geometry: a curve arrives along
+        // end - control2, a polyline along its last leg. Parsing the path string got this
+        // wrong for rounded corners, which is why arrows pointed sideways.
+        const angle = Math.abs(arrival.x) < 0.5 && Math.abs(arrival.y) < 0.5
+          ? (toSide === 'l' ? 180 : toSide === 'r' ? 0 : toSide === 't' ? -90 : 90)
+          : Math.abs(arrival.x) >= Math.abs(arrival.y)
+            ? (arrival.x >= 0 ? 0 : 180)
+            : (arrival.y >= 0 ? 90 : -90)
+        // The glyph's tip sits at the origin with its body behind, so rotating by the
+        // travel direction points it into the card.
+        const arrowAngle = angle
+
         next.push({
           d: bestD ?? ('M ' + startPoint.x + ' ' + startPoint.y + ' L ' + endPoint.x + ' ' + endPoint.y),
           ax: endPoint.x,
           ay: endPoint.y,
-          angle,
+          angle: arrowAngle,
           from: link.from,
           to: link.to,
         })
