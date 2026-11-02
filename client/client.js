@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b52 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b53 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b52 · Search cards on the map",
+  "global.searchPlaceholder": "b53 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12374,14 +12374,6 @@ function TalkMapEdge(props) {
   const safeRoute = routed ? finalRoute : void 0;
   const path = safeRoute !== void 0 ? roundedPath(safeRoute, 10) : smoothPath;
   const arrowAngle = (() => {
-    if (routed) {
-      const end = route[route.length - 1];
-      const before = route[route.length - 2];
-      const dx = end.x - before.x;
-      const dy = end.y - before.y;
-      if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 180;
-      return dy >= 0 ? 90 : -90;
-    }
     const position = String(props.targetPosition ?? "left");
     if (position === "right") return 180;
     if (position === "top") return 90;

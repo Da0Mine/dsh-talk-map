@@ -279,15 +279,13 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
    * Which way the arrow points: the last leg of the route (or, without one, the
    * face the line enters through).
    */
+  /**
+   * Which way the arrow points: always INTO the card, decided by the face the line
+   * enters through. Deriving it from the last leg of the route is unreliable: the
+   * final segment can approach from inside the card, and then the head points back
+   * out along the line, which is the "箭头反了" that gets reported.
+   */
   const arrowAngle = (() => {
-    if (routed) {
-      const end = route[route.length - 1]!
-      const before = route[route.length - 2]!
-      const dx = end.x - before.x
-      const dy = end.y - before.y
-      if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 180
-      return dy >= 0 ? 90 : -90
-    }
     const position = String(props.targetPosition ?? 'left')
     if (position === 'right') return 180
     if (position === 'top') return 90

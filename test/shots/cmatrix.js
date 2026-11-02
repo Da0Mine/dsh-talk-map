@@ -34407,14 +34407,6 @@
     const safeRoute = routed ? finalRoute : void 0;
     const path = safeRoute !== void 0 ? roundedPath(safeRoute, 10) : smoothPath;
     const arrowAngle = (() => {
-      if (routed) {
-        const end = route[route.length - 1];
-        const before = route[route.length - 2];
-        const dx = end.x - before.x;
-        const dy = end.y - before.y;
-        if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 0 : 180;
-        return dy >= 0 ? 90 : -90;
-      }
       const position = String(props.targetPosition ?? "left");
       if (position === "right") return 180;
       if (position === "top") return 90;

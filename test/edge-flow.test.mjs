@@ -44,8 +44,8 @@ assert.match(bundle, /drawerWires/, "the drawer must draw its links")
 assert.match(bundle, /links: drawerWireLinks/, "the canvas must feed the drawer its links")
 
 // 12. lines are routed around cards, on the gap grid
-assert.match(bundle, /routeEdge/, 'edges must use the orthogonal router')
-assert.match(bundle, /roundedPath/, 'the renderer must draw the routed polyline')
+assert.match(bundle, /routeBetween/, 'edges must use the obstacle-avoiding router')
+assert.match(bundle, /roundedPath/, 'the drawer must still draw rounded corners where it uses a polyline')
 assert.match(bundle, /obstacles: obstaclesFor\(/, "the canvas must hand the obstacle list to the renderer")
 assert.match(bundle, /snapToChannels/, "runs must be snapped to the gap centre")
 console.log('edge-flow: 20 checks passed')
