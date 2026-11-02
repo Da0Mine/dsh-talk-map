@@ -34296,7 +34296,7 @@
   function TalkMapEdge(props) {
     const data = props.data ?? {};
     const synced = data.sync === "synced";
-    const hidden = synced && data.structural !== true;
+    const hidden = synced && data.structural !== true || data.ready === false;
     const faceOf = (position) => {
       const name = String(position ?? "left");
       if (name === "right") return "r";

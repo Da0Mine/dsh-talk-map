@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.32",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.33",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.32",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.33",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12300,7 +12300,7 @@ function boardBoxes() {
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
-  const hidden = synced && data.structural !== true;
+  const hidden = synced && data.structural !== true || data.ready === false;
   const faceOf = (position) => {
     const name2 = String(position ?? "left");
     if (name2 === "right") return "r";
@@ -14307,6 +14307,10 @@ function CanvasInner(props) {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
+          // Hidden until the first layout pass: the stored positions come first and the
+          // measured ones a frame later, and drawing the early route made the line
+          // visibly jump across the board when the map opened.
+          ready: boardTick > 0,
           obstacles: obstaclesFor(edge.fromCardId, edge.toCardId),
           ...boxOf(edge.fromCardId) !== void 0 ? { fromRect: boxOf(edge.fromCardId) } : {},
           ...boxOf(edge.toCardId) !== void 0 ? { toRect: boxOf(edge.toCardId) } : {}
@@ -14362,6 +14366,7 @@ function CanvasInner(props) {
             fromCardId: parentCardId,
             toCardId: cardId,
             sync: "idle",
+            ready: boardTick > 0,
             obstacles: obstaclesFor(parentCardId, cardId),
             ...boxOf(parentCardId) !== void 0 ? { fromRect: boxOf(parentCardId) } : {},
             ...boxOf(cardId) !== void 0 ? { toRect: boxOf(cardId) } : {}

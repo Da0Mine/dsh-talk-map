@@ -14,6 +14,8 @@ export interface TalkMapEdgeData {
   fromCardId?: string
   toCardId?: string
   sync?: 'synced' | 'idle'
+  /** False until the canvas has finished its first layout pass. */
+  ready?: boolean
   /** A structural link (fork), which never hides itself. */
   structural?: boolean
   /** Every other painted card, in flow coordinates — the line must avoid them. */
@@ -100,7 +102,10 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const synced = data.sync === 'synced'
   // Only transfer lines disappear once they are in sync; a fork link is part of
   // the map structure and stays where it is.
-  const hidden = synced && data.structural !== true
+  // Also hide until the layout is settled: the first pass has stored positions and the
+  // next one has the measured ones, so showing the early route made the line jump
+  // across the board while the map was opening.
+  const hidden = (synced && data.structural !== true) || data.ready === false
   /**
    * Route here rather than on the canvas: React Flow hands us the *real* handle
    * positions, and the cards' rendered height is content-driven, so anchors

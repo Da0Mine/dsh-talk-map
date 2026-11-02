@@ -1176,6 +1176,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
+          // Hidden until the first layout pass: the stored positions come first and the
+          // measured ones a frame later, and drawing the early route made the line
+          // visibly jump across the board when the map opened.
+          ready: boardTick > 0,
           obstacles: obstaclesFor(edge.fromCardId, edge.toCardId),
           ...(boxOf(edge.fromCardId) !== undefined ? { fromRect: boxOf(edge.fromCardId) } : {}),
           ...(boxOf(edge.toCardId) !== undefined ? { toRect: boxOf(edge.toCardId) } : {}),
@@ -1251,6 +1255,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           fromCardId: parentCardId,
           toCardId: cardId,
           sync: 'idle',
+          ready: boardTick > 0,
           obstacles: obstaclesFor(parentCardId, cardId),
           ...(boxOf(parentCardId) !== undefined ? { fromRect: boxOf(parentCardId) } : {}),
           ...(boxOf(cardId) !== undefined ? { toRect: boxOf(cardId) } : {}),
