@@ -483,12 +483,26 @@ export function routeBetween(
     }
     candidates.push([start, startStub, { x: left, y: startStub.y }, { x: left, y: endStub.y }, endStub, end])
     candidates.push([start, startStub, { x: right, y: startStub.y }, { x: right, y: endStub.y }, endStub, end])
+    // Around the pair's own bounding box: two faces pointing the same way
+    // (left→left, right→right, top→top, bottom→bottom) force the line to wrap
+    // around the other card, which no lane above is guaranteed to do.
+    const pairTop = Math.min(from.y, to.y) - margin - 8
+    const pairBottom = Math.max(from.y + from.h, to.y + to.h) + margin + 8
+    const pairLeft = Math.min(from.x, to.x) - margin - 8
+    const pairRight = Math.max(from.x + from.w, to.x + to.w) + margin + 8
+    candidates.push([start, startStub, { x: startStub.x, y: pairTop }, { x: endStub.x, y: pairTop }, endStub, end])
+    candidates.push([start, startStub, { x: startStub.x, y: pairBottom }, { x: endStub.x, y: pairBottom }, endStub, end])
+    candidates.push([start, startStub, { x: pairLeft, y: startStub.y }, { x: pairLeft, y: endStub.y }, endStub, end])
+    candidates.push([start, startStub, { x: pairRight, y: startStub.y }, { x: pairRight, y: endStub.y }, endStub, end])
     let best: Point[] | undefined
     let bestHits = Infinity
     for (const candidate of candidates) {
       const points = simplify(candidate)
       let hits = 0
-      for (let index = 1; index < points.length; index += 1) {
+      // Skip the first and last segment: those are the stubs, which are *meant* to touch
+      // the endpoint cards (counting them made every candidate look dirty, so the
+      // fallback always returned the straight line through the cards).
+      for (let index = 2; index < points.length - 1; index += 1) {
         const a = points[index - 1]!
         const b = points[index]!
         hits += a.x === b.x

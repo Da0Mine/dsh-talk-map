@@ -7,7 +7,8 @@
  * 没有发光、没有流光、没有粒子：线要么在，要么不在。箭头跟着线一起隐藏。
  */
 import { BaseEdge, getSmoothStepPath, type EdgeProps } from '@xyflow/react'
-import { clipToRects, routeBetween, roundedPath, type Face, type Point, type Rect } from './edge-route.ts'
+import { routeBetween, roundedPath, type Face, type Point, type Rect } from './edge-route.ts'
+import { pickFaces } from './edge-routing.ts'
 
 export interface TalkMapEdgeData {
   fromCardId?: string
@@ -151,7 +152,66 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
         data.toRect ?? { x: props.targetX, y: props.targetY, w: 0, h: 0 },
         merged,
       )
-  const routed = route !== undefined && route.length > 1
+  // If the route the user's handles produce would run through a card (two faces pointing
+  // the same way, e.g. right→right between side-by-side cards), fall back to the faces
+  // geometry suggests. Keeping the requested faces at the cost of a line through the
+  // card is the worse trade.
+  let finalRoute = route
+  if (route !== undefined && route.length > 1 && data.fromRect !== undefined && data.toRect !== undefined) {
+    // The endpoint cards count here too: a straight line between two same-side faces runs
+    // through the *target* card, and the target is excluded from the obstacle list. Points
+    // near the anchors are the stubs and are allowed to touch the cards.
+    const boxesForHit = [
+      ...(data.fromRect === undefined ? [] : [data.fromRect]),
+      ...(data.toRect === undefined ? [] : [data.toRect]),
+      ...merged,
+    ]
+    const nearAnchor = (point: Point): boolean =>
+      Math.hypot(point.x - props.sourceX, point.y - props.sourceY) <= 26
+      || Math.hypot(point.x - props.targetX, point.y - props.targetY) <= 26
+    // Sample along the segments: checking only the vertices misses a two-point straight
+    // line entirely (both of its ends are the anchors).
+    const hitsCard = (points: readonly Point[]): boolean => {
+      for (let index = 1; index < points.length; index += 1) {
+        const a = points[index - 1]!
+        const b = points[index]!
+        const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 4))
+        for (let step = 0; step <= steps; step += 1) {
+          const t = step / steps
+          const point = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t }
+          if (nearAnchor(point)) continue
+          if (boxesForHit.some(box => point.x > box.x + 1 && point.x < box.x + box.w - 1
+            && point.y > box.y + 1 && point.y < box.y + box.h - 1)) return true
+        }
+      }
+      return false
+    }
+    // A two-point route between two faces that point the same way is always a straight
+    // line through one of the cards (nothing else is possible), so retry even when the
+    // hit test cannot see it.
+    const sameSide = faceOf(props.sourcePosition) === faceOf(props.targetPosition)
+    if (hitsCard(route) || (route.length <= 2 && sameSide)) {
+      const faces = pickFaces(
+        { id: 'from', x: data.fromRect.x, y: data.fromRect.y },
+        { id: 'to', x: data.toRect.x, y: data.toRect.y },
+        merged.map((box, index) => ({ id: `o${index}`, x: box.x, y: box.y })),
+        { cardWidth: data.fromRect.w, cardHeight: data.fromRect.h },
+      )
+      const retry = routeBetween(
+        {
+          start: { x: Math.round(props.sourceX), y: Math.round(props.sourceY) },
+          startFace: faces.fromHandle,
+          end: { x: Math.round(props.targetX), y: Math.round(props.targetY) },
+          endFace: faces.toHandle,
+        },
+        data.fromRect,
+        data.toRect,
+        merged,
+      )
+      if (retry.length > 1 && !hitsCard(retry)) finalRoute = retry
+    }
+  }
+  const routed = finalRoute !== undefined && finalRoute.length > 1
 
   /**
    * Last line of defence: if the computed polyline still touches a card, do not
@@ -205,7 +265,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // Draw the routed polyline whole: the stub fallback and the endpoint clipping
   // produced orphan fragments on the board, and with the obstacle list fixed there
   // is nothing left for them to guard against.
-  const safeRoute = routed ? (route as Point[]) : undefined
+  const safeRoute = routed ? (finalRoute as Point[]) : undefined
   const path = safeRoute !== undefined ? roundedPath(safeRoute, 10) : smoothPath
 
   /**
