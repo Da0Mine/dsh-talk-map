@@ -86,24 +86,15 @@ export function pickFaces(
   const gapY = Math.abs(dy) - options.cardHeight
   const horizontalDominant = Math.abs(dx) >= Math.abs(dy)
 
-  if (horizontalDominant) {
-    if (gapX >= minSpan) {
-      return dx >= 0 ? { fromHandle: 'r', toHandle: 'l' } : { fromHandle: 'l', toHandle: 'r' }
-    }
-    // Side by side and too tight: loop through a free horizontal face.
-    const fromSide: Side = blockedToward(from, 'b', obstacles, size)
-      && !blockedToward(from, 't', obstacles, size) ? 't' : 'b'
-    const toSide: Side = blockedToward(to, 'b', obstacles, size)
-      && !blockedToward(to, 't', obstacles, size) ? 't' : 'b'
-    return { fromHandle: fromSide, toHandle: toSide }
-  }
-
-  if (gapY >= minSpan) {
-    return dy >= 0 ? { fromHandle: 'b', toHandle: 't' } : { fromHandle: 't', toHandle: 'b' }
-  }
-  const fromSide: Side = blockedToward(from, 'r', obstacles, size)
-    && !blockedToward(from, 'l', obstacles, size) ? 'l' : 'r'
-  const toSide: Side = blockedToward(to, 'r', obstacles, size)
-    && !blockedToward(to, 'l', obstacles, size) ? 'l' : 'r'
-  return { fromHandle: fromSide, toHandle: toSide }
+  /**
+   * Is another card sitting between the two facing sides? That — not "the gap is short" —
+   * is what makes a facing-side connection impossible. A short stub between neighbours is
+   * fine and far clearer than looping: the loop drew a rectangle around the card.
+   */
+  // Always join the two faces that look at each other. The router routes around whatever
+  // stands between them, so there is no reason to pre-emptively loop: the loop used to
+  // draw a dashed rectangle around the card in the stack drawer.
+  return horizontalDominant
+    ? (dx >= 0 ? { fromHandle: 'r', toHandle: 'l' } : { fromHandle: 'l', toHandle: 'r' })
+    : (dy >= 0 ? { fromHandle: 'b', toHandle: 't' } : { fromHandle: 't', toHandle: 'b' })
 }

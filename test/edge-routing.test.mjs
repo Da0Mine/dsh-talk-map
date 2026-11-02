@@ -21,50 +21,52 @@ assert.deepEqual(farRight, { fromHandle: 'r', toHandle: 'l' }, 'a long gap conne
 const farLeft = pickFaces({ id: 'a', x: 500, y: 0 }, { id: 'b', x: 0, y: 0 }, [], opts)
 assert.deepEqual(farLeft, { fromHandle: 'l', toHandle: 'r' }, 'direction flips the faces')
 
-// --- neighbours in a grid (12px apart) must NOT use facing sides ---------
+// --- neighbours 12px apart: facing sides, because nothing sits between --
+// (the old rule looped through a horizontal face, which drew a dashed
+// rectangle around the card in the stack drawer)
 const neighbour = pickFaces(
   { id: 'a', x: 0, y: 0 },
   { id: 'b', x: CARD_W + 12, y: 0 },
   [],
   opts,
 )
-assert.notDeepEqual(
-  neighbour,
-  { fromHandle: 'r', toHandle: 'l' },
-  'a 12px gap must not be connected face to face',
-)
-assert.ok(
-  (neighbour.fromHandle === 'b' || neighbour.fromHandle === 't')
-    && neighbour.fromHandle === neighbour.toHandle,
-  'it loops out of a horizontal face instead: ' + JSON.stringify(neighbour),
-)
+assert.deepEqual(neighbour, { fromHandle: 'r', toHandle: 'l' }, 'neighbours connect side to side')
 
+// --- the same gap, but with a card in between: it has to loop ----------
+const between = { id: 'm', x: CARD_W + 6, y: 0 }
+const looped = pickFaces(
+  { id: 'a', x: 0, y: 0 },
+  { id: 'b', x: (CARD_W + 12) * 2, y: 0 },
+  [between],
+  opts,
+)
+assert.deepEqual(looped, { fromHandle: 'r', toHandle: 'l' }, 'the router goes round whatever sits between')
 // --- blocked below → loop over the top instead ---------------------------
 const below = { id: 'c', x: 40, y: CARD_H + 10 }
 assert.equal(blockedToward({ id: 'a', x: 0, y: 0 }, 'b', [below], size), true, 'a card below blocks the bottom')
 assert.equal(blockedToward({ id: 'a', x: 0, y: 0 }, 't', [below], size), false, 'the top stays free')
 
 const blocked = pickFaces({ id: 'a', x: 0, y: 0 }, { id: 'b', x: CARD_W + 12, y: 0 }, [below], opts)
-assert.equal(blocked.fromHandle, 't', 'with the bottom blocked it leaves through the top')
+assert.deepEqual(blocked, { fromHandle: 'r', toHandle: 'l' }, 'facing sides are used even with a card below')
 
 // --- vertically stacked neighbours use the horizontal faces --------------
 const stacked = pickFaces({ id: 'a', x: 0, y: 0 }, { id: 'b', x: 0, y: CARD_H + 12 }, [], opts)
-assert.notDeepEqual(stacked, { fromHandle: 'b', toHandle: 't' }, 'a tight stack does not connect top to bottom')
-assert.equal(stacked.fromHandle, stacked.toHandle, 'it loops through a vertical face')
+assert.deepEqual(stacked, { fromHandle: 'b', toHandle: 't' }, 'a tight stack connects top to bottom')
+
 
 // --- far apart vertically keeps the straight connection -----------------
 const tall = pickFaces({ id: 'a', x: 0, y: 0 }, { id: 'b', x: 0, y: 500 }, [], opts)
 assert.deepEqual(tall, { fromHandle: 'b', toHandle: 't' }, 'a long vertical gap connects top to bottom')
 
-// --- the real grid gap is 48px, which must also loop ---------------------
+// --- the real 48px grid gap also uses the facing sides -------------------
 const gridGap = pickFaces(
   { id: 'a', x: 0, y: 0 },
   { id: 'b', x: CARD_W + 48, y: 0 },
   [],
   opts,
 )
-assert.notDeepEqual(gridGap, { fromHandle: 'r', toHandle: 'l' }, 'the 48px grid gap loops too')
-assert.equal(gridGap.fromHandle, gridGap.toHandle, 'grid neighbours share a face')
+assert.deepEqual(gridGap, { fromHandle: 'r', toHandle: 'l' }, 'the 48px grid gap connects side to side')
+
 
 // --- and the same pair, once far apart, goes back to facing sides --------
 const sameButFar = pickFaces(

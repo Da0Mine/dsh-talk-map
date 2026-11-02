@@ -29,7 +29,7 @@ const LINKS = [
   { from: 'c2_1', to: 'c0_1' },
 ]
 
-const STALE = true
+const STALE = false
 
 function Panel() {
   // The drawer animates open: a container that starts at scale 0.9 and settles at 1 over
