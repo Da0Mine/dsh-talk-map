@@ -1161,7 +1161,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         target: edge.toCardId,
         // Faces are recomputed from the live positions — a stored handle would
         // keep a 12px stub forever after the cards were laid out side by side.
-        ...computedHandles(edge.fromCardId, edge.toCardId),
+        // Honour the handles the user picked. Recomputing them unconditionally meant a
+        // connection drawn from the left face of two stacked cards came out of their
+        // *bottom* faces instead, and then had to loop back — the loop is what cut
+        // through the cards. Only fall back to geometry when nothing was stored.
+        ...(edge.fromHandle !== undefined && edge.toHandle !== undefined
+          ? { sourceHandle: edge.fromHandle, targetHandle: edge.toHandle }
+          : computedHandles(edge.fromCardId, edge.toCardId)),
         type: TALK_MAP_EDGE_TYPE,
         selected: liveSelectedEdgeIds.has(edgeId),
         // Endpoints ride along for the edge context menu (id parsing would

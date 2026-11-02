@@ -27,7 +27,7 @@ const browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`)
 const page = browser.contexts()[0].pages()[0] ?? await browser.contexts()[0].newPage()
 await page.setViewportSize({ width: 1700, height: 1050 })
 page.on('pageerror', error => console.log('PAGE ERROR:', String(error).slice(0, 240)))
-await page.goto('file:///' + path.resolve('demo/index.html').replace(/\\/g, '/') + '?demo=1' + (process.argv.includes('--pair') ? '&pair=' + process.argv[process.argv.indexOf('--pair') + 1] : ''))
+await page.goto('file:///' + path.resolve('demo/index.html').replace(/\\/g, '/') + '?demo=1' + (process.argv.includes('--pair') ? '&pair=' + process.argv[process.argv.indexOf('--pair') + 1] : '') + (process.argv.includes('--handles') ? '&handles=' + process.argv[process.argv.indexOf('--handles') + 1] : ''))
 await page.waitForTimeout(2500)
 
 // Pick a vertical stack: a card that has another card well below it.
@@ -49,18 +49,20 @@ const plan = await page.evaluate(() => {
   // source: leftmost of the first row; target: the card with the largest vertical
   // distance below the source, preferring the same column
   const forced = new URLSearchParams(location.search).get('pair')
-  const source = (forced !== null ? cards.find(card => card.id === forced.split('>')[0]) : undefined) ?? [...cards].sort((a, b) => (a.y - b.y) || (a.x - b.x))[0]
+  const forcedHandlesRaw = new URLSearchParams(location.search).get('handles')
+  const forcedHandles = forcedHandlesRaw === null ? null : { from: forcedHandlesRaw.split(/[:>]/)[0], to: forcedHandlesRaw.split(/[:>]/)[1] }
+  const source = (forced !== null ? cards.find(card => card.id === forced.split(/[:>]/)[0]) : undefined) ?? [...cards].sort((a, b) => (a.y - b.y) || (a.x - b.x))[0]
   // farthest card below, preferring the same column (that is the reported gesture:
   // a long vertical link with another card sitting in between)
   const below = cards.filter(card => card !== source && card.y > source.y + 150)
   const candidates = below.length > 0 ? below : cards.filter(card => card !== source && card.y > source.y + 60)
   candidates.sort((a, b) => (b.y - a.y) || (Math.abs(a.x - source.x) - Math.abs(b.x - source.x)))
-  const target = (forced !== null ? cards.find(card => card.id === forced.split('>')[1]) : undefined) ?? candidates[0] ?? cards.find(card => card !== source && card.y > source.y)
+  const target = (forced !== null ? cards.find(card => card.id === forced.split(/[:>]/)[1]) : undefined) ?? candidates[0] ?? cards.find(card => card !== source && card.y > source.y)
   return {
     source: { id: source.id, x: source.x, y: source.y, w: source.w, h: source.h },
     target: target === undefined ? null : { id: target.id, x: target.x, y: target.y, w: target.w, h: target.h },
-    from: handle(source, 'b'),
-    to: target === undefined ? null : handle(target, 't'),
+    from: handle(source, forcedHandles?.from ?? 'b'),
+    to: target === undefined ? null : handle(target, forcedHandles?.to ?? 't'),
     cards: cards.length,
   }
 })
