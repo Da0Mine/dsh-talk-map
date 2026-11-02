@@ -1053,19 +1053,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    */
   const renderedBoxes = (): Record<string, { x: number; y: number; w: number; h: number }> => {
     const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
-    for (const node of liveNodes) {
-      if (node.type !== 'sessionCard' || node.hidden === true) continue
-      // offsetWidth/offsetHeight are LAYOUT pixels: unaffected by the canvas zoom,
-      // unlike getBoundingClientRect(). Measuring the screen rect made the boxes
-      // depend on the zoom, which is why a vertical line flipped between the left and
-      // the right side of the gap while zooming.
-      const sessionId = canvasState.cards[node.id]?.sessionId
+    for (const [id, card] of Object.entries(canvasState.cards)) {
+      // Pure data, no DOM measurement: the layout slot when the card sits in a folder,
+      // otherwise its stored position. Reading offsetWidth here made the first frame
+      // (before the cards were measured) differ from the second, and the line visibly
+      // jumped from one side of the gap to the other when the map opened.
+      const slot = cardLayout[id]
+      // Position from data (stable across renders); size from layout pixels once the card
+      // is mounted. The painted card is ~250×129 because of its padding and border, and a
+      // box 26px too small is exactly what lets a line clip the card's right edge.
+      // offsetWidth does not depend on the canvas zoom, so this cannot make the line jump.
+      const sessionId = card.sessionId
       const element = sessionId === undefined
         ? null
         : document.querySelector(`[data-talkmap-session="${sessionId}"]`)
-      out[node.id] = {
-        x: node.position.x,
-        y: node.position.y,
+      out[id] = {
+        x: slot?.x ?? card.x,
+        y: slot?.y ?? card.y,
         w: element?.offsetWidth ?? CARD_W,
         h: element?.offsetHeight ?? CARD_H,
       }
@@ -1176,7 +1180,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
-          // Hidden until the first layout pass: the stored positions come first and the
+          // (kept for context: the renderer no longer hides on this flag)
           // measured ones a frame later, and drawing the early route made the line
           // visibly jump across the board when the map opened.
           ready: boardTick > 0,

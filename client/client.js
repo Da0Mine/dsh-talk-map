@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.33",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.34",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.33",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.34",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12300,7 +12300,7 @@ function boardBoxes() {
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
-  const hidden = synced && data.structural !== true || data.ready === false;
+  const hidden = synced && data.structural !== true;
   const faceOf = (position) => {
     const name2 = String(position ?? "left");
     if (name2 === "right") return "r";
@@ -14222,13 +14222,13 @@ function CanvasInner(props) {
   };
   const renderedBoxes = () => {
     const out = {};
-    for (const node of liveNodes) {
-      if (node.type !== "sessionCard" || node.hidden === true) continue;
-      const sessionId = canvasState.cards[node.id]?.sessionId;
+    for (const [id2, card] of Object.entries(canvasState.cards)) {
+      const slot = cardLayout[id2];
+      const sessionId = card.sessionId;
       const element = sessionId === void 0 ? null : document.querySelector(`[data-talkmap-session="${sessionId}"]`);
-      out[node.id] = {
-        x: node.position.x,
-        y: node.position.y,
+      out[id2] = {
+        x: slot?.x ?? card.x,
+        y: slot?.y ?? card.y,
         w: element?.offsetWidth ?? CARD_W,
         h: element?.offsetHeight ?? CARD_H
       };
@@ -14307,7 +14307,7 @@ function CanvasInner(props) {
           fromCardId: edge.fromCardId,
           toCardId: edge.toCardId,
           sync,
-          // Hidden until the first layout pass: the stored positions come first and the
+          // (kept for context: the renderer no longer hides on this flag)
           // measured ones a frame later, and drawing the early route made the line
           // visibly jump across the board when the map opened.
           ready: boardTick > 0,
