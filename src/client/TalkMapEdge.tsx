@@ -105,7 +105,7 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // Also hide until the layout is settled: the first pass has stored positions and the
   // next one has the measured ones, so showing the early route made the line jump
   // across the board while the map was opening.
-  const hidden = synced && data.structural !== true
+  const hidden = (synced && data.structural !== true) || data.ready === false
   /**
    * Route here rather than on the canvas: React Flow hands us the *real* handle
    * positions, and the cards' rendered height is content-driven, so anchors

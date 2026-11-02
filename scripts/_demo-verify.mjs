@@ -38,7 +38,7 @@ await page.setViewportSize({ width: 1700, height: 1050 })
 await page.goto('file:///' + path.resolve('demo/index.html').replace(/\\/g, '/') + '?demo=1')
 page.on('pageerror', error => console.log('PAGE ERROR:', String(error).slice(0, 220)))
 page.on('console', message => { if (message.type() === 'error') console.log('CONSOLE:', message.text().slice(0, 220)) })
-// First frame vs settled frame: the line must not move once the layout measures.\nawait page.waitForTimeout(80)\nconst earlyPaths = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map(el => el.getAttribute('d')))\nawait page.waitForTimeout(2500)\nconst latePaths = await page.evaluate(() => [...document.querySelectorAll('.react-flow__edge-path')].map(el => el.getAttribute('d')))\nconst firstFrameStable = JSON.stringify(earlyPaths) === JSON.stringify(latePaths)\nconsole.log('FIRSTFRAME', JSON.stringify({ stable: firstFrameStable, early: earlyPaths.length, late: latePaths.length, sample: earlyPaths[0]?.slice(0, 60) }))
+await page.waitForTimeout(2500)
 
 const report = await page.evaluate(() => {
   // 路径总长度：用来判断有没有只剩一小截的碎片
