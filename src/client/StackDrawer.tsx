@@ -247,6 +247,10 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         // Verify the drawn line; if it would touch a card, sweep every face pair. The
         // drawer's grid is dense and the geometry-only face rule is not always the pair
         // that can actually get there without crossing.
+        const contentWidth = scroller.scrollWidth
+        const contentHeight = scroller.scrollHeight
+        const boundsWidth = scroller.scrollWidth
+        const boundsHeight = scroller.scrollHeight
         const dirty = (candidate: { x: number; y: number }[]): number => {
           let hits = 0
           for (let index = 1; index < candidate.length; index += 1) {
@@ -260,6 +264,10 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 if (point.x > box.x + 1 && point.x < box.x + box.w - 1
                   && point.y > box.y + 1 && point.y < box.y + box.h - 1) hits += 1
               }
+              // A route may not leave the drawer's content box: for a card on the top row
+              // "out of the top face" puts the line above the first row, i.e. outside the
+              // panel, where it just looks broken.
+              if (point.x < 2 || point.y < 2 || point.x > boundsWidth - 2 || point.y > boundsHeight - 2) hits += 1
             }
           }
           return hits

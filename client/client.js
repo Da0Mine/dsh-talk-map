@@ -13103,6 +13103,10 @@ function StackDrawer(props) {
           cardsInDrawer.map((card) => ({ id: card.id, x: card.x, y: card.y })),
           { cardWidth: fromRect.w, cardHeight: fromRect.h }
         );
+        const contentWidth = scroller.scrollWidth;
+        const contentHeight = scroller.scrollHeight;
+        const boundsWidth = scroller.scrollWidth;
+        const boundsHeight = scroller.scrollHeight;
         const dirty = (candidate) => {
           let hits2 = 0;
           for (let index2 = 1; index2 < candidate.length; index2 += 1) {
@@ -13115,6 +13119,7 @@ function StackDrawer(props) {
               for (const box of obstacles) {
                 if (point.x > box.x + 1 && point.x < box.x + box.w - 1 && point.y > box.y + 1 && point.y < box.y + box.h - 1) hits2 += 1;
               }
+              if (point.x < 2 || point.y < 2 || point.x > boundsWidth - 2 || point.y > boundsHeight - 2) hits2 += 1;
             }
           }
           return hits2;
