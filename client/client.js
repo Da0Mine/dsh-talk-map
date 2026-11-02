@@ -10727,22 +10727,6 @@ if (typeof document !== "undefined") {
   }
 }
 
-// src/client/colors.ts
-var COLOR_TAGS = [
-  { id: "red", swatch: "#e5484d", border: "rgba(229,72,77,0.75)", fill: "rgba(229,72,77,0.18)", faint: "rgba(229,72,77,0.05)" },
-  { id: "orange", swatch: "#f76b15", border: "rgba(247,107,21,0.75)", fill: "rgba(247,107,21,0.18)", faint: "rgba(247,107,21,0.05)" },
-  { id: "yellow", swatch: "#ffc53d", border: "rgba(255,197,61,0.75)", fill: "rgba(255,197,61,0.18)", faint: "rgba(255,197,61,0.05)" },
-  { id: "green", swatch: "#30a46c", border: "rgba(48,164,108,0.8)", fill: "rgba(48,164,108,0.18)", faint: "rgba(48,164,108,0.05)" },
-  { id: "teal", swatch: "#12a594", border: "rgba(18,165,148,0.8)", fill: "rgba(18,165,148,0.18)", faint: "rgba(18,165,148,0.05)" },
-  { id: "blue", swatch: "#3e63dd", border: "rgba(62,99,221,0.8)", fill: "rgba(62,99,221,0.2)", faint: "rgba(62,99,221,0.06)" },
-  { id: "purple", swatch: "#8e4ec6", border: "rgba(142,78,198,0.8)", fill: "rgba(142,78,198,0.18)", faint: "rgba(142,78,198,0.05)" },
-  { id: "gray", swatch: "#7d828d", border: "rgba(125,130,141,0.8)", fill: "rgba(125,130,141,0.16)", faint: "rgba(125,130,141,0.05)" }
-];
-var byId = new Map(COLOR_TAGS.map((tag) => [tag.id, tag]));
-function colorOf(tagId) {
-  return tagId === void 0 ? void 0 : byId.get(tagId);
-}
-
 // src/client/digest-text.ts
 function digestBody(digest) {
   const parts = [];
@@ -12880,6 +12864,22 @@ function SpawnPreview(props) {
   ] });
 }
 
+// src/client/colors.ts
+var COLOR_TAGS = [
+  { id: "red", swatch: "#e5484d", border: "rgba(229,72,77,0.75)", fill: "rgba(229,72,77,0.18)", faint: "rgba(229,72,77,0.05)" },
+  { id: "orange", swatch: "#f76b15", border: "rgba(247,107,21,0.75)", fill: "rgba(247,107,21,0.18)", faint: "rgba(247,107,21,0.05)" },
+  { id: "yellow", swatch: "#ffc53d", border: "rgba(255,197,61,0.75)", fill: "rgba(255,197,61,0.18)", faint: "rgba(255,197,61,0.05)" },
+  { id: "green", swatch: "#30a46c", border: "rgba(48,164,108,0.8)", fill: "rgba(48,164,108,0.18)", faint: "rgba(48,164,108,0.05)" },
+  { id: "teal", swatch: "#12a594", border: "rgba(18,165,148,0.8)", fill: "rgba(18,165,148,0.18)", faint: "rgba(18,165,148,0.05)" },
+  { id: "blue", swatch: "#3e63dd", border: "rgba(62,99,221,0.8)", fill: "rgba(62,99,221,0.2)", faint: "rgba(62,99,221,0.06)" },
+  { id: "purple", swatch: "#8e4ec6", border: "rgba(142,78,198,0.8)", fill: "rgba(142,78,198,0.18)", faint: "rgba(142,78,198,0.05)" },
+  { id: "gray", swatch: "#7d828d", border: "rgba(125,130,141,0.8)", fill: "rgba(125,130,141,0.16)", faint: "rgba(125,130,141,0.05)" }
+];
+var byId = new Map(COLOR_TAGS.map((tag) => [tag.id, tag]));
+function colorOf(tagId) {
+  return tagId === void 0 ? void 0 : byId.get(tagId);
+}
+
 // src/client/WsFrame.tsx
 var import_jsx_runtime12 = require("react/jsx-runtime");
 var EDGE = 10;
@@ -14108,7 +14108,7 @@ function CanvasInner(props) {
           count: members.length,
           width: rect.width,
           height: rect.height,
-          ...wsColors[groupId] !== void 0 ? { colorTag: wsColors[groupId] } : {},
+          // Workspace colours are not used any more: frames keep their default look.
           // Red outline while this folder overlaps another one mid-drag.
           blocked: blockedFrame === groupId,
           onResizeStart: (axis, event) => {
@@ -15308,7 +15308,6 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        !batchMode && selectedFrameWs.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(FrameColorToolbar, { workspaceIds: selectedFrameWs }) : null,
         hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
         menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
@@ -15372,41 +15371,6 @@ function CanvasInner(props) {
       ]
     }
   );
-}
-function FrameColorToolbar(props) {
-  const apply2 = (colorTag) => {
-    for (const workspaceId of props.workspaceIds) canvas.setWorkspaceColor(workspaceId, colorTag);
-  };
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["colorToolbar"], role: "toolbar", "aria-label": t("color.toolbar"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["colorToolbarLabel"], children: t("color.toolbar") }),
-    COLOR_TAGS.map((tag) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-      "button",
-      {
-        type: "button",
-        className: talk_map_default["colorSwatch"],
-        style: { background: tag.swatch },
-        title: tag.id,
-        "aria-label": tag.id,
-        onClick: () => {
-          apply2(tag.id);
-        }
-      },
-      tag.id
-    )),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-      "button",
-      {
-        type: "button",
-        className: `${talk_map_default["colorSwatch"]} ${talk_map_default["colorSwatchClear"]}`,
-        title: t("color.clear"),
-        "aria-label": t("color.clear"),
-        onClick: () => {
-          apply2(void 0);
-        },
-        children: "×"
-      }
-    )
-  ] });
 }
 function BatchBar(props) {
   return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [

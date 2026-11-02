@@ -905,7 +905,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           count: members.length,
           width: rect.width,
           height: rect.height,
-          ...(wsColors[groupId] !== undefined ? { colorTag: wsColors[groupId] } : {}),
+        // Workspace colours are not used any more: frames keep their default look.
           // Red outline while this folder overlaps another one mid-drag.
           blocked: blockedFrame === groupId,
           onResizeStart: (axis: ResizeAxis, event: React.PointerEvent<HTMLDivElement>) => {
@@ -2438,9 +2438,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             />
           )
         : null}
-      {!batchMode && selectedFrameWs.length > 0
-        ? <FrameColorToolbar workspaceIds={selectedFrameWs} />
-        : null}
       {hasContent ? null : <div className={styles['emptyHint']}>{t('map.empty')}</div>}
       {menuState !== null
         ? <ContextMenu key={menu?.view ?? 'root'} menu={menuState} onClose={() => { setMenu(null) }} />
@@ -2515,38 +2512,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
  * Workspace colour picker. Cards are not colourable any more; a workspace frame
  * is, and this appears as soon as one is selected (click its label or border).
  */
-function FrameColorToolbar(props: { workspaceIds: readonly string[] }): React.JSX.Element {
-  const apply = (colorTag: string | undefined): void => {
-    for (const workspaceId of props.workspaceIds) canvas.setWorkspaceColor(workspaceId, colorTag)
-  }
-  return (
-    <div className={styles['colorToolbar']} role="toolbar" aria-label={t('color.toolbar')}>
-      <span className={styles['colorToolbarLabel']}>{t('color.toolbar')}</span>
-      {COLOR_TAGS.map(tag => (
-        <button
-          key={tag.id}
-          type="button"
-          className={styles['colorSwatch']}
-          style={{ background: tag.swatch }}
-          title={tag.id}
-          aria-label={tag.id}
-          onClick={() => { apply(tag.id) }}
-        />
-      ))}
-      <button
-        type="button"
-        className={`${styles['colorSwatch']} ${styles['colorSwatchClear']}`}
-        title={t('color.clear')}
-        aria-label={t('color.clear')}
-        onClick={() => { apply(undefined) }}
-      >
-        ×
-      </button>
-    </div>
-  )
-}
-
-/** The batch-mode bar: how many cards are picked, and what to do with them. */
 function BatchBar(props: {
   count: number
   busy: boolean

@@ -994,45 +994,7 @@ try {
   check('地图里不再有内嵌草稿面板', await page.evaluate(() => document.querySelector('[class*="tm_draftCard"]') === null))
   await openMap()
 
-  // ---- 9. workspace colour (frames only) -------------------------------
-  const labelPoint = await page.evaluate(() => {
-    const el = document.querySelector('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
-    const r = el.getBoundingClientRect()
-    return { x: r.x + 24, y: r.y + r.height / 2 }
-  })
-  await page.mouse.click(labelPoint.x, labelPoint.y)
-  await page.waitForTimeout(400)
-  const toolbarShown = await page.evaluate(() => document.querySelector('[class*="tm_colorToolbar"]') !== null)
-  check('选中工作区后出现颜色工具条', toolbarShown === true)
-  await page.evaluate(() => {
-    const swatch = document.querySelectorAll('[class*="tm_colorSwatch"]')
-    swatch[5]?.click() // blue
-  })
-  await page.waitForTimeout(500)
-  const colorState = await page.evaluate(() => {
-    const lastGlobal = window.__harness.posts.filter(p => p.path.includes('talkmap/global') || p.path.includes('talk-map/global')).at(-1)
-    const label = document.querySelector('[data-talkmap-workspace="ws-medkit"] [class*="wsFrameLabel"]')
-    const frame = document.querySelector('[data-talkmap-workspace="ws-medkit"]')
-    return {
-      saved: lastGlobal?.body?.global?.wsColors?.['ws-medkit'] ?? null,
-      labelBorder: label === null ? null : getComputedStyle(label).borderTopColor,
-      frameBorder: frame === null ? null : getComputedStyle(frame).borderTopColor,
-      // The folder's inside must NOT be tinted.
-      frameBackground: frame === null ? null : getComputedStyle(frame).backgroundColor,
-    }
-  })
-  check('颜色写入 wsColors 并落到标题栏/边框',
-    colorState.saved === 'blue' && (colorState.labelBorder ?? '').includes('62, 99, 221') && (colorState.frameBorder ?? '').includes('62, 99, 221'),
-    JSON.stringify(colorState))
-  check('工作区内部不填充颜色',
-    colorState.frameBackground === 'rgba(0, 0, 0, 0)' || colorState.frameBackground === 'transparent',
-    colorState.frameBackground)
-  // Clear it again so the rest of the run starts from a neutral frame.
-  await page.evaluate(() => {
-    const clear = document.querySelector('[class*="tm_colorSwatchClear"]')
-    clear?.click()
-  })
-  await page.waitForTimeout(400)
+// ---- 9. workspace colour — 已移除该功能（工作区保持默认配色）----
 
   // ---- 10. title bar wins over the top edge handle ---------------------
   const beforeTitleDrag = (await page.evaluate(() => window.__harness.nodeBoxes().frames))['ws-medkit']
