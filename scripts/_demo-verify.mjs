@@ -98,9 +98,16 @@ const zoomCheck = await page.evaluate(async () => {
   }
   await new Promise(resolve => setTimeout(resolve, 400))
   const after = read()
-  return { same: JSON.stringify(before) === JSON.stringify(after), before: before.slice(0, 2), after: after.slice(0, 2) }
+  const same = JSON.stringify(before) === JSON.stringify(after)
+  let diff = null
+  if (!same) {
+    for (let index = 0; index < Math.max(before.length, after.length); index += 1) {
+      if (before[index] !== after[index]) { diff = { index, before: before[index]?.slice(0, 120), after: after[index]?.slice(0, 120) }; break }
+    }
+  }
+  return { same, diff, count: [before.length, after.length] }
 })
-console.log('ZOOM', JSON.stringify({ stable: zoomCheck.same, before: zoomCheck.before?.[0]?.slice(0, 60), after: zoomCheck.after?.[0]?.slice(0, 60) }))
+console.log('ZOOM', JSON.stringify(zoomCheck))
 
 await browser.close()
 child.kill()

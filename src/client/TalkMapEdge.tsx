@@ -127,20 +127,22 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   const measuredBoxes = boardBoxes()
   const sameCorner = (box: Rect, other: Rect | undefined): boolean =>
     other !== undefined && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6
-  const merged = (measuredBoxes.length > 0 ? measuredBoxes : (obstacles ?? []))
+  // The canvas' list is authoritative; the DOM measurement is only a fallback (on the
+  // real page it returned every box at (0,0), and preferring it threw the good list away).
+  const merged = (obstacles !== undefined && obstacles.length > 0 ? obstacles : measuredBoxes)
     .filter(box => !sameCorner(box, data.fromRect))
     .filter(box => !sameCorner(box, data.toRect))
     .filter(box => !sameCorner(box, data.fromRect))
     .filter(box => !sameCorner(box, data.toRect))
-    .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
-    .filter(box => !containsPoint(box, props.targetX, props.targetY))
   const route = merged.length === 0
     ? undefined
     : routeBetween(
         {
-          start: { x: props.sourceX, y: props.sourceY },
+          // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,
+          // which shifted the clipped endpoints by a pixel between renders.
+          start: { x: Math.round(props.sourceX), y: Math.round(props.sourceY) },
           startFace: faceOf(props.sourcePosition),
-          end: { x: props.targetX, y: props.targetY },
+          end: { x: Math.round(props.targetX), y: Math.round(props.targetY) },
           endFace: faceOf(props.targetPosition),
         },
         // The endpoints' real boxes: the router excludes them from the obstacle
@@ -176,8 +178,6 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
   // The guard judges against the *measured* board, not the data: if the data is
   // what is wrong, judging by it would pass a crossing route.
   const guardBoxes = merged
-    .filter(box => !containsPoint(box, props.sourceX, props.sourceY))
-    .filter(box => !containsPoint(box, props.targetX, props.targetY))
   const blockedRoute = routeHitsCard(route, guardBoxes)
   // 调试钩子：渲染脚本据此核对组件实际拿到的数据（生产环境无副作用）
   if (typeof window !== 'undefined') {

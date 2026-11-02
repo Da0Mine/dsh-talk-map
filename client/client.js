@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.28",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.29",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.28",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.29",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12263,10 +12263,6 @@ function boardBoxes() {
   }
   return boxes;
 }
-function containsPoint(box, x, y) {
-  const pad = 40;
-  return x >= box.x - pad && x <= box.x + box.w + pad && y >= box.y - pad && y <= box.y + box.h + pad;
-}
 function TalkMapEdge(props) {
   const data = props.data ?? {};
   const synced = data.sync === "synced";
@@ -12281,12 +12277,14 @@ function TalkMapEdge(props) {
   const obstacles = data.obstacles;
   const measuredBoxes = boardBoxes();
   const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
-  const merged = (measuredBoxes.length > 0 ? measuredBoxes : obstacles ?? []).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
+  const merged = (obstacles !== void 0 && obstacles.length > 0 ? obstacles : measuredBoxes).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect));
   const route = merged.length === 0 ? void 0 : routeBetween(
     {
-      start: { x: props.sourceX, y: props.sourceY },
+      // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,
+      // which shifted the clipped endpoints by a pixel between renders.
+      start: { x: Math.round(props.sourceX), y: Math.round(props.sourceY) },
       startFace: faceOf(props.sourcePosition),
-      end: { x: props.targetX, y: props.targetY },
+      end: { x: Math.round(props.targetX), y: Math.round(props.targetY) },
       endFace: faceOf(props.targetPosition)
     },
     // The endpoints' real boxes: the router excludes them from the obstacle
@@ -12313,7 +12311,7 @@ function TalkMapEdge(props) {
     }
     return false;
   };
-  const guardBoxes = merged.filter((box) => !containsPoint(box, props.sourceX, props.sourceY)).filter((box) => !containsPoint(box, props.targetX, props.targetY));
+  const guardBoxes = merged;
   const blockedRoute = routeHitsCard(route, guardBoxes);
   if (typeof window !== "undefined") {
     const w = window;
