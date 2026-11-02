@@ -13808,13 +13808,17 @@ function CanvasInner(props) {
   (0, import_react12.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
-    const stale = {};
-    for (const [cardId, point] of Object.entries(cardLayout)) {
-      const card = canvasState.cards[cardId];
-      if (card === void 0) continue;
-      if (card.x !== point.x || card.y !== point.y) stale[cardId] = point;
-    }
-    if (Object.keys(stale).length > 0) canvas.moveCards(stale);
+    const timer4 = window.setTimeout(() => {
+      const stale = {};
+      for (const [cardId, point] of Object.entries(cardLayout)) {
+        const card = canvasState.cards[cardId];
+        if (card === void 0) continue;
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue;
+        if (Math.abs(card.x - point.x) > 0.5 || Math.abs(card.y - point.y) > 0.5) stale[cardId] = point;
+      }
+      if (Object.keys(stale).length > 0) canvas.moveCards(stale);
+    }, 140);
+    return () => window.clearTimeout(timer4);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
   const foldedSet = (0, import_react12.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
   (0, import_react12.useEffect)(() => {
@@ -14224,17 +14228,17 @@ function CanvasInner(props) {
     const out = {};
     for (const node of liveNodes) {
       if (node.type !== "sessionCard" || node.hidden === true) continue;
-      const sessionId = canvasState.cards[node.id]?.sessionId;
-      const element = sessionId === void 0 ? null : document.querySelector(`[data-talkmap-session="${sessionId}"]`);
       out[node.id] = {
         x: node.position.x,
         y: node.position.y,
-        w: element?.offsetWidth ?? CARD_W,
-        h: element?.offsetHeight ?? CARD_H
+        w: CARD_PAINTED_W,
+        h: CARD_PAINTED_H
       };
     }
     return out;
   };
+  const CARD_PAINTED_W = 250;
+  const CARD_PAINTED_H = 129;
   const [boardTick, setBoardTick] = (0, import_react12.useState)(0);
   (0, import_react12.useEffect)(() => {
     const timer4 = window.setTimeout(() => setBoardTick((value) => value + 1), 150);

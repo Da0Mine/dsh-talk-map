@@ -514,13 +514,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   useEffect(() => {
     if (canvasState.phase !== 'ready') return
     if (draggingCardId !== null || liveFrame !== null) return
-    const stale: Record<string, { x: number; y: number }> = {}
-    for (const [cardId, point] of Object.entries(cardLayout)) {
-      const card = canvasState.cards[cardId]
-      if (card === undefined) continue
-      if (card.x !== point.x || card.y !== point.y) stale[cardId] = point
-    }
-    if (Object.keys(stale).length > 0) canvas.moveCards(stale)
+    // Debounced, with a tolerance: resizing a frame re-slots many cards at once, and one
+    // write per layout pass piled up on the host and stalled the board mid-drag.
+    const timer = window.setTimeout(() => {
+      const stale: Record<string, { x: number; y: number }> = {}
+      for (const [cardId, point] of Object.entries(cardLayout)) {
+        const card = canvasState.cards[cardId]
+        if (card === undefined) continue
+        if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) continue
+        if (Math.abs(card.x - point.x) > 0.5 || Math.abs(card.y - point.y) > 0.5) stale[cardId] = point
+      }
+      if (Object.keys(stale).length > 0) canvas.moveCards(stale)
+    }, 140)
+    return () => window.clearTimeout(timer)
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame])
 
   /** Cards folded into a stack cell — kept in the model, hidden from the grid. */
@@ -1055,19 +1061,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const out: Record<string, { x: number; y: number; w: number; h: number }> = {}
     for (const node of liveNodes) {
       if (node.type !== 'sessionCard' || node.hidden === true) continue
-      // offsetWidth/offsetHeight are LAYOUT pixels: unaffected by the canvas zoom,
-      // unlike getBoundingClientRect(). Measuring the screen rect made the boxes
-      // depend on the zoom, which is why a vertical line flipped between the left and
-      // the right side of the gap while zooming.
-      const sessionId = canvasState.cards[node.id]?.sessionId
-      const element = sessionId === undefined
-        ? null
-        : document.querySelector(`[data-talkmap-session="${sessionId}"]`)
+      // No DOM lookups here: this runs for every card, for every edge, on every render —
+      // during a frame resize that is thousands of querySelector calls per frame, which
+      // stalls the board (and a stalled drag is how the map ended up blanking).
+      // The painted card is 224×120 plus padding and border, so those constants are used.
       out[node.id] = {
         x: node.position.x,
         y: node.position.y,
-        w: element?.offsetWidth ?? CARD_W,
-        h: element?.offsetHeight ?? CARD_H,
+        w: CARD_PAINTED_W,
+        h: CARD_PAINTED_H,
       }
     }
     return out
@@ -1075,6 +1077,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   // One extra pass after the first paint: edges render before the cards are
   // measured, and a route built before that has no obstacle to avoid.
+  /** The painted size of a card: 224×120 plus padding and border. */
+  const CARD_PAINTED_W = 250
+  const CARD_PAINTED_H = 129
+
   const [boardTick, setBoardTick] = useState(0)
   useEffect(() => {
     const timer = window.setTimeout(() => setBoardTick(value => value + 1), 150)
