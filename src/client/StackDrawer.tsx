@@ -279,6 +279,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           faces.fromHandle as 't' | 'r' | 'b' | 'l',
           faces.toHandle as 't' | 'r' | 'b' | 'l',
           [fromRect, toRect, ...obstacles],
+          { stub: 10 },
         )
         let bestDirty = dirty(points)
         if (bestDirty > 0) {
@@ -286,7 +287,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           for (const fromFace of FACES) {
             for (const toFace of FACES) {
               if (fromFace === faces.fromHandle && toFace === faces.toHandle) continue
-              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles])
+              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 })
               const attemptDirty = dirty(attempt)
               if (attemptDirty < bestDirty) {
                 bestDirty = attemptDirty

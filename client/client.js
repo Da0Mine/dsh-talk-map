@@ -10791,7 +10791,36 @@ function pickFaces(from, to, obstacles, options) {
   const gapX = Math.abs(dx) - options.cardWidth;
   const gapY = Math.abs(dy) - options.cardHeight;
   const horizontalDominant = Math.abs(dx) >= Math.abs(dy);
-  return horizontalDominant ? dx >= 0 ? { fromHandle: "r", toHandle: "l" } : { fromHandle: "l", toHandle: "r" } : dy >= 0 ? { fromHandle: "b", toHandle: "t" } : { fromHandle: "t", toHandle: "b" };
+  const approachClear = (rect, side) => {
+    const band = 30;
+    return !obstacles.some((other) => {
+      if (other.id === rect.id || other.id === from.id || other.id === to.id) return false;
+      const ox = Math.abs(other.x - rect.x);
+      const oy = Math.abs(other.y - rect.y);
+      if (side === "r") return other.x > rect.x && other.x - rect.x < options.cardWidth + band && oy < options.cardHeight * 0.9;
+      if (side === "l") return other.x < rect.x && rect.x - other.x < options.cardWidth + band && oy < options.cardHeight * 0.9;
+      if (side === "b") return other.y > rect.y && other.y - rect.y < options.cardHeight + band && ox < options.cardWidth * 0.9;
+      return other.y < rect.y && rect.y - other.y < options.cardHeight + band && ox < options.cardWidth * 0.9;
+    });
+  };
+  if (horizontalDominant) {
+    const fromSide2 = dx >= 0 ? "r" : "l";
+    const toSide2 = dx >= 0 ? "l" : "r";
+    if (approachClear(from, fromSide2) && approachClear(to, toSide2)) {
+      return { fromHandle: fromSide2, toHandle: toSide2 };
+    }
+    const freeFrom2 = approachClear(from, "b") ? "b" : "t";
+    const freeTo2 = approachClear(to, "b") ? "b" : "t";
+    return { fromHandle: freeFrom2, toHandle: freeTo2 };
+  }
+  const fromSide = dy >= 0 ? "b" : "t";
+  const toSide = dy >= 0 ? "t" : "b";
+  if (approachClear(from, fromSide) && approachClear(to, toSide)) {
+    return { fromHandle: fromSide, toHandle: toSide };
+  }
+  const freeFrom = approachClear(from, "r") ? "r" : "l";
+  const freeTo = approachClear(to, "r") ? "r" : "l";
+  return { fromHandle: freeFrom, toHandle: freeTo };
 }
 
 // src/client/push-log.ts
@@ -13096,7 +13125,8 @@ function StackDrawer(props) {
           toRect,
           faces.fromHandle,
           faces.toHandle,
-          [fromRect, toRect, ...obstacles]
+          [fromRect, toRect, ...obstacles],
+          { stub: 10 }
         );
         let bestDirty = dirty(points);
         if (bestDirty > 0) {
@@ -13104,7 +13134,7 @@ function StackDrawer(props) {
           for (const fromFace of FACES) {
             for (const toFace of FACES) {
               if (fromFace === faces.fromHandle && toFace === faces.toHandle) continue;
-              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles]);
+              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 });
               const attemptDirty = dirty(attempt);
               if (attemptDirty < bestDirty) {
                 bestDirty = attemptDirty;

@@ -40,7 +40,7 @@ const looped = pickFaces(
   [between],
   opts,
 )
-assert.deepEqual(looped, { fromHandle: 'r', toHandle: 'l' }, 'the router goes round whatever sits between')
+assert.deepEqual(looped, { fromHandle: 'b', toHandle: 'b' }, 'a card in front of the facing side pushes the line to the vertical faces')
 // --- blocked below → loop over the top instead ---------------------------
 const below = { id: 'c', x: 40, y: CARD_H + 10 }
 assert.equal(blockedToward({ id: 'a', x: 0, y: 0 }, 'b', [below], size), true, 'a card below blocks the bottom')

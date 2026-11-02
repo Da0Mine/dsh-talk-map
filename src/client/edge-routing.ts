@@ -91,10 +91,43 @@ export function pickFaces(
    * is what makes a facing-side connection impossible. A short stub between neighbours is
    * fine and far clearer than looping: the loop drew a rectangle around the card.
    */
-  // Always join the two faces that look at each other. The router routes around whatever
-  // stands between them, so there is no reason to pre-emptively loop: the loop used to
-  // draw a dashed rectangle around the card in the stack drawer.
-  return horizontalDominant
-    ? (dx >= 0 ? { fromHandle: 'r', toHandle: 'l' } : { fromHandle: 'l', toHandle: 'r' })
-    : (dy >= 0 ? { fromHandle: 'b', toHandle: 't' } : { fromHandle: 't', toHandle: 'b' })
+  /**
+   * Is the short run in front of `side` free? A face whose stub lands inside a neighbour
+   * cannot be used at all: the router has nowhere to start, falls back, and the line ends
+   * up cutting straight through that neighbour. That is the stack-drawer case where the
+   * two cards being joined have another card between them.
+   */
+  const approachClear = (rect: PlacedRect & { id: string }, side: Side): boolean => {
+    const band = 30
+    return !obstacles.some(other => {
+      if (other.id === rect.id || other.id === from.id || other.id === to.id) return false
+      const ox = Math.abs(other.x - rect.x)
+      const oy = Math.abs(other.y - rect.y)
+      if (side === 'r') return other.x > rect.x && other.x - rect.x < options.cardWidth + band && oy < options.cardHeight * 0.9
+      if (side === 'l') return other.x < rect.x && rect.x - other.x < options.cardWidth + band && oy < options.cardHeight * 0.9
+      if (side === 'b') return other.y > rect.y && other.y - rect.y < options.cardHeight + band && ox < options.cardWidth * 0.9
+      return other.y < rect.y && rect.y - other.y < options.cardHeight + band && ox < options.cardWidth * 0.9
+    })
+  }
+
+  if (horizontalDominant) {
+    const fromSide: Side = dx >= 0 ? 'r' : 'l'
+    const toSide: Side = dx >= 0 ? 'l' : 'r'
+    if (approachClear(from, fromSide) && approachClear(to, toSide)) {
+      return { fromHandle: fromSide, toHandle: toSide }
+    }
+    // Something sits right in front of a facing side: leave through a vertical face.
+    const freeFrom: Side = approachClear(from, 'b') ? 'b' : 't'
+    const freeTo: Side = approachClear(to, 'b') ? 'b' : 't'
+    return { fromHandle: freeFrom, toHandle: freeTo }
+  }
+
+  const fromSide: Side = dy >= 0 ? 'b' : 't'
+  const toSide: Side = dy >= 0 ? 't' : 'b'
+  if (approachClear(from, fromSide) && approachClear(to, toSide)) {
+    return { fromHandle: fromSide, toHandle: toSide }
+  }
+  const freeFrom: Side = approachClear(from, 'r') ? 'r' : 'l'
+  const freeTo: Side = approachClear(to, 'r') ? 'r' : 'l'
+  return { fromHandle: freeFrom, toHandle: freeTo }
 }
