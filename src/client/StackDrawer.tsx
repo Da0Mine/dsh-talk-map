@@ -286,93 +286,179 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           }
           return hits
         }
-        const FACES: ('t' | 'r' | 'b' | 'l')[] = ['t', 'r', 'b', 'l']
-        const anchorOn = (rect: { x: number; y: number; w: number; h: number }, face: 't' | 'r' | 'b' | 'l') =>
-          face === 't' ? { x: rect.x + rect.w / 2, y: rect.y }
-            : face === 'b' ? { x: rect.x + rect.w / 2, y: rect.y + rect.h }
-              : face === 'l' ? { x: rect.x, y: rect.y + rect.h / 2 }
+        // A curve, not an orthogonal route. The drawer's grid is dense, and forcing the line
+        // to run in the gutters produced long detours and the odd wrap. What is wanted is
+        // the simplest visible connection: a smooth curve between the two facing edges that
+        // does not overlap a card and stays inside the panel.
+        const sideOf = (
+          rect: { x: number; y: number; w: number; h: number },
+          other: { x: number; y: number; w: number; h: number },
+        ): 't' | 'r' | 'b' | 'l' => {
+          const dx = (other.x + other.w / 2) - (rect.x + rect.w / 2)
+          const dy = (other.y + other.h / 2) - (rect.y + rect.h / 2)
+          if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? 'r' : 'l'
+          return dy >= 0 ? 'b' : 't'
+        }
+        const anchorOf = (rect: { x: number; y: number; w: number; h: number }, side: 't' | 'r' | 'b' | 'l') =>
+          side === 't' ? { x: rect.x + rect.w / 2, y: rect.y }
+            : side === 'b' ? { x: rect.x + rect.w / 2, y: rect.y + rect.h }
+              : side === 'l' ? { x: rect.x, y: rect.y + rect.h / 2 }
                 : { x: rect.x + rect.w, y: rect.y + rect.h / 2 }
-        const normalOf = (face: 't' | 'r' | 'b' | 'l') =>
-          face === 't' ? { x: 0, y: -1 } : face === 'b' ? { x: 0, y: 1 }
-            : face === 'l' ? { x: -1, y: 0 } : { x: 1, y: 0 }
+        const normalOf = (side: 't' | 'r' | 'b' | 'l') =>
+          side === 't' ? { x: 0, y: -1 } : side === 'b' ? { x: 0, y: 1 }
+            : side === 'l' ? { x: -1, y: 0 } : { x: 1, y: 0 }
 
-        // Gutter lanes, measured from the cards themselves: the middle of every gap
-        // between two rows and between two columns. A wire that runs in a gutter can
-        // never cross a card, so these are the candidates worth trusting on a grid.
-        const bandCentres = (values: number[], size: number): number[] => {
-          const unique = [...new Set(values.map(value => Math.round(value)))].sort((a, b) => a - b)
-          const lanes: number[] = []
-          for (let index = 1; index < unique.length; index += 1) {
-            const left = unique[index - 1]!
-            const right = unique[index]!
-            if (right - left > size + 2) lanes.push((left + size + right) / 2)
-            else lanes.push((left + size / 2 + right + size / 2) / 2)
-          }
-          const first = unique[0]
-          const last = unique[unique.length - 1]
-          if (first !== undefined) lanes.unshift(first - 14)
-          if (last !== undefined) lanes.push(last + size + 14)
-          return lanes
-        }
-        const lanesY = bandCentres(cardsInDrawer.map(card => card.y), 104)
-        const lanesX = bandCentres(cardsInDrawer.map(card => card.x), 224)
+        const fromSide = sideOf(fromRect, toRect)
+        const toSide = sideOf(toRect, fromRect)
+        const startPoint = anchorOf(fromRect, fromSide)
+        const endPoint = anchorOf(toRect, toSide)
+        const startNormal = normalOf(fromSide)
+        const endNormal = normalOf(toSide)
+        const span = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y)
 
-        const lengthOf = (candidate: { x: number; y: number }[]): number => {
-          let total = 0
-          for (let index = 1; index < candidate.length; index += 1) {
-            total += Math.abs(candidate[index]!.x - candidate[index - 1]!.x)
-              + Math.abs(candidate[index]!.y - candidate[index - 1]!.y)
-          }
-          return total
-        }
-
-        const candidates: { x: number; y: number }[][] = []
-        for (const fromFace of FACES) {
-          for (const toFace of FACES) {
-            candidates.push(routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 }))
-            // Deterministic gutter shapes for this face pair: out along the normal, turn
-            // into the nearest gutter, run along it, then into the target.
-            const start = anchorOn(fromRect, fromFace)
-            const end = anchorOn(toRect, toFace)
-            const startNormal = normalOf(fromFace)
-            const endNormal = normalOf(toFace)
-            const startStub = { x: start.x + startNormal.x * 10, y: start.y + startNormal.y * 10 }
-            const endStub = { x: end.x + endNormal.x * 10, y: end.y + endNormal.y * 10 }
-            for (const lane of lanesY) {
-              candidates.push([start, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, end])
-              candidates.push([start, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane },
-                { x: endStub.x, y: endStub.y }, endStub, end])
-            }
-            for (const lane of lanesX) {
-              candidates.push([start, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, end])
-              candidates.push([start, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y },
-                { x: endStub.x, y: endStub.y }, endStub, end])
+        /** Sampled points that sit inside a card or outside the panel. */
+        const badness = (sample: (t: number) => { x: number; y: number }): number => {
+          let bad = 0
+          for (let step = 0; step <= 40; step += 1) {
+            const point = sample(step / 40)
+            if (point.x < 6 || point.y < 6 || point.x > boundsWidth - 6 || point.y > boundsHeight - 6) bad += 1
+            for (const card of cardsInDrawer) {
+              if (point.x <= card.x + 2 || point.x >= card.x + card.w - 2) continue
+              if (point.y <= card.y + 2 || point.y >= card.y + card.h - 2) continue
+              const own = card.id === link.from || card.id === link.to
+              const nearStart = Math.hypot(point.x - startPoint.x, point.y - startPoint.y) < 18
+              const nearEnd = Math.hypot(point.x - endPoint.x, point.y - endPoint.y) < 18
+              if (own && (nearStart || nearEnd)) continue
+              bad += 1
             }
           }
+          return bad
         }
 
-        let bestPoints = candidates[0] ?? routeEdge(fromRect, toRect, faces.fromHandle as 't' | 'r' | 'b' | 'l',
-          faces.toHandle as 't' | 'r' | 'b' | 'l', [fromRect, toRect, ...obstacles], { stub: 10 })
-        let bestDirty = dirty(bestPoints)
-        let bestLength = lengthOf(bestPoints)
-        for (const candidate of candidates) {
-          const cost = dirty(candidate)
-          const length = lengthOf(candidate)
-          if (cost < bestDirty || (cost === bestDirty && length < bestLength)) {
-            bestDirty = cost
-            bestLength = length
-            bestPoints = candidate
-            if (cost === 0 && length <= 220) break
+        // Candidates, in order of how "direct" they look:
+        //   1. a curve that bows out along the face normals (works for neighbours),
+        //   2. a curve that goes round the pair through a waypoint above / below /
+        //      left / right (needed when another card sits between the two).
+        let bestD: string | undefined
+        let bestCost = Number.POSITIVE_INFINITY
+        const tryCurve = (
+          control1: { x: number; y: number },
+          control2: { x: number; y: number },
+        ): void => {
+          const u1 = (t: number) => (1 - t) * (1 - t) * (1 - t)
+          const u2 = (t: number) => 3 * (1 - t) * (1 - t) * t
+          const u3 = (t: number) => 3 * (1 - t) * t * t
+          const u4 = (t: number) => t * t * t
+          const sample = (t: number) => ({
+            x: u1(t) * startPoint.x + u2(t) * control1.x + u3(t) * control2.x + u4(t) * endPoint.x,
+            y: u1(t) * startPoint.y + u2(t) * control1.y + u3(t) * control2.y + u4(t) * endPoint.y,
+          })
+          const cost = badness(sample)
+          if (cost < bestCost) {
+            bestCost = cost
+            bestD = 'M ' + startPoint.x + ' ' + startPoint.y
+              + ' C ' + control1.x + ' ' + control1.y + ', ' + control2.x + ' ' + control2.y
+              + ', ' + endPoint.x + ' ' + endPoint.y
           }
         }
-        const points = bestPoints
 
-        const tip = points[points.length - 1]
-        const prev = points[points.length - 2]
-        const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y)
-          ? (tip.x >= prev.x ? 0 : 180)
-          : (tip.y >= prev.y ? 90 : -90)
-        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle, from: link.from, to: link.to })
+        for (const bow of [0.15, 0.3, 0.5, 0.75, 1.1]) {
+          const reach = Math.max(18, span * bow)
+          const c1 = { x: startPoint.x + startNormal.x * reach, y: startPoint.y + startNormal.y * reach }
+          const c2 = { x: endPoint.x + endNormal.x * reach, y: endPoint.y + endNormal.y * reach }
+          tryCurve(c1, c2)
+          if (bestCost === 0) break
+        }
+
+        // Detours: a waypoint clear of both cards, clamped inside the panel.
+        if (bestCost > 0) {
+          const pad = 10
+          const pairTop = Math.min(fromRect.y, toRect.y)
+          const pairBottom = Math.max(fromRect.y + fromRect.h, toRect.y + toRect.h)
+          const pairLeft = Math.min(fromRect.x, toRect.x)
+          const pairRight = Math.max(fromRect.x + fromRect.w, toRect.x + toRect.w)
+          const midX = (startPoint.x + endPoint.x) / 2
+          const midY = (startPoint.y + endPoint.y) / 2
+          const waypoints = [
+            { x: midX, y: Math.max(pad, pairTop - 16) },
+            { x: midX, y: Math.min(boundsHeight - pad, pairBottom + 16) },
+            { x: Math.max(pad, pairLeft - 16), y: midY },
+            { x: Math.min(boundsWidth - pad, pairRight + 16), y: midY },
+          ]
+          for (const waypoint of waypoints) {
+            // Both control points at the waypoint: the curve leaves along the normal,
+            // sweeps through the waypoint area and comes into the target face.
+            tryCurve(waypoint, waypoint)
+            if (bestCost === 0) break
+          }
+        }
+        // A curve cannot always avoid the cards: between two neighbouring columns a card
+        // fills the whole span, so the line has to run in a gutter first. Keep the curve
+        // for the pretty cases, fall back to a gutter polyline when it is not clean.
+        if (bestCost > 0) {
+          const bands = (values: number[], size: number): number[] => {
+            const unique = [...new Set(values.map(value => Math.round(value)))].sort((a, b) => a - b)
+            const lanes: number[] = []
+            for (let index = 1; index < unique.length; index += 1) {
+              lanes.push((unique[index - 1]! + size + unique[index]!) / 2)
+            }
+            const first = unique[0]
+            const last = unique[unique.length - 1]
+            if (first !== undefined) lanes.unshift(Math.max(8, first - 14))
+            if (last !== undefined) lanes.push(last + size + 14)
+            return lanes
+          }
+          const samplePolyline = (points: { x: number; y: number }[]) => (t: number) => {
+            let total = 0
+            for (let index = 1; index < points.length; index += 1) {
+              total += Math.abs(points[index]!.x - points[index - 1]!.x) + Math.abs(points[index]!.y - points[index - 1]!.y)
+            }
+            let walked = 0
+            const target = t * total
+            for (let index = 1; index < points.length; index += 1) {
+              const a = points[index - 1]!
+              const b = points[index]!
+              const length = Math.abs(b.x - a.x) + Math.abs(b.y - a.y)
+              if (walked + length >= target || index === points.length - 1) {
+                const ratio = length === 0 ? 0 : Math.min(1, (target - walked) / length)
+                return { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio }
+              }
+              walked += length
+            }
+            return points[points.length - 1]!
+          }
+          const midY = (startPoint.y + endPoint.y) / 2
+          const midX = (startPoint.x + endPoint.x) / 2
+          const lanesY = bands(cardsInDrawer.map(card => card.y), 104)
+            .sort((a, b) => Math.abs(a - midY) - Math.abs(b - midY))
+          const lanesX = bands(cardsInDrawer.map(card => card.x), 224)
+            .sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX))
+          const shapes: { x: number; y: number }[][] = []
+          for (const lane of lanesY) {
+            shapes.push([startPoint, { x: startPoint.x, y: lane }, { x: endPoint.x, y: lane }, endPoint])
+          }
+          for (const lane of lanesX) {
+            shapes.push([startPoint, { x: lane, y: startPoint.y }, { x: lane, y: endPoint.y }, endPoint])
+          }
+          for (const shape of shapes) {
+            const cost = badness(samplePolyline(shape))
+            if (cost < bestCost) {
+              bestCost = cost
+              bestD = roundedPath(shape as never, 10)
+              if (cost === 0) break
+            }
+          }
+        }
+
+        const angle = toSide === 'l' ? 180 : toSide === 'r' ? 0 : toSide === 't' ? -90 : 90
+        next.push({
+          d: bestD ?? ('M ' + startPoint.x + ' ' + startPoint.y + ' L ' + endPoint.x + ' ' + endPoint.y),
+          ax: endPoint.x,
+          ay: endPoint.y,
+          angle,
+          from: link.from,
+          to: link.to,
+        })
       }
       // Only touch state when something actually moved: the parent may
       // re-render for unrelated reasons, and a blind setState here loops.

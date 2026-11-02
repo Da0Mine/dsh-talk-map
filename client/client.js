@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b48 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b49 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b48 · Search cards on the map",
+  "global.searchPlaceholder": "b49 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11720,18 +11720,6 @@ function ContextMenu(props) {
 // src/client/edge-route.ts
 var __routeDebug = {};
 var DEFAULTS = { margin: 4, stub: 22, minCorridor: 10 };
-function anchorOf(rect, face) {
-  switch (face) {
-    case "r":
-      return { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
-    case "l":
-      return { x: rect.x, y: rect.y + rect.h / 2 };
-    case "t":
-      return { x: rect.x + rect.w / 2, y: rect.y };
-    default:
-      return { x: rect.x + rect.w / 2, y: rect.y + rect.h };
-  }
-}
 function normalOf(face) {
   switch (face) {
     case "r":
@@ -11866,15 +11854,6 @@ function simplify(points) {
     else index2 += 1;
   }
   return out;
-}
-function routeEdge(from, to, fromFace, toFace, obstacles, options = {}) {
-  return routeBetween(
-    { start: anchorOf(from, fromFace), startFace: fromFace, end: anchorOf(to, toFace), endFace: toFace },
-    from,
-    to,
-    obstacles,
-    options
-  );
 }
 function snapToChannels(points, obstacles, margin) {
   if (points.length < 3) return points;
@@ -13130,94 +13109,142 @@ function StackDrawer(props) {
           }
           return hits2;
         };
-        const FACES = ["t", "r", "b", "l"];
-        const anchorOn = (rect, face) => face === "t" ? { x: rect.x + rect.w / 2, y: rect.y } : face === "b" ? { x: rect.x + rect.w / 2, y: rect.y + rect.h } : face === "l" ? { x: rect.x, y: rect.y + rect.h / 2 } : { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
-        const normalOf2 = (face) => face === "t" ? { x: 0, y: -1 } : face === "b" ? { x: 0, y: 1 } : face === "l" ? { x: -1, y: 0 } : { x: 1, y: 0 };
-        const bandCentres = (values, size) => {
-          const unique = [...new Set(values.map((value) => Math.round(value)))].sort((a, b) => a - b);
-          const lanes = [];
-          for (let index2 = 1; index2 < unique.length; index2 += 1) {
-            const left = unique[index2 - 1];
-            const right = unique[index2];
-            if (right - left > size + 2) lanes.push((left + size + right) / 2);
-            else lanes.push((left + size / 2 + right + size / 2) / 2);
-          }
-          const first = unique[0];
-          const last = unique[unique.length - 1];
-          if (first !== void 0) lanes.unshift(first - 14);
-          if (last !== void 0) lanes.push(last + size + 14);
-          return lanes;
+        const sideOf = (rect, other) => {
+          const dx = other.x + other.w / 2 - (rect.x + rect.w / 2);
+          const dy = other.y + other.h / 2 - (rect.y + rect.h / 2);
+          if (Math.abs(dx) >= Math.abs(dy)) return dx >= 0 ? "r" : "l";
+          return dy >= 0 ? "b" : "t";
         };
-        const lanesY = bandCentres(cardsInDrawer.map((card) => card.y), 104);
-        const lanesX = bandCentres(cardsInDrawer.map((card) => card.x), 224);
-        const lengthOf = (candidate) => {
-          let total = 0;
-          for (let index2 = 1; index2 < candidate.length; index2 += 1) {
-            total += Math.abs(candidate[index2].x - candidate[index2 - 1].x) + Math.abs(candidate[index2].y - candidate[index2 - 1].y);
-          }
-          return total;
-        };
-        const candidates = [];
-        for (const fromFace of FACES) {
-          for (const toFace of FACES) {
-            candidates.push(routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 }));
-            const start2 = anchorOn(fromRect, fromFace);
-            const end = anchorOn(toRect, toFace);
-            const startNormal = normalOf2(fromFace);
-            const endNormal = normalOf2(toFace);
-            const startStub = { x: start2.x + startNormal.x * 10, y: start2.y + startNormal.y * 10 };
-            const endStub = { x: end.x + endNormal.x * 10, y: end.y + endNormal.y * 10 };
-            for (const lane of lanesY) {
-              candidates.push([start2, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, end]);
-              candidates.push([
-                start2,
-                startStub,
-                { x: startStub.x, y: lane },
-                { x: endStub.x, y: lane },
-                { x: endStub.x, y: endStub.y },
-                endStub,
-                end
-              ]);
+        const anchorOf = (rect, side) => side === "t" ? { x: rect.x + rect.w / 2, y: rect.y } : side === "b" ? { x: rect.x + rect.w / 2, y: rect.y + rect.h } : side === "l" ? { x: rect.x, y: rect.y + rect.h / 2 } : { x: rect.x + rect.w, y: rect.y + rect.h / 2 };
+        const normalOf2 = (side) => side === "t" ? { x: 0, y: -1 } : side === "b" ? { x: 0, y: 1 } : side === "l" ? { x: -1, y: 0 } : { x: 1, y: 0 };
+        const fromSide = sideOf(fromRect, toRect);
+        const toSide = sideOf(toRect, fromRect);
+        const startPoint = anchorOf(fromRect, fromSide);
+        const endPoint = anchorOf(toRect, toSide);
+        const startNormal = normalOf2(fromSide);
+        const endNormal = normalOf2(toSide);
+        const span = Math.hypot(endPoint.x - startPoint.x, endPoint.y - startPoint.y);
+        const badness = (sample) => {
+          let bad = 0;
+          for (let step2 = 0; step2 <= 40; step2 += 1) {
+            const point = sample(step2 / 40);
+            if (point.x < 6 || point.y < 6 || point.x > boundsWidth - 6 || point.y > boundsHeight - 6) bad += 1;
+            for (const card of cardsInDrawer) {
+              if (point.x <= card.x + 2 || point.x >= card.x + card.w - 2) continue;
+              if (point.y <= card.y + 2 || point.y >= card.y + card.h - 2) continue;
+              const own = card.id === link2.from || card.id === link2.to;
+              const nearStart = Math.hypot(point.x - startPoint.x, point.y - startPoint.y) < 18;
+              const nearEnd = Math.hypot(point.x - endPoint.x, point.y - endPoint.y) < 18;
+              if (own && (nearStart || nearEnd)) continue;
+              bad += 1;
             }
-            for (const lane of lanesX) {
-              candidates.push([start2, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, end]);
-              candidates.push([
-                start2,
-                startStub,
-                { x: lane, y: startStub.y },
-                { x: lane, y: endStub.y },
-                { x: endStub.x, y: endStub.y },
-                endStub,
-                end
-              ]);
+          }
+          return bad;
+        };
+        let bestD;
+        let bestCost = Number.POSITIVE_INFINITY;
+        const tryCurve = (control1, control2) => {
+          const u1 = (t2) => (1 - t2) * (1 - t2) * (1 - t2);
+          const u2 = (t2) => 3 * (1 - t2) * (1 - t2) * t2;
+          const u3 = (t2) => 3 * (1 - t2) * t2 * t2;
+          const u4 = (t2) => t2 * t2 * t2;
+          const sample = (t2) => ({
+            x: u1(t2) * startPoint.x + u2(t2) * control1.x + u3(t2) * control2.x + u4(t2) * endPoint.x,
+            y: u1(t2) * startPoint.y + u2(t2) * control1.y + u3(t2) * control2.y + u4(t2) * endPoint.y
+          });
+          const cost = badness(sample);
+          if (cost < bestCost) {
+            bestCost = cost;
+            bestD = "M " + startPoint.x + " " + startPoint.y + " C " + control1.x + " " + control1.y + ", " + control2.x + " " + control2.y + ", " + endPoint.x + " " + endPoint.y;
+          }
+        };
+        for (const bow of [0.15, 0.3, 0.5, 0.75, 1.1]) {
+          const reach = Math.max(18, span * bow);
+          const c1 = { x: startPoint.x + startNormal.x * reach, y: startPoint.y + startNormal.y * reach };
+          const c2 = { x: endPoint.x + endNormal.x * reach, y: endPoint.y + endNormal.y * reach };
+          tryCurve(c1, c2);
+          if (bestCost === 0) break;
+        }
+        if (bestCost > 0) {
+          const pad = 10;
+          const pairTop = Math.min(fromRect.y, toRect.y);
+          const pairBottom = Math.max(fromRect.y + fromRect.h, toRect.y + toRect.h);
+          const pairLeft = Math.min(fromRect.x, toRect.x);
+          const pairRight = Math.max(fromRect.x + fromRect.w, toRect.x + toRect.w);
+          const midX = (startPoint.x + endPoint.x) / 2;
+          const midY = (startPoint.y + endPoint.y) / 2;
+          const waypoints = [
+            { x: midX, y: Math.max(pad, pairTop - 16) },
+            { x: midX, y: Math.min(boundsHeight - pad, pairBottom + 16) },
+            { x: Math.max(pad, pairLeft - 16), y: midY },
+            { x: Math.min(boundsWidth - pad, pairRight + 16), y: midY }
+          ];
+          for (const waypoint of waypoints) {
+            tryCurve(waypoint, waypoint);
+            if (bestCost === 0) break;
+          }
+        }
+        if (bestCost > 0) {
+          const bands2 = (values, size) => {
+            const unique = [...new Set(values.map((value) => Math.round(value)))].sort((a, b) => a - b);
+            const lanes = [];
+            for (let index2 = 1; index2 < unique.length; index2 += 1) {
+              lanes.push((unique[index2 - 1] + size + unique[index2]) / 2);
+            }
+            const first = unique[0];
+            const last = unique[unique.length - 1];
+            if (first !== void 0) lanes.unshift(Math.max(8, first - 14));
+            if (last !== void 0) lanes.push(last + size + 14);
+            return lanes;
+          };
+          const samplePolyline = (points) => (t2) => {
+            let total = 0;
+            for (let index2 = 1; index2 < points.length; index2 += 1) {
+              total += Math.abs(points[index2].x - points[index2 - 1].x) + Math.abs(points[index2].y - points[index2 - 1].y);
+            }
+            let walked = 0;
+            const target = t2 * total;
+            for (let index2 = 1; index2 < points.length; index2 += 1) {
+              const a = points[index2 - 1];
+              const b = points[index2];
+              const length = Math.abs(b.x - a.x) + Math.abs(b.y - a.y);
+              if (walked + length >= target || index2 === points.length - 1) {
+                const ratio = length === 0 ? 0 : Math.min(1, (target - walked) / length);
+                return { x: a.x + (b.x - a.x) * ratio, y: a.y + (b.y - a.y) * ratio };
+              }
+              walked += length;
+            }
+            return points[points.length - 1];
+          };
+          const midY = (startPoint.y + endPoint.y) / 2;
+          const midX = (startPoint.x + endPoint.x) / 2;
+          const lanesY = bands2(cardsInDrawer.map((card) => card.y), 104).sort((a, b) => Math.abs(a - midY) - Math.abs(b - midY));
+          const lanesX = bands2(cardsInDrawer.map((card) => card.x), 224).sort((a, b) => Math.abs(a - midX) - Math.abs(b - midX));
+          const shapes = [];
+          for (const lane of lanesY) {
+            shapes.push([startPoint, { x: startPoint.x, y: lane }, { x: endPoint.x, y: lane }, endPoint]);
+          }
+          for (const lane of lanesX) {
+            shapes.push([startPoint, { x: lane, y: startPoint.y }, { x: lane, y: endPoint.y }, endPoint]);
+          }
+          for (const shape of shapes) {
+            const cost = badness(samplePolyline(shape));
+            if (cost < bestCost) {
+              bestCost = cost;
+              bestD = roundedPath(shape, 10);
+              if (cost === 0) break;
             }
           }
         }
-        let bestPoints = candidates[0] ?? routeEdge(
-          fromRect,
-          toRect,
-          faces.fromHandle,
-          faces.toHandle,
-          [fromRect, toRect, ...obstacles],
-          { stub: 10 }
-        );
-        let bestDirty = dirty(bestPoints);
-        let bestLength = lengthOf(bestPoints);
-        for (const candidate of candidates) {
-          const cost = dirty(candidate);
-          const length = lengthOf(candidate);
-          if (cost < bestDirty || cost === bestDirty && length < bestLength) {
-            bestDirty = cost;
-            bestLength = length;
-            bestPoints = candidate;
-            if (cost === 0 && length <= 220) break;
-          }
-        }
-        const points = bestPoints;
-        const tip = points[points.length - 1];
-        const prev = points[points.length - 2];
-        const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y) ? tip.x >= prev.x ? 0 : 180 : tip.y >= prev.y ? 90 : -90;
-        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle, from: link2.from, to: link2.to });
+        const angle = toSide === "l" ? 180 : toSide === "r" ? 0 : toSide === "t" ? -90 : 90;
+        next.push({
+          d: bestD ?? "M " + startPoint.x + " " + startPoint.y + " L " + endPoint.x + " " + endPoint.y,
+          ax: endPoint.x,
+          ay: endPoint.y,
+          angle,
+          from: link2.from,
+          to: link2.to
+        });
       }
       setWires((current) => {
         if (current.length === next.length && current.every((wire, index2) => wire.d === next[index2]?.d)) {
