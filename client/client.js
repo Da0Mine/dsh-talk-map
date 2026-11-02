@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b53 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b54 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b53 · Search cards on the map",
+  "global.searchPlaceholder": "b54 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12270,6 +12270,11 @@ function TalkMapEdge(props) {
   const measuredBoxes = boardBoxes();
   const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
   const merged = (obstacles !== void 0 && obstacles.length > 0 ? obstacles : measuredBoxes).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect));
+  const laneOffset = (() => {
+    let hash = 7;
+    for (const character of String(props.id)) hash = (hash * 31 + character.charCodeAt(0)) % 997;
+    return (hash % 5 - 2) * 1.2;
+  })();
   const route = data.fromRect === void 0 || data.toRect === void 0 ? void 0 : routeBetween(
     {
       // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,
@@ -14511,8 +14516,8 @@ function CanvasInner(props) {
         if (parentSessionId === void 0) continue;
         const parentCardId = sessionIdToCardId.get(parentSessionId);
         if (parentCardId === void 0) continue;
-        if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue;
-        if (lineageCut.includes(parentCardId + "->" + cardId)) continue;
+        if (explicitPairs.has(parentCardId + "->" + cardId)) continue;
+        if (explicitPairs.has(cardId + "->" + parentCardId)) continue;
         const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? ""];
         const childSession = sessions.byId[card.sessionId];
         const lineagePush = lastPushOf(parentCardId, cardId);

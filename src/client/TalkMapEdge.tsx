@@ -142,6 +142,14 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     .filter(box => !sameCorner(box, data.toRect))
   // Always route when the two boxes are known. The old "no obstacles → smooth-step"
   // shortcut drew a straight line through the target card on a two-card board.
+  // Stable per-edge lane offset: two edges in the same gap would otherwise draw the
+  // same line twice.
+  const laneOffset = (() => {
+    let hash = 7
+    for (const character of String(props.id)) hash = (hash * 31 + character.charCodeAt(0)) % 997
+    return ((hash % 5) - 2) * 1.2
+  })()
+
   const route = data.fromRect === undefined || data.toRect === undefined
     ? undefined
     : routeBetween(

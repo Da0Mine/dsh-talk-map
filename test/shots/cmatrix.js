@@ -34303,6 +34303,11 @@
     const measuredBoxes = boardBoxes();
     const sameCorner = (box, other) => other !== void 0 && Math.abs(box.x - other.x) < 6 && Math.abs(box.y - other.y) < 6;
     const merged = (obstacles !== void 0 && obstacles.length > 0 ? obstacles : measuredBoxes).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect)).filter((box) => !sameCorner(box, data.fromRect)).filter((box) => !sameCorner(box, data.toRect));
+    const laneOffset = (() => {
+      let hash = 7;
+      for (const character of String(props.id)) hash = (hash * 31 + character.charCodeAt(0)) % 997;
+      return (hash % 5 - 2) * 1.2;
+    })();
     const route = data.fromRect === void 0 || data.toRect === void 0 ? void 0 : routeBetween(
       {
         // Rounded to whole flow pixels: anchors carry sub-pixel noise after a zoom,

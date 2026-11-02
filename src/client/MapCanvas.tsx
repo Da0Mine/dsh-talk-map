@@ -1225,11 +1225,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       if (parentSessionId === undefined) continue
       const parentCardId = sessionIdToCardId.get(parentSessionId)
       if (parentCardId === undefined) continue
-      if (explicitPairs.has(`${parentCardId}->${cardId}`)) continue
-      // ...and the pairs the user deleted one by one.
-      if (lineageCut.includes(parentCardId + '->' + cardId)) continue
-      // Provenance, not a channel: the child inherited the history and has
-      // to be judged by its own timestamps.
+          // Skip when a stored edge already joins this pair — in either direction, otherwise
+          // the lineage line runs parallel to it and the two read as one doubled line.
+          if (explicitPairs.has(parentCardId + '->' + cardId)) continue
+          if (explicitPairs.has(cardId + '->' + parentCardId)) continue
+          // ...and the pairs the user deleted one by one.
       const parentSession = sessions.byId[visibleCards[parentCardId]?.sessionId ?? '']
       const childSession = sessions.byId[card.sessionId]
       // A lineage line can be pushed along too (the menu offers 推送摘要 on it),
