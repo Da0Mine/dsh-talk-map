@@ -135,7 +135,7 @@ const report = await page.evaluate(() => {
       Math.max(card.x - point.x, 0, point.x - (card.x + card.w)),
       Math.max(card.y - point.y, 0, point.y - (card.y + card.h)),
     )))
-    return { d: (element.getAttribute('d') ?? '').slice(0, 64), outside, cross,
+    return { d: element.getAttribute('d') ?? '', outside, cross,
       from: element.getAttribute('data-from') ?? null, to: element.getAttribute('data-to') ?? null,
       head: [Math.round(points[0].x), Math.round(points[0].y)], tail: [Math.round(points[points.length-1].x), Math.round(points[points.length-1].y)],
       headGap: Math.round(gap(points[0]) * 10) / 10, tailGap: Math.round(gap(points[points.length - 1]) * 10) / 10 }
