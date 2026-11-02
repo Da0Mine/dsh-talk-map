@@ -109,7 +109,7 @@ createRoot(document.getElementById('root')).render(
       const originX = (index % COLS) * CELL_W + PAD
       const originY = Math.floor(index / COLS) * CELL_H + PAD
       return (
-        <div key={index} data-scene={index} style={{ position: 'absolute', left: originX, top: originY,
+        <div key={index} data-scene={index} data-target={scene.props.targetPosition} style={{ position: 'absolute', left: originX, top: originY,
           width: CELL_W - PAD, height: CELL_H - PAD, outline: '1px solid #1b1f26' }}>
           <div style={{ position: 'absolute', left: 0, top: -18, fontSize: 11, color: '#6b7280' }}>{scene.key}</div>
           <svg width={CELL_W} height={CELL_H} style={{ position: 'absolute', left: 0, top: 0 }}>
@@ -204,7 +204,14 @@ const report = await page.evaluate(() => {
         }
       }
     }
-    out.push({ key, inside, hits: [...hits], d: pathElement.getAttribute('d')?.slice(0, 90) })
+      // The head is its own path; its rotate() must be the one the target face needs.
+      const face = scene.getAttribute('data-target') ?? 'left'
+      const expectedAngle = {"right":180,"left":0,"top":90,"bottom":-90}[face]
+      const headElement = [...scene.querySelectorAll('svg path')].find(element => (element.getAttribute('d') ?? '').startsWith('M0 0'))
+      const rotateMatch = /rotate\(([-\d.]+)\)/.exec(headElement === undefined ? '' : (headElement.getAttribute('transform') ?? ''))
+      const arrowAngle = rotateMatch === null ? null : Number(rotateMatch[1])
+      const arrowOk = expectedAngle === undefined || arrowAngle === expectedAngle
+    out.push({ key, inside, hits: [...hits], face, arrowAngle, expectedAngle, arrowOk, d: pathElement.getAttribute('d')?.slice(0, 90) })
   }
   return out
 })
@@ -214,10 +221,11 @@ await page.screenshot({ path: shot, fullPage: true })
 await browser.close()
 child.kill()
 
-const bad = report.filter(entry => (entry.inside ?? 0) > 0)
+  const bad = report.filter(crossing => crossing.inside > 0 || crossing.arrowOk === false)
 console.log(JSON.stringify({
   scenes: report.length,
   crossing: bad.length,
   sample: bad.slice(0, 6),
+  arrows: report.slice(0, 6).map(entry => ({ face: entry.face, angle: entry.arrowAngle, expected: entry.expectedAngle, ok: entry.arrowOk })),
 }, null, 1))
 process.exitCode = bad.length === 0 ? 0 : 1

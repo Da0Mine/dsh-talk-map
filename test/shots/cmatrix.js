@@ -34459,7 +34459,7 @@
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("div", { style: { position: "relative", width: COLS * CELL_W, height: Math.ceil(SCENES.length / COLS) * CELL_H }, children: SCENES.map((scene, index2) => {
       const originX = index2 % COLS * CELL_W + PAD;
       const originY = Math.floor(index2 / COLS) * CELL_H + PAD;
-      return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-scene": index2, style: {
+      return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "data-scene": index2, "data-target": scene.props.targetPosition, style: {
         position: "absolute",
         left: originX,
         top: originY,

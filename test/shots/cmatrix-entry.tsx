@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')).render(
       const originX = (index % COLS) * CELL_W + PAD
       const originY = Math.floor(index / COLS) * CELL_H + PAD
       return (
-        <div key={index} data-scene={index} style={{ position: 'absolute', left: originX, top: originY,
+        <div key={index} data-scene={index} data-target={scene.props.targetPosition} style={{ position: 'absolute', left: originX, top: originY,
           width: CELL_W - PAD, height: CELL_H - PAD, outline: '1px solid #1b1f26' }}>
           <div style={{ position: 'absolute', left: 0, top: -18, fontSize: 11, color: '#6b7280' }}>{scene.key}</div>
           <svg width={CELL_W} height={CELL_H} style={{ position: 'absolute', left: 0, top: 0 }}>
