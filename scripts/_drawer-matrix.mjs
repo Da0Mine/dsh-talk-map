@@ -230,6 +230,7 @@ for (const scenario of SCENARIOS) {
         // Does the arrow point into the target card? Compare its direction with the
         // vector from the arrow to the card centre.
         let inward = null
+        let arrowVisible = null
         if (target !== undefined && arrow !== undefined) {
           const radians = (arrow.angle * Math.PI) / 180
           const dir = { x: Math.cos(radians), y: Math.sin(radians) }
@@ -244,6 +245,33 @@ for (const scenario of SCENARIOS) {
           ].sort((a, b) => a.d - b.d)
           const normal = candidates[0].n
           inward = dir.x * normal.x + dir.y * normal.y
+
+          // How much of the arrow head is covered by a card? The wires are drawn behind
+          // the cards, so a head that straddles a border loses half of itself and reads
+          // as a backwards triangle.
+          const glyph = [[0, 0], [-9, -4], [-9, 4]]
+          let covered = 0
+          let sampled = 0
+          for (let i = 0; i <= 6; i += 1) {
+            for (let j = 0; j <= 6; j += 1) {
+              if (i + j > 6) continue
+              const a = i / 6
+              const b = j / 6
+              const c = 1 - a - b
+              const gx = glyph[0][0] * a + glyph[1][0] * b + glyph[2][0] * c
+              const gy = glyph[0][1] * a + glyph[1][1] * b + glyph[2][1] * c
+              const px = arrow.x + gx * Math.cos(radians) - gy * Math.sin(radians)
+              const py = arrow.y + gx * Math.sin(radians) + gy * Math.cos(radians)
+              sampled += 1
+              for (const card of cards) {
+                if (px > card.x && px < card.x + card.w && py > card.y && py < card.y + card.h) {
+                  covered += 1
+                  break
+                }
+              }
+            }
+          }
+          arrowVisible = sampled === 0 ? null : Math.round((1 - covered / sampled) * 100) / 100
         }
         return {
           from: wire.from, to: wire.to,
@@ -253,6 +281,7 @@ for (const scenario of SCENARIOS) {
           arrowAngle: arrow === undefined ? null : arrow.angle,
           onEdge: onEdge === null ? null : Math.round(onEdge * 10) / 10,
           inward: inward === null ? null : Math.round(inward * 100) / 100,
+          arrowVisible,
           fromKnown: source !== undefined,
           points: wire.points.filter((_point, at) => at % 4 === 0).map(point => [point.x, point.y]),
         }
@@ -269,7 +298,7 @@ child.kill()
 const summary = results.map(result => {
   if (result.error !== undefined) return { id: result.id, error: result.error }
   const bad = result.wires.filter(wire => wire.cross > 0 || wire.outside > 0
-    || (wire.onEdge ?? 0) > 4 || (wire.inward ?? 1) <= 0.2)
+    || (wire.onEdge ?? 0) > 4 || (wire.inward ?? 1) <= 0.2 || (wire.arrowVisible ?? 1) < 0.85)
   const overlaps = (result.overlapPairs ?? []).length
   return {
     id: result.id,
@@ -277,7 +306,7 @@ const summary = results.map(result => {
     wires: result.wires.length,
     bad: bad.length,
     overlaps,
-    detail: bad.slice(0, 3).map(wire => ({ from: wire.from, to: wire.to, cross: wire.cross, outside: wire.outside, onEdge: wire.onEdge, inward: wire.inward })),
+    detail: bad.slice(0, 3).map(wire => ({ from: wire.from, to: wire.to, cross: wire.cross, outside: wire.outside, onEdge: wire.onEdge, inward: wire.inward, visible: wire.arrowVisible })),
   }
 })
 
