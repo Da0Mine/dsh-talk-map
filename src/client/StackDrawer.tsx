@@ -143,7 +143,7 @@ export interface StackDrawerProps {
 export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   /** Measured connector lines: curved paths in scroller coordinates. */
-  const [wires, setWires] = useState<{ d: string; ax: number; ay: number; angle: number }[]>([])
+  const [wires, setWires] = useState<{ d: string; ax: number; ay: number; angle: number; from?: string; to?: string }[]>([])
   const [wireSize, setWireSize] = useState({ width: 0, height: 0 })
   const remembered = loadSearch<DrawerSearchHit>('drawer:' + props.groupId)
   const [query, setQuery] = useState(remembered?.query ?? '')
@@ -224,7 +224,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
             h: box.height,
           }
         })
-      const next: { d: string; ax: number; ay: number; angle: number }[] = []
+      const next: { d: string; ax: number; ay: number; angle: number; from?: string; to?: string }[] = []
       for (const link of links) {
         const from = boxOf(link.from)
         const to = boxOf(link.to)
@@ -304,7 +304,7 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
         const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y)
           ? (tip.x >= prev.x ? 0 : 180)
           : (tip.y >= prev.y ? 90 : -90)
-        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle })
+        next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle, from: link.from, to: link.to })
       }
       // Only touch state when something actually moved: the parent may
       // re-render for unrelated reasons, and a blind setState here loops.
@@ -514,7 +514,9 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                   {wires.map((wire, index) => (
                     <g key={index}>
                       <path
-                        d={wire.d}
+                  d={wire.d}
+                  data-from={wire.from ?? ''}
+                  data-to={wire.to ?? ''}
                         fill="none"
                         stroke="rgba(200, 206, 216, 0.42)"
                         strokeWidth={1.4}

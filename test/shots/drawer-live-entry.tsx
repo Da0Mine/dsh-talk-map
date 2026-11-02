@@ -14,10 +14,12 @@ const items = ids.map((id, index) => ({
 // Top-row cards wired through their top faces (the reported case), plus a long link.
 const links = [
   { from: 'card-a', to: 'card-e', visible: true },
-  { from: 'card-b', to: 'card-f', visible: true },
-  { from: 'card-c', to: 'card-g', visible: true },
-  { from: 'card-d', to: 'card-h', visible: true },
-  { from: 'card-a', to: 'card-b', visible: true },
+  { from: 'card-a', to: 'card-f', visible: true },
+  { from: 'card-a', to: 'card-g', visible: true },
+  { from: 'card-b', to: 'card-h', visible: true },
+  { from: 'card-d', to: 'card-e', visible: true },
+  { from: 'card-a', to: 'card-h', visible: true },
+  { from: 'card-c', to: 'card-d', visible: true },
 ]
 
 createRoot(document.getElementById('root')).render(

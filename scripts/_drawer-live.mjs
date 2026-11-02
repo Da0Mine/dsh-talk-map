@@ -27,10 +27,12 @@ const items = ids.map((id, index) => ({
 // Top-row cards wired through their top faces (the reported case), plus a long link.
 const links = [
   { from: 'card-a', to: 'card-e', visible: true },
-  { from: 'card-b', to: 'card-f', visible: true },
-  { from: 'card-c', to: 'card-g', visible: true },
-  { from: 'card-d', to: 'card-h', visible: true },
-  { from: 'card-a', to: 'card-b', visible: true },
+  { from: 'card-a', to: 'card-f', visible: true },
+  { from: 'card-a', to: 'card-g', visible: true },
+  { from: 'card-b', to: 'card-h', visible: true },
+  { from: 'card-d', to: 'card-e', visible: true },
+  { from: 'card-a', to: 'card-h', visible: true },
+  { from: 'card-c', to: 'card-d', visible: true },
 ]
 
 createRoot(document.getElementById('root')).render(
@@ -134,9 +136,11 @@ const report = await page.evaluate(() => {
       Math.max(card.y - point.y, 0, point.y - (card.y + card.h)),
     )))
     return { d: (element.getAttribute('d') ?? '').slice(0, 64), outside, cross,
+      from: element.getAttribute('data-from') ?? null, to: element.getAttribute('data-to') ?? null,
+      head: [Math.round(points[0].x), Math.round(points[0].y)], tail: [Math.round(points[points.length-1].x), Math.round(points[points.length-1].y)],
       headGap: Math.round(gap(points[0]) * 10) / 10, tailGap: Math.round(gap(points[points.length - 1]) * 10) / 10 }
   })
-  return { cards: cards.length, wires }
+  return { cards: cards.length, boxes: cards.map(c => ({ id: c.id, x: Math.round(c.x), y: Math.round(c.y), w: Math.round(c.w), h: Math.round(c.h) })), wires }
 })
 
 const shot = process.argv.includes('--shot') ? process.argv[process.argv.indexOf('--shot') + 1] : 'test/shots/drawer-live.png'

@@ -24730,7 +24730,7 @@
     "digest.empty": "\u8FD9\u6761\u5BF9\u8BDD\u8FD8\u6CA1\u6709\u6458\u8981\uFF0C\u5148\u5237\u65B0\u6458\u8981\u518D\u6765\u770B\u3002",
     "digest.copy": "\u590D\u5236",
     "digest.close": "\u5173\u95ED",
-    "global.searchPlaceholder": "\u641C\u5730\u56FE\u4E0A\u7684\u5361\u7247\uFF08\u6807\u9898/\u6B63\u6587\uFF09\xB7 v0.1.33",
+    "global.searchPlaceholder": "b47 \xB7 \u641C\u5730\u56FE\u4E0A\u7684\u5361\u7247\uFF08\u6807\u9898/\u6B63\u6587\uFF09",
     "global.searchRun": "\u641C\u7D22",
     "global.searchTitle": "\u641C\u7D22\u5730\u56FE",
     "font.group": "\u6587\u5B57\u5927\u5C0F",
@@ -24881,7 +24881,7 @@
     "menu.noGroup": "Remove from group (free card)",
     "menu.open": "Open conversation",
     "menu.markUnread": "Mark as unread",
-    "global.searchPlaceholder": "Search cards on the map \xB7 v0.1.33",
+    "global.searchPlaceholder": "b47 \xB7 Search cards on the map",
     "global.searchRun": "Search",
     "global.searchTitle": "Search the map",
     "font.group": "Text size",
@@ -25889,7 +25889,7 @@
           const tip = points[points.length - 1];
           const prev = points[points.length - 2];
           const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y) ? tip.x >= prev.x ? 0 : 180 : tip.y >= prev.y ? 90 : -90;
-          next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle });
+          next.push({ d: roundedPath(points, 8), ax: tip.x, ay: tip.y, angle, from: link.from, to: link.to });
         }
         setWires((current) => {
           if (current.length === next.length && current.every((wire, index) => wire.d === next[index]?.d)) {
@@ -26087,6 +26087,8 @@
                             "path",
                             {
                               d: wire.d,
+                              "data-from": wire.from ?? "",
+                              "data-to": wire.to ?? "",
                               fill: "none",
                               stroke: "rgba(200, 206, 216, 0.42)",
                               strokeWidth: 1.4,
@@ -26245,10 +26247,12 @@
   }));
   var links = [
     { from: "card-a", to: "card-e", visible: true },
-    { from: "card-b", to: "card-f", visible: true },
-    { from: "card-c", to: "card-g", visible: true },
-    { from: "card-d", to: "card-h", visible: true },
-    { from: "card-a", to: "card-b", visible: true }
+    { from: "card-a", to: "card-f", visible: true },
+    { from: "card-a", to: "card-g", visible: true },
+    { from: "card-b", to: "card-h", visible: true },
+    { from: "card-d", to: "card-e", visible: true },
+    { from: "card-a", to: "card-h", visible: true },
+    { from: "card-c", to: "card-d", visible: true }
   ];
   (0, import_client.createRoot)(document.getElementById("root")).render(
     import_react2.default.createElement(StackDrawer, {
