@@ -264,6 +264,20 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
                 if (point.x > box.x + 1 && point.x < box.x + box.w - 1
                   && point.y > box.y + 1 && point.y < box.y + box.h - 1) hits += 1
               }
+              // The two endpoint cards count too, except right at their anchors: a route
+              // that dives through its own card (over the top and back down inside it)
+              // looks as broken as one through a neighbour.
+              for (const endpoint of [fromRect, toRect]) {
+                if (point.x <= endpoint.x + 1 || point.x >= endpoint.x + endpoint.w - 1) continue
+                if (point.y <= endpoint.y + 1 || point.y >= endpoint.y + endpoint.h - 1) continue
+                const away = Math.min(
+                  Math.hypot(point.x - (endpoint.x + endpoint.w / 2), point.y - endpoint.y),
+                  Math.hypot(point.x - (endpoint.x + endpoint.w / 2), point.y - (endpoint.y + endpoint.h)),
+                  Math.hypot(point.x - endpoint.x, point.y - (endpoint.y + endpoint.h / 2)),
+                  Math.hypot(point.x - (endpoint.x + endpoint.w), point.y - (endpoint.y + endpoint.h / 2)),
+                )
+                if (away > 14) hits += 1
+              }
               // A route may not leave the drawer's content box: for a card on the top row
               // "out of the top face" puts the line above the first row, i.e. outside the
               // panel, where it just looks broken.
@@ -273,32 +287,86 @@ export function StackDrawer(props: StackDrawerProps): React.JSX.Element {
           return hits
         }
         const FACES: ('t' | 'r' | 'b' | 'l')[] = ['t', 'r', 'b', 'l']
-        let points = routeEdge(
-          fromRect,
-          toRect,
-          faces.fromHandle as 't' | 'r' | 'b' | 'l',
-          faces.toHandle as 't' | 'r' | 'b' | 'l',
-          [fromRect, toRect, ...obstacles],
-          { stub: 10 },
-        )
-        let bestDirty = dirty(points)
-        if (bestDirty > 0) {
-          let bestPoints = points
-          for (const fromFace of FACES) {
-            for (const toFace of FACES) {
-              if (fromFace === faces.fromHandle && toFace === faces.toHandle) continue
-              const attempt = routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 })
-              const attemptDirty = dirty(attempt)
-              if (attemptDirty < bestDirty) {
-                bestDirty = attemptDirty
-                bestPoints = attempt
-                if (bestDirty === 0) break
-              }
-            }
-            if (bestDirty === 0) break
+        const anchorOn = (rect: { x: number; y: number; w: number; h: number }, face: 't' | 'r' | 'b' | 'l') =>
+          face === 't' ? { x: rect.x + rect.w / 2, y: rect.y }
+            : face === 'b' ? { x: rect.x + rect.w / 2, y: rect.y + rect.h }
+              : face === 'l' ? { x: rect.x, y: rect.y + rect.h / 2 }
+                : { x: rect.x + rect.w, y: rect.y + rect.h / 2 }
+        const normalOf = (face: 't' | 'r' | 'b' | 'l') =>
+          face === 't' ? { x: 0, y: -1 } : face === 'b' ? { x: 0, y: 1 }
+            : face === 'l' ? { x: -1, y: 0 } : { x: 1, y: 0 }
+
+        // Gutter lanes, measured from the cards themselves: the middle of every gap
+        // between two rows and between two columns. A wire that runs in a gutter can
+        // never cross a card, so these are the candidates worth trusting on a grid.
+        const bandCentres = (values: number[], size: number): number[] => {
+          const unique = [...new Set(values.map(value => Math.round(value)))].sort((a, b) => a - b)
+          const lanes: number[] = []
+          for (let index = 1; index < unique.length; index += 1) {
+            const left = unique[index - 1]!
+            const right = unique[index]!
+            if (right - left > size + 2) lanes.push((left + size + right) / 2)
+            else lanes.push((left + size / 2 + right + size / 2) / 2)
           }
-          points = bestPoints
+          const first = unique[0]
+          const last = unique[unique.length - 1]
+          if (first !== undefined) lanes.unshift(first - 14)
+          if (last !== undefined) lanes.push(last + size + 14)
+          return lanes
         }
+        const lanesY = bandCentres(cardsInDrawer.map(card => card.y), 104)
+        const lanesX = bandCentres(cardsInDrawer.map(card => card.x), 224)
+
+        const lengthOf = (candidate: { x: number; y: number }[]): number => {
+          let total = 0
+          for (let index = 1; index < candidate.length; index += 1) {
+            total += Math.abs(candidate[index]!.x - candidate[index - 1]!.x)
+              + Math.abs(candidate[index]!.y - candidate[index - 1]!.y)
+          }
+          return total
+        }
+
+        const candidates: { x: number; y: number }[][] = []
+        for (const fromFace of FACES) {
+          for (const toFace of FACES) {
+            candidates.push(routeEdge(fromRect, toRect, fromFace, toFace, [fromRect, toRect, ...obstacles], { stub: 10 }))
+            // Deterministic gutter shapes for this face pair: out along the normal, turn
+            // into the nearest gutter, run along it, then into the target.
+            const start = anchorOn(fromRect, fromFace)
+            const end = anchorOn(toRect, toFace)
+            const startNormal = normalOf(fromFace)
+            const endNormal = normalOf(toFace)
+            const startStub = { x: start.x + startNormal.x * 10, y: start.y + startNormal.y * 10 }
+            const endStub = { x: end.x + endNormal.x * 10, y: end.y + endNormal.y * 10 }
+            for (const lane of lanesY) {
+              candidates.push([start, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane }, endStub, end])
+              candidates.push([start, startStub, { x: startStub.x, y: lane }, { x: endStub.x, y: lane },
+                { x: endStub.x, y: endStub.y }, endStub, end])
+            }
+            for (const lane of lanesX) {
+              candidates.push([start, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y }, endStub, end])
+              candidates.push([start, startStub, { x: lane, y: startStub.y }, { x: lane, y: endStub.y },
+                { x: endStub.x, y: endStub.y }, endStub, end])
+            }
+          }
+        }
+
+        let bestPoints = candidates[0] ?? routeEdge(fromRect, toRect, faces.fromHandle as 't' | 'r' | 'b' | 'l',
+          faces.toHandle as 't' | 'r' | 'b' | 'l', [fromRect, toRect, ...obstacles], { stub: 10 })
+        let bestDirty = dirty(bestPoints)
+        let bestLength = lengthOf(bestPoints)
+        for (const candidate of candidates) {
+          const cost = dirty(candidate)
+          const length = lengthOf(candidate)
+          if (cost < bestDirty || (cost === bestDirty && length < bestLength)) {
+            bestDirty = cost
+            bestLength = length
+            bestPoints = candidate
+            if (cost === 0 && length <= 220) break
+          }
+        }
+        const points = bestPoints
+
         const tip = points[points.length - 1]
         const prev = points[points.length - 2]
         const angle = Math.abs(tip.x - prev.x) >= Math.abs(tip.y - prev.y)
