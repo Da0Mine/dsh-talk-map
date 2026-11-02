@@ -202,29 +202,11 @@ export function TalkMapEdge(props: EdgeProps): React.JSX.Element {
     targetY: props.targetY,
     targetPosition: props.targetPosition,
   })
-  const safeRoute = routed && !blockedRoute ? (route as Point[]) : undefined
-  // When even the router's best effort would run through a card, draw only the
-  // two stubs: the connection is still visible, and nothing is drawn over a card.
-  const stubPath = (() => {
-    const normal = (face: Face): Point => (face === 'r' ? { x: 1, y: 0 }
-      : face === 'l' ? { x: -1, y: 0 }
-        : face === 't' ? { x: 0, y: -1 } : { x: 0, y: 1 })
-    const length = 16
-    const a = normal(faceOf(props.sourcePosition))
-    const b = normal(faceOf(props.targetPosition))
-    const p1 = { x: props.sourceX + a.x * length, y: props.sourceY + a.y * length }
-    const p2 = { x: props.targetX + b.x * length, y: props.targetY + b.y * length }
-    return `M ${props.sourceX} ${props.sourceY} L ${p1.x} ${p1.y} M ${props.targetX} ${props.targetY} L ${p2.x} ${p2.y}`
-  })()
-  // Clip the polyline against the two endpoint cards: a route may pass through the
-  // card it is attached to (it is hidden behind that card), and drawing it would still
-  // put ink inside the card. Clipping keeps exactly the visible part.
-  const endpointBoxes = [data.fromRect, data.toRect].filter((box): box is Rect => box !== undefined)
-  const path = safeRoute !== undefined
-    ? (endpointBoxes.length === 0
-        ? roundedPath(safeRoute, 10)
-        : clipToRects(safeRoute, endpointBoxes).map(subpath => roundedPath(subpath, 10)).join(' '))
-    : blockedRoute ? stubPath : smoothPath
+  // Draw the routed polyline whole: the stub fallback and the endpoint clipping
+  // produced orphan fragments on the board, and with the obstacle list fixed there
+  // is nothing left for them to guard against.
+  const safeRoute = routed ? (route as Point[]) : undefined
+  const path = safeRoute !== undefined ? roundedPath(safeRoute, 10) : smoothPath
 
   /**
    * Which way the arrow points: the last leg of the route (or, without one, the

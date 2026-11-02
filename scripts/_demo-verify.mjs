@@ -41,6 +41,12 @@ page.on('console', message => { if (message.type() === 'error') console.log('CON
 await page.waitForTimeout(2500)
 
 const report = await page.evaluate(() => {
+  // 路径总长度：用来判断有没有只剩一小截的碎片
+  const element_length = path => {
+    const probe = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    probe.setAttribute('d', path)
+    try { return probe.getTotalLength() } catch { return 0 }
+  }
   const cards = [...document.querySelectorAll('[data-talkmap-session]')].map(element => {
     const rect = element.getBoundingClientRect()
     return { x: rect.left, y: rect.top, w: rect.width, h: rect.height }
@@ -78,7 +84,12 @@ const report = await page.evaluate(() => {
     }
     out.push({ id: group.getAttribute('data-id'), inside, closest: Math.round(closest * 10) / 10 })
   }
+  const paths = [...document.querySelectorAll('.react-flow__edge-path')].map(element => element.getAttribute('d') ?? '')
+  const brokenStubs = paths.filter(path => (path.match(/M/g) ?? []).length > 1).length
+  const tooShort = paths.filter(path => element_length(path) < 24).length
   return {
+    brokenStubs,
+    tooShort,
     cardCount: cards.length,
     sizes: [...new Set(cards.map(card => Math.round(card.w) + 'x' + Math.round(card.h)))],
     edges: out,
@@ -115,6 +126,8 @@ child.kill()
 const crossing = report.edges.filter(edge => edge.inside > 0)
 console.log(JSON.stringify({
   cards: report.cardCount,
+  brokenStubs: report.brokenStubs,
+  tooShort: report.tooShort,
   sizes: report.sizes,
   edges: report.edges.length,
   crossing: crossing.length,

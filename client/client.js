@@ -448,7 +448,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.29",
+  "global.searchPlaceholder": "搜地图上的卡片（标题/正文）· v0.1.30",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -599,7 +599,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "Search cards on the map · v0.1.29",
+  "global.searchPlaceholder": "Search cards on the map · v0.1.30",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12188,50 +12188,6 @@ function roundedPath(points, radius = 10) {
 function round(value) {
   return Math.round(value * 100) / 100;
 }
-function clipToRects(points, rects) {
-  if (points.length < 2) return [points];
-  const insideAny = (point) => rects.some((rect) => point.x > rect.x + 0.5 && point.x < rect.x + rect.w - 0.5 && point.y > rect.y + 0.5 && point.y < rect.y + rect.h - 0.5);
-  const subpaths = [];
-  let current = [];
-  const flush = () => {
-    if (current.length >= 2) subpaths.push(current);
-    current = [];
-  };
-  for (let index2 = 1; index2 < points.length; index2 += 1) {
-    const a = points[index2 - 1];
-    const b = points[index2];
-    const steps = Math.max(2, Math.ceil((Math.abs(b.x - a.x) + Math.abs(b.y - a.y)) / 2));
-    for (let step2 = 0; step2 <= steps; step2 += 1) {
-      const t2 = step2 / steps;
-      const point = { x: a.x + (b.x - a.x) * t2, y: a.y + (b.y - a.y) * t2 };
-      if (insideAny(point)) {
-        flush();
-      } else {
-        const last = current[current.length - 1];
-        if (last === void 0 || Math.abs(last.x - point.x) > 0.4 || Math.abs(last.y - point.y) > 0.4) {
-          current.push(point);
-        }
-      }
-    }
-  }
-  flush();
-  if (subpaths.length === 0) return [points];
-  return subpaths.map((subpath) => {
-    const rounded = subpath.map((point) => ({ x: Math.round(point.x * 2) / 2, y: Math.round(point.y * 2) / 2 }));
-    const out = [];
-    for (const point of rounded) {
-      const last = out[out.length - 1];
-      if (last !== void 0 && last.x === point.x && last.y === point.y) continue;
-      const before = out[out.length - 2];
-      if (before !== void 0 && last !== void 0 && (before.x === last.x && last.x === point.x || before.y === last.y && last.y === point.y)) {
-        out[out.length - 1] = point;
-        continue;
-      }
-      out.push(point);
-    }
-    return out;
-  }).filter((subpath) => subpath.length >= 2);
-}
 
 // src/client/TalkMapEdge.tsx
 var import_jsx_runtime8 = require("react/jsx-runtime");
@@ -12335,18 +12291,8 @@ function TalkMapEdge(props) {
     targetY: props.targetY,
     targetPosition: props.targetPosition
   });
-  const safeRoute = routed && !blockedRoute ? route : void 0;
-  const stubPath = (() => {
-    const normal = (face) => face === "r" ? { x: 1, y: 0 } : face === "l" ? { x: -1, y: 0 } : face === "t" ? { x: 0, y: -1 } : { x: 0, y: 1 };
-    const length = 16;
-    const a = normal(faceOf(props.sourcePosition));
-    const b = normal(faceOf(props.targetPosition));
-    const p1 = { x: props.sourceX + a.x * length, y: props.sourceY + a.y * length };
-    const p2 = { x: props.targetX + b.x * length, y: props.targetY + b.y * length };
-    return `M ${props.sourceX} ${props.sourceY} L ${p1.x} ${p1.y} M ${props.targetX} ${props.targetY} L ${p2.x} ${p2.y}`;
-  })();
-  const endpointBoxes = [data.fromRect, data.toRect].filter((box) => box !== void 0);
-  const path = safeRoute !== void 0 ? endpointBoxes.length === 0 ? roundedPath(safeRoute, 10) : clipToRects(safeRoute, endpointBoxes).map((subpath) => roundedPath(subpath, 10)).join(" ") : blockedRoute ? stubPath : smoothPath;
+  const safeRoute = routed ? route : void 0;
+  const path = safeRoute !== void 0 ? roundedPath(safeRoute, 10) : smoothPath;
   const arrowAngle = (() => {
     if (routed) {
       const end = route[route.length - 1];
