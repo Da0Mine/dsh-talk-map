@@ -224,7 +224,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         onClick={toggle}
       >
         {/* Two vertical bars: the rail is a column of cards. */}
-        <svg viewBox="0 0 12 14" width="12" height="14" aria-hidden="true">
+        <svg viewBox="0 0 12 14" width="15" height="18" aria-hidden="true">
           <rect x="1.6" y="1.5" width="2.1" height="11" rx="1.05" fill="currentColor" />
           <rect x="8.3" y="1.5" width="2.1" height="11" rx="1.05" fill="currentColor" />
         </svg>

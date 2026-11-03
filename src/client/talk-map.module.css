@@ -2224,7 +2224,8 @@
   --rail-pad: 10px;
   /* .card is content-box: 224 content + 13px padding each side paints 250 wide. */
   --rail-card-outer: calc(var(--rail-card-w) + 26px);
-  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2);
+  /* +2px: the card's own 1px border on each side must not be clipped */
+  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2 + 2px);
 }
 
 .statusRailPanel {
@@ -2279,7 +2280,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 2px 2px 14px;
+  padding: 2px 0 14px;
 }
 
 .statusRailEmpty {
@@ -2322,10 +2323,12 @@
   flex-direction: column;
   align-items: center;
   gap: 5px;
-  padding: 9px 5px;
+  min-width: 30px;
+  padding: 13px 7px;
   border: 1px solid var(--dsw-alias-border-secondary);
   border-left: none;
-  border-radius: 0 9px 9px 0;
+  border-radius: 0 11px 11px 0;
+  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.28);
   background: var(--dsw-alias-interactive-bg-hover);
   color: var(--dsw-alias-label-secondary);
   cursor: pointer;
@@ -2336,7 +2339,8 @@
 
 /* Open: the tab rides the panel's right edge, half over it. */
 .statusRailOpen .statusRailTab {
-  left: calc(var(--rail-w) - 12px);
+  /* flush against the panel edge: a step here read as a misaligned seam */
+  left: calc(var(--rail-w) - 1px);
 }
 
 .statusRailTab:hover {
