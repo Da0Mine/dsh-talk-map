@@ -2376,3 +2376,76 @@
   color: #0b0d12;
   font-variant-numeric: tabular-nums;
 }
+
+
+/* ── destructive confirmation ────────────────────────────────────────────── */
+.dangerBackdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 14, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.dangerDialog {
+  width: min(420px, calc(100% - 48px));
+  padding: 18px 18px 14px;
+  border: 1px solid var(--dsw-alias-border-secondary);
+  border-radius: 14px;
+  background: var(--dsw-alias-bg-elevated, #16181f);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+}
+
+.dangerTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dsw-alias-label-primary);
+}
+
+.dangerBody {
+  margin-top: 8px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.dangerActions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dangerCancel,
+.dangerOk {
+  padding: 6px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.dangerCancel {
+  border: 1px solid var(--dsw-alias-border-secondary);
+  background: transparent;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.dangerCancel:hover {
+  color: var(--dsw-alias-label-primary);
+  background: var(--dsw-alias-interactive-bg-hover);
+}
+
+.dangerOk {
+  border: 1px solid rgba(242, 78, 78, 0.55);
+  background: rgba(242, 78, 78, 0.16);
+  color: #ff6b6b;
+}
+
+.dangerOk:hover {
+  background: rgba(242, 78, 78, 0.28);
+  color: #ff8a8a;
+}

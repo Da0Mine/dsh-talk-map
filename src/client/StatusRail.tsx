@@ -39,8 +39,10 @@ export interface StatusRailProps {
 
 interface DragState {
   cardId: string
-  /** Pointer offset inside the card when it was picked up. */
-  grabOffset: number
+  /** Pointer Y where the card was picked up. */
+  startPointerY: number
+  /** Card top at pickup, in panel coordinates (see beginDrag). */
+  baseTop: number
   pointerY: number
   left: number
   width: number
@@ -118,6 +120,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const [drag, setDrag] = useState<DragState | null>(null)
   const seenRef = useRef(new Map<string, string>())
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
+  const panelRef = useRef<HTMLDivElement | null>(null)
   const prevTops = useRef(new Map<string, number>())
   const orderRef = useRef(order)
   orderRef.current = order
@@ -248,12 +251,17 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     const element = slotsRef.current.get(cardId)
     if (element === undefined) return
     const rect = element.getBoundingClientRect()
+    // The panel is transformed (it slides in), so a position:fixed child is laid out
+    // against the panel, not the viewport. Store panel-relative coordinates and move by
+    // the pointer delta — using viewport numbers made the card jump on pickup.
+    const panelRect = panelRef.current?.getBoundingClientRect()
     event.preventDefault()
     setDrag({
       cardId,
-      grabOffset: event.clientY - rect.top,
+      startPointerY: event.clientY,
+      baseTop: rect.top - (panelRect?.top ?? 0),
       pointerY: event.clientY,
-      left: rect.left,
+      left: rect.left - (panelRect?.left ?? 0),
       width: rect.width,
     })
   }, [])
@@ -264,7 +272,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       data-open={open ? '1' : '0'}
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
-      <div className={styles['statusRailPanel']} aria-hidden={!open}>
+      <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>
         <div className={styles['statusRailHead']}>
           <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
           <span className={styles['statusRailCount']}>{props.entries.length}</span>
@@ -289,7 +297,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                       position: 'fixed',
                       left: drag.left,
                       width: drag.width,
-                      top: drag.pointerY - drag.grabOffset,
+                      top: drag.baseTop + (drag.pointerY - drag.startPointerY),
                       zIndex: 20,
                     }
                   : undefined}

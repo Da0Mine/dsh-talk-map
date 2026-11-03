@@ -1,0 +1,33 @@
+<!doctype html><meta charset="utf-8">
+<style>
+  body { margin:0; padding:24px; background:#0d0f13; color:#cfd6e3; font:13px system-ui, sans-serif; }
+  .row { display:flex; gap:26px; flex-wrap:wrap; }
+  .cell { text-align:center; }
+  .chip {
+    width:44px; height:86px; border:1px solid rgba(255,255,255,.16); border-left:none;
+    border-radius:0 11px 11px 0; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:7px; background:rgba(38,42,52,.42);
+    backdrop-filter: blur(16px) saturate(1.5); color:#e7ebf3;
+    box-shadow:3px 0 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .badge { font-size:10px; line-height:1; padding:2px 4px; border-radius:999px; background:#4b7bff; color:#0b0d12; }
+  .label { margin-top:10px; font-size:12px; color:#8792a6; max-width:120px; }
+</style>
+<div class="row" id="row"></div>
+<script>
+const icons = {
+  A: '<rect x="1.4" y="1" width="2" height="22" rx="1" fill="currentColor"/><rect x="8.6" y="1" width="2" height="22" rx="1" fill="currentColor"/>',
+  B: '<rect x="1.4" y="5" width="2" height="14" rx="1" fill="currentColor"/><rect x="8.6" y="1" width="2" height="22" rx="1" fill="currentColor"/>',
+  C: '<rect x="1.4" y="1" width="2" height="22" rx="1" fill="currentColor"/><rect x="8.6" y="1" width="2" height="22" rx="1" fill="currentColor"/><circle cx="2.4" cy="25" r="1.4" fill="currentColor"/><circle cx="9.6" cy="25" r="1.4" fill="currentColor"/>',
+  D: '<rect x="1.6" y="1" width="3" height="22" rx="1.5" fill="currentColor"/><rect x="8.4" y="4" width="1.4" height="16" rx=".7" fill="currentColor"/>',
+  E: '<rect x=".6" y=".6" width="10.8" height="22.8" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/><rect x="4.2" y="5" width="1.6" height="14" rx=".8" fill="currentColor"/><rect x="6.2" y="5" width="1.6" height="14" rx=".8" fill="currentColor"/>',
+  F: '<rect x="1.4" y="2" width="2" height="10" rx="1" fill="currentColor"/><rect x="8.6" y="2" width="2" height="10" rx="1" fill="currentColor"/><rect x="1.4" y="14" width="2" height="8" rx="1" fill="currentColor" opacity=".45"/><rect x="8.6" y="14" width="2" height="8" rx="1" fill="currentColor" opacity=".45"/>',
+}
+const notes = { A:'A 等长双线（现在）', B:'B 上短下长', C:'C 双线+两点', D:'D 一粗一细', E:'E 胶囊内双线', F:'F 双线断成两段' }
+const row = document.getElementById('row')
+for (const key of Object.keys(icons)) {
+  const cell = document.createElement('div'); cell.className = 'cell'
+  cell.innerHTML = '<div class="chip"><svg viewBox="0 0 12 28" width="22" height="50">' + icons[key] + '</svg><span class="badge">4</span></div><div class="label">' + notes[key] + '</div>'
+  row.appendChild(cell)
+}
+</script>
