@@ -464,7 +464,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b65 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b66 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -631,7 +631,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b65 · Search cards on the map",
+  "global.searchPlaceholder": "b66 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14196,7 +14196,6 @@ function CanvasInner(props) {
     } catch {
     }
   };
-  const [confirmRemove, setConfirmRemove] = (0, import_react13.useState)(null);
   const [renameTarget, setRenameTarget] = (0, import_react13.useState)(null);
   const [renamedTitles, setRenamedTitles] = (0, import_react13.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react13.useState)({});
@@ -15777,9 +15776,12 @@ function CanvasInner(props) {
         key: "remove-group",
         icon: "delete",
         label: t("menu.removeGroup"),
+        // Red row and no dialog: the colour is the confirmation. Clicking deletes now —
+        // into the recycle bin when one answers, through the Host's own delete otherwise.
+        danger: true,
         onPick: () => {
-          removeGroup(groupId);
           close();
+          void deleteWorkspace(groupId);
         }
       });
     }
@@ -15912,49 +15914,6 @@ function CanvasInner(props) {
           }
         ) : null,
         hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        confirmRemove !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
-          "div",
-          {
-            className: talk_map_default["dangerBackdrop"],
-            role: "presentation",
-            onClick: () => {
-              setConfirmRemove(null);
-            },
-            children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
-              "div",
-              {
-                className: talk_map_default["dangerDialog"],
-                role: "dialog",
-                "aria-modal": "true",
-                "aria-label": t("confirm.removeGroup.title"),
-                onClick: (event) => {
-                  event.stopPropagation();
-                },
-                children: [
-                  /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["dangerTitle"], children: t("confirm.removeGroup.title") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["dangerBody"], children: t(confirmRemove.bin ? "confirm.removeGroup.body" : "confirm.removeGroup.bodyHard", { n: String(confirmRemove.count) }) }),
-                  /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["dangerActions"], children: [
-                    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("button", { type: "button", className: talk_map_default["dangerCancel"], onClick: () => {
-                      setConfirmRemove(null);
-                    }, children: t("confirm.cancel") }),
-                    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
-                      "button",
-                      {
-                        type: "button",
-                        className: talk_map_default["dangerOk"],
-                        onClick: () => {
-                          void deleteWorkspace(confirmRemove.groupId);
-                          setConfirmRemove(null);
-                        },
-                        children: t(confirmRemove.bin ? "confirm.removeGroup.ok" : "confirm.removeGroup.okHard")
-                      }
-                    )
-                  ] })
-                ]
-              }
-            )
-          }
-        ) : null,
         menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,

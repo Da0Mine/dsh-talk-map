@@ -272,7 +272,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       localStorage.setItem('dsh.talk-map.lineage-hidden.v1', next ? '1' : '0')
     } catch { /* private mode: the choice lasts this session */ }
   }
-  const [confirmRemove, setConfirmRemove] = useState<{ groupId: string; count: number; bin: boolean } | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -2372,9 +2371,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         key: 'remove-group',
         icon: 'delete',
         label: t('menu.removeGroup'),
+        // Red row and no dialog: the colour is the confirmation. Clicking deletes now —
+        // into the recycle bin when one answers, through the Host's own delete otherwise.
+        danger: true,
         onPick: () => {
-          removeGroup(groupId)
           close()
+          void deleteWorkspace(groupId)
         },
       })
     }
@@ -2511,43 +2513,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           )
         : null}
       {hasContent ? null : <div className={styles['emptyHint']}>{t('map.empty')}</div>}
-      {confirmRemove !== null
-        ? (
-          <div
-            className={styles['dangerBackdrop']}
-            role="presentation"
-            onClick={() => { setConfirmRemove(null) }}
-          >
-            <div
-              className={styles['dangerDialog']}
-              role="dialog"
-              aria-modal="true"
-              aria-label={t('confirm.removeGroup.title')}
-              onClick={(event) => { event.stopPropagation() }}
-            >
-              <div className={styles['dangerTitle']}>{t('confirm.removeGroup.title')}</div>
-              <div className={styles['dangerBody']}>
-                {t(confirmRemove.bin ? 'confirm.removeGroup.body' : 'confirm.removeGroup.bodyHard', { n: String(confirmRemove.count) })}
-              </div>
-              <div className={styles['dangerActions']}>
-                <button type="button" className={styles['dangerCancel']} onClick={() => { setConfirmRemove(null) }}>
-                  {t('confirm.cancel')}
-                </button>
-                <button
-                  type="button"
-                  className={styles['dangerOk']}
-                  onClick={() => {
-                    void deleteWorkspace(confirmRemove.groupId)
-                    setConfirmRemove(null)
-                  }}
-                >
-                  {t(confirmRemove.bin ? 'confirm.removeGroup.ok' : 'confirm.removeGroup.okHard')}
-                </button>
-              </div>
-            </div>
-          </div>
-        )
-        : null}
       {menuState !== null
         ? <ContextMenu key={menu?.view ?? 'root'} menu={menuState} onClose={() => { setMenu(null) }} />
         : null}
