@@ -461,7 +461,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b61 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b62 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -625,7 +625,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b61 · Search cards on the map",
+  "global.searchPlaceholder": "b62 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13747,7 +13747,10 @@ function StatusRail(props) {
   const slotsRef = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
   const panelRef = (0, import_react11.useRef)(null);
   const prevTops = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
+  const [shift, setShift] = (0, import_react11.useState)({});
   const orderRef = (0, import_react11.useRef)(order);
+  const hoverRef = (0, import_react11.useRef)(0);
+  const dragIdRef = (0, import_react11.useRef)(null);
   orderRef.current = order;
   const signature = (0, import_react11.useMemo)(
     () => props.entries.map((entry) => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join("|"),
@@ -13791,28 +13794,39 @@ function StatusRail(props) {
   }, [order, props.entries]);
   (0, import_react11.useLayoutEffect)(() => {
     const next = /* @__PURE__ */ new Map();
+    const deltas = {};
     for (const [cardId, element] of slotsRef.current) {
       const top = element.getBoundingClientRect().top;
       next.set(cardId, top);
       if (drag !== null && drag.cardId === cardId) continue;
       const before = prevTops.current.get(cardId);
       if (before === void 0 || Math.abs(before - top) < 1) continue;
-      element.style.transition = "none";
-      element.style.transform = `translateY(${before - top}px)`;
-      requestAnimationFrame(() => {
-        element.style.transition = `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
-        element.style.transform = "";
-      });
+      deltas[cardId] = before - top;
     }
     prevTops.current = next;
+    const ids = Object.keys(deltas);
+    if (ids.length === 0) return;
+    setShift(deltas);
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        setShift({});
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner !== 0) cancelAnimationFrame(inner);
+    };
   }, [order, drag === null]);
   (0, import_react11.useEffect)(() => {
     if (drag === null) return;
     const cardId = drag.cardId;
+    dragIdRef.current = cardId;
+    hoverRef.current = drag.hoverIndex;
     const indexUnder = (pointerY) => {
       let best = 0;
       let bestDistance = Number.POSITIVE_INFINITY;
-      const ids = orderRef.current;
+      const ids = orderRef.current.filter((id2) => id2 !== cardId);
       for (let index2 = 0; index2 < ids.length; index2 += 1) {
         const element = slotsRef.current.get(ids[index2]);
         if (element === void 0) continue;
@@ -13826,19 +13840,23 @@ function StatusRail(props) {
       return best;
     };
     const onMove = (event) => {
-      setDrag((current) => current === null ? null : { ...current, pointerY: event.clientY });
       const target = indexUnder(event.clientY);
-      setOrder((current) => {
-        const from = current.indexOf(cardId);
-        if (from < 0 || target < 0 || target >= current.length || from === target) return current;
-        const next = [...current];
-        next.splice(from, 1);
-        next.splice(target, 0, cardId);
-        return next;
-      });
+      hoverRef.current = target;
+      setDrag((current) => current === null ? null : { ...current, pointerY: event.clientY, hoverIndex: target });
     };
     const onUp = () => {
-      writeOrder(orderRef.current);
+      const dropped = dragIdRef.current;
+      const at = hoverRef.current;
+      if (dropped !== null) {
+        setOrder((existing) => {
+          const rest = existing.filter((id2) => id2 !== dropped);
+          const index2 = Math.min(Math.max(at, 0), rest.length);
+          const next = [...rest.slice(0, index2), dropped, ...rest.slice(index2)];
+          writeOrder(next);
+          return next;
+        });
+      }
+      dragIdRef.current = null;
       prevTops.current.clear();
       setDrag(null);
     };
@@ -13863,6 +13881,8 @@ function StatusRail(props) {
     event.preventDefault();
     setDrag({
       cardId,
+      hoverIndex: Math.max(0, orderRef.current.indexOf(cardId)),
+      step: rect.height + 10,
       startPointerY: event.clientY,
       baseTop: rect.top - (panelRect?.top ?? 0),
       pointerY: event.clientY,
@@ -13901,7 +13921,15 @@ function StatusRail(props) {
                     width: drag.width,
                     top: drag.baseTop + (drag.pointerY - drag.startPointerY),
                     zIndex: 20
-                  } : void 0,
+                  } : drag !== null ? (() => {
+                    const compact = ordered.filter((row) => row.cardId !== drag.cardId);
+                    const position = compact.findIndex((row) => row.cardId === entry.cardId);
+                    const moved = position >= 0 && position >= drag.hoverIndex ? drag.step : 0;
+                    return {
+                      transform: `translateY(${moved}px)`,
+                      transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
+                    };
+                  })() : shift[entry.cardId] !== void 0 ? { transform: `translateY(${shift[entry.cardId]}px)`, transition: "none" } : { transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)` },
                   children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
                     "div",
                     {
@@ -13942,9 +13970,11 @@ function StatusRail(props) {
             title: open ? t("statusRail.close") : t("statusRail.open"),
             onClick: toggle,
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("svg", { viewBox: "0 0 12 24", width: "13", height: "26", "aria-hidden": "true", children: [
-                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("rect", { x: "1.4", y: "1", width: "2", height: "22", rx: "1", fill: "currentColor" }),
-                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("rect", { x: "8.6", y: "1", width: "2", height: "22", rx: "1", fill: "currentColor" })
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("svg", { viewBox: "0 0 12 28", width: "14", height: "30", "aria-hidden": "true", children: [
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("rect", { x: "1.4", y: "1", width: "2", height: "20", rx: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("rect", { x: "8.6", y: "1", width: "2", height: "20", rx: "1", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("circle", { cx: "2.4", cy: "25", r: "1.5", fill: "currentColor" }),
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("circle", { cx: "9.6", cy: "25", r: "1.5", fill: "currentColor" })
               ] }),
               props.entries.length > 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailTabCount"], children: props.entries.length }) : null
             ]

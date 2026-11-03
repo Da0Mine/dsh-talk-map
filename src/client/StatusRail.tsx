@@ -39,6 +39,10 @@ export interface StatusRailProps {
 
 interface DragState {
   cardId: string
+  /** Index the card would land on if dropped now (over the compacted column). */
+  hoverIndex: number
+  /** How far the cards after the gap move down (card height + list gap). */
+  step: number
   /** Pointer Y where the card was picked up. */
   startPointerY: number
   /** Card top at pickup, in panel coordinates (see beginDrag). */
@@ -122,7 +126,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const panelRef = useRef<HTMLDivElement | null>(null)
   const prevTops = useRef(new Map<string, number>())
+  const [shift, setShift] = useState<Record<string, number>>({})
   const orderRef = useRef(order)
+  const hoverRef = useRef(0)
+  const dragIdRef = useRef<string | null>(null)
   orderRef.current = order
 
   const signature = useMemo(
@@ -171,35 +178,44 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return rows
   }, [order, props.entries])
 
-  // FLIP: after any reorder, put every surviving card back where it was and let it glide
-  // to its new place — the "cards move out of the way" feel the board has.
+  // FLIP: after a reorder, each card that moved is painted first at its old offset and
+  // then animated to its new place — so the rest of the column visibly makes room while
+  // you drag. The offsets live in React state so a re-render cannot drop them.
   useLayoutEffect(() => {
     const next = new Map<string, number>()
+    const deltas: Record<string, number> = {}
     for (const [cardId, element] of slotsRef.current) {
       const top = element.getBoundingClientRect().top
       next.set(cardId, top)
       if (drag !== null && drag.cardId === cardId) continue
       const before = prevTops.current.get(cardId)
       if (before === undefined || Math.abs(before - top) < 1) continue
-      element.style.transition = 'none'
-      element.style.transform = `translateY(${before - top}px)`
-      requestAnimationFrame(() => {
-        element.style.transition = `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
-        element.style.transform = ''
-      })
+      deltas[cardId] = before - top
     }
     prevTops.current = next
+    const ids = Object.keys(deltas)
+    if (ids.length === 0) return
+    setShift(deltas)
+    // Two frames: the offset must be painted once, then the transition carries the card
+    // to its new place. Clearing in a single rAF happened before paint, so nothing moved.
+    let inner = 0
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => { setShift({}) })
+    })
+    return () => { cancelAnimationFrame(outer); if (inner !== 0) cancelAnimationFrame(inner) }
   }, [order, drag === null])
 
   // Pointer-driven drag: the picked card floats under the pointer, the rest reorder live.
   useEffect(() => {
     if (drag === null) return
     const cardId = drag.cardId
+    dragIdRef.current = cardId
+    hoverRef.current = drag.hoverIndex
 
     const indexUnder = (pointerY: number): number => {
       let best = 0
       let bestDistance = Number.POSITIVE_INFINITY
-      const ids = orderRef.current
+      const ids = orderRef.current.filter(id => id !== cardId)
       for (let index = 0; index < ids.length; index += 1) {
         const element = slotsRef.current.get(ids[index]!)
         if (element === undefined) continue
@@ -214,20 +230,26 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     }
 
     const onMove = (event: PointerEvent): void => {
-      setDrag(current => (current === null ? null : { ...current, pointerY: event.clientY }))
       const target = indexUnder(event.clientY)
-      setOrder(current => {
-        const from = current.indexOf(cardId)
-        if (from < 0 || target < 0 || target >= current.length || from === target) return current
-        const next = [...current]
-        next.splice(from, 1)
-        next.splice(target, 0, cardId)
-        return next
-      })
+      hoverRef.current = target
+      setDrag(current => (current === null
+        ? null
+        : { ...current, pointerY: event.clientY, hoverIndex: target }))
     }
 
     const onUp = (): void => {
-      writeOrder(orderRef.current)
+      const dropped = dragIdRef.current
+      const at = hoverRef.current
+      if (dropped !== null) {
+        setOrder(existing => {
+          const rest = existing.filter(id => id !== dropped)
+          const index = Math.min(Math.max(at, 0), rest.length)
+          const next = [...rest.slice(0, index), dropped, ...rest.slice(index)]
+          writeOrder(next)
+          return next
+        })
+      }
+      dragIdRef.current = null
       prevTops.current.clear()
       setDrag(null)
     }
@@ -258,6 +280,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     event.preventDefault()
     setDrag({
       cardId,
+      hoverIndex: Math.max(0, orderRef.current.indexOf(cardId)),
+      step: rect.height + 10,
       startPointerY: event.clientY,
       baseTop: rect.top - (panelRect?.top ?? 0),
       pointerY: event.clientY,
@@ -300,7 +324,19 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                       top: drag.baseTop + (drag.pointerY - drag.startPointerY),
                       zIndex: 20,
                     }
-                  : undefined}
+                  : drag !== null
+                    ? (() => {
+                        const compact = ordered.filter(row => row.cardId !== drag.cardId)
+                        const position = compact.findIndex(row => row.cardId === entry.cardId)
+                        const moved = position >= 0 && position >= drag.hoverIndex ? drag.step : 0
+                        return {
+                          transform: `translateY(${moved}px)`,
+                          transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`,
+                        }
+                      })()
+                    : shift[entry.cardId] !== undefined
+                      ? { transform: `translateY(${shift[entry.cardId]}px)`, transition: 'none' }
+                      : { transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)` }}
               >
                 <div
                   className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
@@ -336,9 +372,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         onClick={toggle}
       >
         {/* Two vertical bars: the rail is a column of cards. */}
-        <svg viewBox="0 0 12 24" width="13" height="26" aria-hidden="true">
-          <rect x="1.4" y="1" width="2" height="22" rx="1" fill="currentColor" />
-          <rect x="8.6" y="1" width="2" height="22" rx="1" fill="currentColor" />
+        <svg viewBox="0 0 12 28" width="14" height="30" aria-hidden="true">
+          <rect x="1.4" y="1" width="2" height="20" rx="1" fill="currentColor" />
+          <rect x="8.6" y="1" width="2" height="20" rx="1" fill="currentColor" />
+          <circle cx="2.4" cy="25" r="1.5" fill="currentColor" />
+          <circle cx="9.6" cy="25" r="1.5" fill="currentColor" />
         </svg>
         {props.entries.length > 0
           ? <span className={styles['statusRailTabCount']}>{props.entries.length}</span>
