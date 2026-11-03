@@ -327,10 +327,11 @@ var zh = {
   "map.toggle": "对话地图",
   "map.empty": "地图是空的 —— 右键导入工作区或对话；双击空白直接开新对话",
   "statusRail.title": "队列中的任务",
-  "confirm.removeGroup.title": "移除这个分组？",
-  "confirm.removeGroup.body": "只会从地图上移走 {n} 张卡片和这个分组框——会话本身还在侧栏，不会被删除，也不会进回收站。再导入这个工作区就能恢复。",
-  "confirm.removeGroup.ok": "移除",
+  "confirm.removeGroup.title": "删除这个分组？",
+  "confirm.removeGroup.body": "分组里的 {n} 个会话会被移入回收站（可在回收站恢复），卡片和分组框同时从地图上移除。仍在运行的会话会先被停止。",
+  "confirm.removeGroup.ok": "移入回收站",
   "confirm.cancel": "取消",
+  "toast.workspaceTrashed": "已把 {n} 个会话移入回收站，分组已从地图移除",
   "statusRail.open": "展开状态栏",
   "statusRail.close": "收起状态栏",
   "statusRail.empty": "暂时没有带状态的卡片",
@@ -460,7 +461,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b60 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b61 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -488,7 +489,7 @@ var zh = {
   "lang.zh": "中文",
   "lang.en": "English",
   "menu.syncGroup": "同步该工作区的新会话",
-  "menu.removeGroup": "移除分组（连同卡片）"
+  "menu.removeGroup": "删除分组（连同会话）"
 };
 var en = {
   "map.title": "Talk Map ·v2",
@@ -497,10 +498,11 @@ var en = {
   "map.toggle": "Talk Map",
   "map.empty": "The map is empty — right-click to import a workspace or conversation; double-click to start a chat",
   "statusRail.title": "Tasks in the queue",
-  "confirm.removeGroup.title": "Remove this group?",
-  "confirm.removeGroup.body": "This only takes {n} cards and the group frame off the map — the conversations stay in the sidebar, nothing is deleted and nothing goes to the recycle bin. Re-importing the workspace brings it back.",
-  "confirm.removeGroup.ok": "Remove",
+  "confirm.removeGroup.title": "Delete this group?",
+  "confirm.removeGroup.body": "Its {n} conversations go to the recycle bin (restorable from there) and the cards and frame leave the map. Anything still running is stopped first.",
+  "confirm.removeGroup.ok": "Move to recycle bin",
   "confirm.cancel": "Cancel",
+  "toast.workspaceTrashed": "Moved {n} conversations to the recycle bin; the group is off the map",
   "statusRail.open": "Open the status rail",
   "statusRail.close": "Close the status rail",
   "statusRail.empty": "No card carries a status right now",
@@ -623,7 +625,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b60 · Search cards on the map",
+  "global.searchPlaceholder": "b61 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -651,7 +653,7 @@ var en = {
   "lang.zh": "中文",
   "lang.en": "English",
   "menu.syncGroup": "Sync new sessions of this workspace",
-  "menu.removeGroup": "Remove group (with its cards)"
+  "menu.removeGroup": "Delete group (with its conversations)"
 };
 var preference = "auto";
 var localeListeners = /* @__PURE__ */ new Set();
@@ -15400,6 +15402,20 @@ function CanvasInner(props) {
     });
     canvas.addCards(added);
   };
+  const deleteWorkspace = async (groupId) => {
+    const sessionIds = (membersByGroup.get(groupId) ?? []).map((cardId) => visibleCards[cardId]?.sessionId).filter((sessionId) => sessionId !== void 0);
+    try {
+      if (sessionIds.length > 0) {
+        await trashSessions(sessionIds, () => {
+          showToast(t("toast.stopping"));
+        });
+      }
+      removeGroup(groupId);
+      showToast(t("toast.workspaceTrashed", { n: String(sessionIds.length) }));
+    } catch (error) {
+      showToast(String(error?.message ?? error));
+    }
+  };
   const removeGroup = (groupId) => {
     for (const cardId of membersByGroup.get(groupId) ?? []) canvas.removeCard(cardId);
     const framesNext = { ...wsFrames };
@@ -15844,7 +15860,7 @@ function CanvasInner(props) {
                         type: "button",
                         className: talk_map_default["dangerOk"],
                         onClick: () => {
-                          removeGroup(confirmRemove.groupId);
+                          void deleteWorkspace(confirmRemove.groupId);
                           setConfirmRemove(null);
                         },
                         children: t("confirm.removeGroup.ok")

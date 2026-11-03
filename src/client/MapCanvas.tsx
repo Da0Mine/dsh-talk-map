@@ -2029,6 +2029,26 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     canvas.addCards(added)
   }
 
+  /**
+   * Delete a whole workspace the official way: every session in it goes through
+   * `trashSessions` (the same seam the sidebar's delete uses, which lands in the recycle
+   * bin and is restorable), and only then is the frame and its cards taken off the board.
+   */
+  const deleteWorkspace = async (groupId: string): Promise<void> => {
+    const sessionIds = (membersByGroup.get(groupId) ?? [])
+      .map(cardId => visibleCards[cardId]?.sessionId)
+      .filter((sessionId): sessionId is string => sessionId !== undefined)
+    try {
+      if (sessionIds.length > 0) {
+        await trashSessions(sessionIds, () => { showToast(t('toast.stopping')) })
+      }
+      removeGroup(groupId)
+      showToast(t('toast.workspaceTrashed', { n: String(sessionIds.length) }))
+    } catch (error) {
+      showToast(String((error as Error | undefined)?.message ?? error))
+    }
+  }
+
   const removeGroup = (groupId: string): void => {
     for (const cardId of membersByGroup.get(groupId) ?? []) canvas.removeCard(cardId)
     const framesNext = { ...wsFrames }
@@ -2503,7 +2523,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                   type="button"
                   className={styles['dangerOk']}
                   onClick={() => {
-                    removeGroup(confirmRemove.groupId)
+                    void deleteWorkspace(confirmRemove.groupId)
                     setConfirmRemove(null)
                   }}
                 >
