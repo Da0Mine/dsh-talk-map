@@ -1,16 +1,17 @@
 /**
  * The status rail: a panel pinned to the left edge of the map that lists only the cards
- * which currently carry a lamp (running / waiting / unread / interrupted). Each entry is
- * the same card the board draws — same width, same look — stacked top to bottom.
+ * which currently carry a lamp. Each entry is the same card the board draws — same width,
+ * same look — stacked top to bottom.
  *
- * Behaviour asked for and kept here:
- *   • closed by default, opened from a tab that overlaps the panel a little;
- *   • slides in from beyond the left edge with an eased transition;
- *   • a card whose lamp changes jumps to the top; the user can drag rows to reorder;
- *   • a card that stops carrying a lamp disappears (the list is derived from the board);
- *   • open/closed and the manual order survive a restart.
+ * Kept behaviour: closed by default, opened from a frosted-glass handle that rides the
+ * panel edge, slides in from beyond the left edge, a card whose lamp changes jumps to the
+ * top, cards that settle disappear, open/closed and the manual order survive a restart.
+ *
+ * Dragging is pointer-based (not HTML5 DnD) so it can look like the board: the card you
+ * pick up floats under the pointer while the other cards glide out of its way with a FLIP
+ * animation, and dropping simply keeps the order you saw.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import styles from './talk-map.module.css'
@@ -36,14 +37,43 @@ export interface StatusRailProps {
   onFocus: (cardId: string) => void
 }
 
+interface DragState {
+  cardId: string
+  /** Pointer offset inside the card when it was picked up. */
+  grabOffset: number
+  pointerY: number
+  left: number
+  width: number
+}
+
 const OPEN_KEY = 'dsh.talk-map.status-rail.open.v1'
 const ORDER_KEY = 'dsh.talk-map.status-rail.order.v1'
+const FLIP_MS = 180
 
 const LAMP_CLASS: Record<StatusLamp, string> = {
   running: 'cardLampRunning',
   done: 'cardLampDone',
   error: 'cardLampError',
   waiting: 'cardLampWaiting',
+}
+
+let openState: boolean | undefined
+const openListeners = new Set<() => void>()
+
+function subscribeOpen(listener: () => void): () => void {
+  openListeners.add(listener)
+  return () => { openListeners.delete(listener) }
+}
+
+function openSnapshot(): boolean {
+  if (openState === undefined) openState = readOpen()
+  return openState
+}
+
+function setOpenState(next: boolean): void {
+  openState = next
+  writeOpen(next)
+  for (const listener of openListeners) listener()
 }
 
 function readOpen(): boolean {
@@ -83,10 +113,14 @@ function writeOrder(order: readonly string[]): void {
 }
 
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
-  const [open, setOpen] = useState<boolean>(() => readOpen())
+  const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
   const [order, setOrder] = useState<string[]>(() => readOrder())
+  const [drag, setDrag] = useState<DragState | null>(null)
   const seenRef = useRef(new Map<string, string>())
-  const dragFrom = useRef<string | null>(null)
+  const slotsRef = useRef(new Map<string, HTMLDivElement>())
+  const prevTops = useRef(new Map<string, number>())
+  const orderRef = useRef(order)
+  orderRef.current = order
 
   const signature = useMemo(
     () => props.entries.map(entry => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join('|'),
@@ -134,28 +168,100 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return rows
   }, [order, props.entries])
 
+  // FLIP: after any reorder, put every surviving card back where it was and let it glide
+  // to its new place — the "cards move out of the way" feel the board has.
+  useLayoutEffect(() => {
+    const next = new Map<string, number>()
+    for (const [cardId, element] of slotsRef.current) {
+      const top = element.getBoundingClientRect().top
+      next.set(cardId, top)
+      if (drag !== null && drag.cardId === cardId) continue
+      const before = prevTops.current.get(cardId)
+      if (before === undefined || Math.abs(before - top) < 1) continue
+      element.style.transition = 'none'
+      element.style.transform = `translateY(${before - top}px)`
+      requestAnimationFrame(() => {
+        element.style.transition = `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`
+        element.style.transform = ''
+      })
+    }
+    prevTops.current = next
+  }, [order, drag === null])
+
+  // Pointer-driven drag: the picked card floats under the pointer, the rest reorder live.
+  useEffect(() => {
+    if (drag === null) return
+    const cardId = drag.cardId
+
+    const indexUnder = (pointerY: number): number => {
+      let best = 0
+      let bestDistance = Number.POSITIVE_INFINITY
+      const ids = orderRef.current
+      for (let index = 0; index < ids.length; index += 1) {
+        const element = slotsRef.current.get(ids[index]!)
+        if (element === undefined) continue
+        const rect = element.getBoundingClientRect()
+        const distance = Math.abs(pointerY - (rect.top + rect.height / 2))
+        if (distance < bestDistance) {
+          bestDistance = distance
+          best = index
+        }
+      }
+      return best
+    }
+
+    const onMove = (event: PointerEvent): void => {
+      setDrag(current => (current === null ? null : { ...current, pointerY: event.clientY }))
+      const target = indexUnder(event.clientY)
+      setOrder(current => {
+        const from = current.indexOf(cardId)
+        if (from < 0 || target < 0 || target >= current.length || from === target) return current
+        const next = [...current]
+        next.splice(from, 1)
+        next.splice(target, 0, cardId)
+        return next
+      })
+    }
+
+    const onUp = (): void => {
+      writeOrder(orderRef.current)
+      prevTops.current.clear()
+      setDrag(null)
+    }
+
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [drag])
+
   const toggle = useCallback(() => {
-    setOpen((current) => {
-      writeOpen(!current)
-      return !current
-    })
+    setOpenState(!openSnapshot())
   }, [])
 
-  const move = useCallback((from: string, to: string) => {
-    if (from === to) return
-    setOrder((current) => {
-      const rest = current.filter(cardId => cardId !== from)
-      const at = rest.indexOf(to)
-      if (at < 0) return current
-      const next = [...rest.slice(0, at), from, ...rest.slice(at)]
-      writeOrder(next)
-      return next
+  const beginDrag = useCallback((event: React.PointerEvent<HTMLDivElement>, cardId: string) => {
+    if (event.button !== 0) return
+    const element = slotsRef.current.get(cardId)
+    if (element === undefined) return
+    const rect = element.getBoundingClientRect()
+    event.preventDefault()
+    setDrag({
+      cardId,
+      grabOffset: event.clientY - rect.top,
+      pointerY: event.clientY,
+      left: rect.left,
+      width: rect.width,
     })
   }, [])
 
   return (
     <div
-      className={`${styles['statusRail']}${open ? ` ${styles['statusRailOpen']}` : ''}`}
+      className={styles['statusRail']}
+      data-open={open ? '1' : '0'}
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open}>
@@ -167,52 +273,50 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
           {ordered.length === 0
             ? <div className={styles['statusRailEmpty']}>{t('statusRail.empty')}</div>
             : null}
-          {ordered.map(entry => (
-            <div
-              key={entry.cardId}
-              role="listitem"
-              className={styles['statusRailSlot']}
-              draggable
-              onDragStart={(event) => {
-                dragFrom.current = entry.cardId
-                event.dataTransfer.effectAllowed = 'move'
-                event.dataTransfer.setData('text/plain', entry.cardId)
-              }}
-              onDragOver={(event) => {
-                if (dragFrom.current === null) return
-                event.preventDefault()
-                event.dataTransfer.dropEffect = 'move'
-              }}
-              onDrop={(event) => {
-                event.preventDefault()
-                const from = dragFrom.current ?? event.dataTransfer.getData('text/plain')
-                dragFrom.current = null
-                if (from !== '') move(from, entry.cardId)
-              }}
-              onDragEnd={() => { dragFrom.current = null }}
-            >
-              {/* The same card the board draws: same classes, same width, same lamp. */}
+          {ordered.map(entry => {
+            const floating = drag !== null && drag.cardId === entry.cardId
+            return (
               <div
-                className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}`}
-                onClick={() => { props.onFocus(entry.cardId) }}
-                title={entry.title}
+                key={entry.cardId}
+                role="listitem"
+                ref={(element) => {
+                  if (element === null) slotsRef.current.delete(entry.cardId)
+                  else slotsRef.current.set(entry.cardId, element)
+                }}
+                className={`${styles['statusRailSlot']}${floating ? ` ${styles['statusRailSlotFloating']}` : ''}`}
+                style={floating
+                  ? {
+                      position: 'fixed',
+                      left: drag.left,
+                      width: drag.width,
+                      top: drag.pointerY - drag.grabOffset,
+                      zIndex: 20,
+                    }
+                  : undefined}
               >
-                <div className={styles['cardTop']}>
-                  <span className={styles['cardTitle']}>{entry.title}</span>
-                </div>
-                {entry.preview !== undefined && entry.preview !== ''
-                  ? <div className={styles['cardSummary']}>{entry.preview}</div>
-                  : null}
-                <div className={styles['cardFooter']}>
-                  <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
-                  <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
-                    {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
-                    {t(LAMP_CHIP[entry.lamp].key)}
-                  </span>
+                <div
+                  className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
+                  onPointerDown={(event) => { beginDrag(event, entry.cardId) }}
+                  onClick={() => { if (drag === null) props.onFocus(entry.cardId) }}
+                  title={entry.title}
+                >
+                  <div className={styles['cardTop']}>
+                    <span className={styles['cardTitle']}>{entry.title}</span>
+                  </div>
+                  {entry.preview !== undefined && entry.preview !== ''
+                    ? <div className={styles['cardSummary']}>{entry.preview}</div>
+                    : null}
+                  <div className={styles['cardFooter']}>
+                    <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
+                    <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
+                      {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
+                      {t(LAMP_CHIP[entry.lamp].key)}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
       <button
@@ -224,9 +328,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         onClick={toggle}
       >
         {/* Two vertical bars: the rail is a column of cards. */}
-        <svg viewBox="0 0 12 14" width="15" height="18" aria-hidden="true">
-          <rect x="1.6" y="1.5" width="2.1" height="11" rx="1.05" fill="currentColor" />
-          <rect x="8.3" y="1.5" width="2.1" height="11" rx="1.05" fill="currentColor" />
+        <svg viewBox="0 0 12 24" width="13" height="26" aria-hidden="true">
+          <rect x="1.4" y="1" width="2" height="22" rx="1" fill="currentColor" />
+          <rect x="8.6" y="1" width="2" height="22" rx="1" fill="currentColor" />
         </svg>
         {props.entries.length > 0
           ? <span className={styles['statusRailTabCount']}>{props.entries.length}</span>

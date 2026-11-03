@@ -2248,7 +2248,7 @@
   pointer-events: none;
 }
 
-.statusRailOpen .statusRailPanel {
+.statusRail[data-open="1"] .statusRailPanel {
   transform: translateX(0);
   pointer-events: auto;
 }
@@ -2306,8 +2306,24 @@
 .statusRailCard {
   width: var(--rail-card-w);
   min-height: 84px;
-  cursor: pointer;
+  cursor: grab;
   transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.statusRailCard:active {
+  cursor: grabbing;
+}
+
+/* The card being dragged floats under the pointer; the rest glide out of its way. */
+.statusRailSlotFloating {
+  pointer-events: none;
+}
+
+.statusRailCardDragging {
+  cursor: grabbing;
+  transform: scale(1.02) rotate(-0.3deg);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0.97;
 }
 
 .statusRailCard:hover {
@@ -2325,12 +2341,15 @@
   gap: 5px;
   min-width: 30px;
   padding: 13px 7px;
-  border: 1px solid var(--dsw-alias-border-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: none;
   border-radius: 0 11px 11px 0;
-  box-shadow: 3px 0 12px rgba(0, 0, 0, 0.28);
-  background: var(--dsw-alias-interactive-bg-hover);
-  color: var(--dsw-alias-label-secondary);
+  /* Frosted glass: the canvas behind is dark, so a solid chip disappeared into it. */
+  background: rgba(38, 42, 52, 0.42);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  box-shadow: 3px 0 14px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--dsw-alias-label-primary);
   cursor: pointer;
   font: inherit;
   pointer-events: auto;
@@ -2338,14 +2357,14 @@
 }
 
 /* Open: the tab rides the panel's right edge, half over it. */
-.statusRailOpen .statusRailTab {
+.statusRail[data-open="1"] .statusRailTab {
   /* flush against the panel edge: a step here read as a misaligned seam */
   left: calc(var(--rail-w) - 1px);
 }
 
 .statusRailTab:hover {
-  color: var(--dsw-alias-label-primary);
-  background: var(--dsw-alias-interactive-bg-active);
+  color: #ffffff;
+  background: rgba(58, 64, 78, 0.55);
 }
 
 .statusRailTabCount {
