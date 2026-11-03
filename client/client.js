@@ -328,10 +328,13 @@ var zh = {
   "map.empty": "地图是空的 —— 右键导入工作区或对话；双击空白直接开新对话",
   "statusRail.title": "队列中的任务",
   "confirm.removeGroup.title": "删除这个分组？",
-  "confirm.removeGroup.body": "分组里的 {n} 个会话会被直接删除（不经过回收站，无法恢复），卡片和分组框同时从地图上移除。",
-  "confirm.removeGroup.ok": "直接删除",
+  "confirm.removeGroup.body": "分组里的 {n} 个会话会被移入回收站（可在回收站恢复），卡片和分组框同时从地图上移除。仍在运行的会话会先被停止。",
+  "confirm.removeGroup.bodyHard": "这里没有回收站插件，{n} 个会话会被直接删除（无法恢复），卡片和分组框同时从地图上移除。",
+  "confirm.removeGroup.ok": "移入回收站",
+  "confirm.removeGroup.okHard": "直接删除",
   "confirm.cancel": "取消",
-  "toast.workspaceTrashed": "已删除 {n} 个会话，分组已从地图移除",
+  "toast.workspaceTrashed": "已把 {n} 个会话移入回收站，分组已从地图移除",
+  "toast.workspaceDeleted": "已直接删除 {n} 个会话，分组已从地图移除",
   "statusRail.open": "展开状态栏",
   "statusRail.close": "收起状态栏",
   "statusRail.empty": "暂时没有带状态的卡片",
@@ -461,7 +464,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b64 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b65 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -499,10 +502,13 @@ var en = {
   "map.empty": "The map is empty — right-click to import a workspace or conversation; double-click to start a chat",
   "statusRail.title": "Tasks in the queue",
   "confirm.removeGroup.title": "Delete this group?",
-  "confirm.removeGroup.body": "Its {n} conversations are deleted outright (no recycle bin, no undo) and the cards and frame leave the map.",
-  "confirm.removeGroup.ok": "Delete for good",
+  "confirm.removeGroup.body": "Its {n} conversations go to the recycle bin (restorable from there) and the cards and frame leave the map. Anything still running is stopped first.",
+  "confirm.removeGroup.bodyHard": "No recycle bin plugin answers here, so its {n} conversations are deleted outright (no undo) and the cards and frame leave the map.",
+  "confirm.removeGroup.ok": "Move to recycle bin",
+  "confirm.removeGroup.okHard": "Delete for good",
   "confirm.cancel": "Cancel",
-  "toast.workspaceTrashed": "Deleted {n} conversations; the group is off the map",
+  "toast.workspaceTrashed": "Moved {n} conversations to the recycle bin; the group is off the map",
+  "toast.workspaceDeleted": "Deleted {n} conversations outright; the group is off the map",
   "statusRail.open": "Open the status rail",
   "statusRail.close": "Close the status rail",
   "statusRail.empty": "No card carries a status right now",
@@ -625,7 +631,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b64 · Search cards on the map",
+  "global.searchPlaceholder": "b65 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -10985,6 +10991,20 @@ async function postRecycleBin(body) {
   if (payload.ok !== true) throw new Error(payload.message ?? `回收站拒绝了请求（HTTP ${response.status}）`);
   return payload;
 }
+async function recycleBinReady() {
+  try {
+    const path = new URL(RECYCLE_BIN_ROUTE, document.baseURI).pathname;
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "list" }),
+      cache: "no-store"
+    });
+    return response.status !== 404 && response.status !== 405;
+  } catch {
+    return false;
+  }
+}
 var STOP_RETRIES = 10;
 var STOP_RETRY_DELAY_MS = 400;
 function isBusyRefusal(error) {
@@ -15456,10 +15476,25 @@ function CanvasInner(props) {
   const deleteWorkspace = async (groupId) => {
     const sessionIds = (membersByGroup.get(groupId) ?? []).map((cardId) => visibleCards[cardId]?.sessionId).filter((sessionId) => sessionId !== void 0);
     try {
-      if (sessionIds.length > 0) await deleteSessionsDirect(sessionIds);
-      await deleteWorkspaceRegistration(groupId);
+      const bin = await recycleBinReady();
+      if (sessionIds.length > 0) {
+        if (bin) {
+          try {
+            await trashSessions(sessionIds, () => {
+              showToast(t("toast.stopping"));
+            });
+          } catch (error) {
+            if (!/HTTP (404|405)|未注册|not found/i.test(String(error.message))) throw error;
+            await deleteSessionsDirect(sessionIds);
+            await deleteWorkspaceRegistration(groupId);
+          }
+        } else {
+          await deleteSessionsDirect(sessionIds);
+          await deleteWorkspaceRegistration(groupId);
+        }
+      }
       removeGroup(groupId);
-      showToast(t("toast.workspaceTrashed", { n: String(sessionIds.length) }));
+      showToast(t(bin ? "toast.workspaceTrashed" : "toast.workspaceDeleted", { n: String(sessionIds.length) }));
     } catch (error) {
       showToast(String(error?.message ?? error));
     }
@@ -15897,7 +15932,7 @@ function CanvasInner(props) {
                 },
                 children: [
                   /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["dangerTitle"], children: t("confirm.removeGroup.title") }),
-                  /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["dangerBody"], children: t("confirm.removeGroup.body", { n: String(confirmRemove.count) }) }),
+                  /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["dangerBody"], children: t(confirmRemove.bin ? "confirm.removeGroup.body" : "confirm.removeGroup.bodyHard", { n: String(confirmRemove.count) }) }),
                   /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["dangerActions"], children: [
                     /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("button", { type: "button", className: talk_map_default["dangerCancel"], onClick: () => {
                       setConfirmRemove(null);
@@ -15911,7 +15946,7 @@ function CanvasInner(props) {
                           void deleteWorkspace(confirmRemove.groupId);
                           setConfirmRemove(null);
                         },
-                        children: t("confirm.removeGroup.ok")
+                        children: t(confirmRemove.bin ? "confirm.removeGroup.ok" : "confirm.removeGroup.okHard")
                       }
                     )
                   ] })

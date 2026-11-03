@@ -39,6 +39,25 @@ async function postRecycleBin(body: Record<string, unknown>): Promise<RecycleBin
   return payload
 }
 
+/**
+ * Is a recycle bin installed and answering? Its route is registered by the plugin, so a
+ * missing plugin shows up as 404/405 on this path — that is the only signal there is.
+ */
+export async function recycleBinReady(): Promise<boolean> {
+  try {
+    const path = new URL(RECYCLE_BIN_ROUTE, document.baseURI).pathname
+    const response = await fetch(path, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ action: 'list' }),
+      cache: 'no-store',
+    })
+    return response.status !== 404 && response.status !== 405
+  } catch {
+    return false
+  }
+}
+
 /** How many attempts (and how long apart) to let the stops settle. */
 const STOP_RETRIES = 10
 const STOP_RETRY_DELAY_MS = 400

@@ -29,7 +29,7 @@ import { pickFaces, type Obstacle } from './edge-routing.ts'
 import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
-import { archiveSessions, deleteSessionsDirect, deleteWorkspaceRegistration, setPinned, trashSessions } from './session-actions.ts'
+import { archiveSessions, deleteSessionsDirect, deleteWorkspaceRegistration, recycleBinReady, setPinned, trashSessions } from './session-actions.ts'
 import { allSessionTitles, setCardTable, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
@@ -272,7 +272,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       localStorage.setItem('dsh.talk-map.lineage-hidden.v1', next ? '1' : '0')
     } catch { /* private mode: the choice lasts this session */ }
   }
-  const [confirmRemove, setConfirmRemove] = useState<{ groupId: string; count: number } | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState<{ groupId: string; count: number; bin: boolean } | null>(null)
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
@@ -2039,12 +2039,25 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .map(cardId => visibleCards[cardId]?.sessionId)
       .filter((sessionId): sessionId is string => sessionId !== undefined)
     try {
-      // The Host's own delete (session/delete), not the recycle-bin plugin: the user asked
-      // for the system path, so nothing here depends on that plugin being installed.
-      if (sessionIds.length > 0) await deleteSessionsDirect(sessionIds)
-      await deleteWorkspaceRegistration(groupId)
+      // Recycle bin when one is installed (restorable, same bin as the sidebar); the Host's
+      // own delete only as the fallback when there is none.
+      const bin = await recycleBinReady()
+      if (sessionIds.length > 0) {
+        if (bin) {
+          try {
+            await trashSessions(sessionIds, () => { showToast(t('toast.stopping')) })
+          } catch (error) {
+            if (!/HTTP (404|405)|未注册|not found/i.test(String((error as Error).message))) throw error
+            await deleteSessionsDirect(sessionIds)
+            await deleteWorkspaceRegistration(groupId)
+          }
+        } else {
+          await deleteSessionsDirect(sessionIds)
+          await deleteWorkspaceRegistration(groupId)
+        }
+      }
       removeGroup(groupId)
-      showToast(t('toast.workspaceTrashed', { n: String(sessionIds.length) }))
+      showToast(t(bin ? 'toast.workspaceTrashed' : 'toast.workspaceDeleted', { n: String(sessionIds.length) }))
     } catch (error) {
       showToast(String((error as Error | undefined)?.message ?? error))
     }
@@ -2514,7 +2527,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             >
               <div className={styles['dangerTitle']}>{t('confirm.removeGroup.title')}</div>
               <div className={styles['dangerBody']}>
-                {t('confirm.removeGroup.body', { n: String(confirmRemove.count) })}
+                {t(confirmRemove.bin ? 'confirm.removeGroup.body' : 'confirm.removeGroup.bodyHard', { n: String(confirmRemove.count) })}
               </div>
               <div className={styles['dangerActions']}>
                 <button type="button" className={styles['dangerCancel']} onClick={() => { setConfirmRemove(null) }}>
@@ -2528,7 +2541,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                     setConfirmRemove(null)
                   }}
                 >
-                  {t('confirm.removeGroup.ok')}
+                  {t(confirmRemove.bin ? 'confirm.removeGroup.ok' : 'confirm.removeGroup.okHard')}
                 </button>
               </div>
             </div>
