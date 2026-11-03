@@ -2449,3 +2449,16 @@
   background: rgba(242, 78, 78, 0.28);
   color: #ff8a8a;
 }
+
+
+/* The picked card keeps its slot (hidden) so the column cannot collapse, while a copy
+   follows the pointer — that is what lets the gap open in both directions. */
+.statusRailGhost {
+  visibility: hidden;
+}
+
+.statusRailFloating {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+}

@@ -29,7 +29,7 @@ import { pickFaces, type Obstacle } from './edge-routing.ts'
 import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
-import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
+import { archiveSessions, deleteSessionsDirect, deleteWorkspaceRegistration, setPinned, trashSessions } from './session-actions.ts'
 import { allSessionTitles, setCardTable, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
@@ -2039,9 +2039,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .map(cardId => visibleCards[cardId]?.sessionId)
       .filter((sessionId): sessionId is string => sessionId !== undefined)
     try {
-      if (sessionIds.length > 0) {
-        await trashSessions(sessionIds, () => { showToast(t('toast.stopping')) })
-      }
+      // The Host's own delete (session/delete), not the recycle-bin plugin: the user asked
+      // for the system path, so nothing here depends on that plugin being installed.
+      if (sessionIds.length > 0) await deleteSessionsDirect(sessionIds)
+      await deleteWorkspaceRegistration(groupId)
       removeGroup(groupId)
       showToast(t('toast.workspaceTrashed', { n: String(sessionIds.length) }))
     } catch (error) {

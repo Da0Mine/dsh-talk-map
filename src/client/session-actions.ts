@@ -124,3 +124,31 @@ export async function setPinned(sessionId: string, pinned: boolean): Promise<voi
   }
   await call.call(ui, sessionId)
 }
+
+
+/**
+ * The Host's own delete, not the recycle-bin plugin's: \`session/delete\` is the endpoint
+ * the app itself uses (AGENT_METHODS.session_delete). It removes the conversation for good
+ * — nothing lands in a bin, so the caller must confirm first.
+ */
+export async function deleteSessionsDirect(sessionIds: readonly string[]): Promise<void> {
+  let firstFailure: string | undefined
+  for (const sessionId of sessionIds) {
+    try {
+      await callRpc('session/delete', { sessionId })
+    } catch (error) {
+      firstFailure ??= (error as Error).message
+    }
+  }
+  if (firstFailure !== undefined) throw new Error(firstFailure)
+}
+
+/** \`workspaceController.deleteWorkspace\` — drops the registration, keeps files/sessions. */
+export async function deleteWorkspaceRegistration(workspaceId: string): Promise<void> {
+  try {
+    await callRpc('workspace/delete', { workspaceId })
+  } catch {
+    // The registration may already be gone (or the id was never registered); the board
+    // cleanup below still has to happen, so a missing registration is not an error here.
+  }
+}

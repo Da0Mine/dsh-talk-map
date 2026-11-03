@@ -3,13 +3,13 @@
  * which currently carry a lamp. Each entry is the same card the board draws — same width,
  * same look — stacked top to bottom.
  *
- * Kept behaviour: closed by default, opened from a frosted-glass handle that rides the
- * panel edge, slides in from beyond the left edge, a card whose lamp changes jumps to the
- * top, cards that settle disappear, open/closed and the manual order survive a restart.
+ * Behaviour: closed by default; a frosted handle (two bars + two dots) rides the panel
+ * edge; the panel slides in from beyond the left edge; a card whose lamp changes jumps to
+ * the top; cards that settle disappear; open/closed and the manual order survive a restart.
  *
- * Dragging is pointer-based (not HTML5 DnD) so it can look like the board: the card you
- * pick up floats under the pointer while the other cards glide out of its way with a FLIP
- * animation, and dropping simply keeps the order you saw.
+ * Dragging keeps the picked card's slot in place (invisible) so the column cannot collapse,
+ * floats a copy under the pointer, and slides the cards between the old and the new index
+ * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
@@ -39,16 +39,17 @@ export interface StatusRailProps {
 
 interface DragState {
   cardId: string
-  /** Index the card would land on if dropped now (over the compacted column). */
-  hoverIndex: number
-  /** How far the cards after the gap move down (card height + list gap). */
+  /** Where the card came from, in the visible order. */
+  origin: number
+  /** Where it would land if dropped now. */
+  hover: number
+  /** One row (card height + gap). */
   step: number
-  /** Pointer Y where the card was picked up. */
   startPointerY: number
-  /** Card top at pickup, in panel coordinates (see beginDrag). */
-  baseTop: number
   pointerY: number
+  /** Panel-relative geometry of the floating copy. */
   left: number
+  baseTop: number
   width: number
 }
 
@@ -66,22 +67,6 @@ const LAMP_CLASS: Record<StatusLamp, string> = {
 let openState: boolean | undefined
 const openListeners = new Set<() => void>()
 
-function subscribeOpen(listener: () => void): () => void {
-  openListeners.add(listener)
-  return () => { openListeners.delete(listener) }
-}
-
-function openSnapshot(): boolean {
-  if (openState === undefined) openState = readOpen()
-  return openState
-}
-
-function setOpenState(next: boolean): void {
-  openState = next
-  writeOpen(next)
-  for (const listener of openListeners) listener()
-}
-
 function readOpen(): boolean {
   if (typeof window === 'undefined') return false
   try {
@@ -97,6 +82,22 @@ function writeOpen(open: boolean): void {
   } catch {
     /* a blocked store must not break the map */
   }
+}
+
+function subscribeOpen(listener: () => void): () => void {
+  openListeners.add(listener)
+  return () => { openListeners.delete(listener) }
+}
+
+function openSnapshot(): boolean {
+  if (openState === undefined) openState = readOpen()
+  return openState
+}
+
+function setOpenState(next: boolean): void {
+  openState = next
+  writeOpen(next)
+  for (const listener of openListeners) listener()
 }
 
 function readOrder(): string[] {
@@ -122,15 +123,15 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
+  const [shift, setShift] = useState<Record<string, number>>({})
   const seenRef = useRef(new Map<string, string>())
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
-  const panelRef = useRef<HTMLDivElement | null>(null)
   const prevTops = useRef(new Map<string, number>())
-  const [shift, setShift] = useState<Record<string, number>>({})
+  const panelRef = useRef<HTMLDivElement | null>(null)
   const orderRef = useRef(order)
-  const hoverRef = useRef(0)
-  const dragIdRef = useRef<string | null>(null)
   orderRef.current = order
+  const dragRef = useRef<DragState | null>(null)
+  dragRef.current = drag
 
   const signature = useMemo(
     () => props.entries.map(entry => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join('|'),
@@ -178,44 +179,41 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return rows
   }, [order, props.entries])
 
-  // FLIP: after a reorder, each card that moved is painted first at its old offset and
-  // then animated to its new place — so the rest of the column visibly makes room while
-  // you drag. The offsets live in React state so a re-render cannot drop them.
+  // FLIP for status-driven moves; dragging has its own gap logic below.
   useLayoutEffect(() => {
+    if (drag !== null) return
     const next = new Map<string, number>()
     const deltas: Record<string, number> = {}
     for (const [cardId, element] of slotsRef.current) {
       const top = element.getBoundingClientRect().top
       next.set(cardId, top)
-      if (drag !== null && drag.cardId === cardId) continue
       const before = prevTops.current.get(cardId)
       if (before === undefined || Math.abs(before - top) < 1) continue
       deltas[cardId] = before - top
     }
     prevTops.current = next
-    const ids = Object.keys(deltas)
-    if (ids.length === 0) return
+    if (Object.keys(deltas).length === 0) return
     setShift(deltas)
-    // Two frames: the offset must be painted once, then the transition carries the card
-    // to its new place. Clearing in a single rAF happened before paint, so nothing moved.
     let inner = 0
     const outer = requestAnimationFrame(() => {
       inner = requestAnimationFrame(() => { setShift({}) })
     })
-    return () => { cancelAnimationFrame(outer); if (inner !== 0) cancelAnimationFrame(inner) }
+    return () => {
+      cancelAnimationFrame(outer)
+      if (inner !== 0) cancelAnimationFrame(inner)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order, drag === null])
 
-  // Pointer-driven drag: the picked card floats under the pointer, the rest reorder live.
+  // Pointer drag: pick the row, follow the pointer, open a gap both ways, commit on drop.
   useEffect(() => {
     if (drag === null) return
-    const cardId = drag.cardId
-    dragIdRef.current = cardId
-    hoverRef.current = drag.hoverIndex
+    const { cardId } = drag
 
     const indexUnder = (pointerY: number): number => {
+      const ids = orderRef.current
       let best = 0
       let bestDistance = Number.POSITIVE_INFINITY
-      const ids = orderRef.current.filter(id => id !== cardId)
       for (let index = 0; index < ids.length; index += 1) {
         const element = slotsRef.current.get(ids[index]!)
         if (element === undefined) continue
@@ -230,26 +228,26 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     }
 
     const onMove = (event: PointerEvent): void => {
-      const target = indexUnder(event.clientY)
-      hoverRef.current = target
+      const hover = indexUnder(event.clientY)
       setDrag(current => (current === null
         ? null
-        : { ...current, pointerY: event.clientY, hoverIndex: target }))
+        : { ...current, pointerY: event.clientY, hover }))
     }
 
     const onUp = (): void => {
-      const dropped = dragIdRef.current
-      const at = hoverRef.current
-      if (dropped !== null) {
+      const current = dragRef.current
+      if (current !== null && current.hover !== current.origin) {
         setOrder(existing => {
-          const rest = existing.filter(id => id !== dropped)
-          const index = Math.min(Math.max(at, 0), rest.length)
-          const next = [...rest.slice(0, index), dropped, ...rest.slice(index)]
+          const from = existing.indexOf(current.cardId)
+          if (from < 0) return existing
+          const next = [...existing]
+          next.splice(from, 1)
+          const to = Math.min(Math.max(current.hover, 0), next.length)
+          next.splice(to, 0, current.cardId)
           writeOrder(next)
           return next
         })
       }
-      dragIdRef.current = null
       prevTops.current.clear()
       setDrag(null)
     }
@@ -262,7 +260,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
     }
-  }, [drag])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [drag === null])
 
   const toggle = useCallback(() => {
     setOpenState(!openSnapshot())
@@ -274,21 +273,47 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     if (element === undefined) return
     const rect = element.getBoundingClientRect()
     // The panel is transformed (it slides in), so a position:fixed child is laid out
-    // against the panel, not the viewport. Store panel-relative coordinates and move by
-    // the pointer delta — using viewport numbers made the card jump on pickup.
+    // against the panel, not the viewport: keep panel-relative coordinates.
     const panelRect = panelRef.current?.getBoundingClientRect()
     event.preventDefault()
+    const index = Math.max(0, orderRef.current.indexOf(cardId))
     setDrag({
       cardId,
-      hoverIndex: Math.max(0, orderRef.current.indexOf(cardId)),
+      origin: index,
+      hover: index,
       step: rect.height + 10,
       startPointerY: event.clientY,
-      baseTop: rect.top - (panelRect?.top ?? 0),
       pointerY: event.clientY,
       left: rect.left - (panelRect?.left ?? 0),
+      baseTop: rect.top - (panelRect?.top ?? 0),
       width: rect.width,
     })
   }, [])
+
+  const renderCard = (entry: StatusRailEntry, floating: boolean): React.JSX.Element => (
+    <div
+      className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
+      onPointerDown={floating ? undefined : (event) => { beginDrag(event, entry.cardId) }}
+      onClick={() => { if (!floating && dragRef.current === null) props.onFocus(entry.cardId) }}
+      title={entry.title}
+    >
+      <div className={styles['cardTop']}>
+        <span className={styles['cardTitle']}>{entry.title}</span>
+      </div>
+      {entry.preview !== undefined && entry.preview !== ''
+        ? <div className={styles['cardSummary']}>{entry.preview}</div>
+        : null}
+      <div className={styles['cardFooter']}>
+        <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
+        <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
+          {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
+          {t(LAMP_CHIP[entry.lamp].key)}
+        </span>
+      </div>
+    </div>
+  )
+
+  const floatingEntry = drag === null ? undefined : ordered.find(entry => entry.cardId === drag.cardId)
 
   return (
     <div
@@ -305,8 +330,20 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
           {ordered.length === 0
             ? <div className={styles['statusRailEmpty']}>{t('statusRail.empty')}</div>
             : null}
-          {ordered.map(entry => {
-            const floating = drag !== null && drag.cardId === entry.cardId
+          {ordered.map((entry, index) => {
+            const dragging = drag !== null && drag.cardId === entry.cardId
+            // Cards between the old and the new index slide one row out of the way; the
+            // picked card's own slot stays in flow (hidden) so the column keeps its height.
+            let moved = 0
+            if (drag !== null && !dragging) {
+              if (drag.hover > drag.origin && index > drag.origin && index <= drag.hover) moved = -drag.step
+              else if (drag.hover < drag.origin && index >= drag.hover && index < drag.origin) moved = drag.step
+            }
+            const style = drag !== null
+              ? { transform: `translateY(${moved}px)`, transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)` }
+              : shift[entry.cardId] !== undefined
+                ? { transform: `translateY(${shift[entry.cardId]}px)`, transition: 'none' }
+                : { transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)` }
             return (
               <div
                 key={entry.cardId}
@@ -315,54 +352,31 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                   if (element === null) slotsRef.current.delete(entry.cardId)
                   else slotsRef.current.set(entry.cardId, element)
                 }}
-                className={`${styles['statusRailSlot']}${floating ? ` ${styles['statusRailSlotFloating']}` : ''}`}
-                style={floating
-                  ? {
-                      position: 'fixed',
-                      left: drag.left,
-                      width: drag.width,
-                      top: drag.baseTop + (drag.pointerY - drag.startPointerY),
-                      zIndex: 20,
-                    }
-                  : drag !== null
-                    ? (() => {
-                        const compact = ordered.filter(row => row.cardId !== drag.cardId)
-                        const position = compact.findIndex(row => row.cardId === entry.cardId)
-                        const moved = position >= 0 && position >= drag.hoverIndex ? drag.step : 0
-                        return {
-                          transform: `translateY(${moved}px)`,
-                          transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`,
-                        }
-                      })()
-                    : shift[entry.cardId] !== undefined
-                      ? { transform: `translateY(${shift[entry.cardId]}px)`, transition: 'none' }
-                      : { transition: `transform ${FLIP_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)` }}
+                className={styles['statusRailSlot']}
+                style={style}
               >
-                <div
-                  className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
-                  onPointerDown={(event) => { beginDrag(event, entry.cardId) }}
-                  onClick={() => { if (drag === null) props.onFocus(entry.cardId) }}
-                  title={entry.title}
-                >
-                  <div className={styles['cardTop']}>
-                    <span className={styles['cardTitle']}>{entry.title}</span>
-                  </div>
-                  {entry.preview !== undefined && entry.preview !== ''
-                    ? <div className={styles['cardSummary']}>{entry.preview}</div>
-                    : null}
-                  <div className={styles['cardFooter']}>
-                    <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
-                    <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
-                      {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
-                      {t(LAMP_CHIP[entry.lamp].key)}
-                    </span>
-                  </div>
-                </div>
+                {dragging
+                  ? <div className={styles['statusRailGhost']}>{renderCard(entry, false)}</div>
+                  : renderCard(entry, false)}
               </div>
             )
           })}
         </div>
       </div>
+      {drag !== null && floatingEntry !== undefined
+        ? (
+          <div
+            className={styles['statusRailFloating']}
+            style={{
+              left: drag.left,
+              width: drag.width,
+              top: drag.baseTop + (drag.pointerY - drag.startPointerY),
+            }}
+          >
+            {renderCard(floatingEntry, true)}
+          </div>
+        )
+        : null}
       <button
         type="button"
         className={styles['statusRailTab']}
@@ -371,7 +385,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         title={open ? t('statusRail.close') : t('statusRail.open')}
         onClick={toggle}
       >
-        {/* Two vertical bars: the rail is a column of cards. */}
+        {/* Two bars with two dots under them. */}
         <svg viewBox="0 0 12 28" width="14" height="30" aria-hidden="true">
           <rect x="1.4" y="1" width="2" height="20" rx="1" fill="currentColor" />
           <rect x="8.6" y="1" width="2" height="20" rx="1" fill="currentColor" />
