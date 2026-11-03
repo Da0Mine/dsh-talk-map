@@ -910,10 +910,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         lamp,
         stamp: summary?.updatedAt ?? 0,
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+        ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
+        ...(pinnedSessions.has(card.sessionId) ? { pinned: true } : {}),
       })
     }
     return rows
-  }, [visibleCards, sessions, renamedTitles, statusById, alertById, finishedById])
+  }, [visibleCards, sessions, renamedTitles, previews, pinnedSessions, statusById, alertById, finishedById])
 
   /** Bring one card into view and select it (a click on a rail row). */
   const focusCard = useCallback((cardId: string) => {
@@ -2461,7 +2463,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           </ControlButton>
         </Controls>
       </ReactFlow>
-      <StatusRail entries={statusEntries} onFocus={focusCard} />
+      <StatusRail entries={statusEntries} cardWidth={CARD_W} onFocus={focusCard} />
       {batchMode
         ? (
             <BatchBar
