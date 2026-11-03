@@ -4,6 +4,8 @@
 
 DeepSeek Harness（dsh）的可视化对话地图插件：把你的每一个会话变成白板上的一张卡片。
 
+> 源自 [Tasihi89/dsh-talk-map](https://github.com/Tasihi89/dsh-talk-map)（MIT）。本仓库是在其基础上大幅改造的分支：槽位布局、可缩放工作区、溢出抽屉、避让连线的路由都是在这里新增或重写的。
+
 ![工作区分组、置顶卡片与状态灯](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/workspaces-and-pins.png)
 
 ![卡片之间的连线，以及运行中 / 等你回复 / 待查看的指示灯](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/cards-and-links.png)

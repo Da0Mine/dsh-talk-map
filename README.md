@@ -4,6 +4,8 @@ English | [中文](README.zh.md)
 
 A visual conversation map plugin for DeepSeek Harness (dsh): every session becomes a card on an infinite whiteboard.
 
+> Derived from [Tasihi89/dsh-talk-map](https://github.com/Tasihi89/dsh-talk-map) (MIT). This repository is a heavily reworked fork: slot layout, resizable workspaces, the overflow drawer and the routed links are additions or rewrites here.
+
 ![Workspaces, pinned cards and live status](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/workspaces-and-pins.png)
 
 ![Cards connected by links, with running / waiting / unread lamps](https://raw.githubusercontent.com/Da0Mine/dsh-talk-map/main/docs/screenshots/cards-and-links.png)
