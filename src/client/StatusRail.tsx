@@ -272,9 +272,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     const element = slotsRef.current.get(cardId)
     if (element === undefined) return
     const rect = element.getBoundingClientRect()
-    // The panel is transformed (it slides in), so a position:fixed child is laid out
-    // against the panel, not the viewport: keep panel-relative coordinates.
-    const panelRect = panelRef.current?.getBoundingClientRect()
+    // The floating copy is a direct child of .statusRail (outside the transformed panel),
+    // so position:fixed there is viewport-relative — use viewport numbers, not panel ones.
     event.preventDefault()
     const index = Math.max(0, orderRef.current.indexOf(cardId))
     setDrag({
@@ -284,8 +283,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       step: rect.height + 10,
       startPointerY: event.clientY,
       pointerY: event.clientY,
-      left: rect.left - (panelRect?.left ?? 0),
-      baseTop: rect.top - (panelRect?.top ?? 0),
+      left: rect.left,
+      baseTop: rect.top,
       width: rect.width,
     })
   }, [])

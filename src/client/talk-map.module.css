@@ -1918,7 +1918,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-snap-type: y proximity;
+
   display: grid;
   grid-template-columns: repeat(auto-fill, 224px);
   justify-content: center;
@@ -1968,7 +1968,7 @@
 .drawerCard {
   width: 224px;
   box-sizing: border-box;
-  scroll-snap-align: start;
+
   text-align: left;
   font: inherit;
   cursor: pointer;
