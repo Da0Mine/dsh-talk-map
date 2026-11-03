@@ -12,7 +12,7 @@
  * Interaction: right/middle-drag pans, plain right-click opens the context
  * menu, left-drag box-selects on the pane and drags nodes.
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
   SelectionMode, useReactFlow, type Connection, type Edge, type EdgeChange, type FinalConnectionState,
@@ -55,6 +55,7 @@ import {
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
+import { StatusRail, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
@@ -204,7 +205,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       .filter(([, entry]) => typeof entry?.text === 'string' && cleanPreviewText(entry.text) !== '')
       .map(([sessionId, entry]) => [sessionId, entry.stamp])),
   )
-  const { screenToFlowPosition, zoomTo, setNodes } = useReactFlow()
+  const { screenToFlowPosition, zoomTo, setNodes, setCenter, getZoom } = useReactFlow()
   // 2026-10-24 补丁：默认左键拖拽平移，左下角控件面板可切回框选
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set())
   const [selectedEdgeIds, setSelectedEdgeIds] = useState<ReadonlySet<string>>(new Set())
@@ -890,6 +891,39 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (status?.completionUnread === true || finishedById.has(sessionId)) return 'done'
     return undefined
   }
+
+  /**
+   * The status rail lists only the cards that carry a lamp right now. It is derived, not
+   * stored, so a card whose status clears leaves the list on its own.
+   */
+  const statusEntries = useMemo<StatusRailEntry[]>(() => {
+    const rows: StatusRailEntry[] = []
+    for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (card.boardId !== INBOX_BOARD_ID) continue
+      const lamp = glowOf(card.sessionId) as StatusLamp | undefined
+      if (lamp === undefined) continue
+      const summary = sessions.byId[card.sessionId]
+      rows.push({
+        cardId,
+        sessionId: card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        lamp,
+        stamp: summary?.updatedAt ?? 0,
+        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+      })
+    }
+    return rows
+  }, [visibleCards, sessions, renamedTitles, statusById, alertById, finishedById])
+
+  /** Bring one card into view and select it (a click on a rail row). */
+  const focusCard = useCallback((cardId: string) => {
+    const slot = cardLayout[cardId]
+    const card = visibleCards[cardId]
+    const point = slot ?? (card === undefined ? undefined : { x: card.x, y: card.y })
+    setSelectedIds([cardId])
+    if (point === undefined) return
+    setCenter(point.x + CARD_W / 2, point.y + CARD_H / 2, { zoom: getZoom(), duration: 320 })
+  }, [cardLayout, visibleCards, setCenter, getZoom, setSelectedIds])
 
   const liveNodes = useMemo<TalkMapNode[]>(() => {
     const wsColors = canvasState.global?.wsColors ?? {}
@@ -2427,6 +2461,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           </ControlButton>
         </Controls>
       </ReactFlow>
+      <StatusRail entries={statusEntries} onFocus={focusCard} />
       {batchMode
         ? (
             <BatchBar

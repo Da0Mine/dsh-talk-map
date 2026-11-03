@@ -19,6 +19,8 @@ A visual conversation map plugin for DeepSeek Harness (dsh): every session becom
 - **Automatic digests**: a three-field digest (summary / key findings / next step) is generated on demand through your deployment's default model; hit ⟳ on a card to regenerate.
 - **Bilingual interface**: the map's own copy renders in Chinese or English. The pill in the map header cycles Auto → 中文 → English; Auto follows dsh's own language, and the choice is remembered across restarts.
 
+- **Status rail**: a collapsible strip on the left edge lists only the cards that carry a lamp (running / waiting / unread / interrupted). A card whose status changes jumps to the top, the order is yours to drag, a card that settles drops out, and the rail remembers whether you left it open.
+
 ## Install
 
 ```sh

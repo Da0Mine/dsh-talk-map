@@ -63,12 +63,12 @@ var require_use_sync_external_store_shim_production = __commonJS({
       return x === y && (0 !== x || 1 / x === 1 / y) || x !== x && y !== y;
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
-    var useState8 = React.useState;
-    var useEffect11 = React.useEffect;
+    var useState9 = React.useState;
+    var useEffect12 = React.useEffect;
     var useLayoutEffect3 = React.useLayoutEffect;
     var useDebugValue2 = React.useDebugValue;
     function useSyncExternalStore$2(subscribe2, getSnapshot2) {
-      var value = getSnapshot2(), _useState = useState8({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
+      var value = getSnapshot2(), _useState = useState9({ inst: { value, getSnapshot: getSnapshot2 } }), inst = _useState[0].inst, forceUpdate = _useState[1];
       useLayoutEffect3(
         function() {
           inst.value = value;
@@ -77,7 +77,7 @@ var require_use_sync_external_store_shim_production = __commonJS({
         },
         [subscribe2, value, getSnapshot2]
       );
-      useEffect11(
+      useEffect12(
         function() {
           checkIfSnapshotChanged(inst) && forceUpdate({ inst });
           return subscribe2(function() {
@@ -130,17 +130,17 @@ var require_with_selector_production = __commonJS({
     }
     var objectIs = "function" === typeof Object.is ? Object.is : is;
     var useSyncExternalStore5 = shim.useSyncExternalStore;
-    var useRef7 = React.useRef;
-    var useEffect11 = React.useEffect;
-    var useMemo3 = React.useMemo;
+    var useRef8 = React.useRef;
+    var useEffect12 = React.useEffect;
+    var useMemo4 = React.useMemo;
     var useDebugValue2 = React.useDebugValue;
     exports.useSyncExternalStoreWithSelector = function(subscribe2, getSnapshot2, getServerSnapshot, selector, isEqual) {
-      var instRef = useRef7(null);
+      var instRef = useRef8(null);
       if (null === instRef.current) {
         var inst = { hasValue: false, value: null };
         instRef.current = inst;
       } else inst = instRef.current;
-      instRef = useMemo3(
+      instRef = useMemo4(
         function() {
           function memoizedSelector(nextSnapshot) {
             if (!hasMemo) {
@@ -175,7 +175,7 @@ var require_with_selector_production = __commonJS({
         [getSnapshot2, getServerSnapshot, selector, isEqual]
       );
       var value = useSyncExternalStore5(subscribe2, instRef[0], instRef[1]);
-      useEffect11(
+      useEffect12(
         function() {
           inst.hasValue = true;
           inst.value = value;
@@ -326,6 +326,14 @@ var zh = {
   "map.back": "返回",
   "map.toggle": "对话地图",
   "map.empty": "地图是空的 —— 右键导入工作区或对话；双击空白直接开新对话",
+  "statusRail.title": "有状态的卡片",
+  "statusRail.open": "展开状态栏",
+  "statusRail.close": "收起状态栏",
+  "statusRail.empty": "暂时没有带状态的卡片",
+  "statusRail.lamp.running": "运行中",
+  "statusRail.lamp.waiting": "等你回复",
+  "statusRail.lamp.done": "待查看",
+  "statusRail.lamp.error": "异常终止",
   "map.sessions": "个会话",
   "map.loading": "正在加载地图……",
   "map.retry": "重试",
@@ -448,7 +456,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b55 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b56 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -484,6 +492,14 @@ var en = {
   "map.back": "Back",
   "map.toggle": "Talk Map",
   "map.empty": "The map is empty — right-click to import a workspace or conversation; double-click to start a chat",
+  "statusRail.title": "Cards with a status",
+  "statusRail.open": "Open the status rail",
+  "statusRail.close": "Close the status rail",
+  "statusRail.empty": "No card carries a status right now",
+  "statusRail.lamp.running": "running",
+  "statusRail.lamp.waiting": "waiting",
+  "statusRail.lamp.done": "unread",
+  "statusRail.lamp.error": "error",
   "map.sessions": "sessions",
   "map.loading": "Loading map…",
   "map.retry": "Retry",
@@ -599,7 +615,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b55 · Search cards on the map",
+  "global.searchPlaceholder": "b56 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1245,7 +1261,7 @@ function allCards() {
 }
 
 // src/client/MapOverlay.tsx
-var import_react14 = require("react");
+var import_react15 = require("react");
 
 // src/client/font-scale.ts
 var STORAGE_KEY = "dsh.talk-map.font-step";
@@ -1363,7 +1379,7 @@ function cleanSnippet(raw, query) {
 
 // dsh-css: dsh-css:src/client/talk-map.module.css
 var __tagId = "dsh-talk-map/talk-map.module.css";
-var __css = `.tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_globalSearch { position: relative; display: flex; align-items: center; gap: 6px; margin-right: 8px; } .tm_globalSearchInput { width: 200px; font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 9px; outline: none; } .tm_globalSearchInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_globalSearchButton { font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_globalSearchButton:hover { color: var(--dsw-alias-label-primary); } .tm_globalSearchBackdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-start; justify-content: center; padding-top: 9vh; } .tm_globalSearchPanel { width: min(980px, 92vw); max-height: 76vh; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5); overflow: hidden; } .tm_globalSearchHead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_globalSearchTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_globalSearchBody { padding: 0 16px 14px; overflow-y: auto; overscroll-behavior: contain; } .tm_searchInlineLoading { display: flex; align-items: center; padding: 4px 0 2px 10px; } .tm_searchInlineLoading > span { width: 62%; } .tm_drawerScrollSensor { width: 100%; height: 1px; opacity: 0; } .tm_fontGroup { display: flex; align-items: center; gap: 4px; margin-right: 6px; } .tm_fontButton { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 46px; height: 28px; padding: 0 8px; line-height: 1; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_fontButton:hover:not(:disabled) { color: var(--dsw-alias-label-primary); border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_fontButton:disabled { opacity: 0.4; cursor: default; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { display: inline-block; width: calc(9px + 0px); text-align: center; line-height: 1; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_fontSign { display: inline-block; font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1; transform: translateY(-3px); } .tm_fontReset { min-width: 50px; } .tm_fontReset { min-width: 44px; } .tm_headerSpace { flex: 1; } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: calc(9px + var(--tm-font-step, 0px)); font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } @media (prefers-reduced-motion: reduce) { .tm_canvas .react-flow__edge circle { opacity: 0.28; } } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { position: relative; width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: calc(12px + var(--tm-font-step, 0px)); } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardChip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); font-weight: 600; white-space: nowrap; border: 1px solid transparent; } .tm_cardChipRunning { color: #ffffff; background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); } .tm_cardChipWaiting { color: rgb(245, 178, 46); background: rgba(245, 178, 46, 0.14); border-color: rgba(245, 178, 46, 0.42); } .tm_cardChipDone { color: rgb(52, 199, 89); background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.42); } .tm_cardChipError { color: rgb(242, 78, 78); background: rgba(242, 78, 78, 0.14); border-color: rgba(242, 78, 78, 0.45); } .tm_cardChipDraft { color: rgb(255, 197, 61); background: rgba(255, 197, 61, 0.18); border-color: rgba(255, 197, 61, 0.5); } .tm_cardChipInterrupted { color: rgb(214, 158, 92); background: rgba(214, 158, 92, 0.14); border-color: rgba(214, 158, 92, 0.42); } .tm_cardSummary { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 0 16px 2px rgba(255, 255, 255, 0.2), 0 0 40px 9px rgba(255, 255, 255, 0.1); } .tm_dialogBackdrop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); animation: tm_tmFadeIn 140ms ease-out; } .tm_digestDialog { width: min(720px, 86vw); max-height: 82vh; display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 14px; border-radius: 14px; background: var(--dsw-alias-bg-elevated, #232323); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); animation: tm_tmRiseIn 200ms cubic-bezier(0.16, 1, 0.3, 1); } .tm_digestDialogHead { display: flex; align-items: baseline; gap: 8px; min-width: 0; } .tm_digestDialogTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_digestDialogFrom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_digestLabel { margin-top: 4px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.5)); } .tm_digestText { width: 100%; min-height: 96px; max-height: 30vh; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); color: var(--dsw-alias-label-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: calc(11.5px + var(--tm-font-step, 0px)); line-height: 1.62; resize: none; } .tm_digestEmpty { padding: 18px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_digestActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; } .tm_renameBackdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.42); display: flex; align-items: flex-start; justify-content: center; padding-top: 22vh; } .tm_renameDialog { width: min(420px, 90vw); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42); padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; } .tm_renameHeading { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_renameInput { width: 100%; box-sizing: border-box; font: inherit; font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 8px 10px; outline: none; } .tm_renameInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.35)); } .tm_renameError { font-size: calc(12px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_renameActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_renameButton { font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 12px; cursor: pointer; } .tm_renameButton:hover { color: var(--dsw-alias-label-primary); } .tm_renamePrimary { color: #0b0b0c; background: rgb(255, 214, 106); border-color: rgb(255, 214, 106); } .tm_renamePrimary:disabled { opacity: 0.5; cursor: default; } .tm_cardPin { display: inline-flex; align-items: center; flex: none; color: rgb(255, 214, 106); filter: drop-shadow(0 0 5px rgba(255, 214, 106, 0.85)); animation: tm_talkmap-pin-glow 2.6s ease-in-out infinite; } @keyframes tm_talkmap-pin-glow { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.6)); opacity: 0.92; } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 106, 1)); opacity: 1; } } .tm_cardReticle { position: absolute; inset: -5px; pointer-events: none; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45)); } .tm_cardReticle i { position: absolute; width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.9); } .tm_cardReticle i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; } .tm_cardReticle i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; } .tm_cardReticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; } .tm_cardReticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; } .tm_cardQuiet { opacity: 0.62; transition: opacity 140ms ease; } .tm_cardQuiet:hover { opacity: 1; } .tm_stackBadgeBusy { color: rgb(255, 197, 61); border-color: rgba(255, 197, 61, 0.5); } @property --tm-ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; } .tm_cardLampRunning::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; padding: 2px; background: conic-gradient( from var(--tm-ring-angle), rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0) 190deg, rgba(255, 255, 255, 0.18) 250deg, rgba(255, 255, 255, 0.55) 292deg, rgba(255, 255, 255, 1) 325deg, rgba(255, 255, 255, 0.4) 352deg, rgba(255, 255, 255, 0) 360deg ); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: tm_talkmap-ring-sweep 1.8s linear infinite; pointer-events: none; } @keyframes tm_talkmap-ring-sweep { to { --tm-ring-angle: 360deg; } } .tm_cardLampDone { animation: tm_talkmap-lamp-green 2.8s ease-in-out infinite; } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameBlocked { border-color: rgb(242, 78, 78) !important; box-shadow: 0 0 0 1px rgba(242, 78, 78, 0.45) inset; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: calc(12px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; z-index: 5; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_menu { position: absolute; z-index: 60; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); font-family: inherit; } .tm_menuHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuIcon { flex: none; width: 14px; height: 14px; color: var(--dsw-alias-label-secondary); } .tm_menuItemDanger { color: rgb(242, 78, 78); } .tm_menuItemDanger .tm_menuIcon { color: rgb(242, 78, 78); } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: calc(11px + var(--tm-font-step, 0px)); font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(1120px, 94%); max-height: 84%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(16px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerHits > .tm_drawerHit { animation: tm_tmPopIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerHits > .tm_drawerHit:nth-child(1) { animation-delay: 20ms; } .tm_drawerHits > .tm_drawerHit:nth-child(2) { animation-delay: 34ms; } .tm_drawerHits > .tm_drawerHit:nth-child(3) { animation-delay: 48ms; } .tm_drawerHits > .tm_drawerHit:nth-child(4) { animation-delay: 62ms; } .tm_drawerHits > .tm_drawerHit:nth-child(5) { animation-delay: 76ms; } .tm_drawerHits > .tm_drawerHit:nth-child(n+6) { animation-delay: 90ms; } .tm_searchLoading { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 2px; } .tm_searchLoadingBar { position: relative; height: 2px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.07); } .tm_searchLoadingBar > i { position: absolute; inset: 0 auto 0 0; width: 34%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--dsw-alias-brand-primary), transparent); animation: tm_tmSlideBar 1150ms cubic-bezier(0.4, 0, 0.2, 1) infinite; } @keyframes tm_tmSlideBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } } .tm_searchSkeletonRow { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; } .tm_searchSkeletonTitle, .tm_searchSkeletonLine { display: block; height: 9px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05)); background-size: 220% 100%; animation: tm_tmShimmer 1300ms ease-in-out infinite; } .tm_searchSkeletonTitle { width: 38%; } .tm_searchSkeletonLine { width: 78%; } @keyframes tm_tmShimmer { 0% { background-position: 120% 0; } 100% { background-position: -60% 0; } } @media (prefers-reduced-motion: reduce) { .tm_drawerHits > .tm_drawerHit, .tm_searchLoadingBar > i, .tm_searchSkeletonTitle, .tm_searchSkeletonLine { animation: none; } } @keyframes tm_tmFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes tm_tmFadeOut { from { opacity: 1; } to { opacity: 0; } } @keyframes tm_tmRiseIn { from { opacity: 0; transform: translateY(26px) scale(0.94); } 60% { opacity: 1; } to { opacity: 1; transform: none; } } @keyframes tm_tmRiseOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.985); } } @keyframes tm_tmPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } } @keyframes tm_tmCardIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } } .tm_drawerBackdrop { animation: tm_tmFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerBackdropOut { animation: tm_tmFadeOut 130ms ease-in both; } .tm_drawer { animation: tm_tmRiseIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_drawerOut { animation: tm_tmRiseOut 150ms cubic-bezier(0.4, 0, 0.7, 0.2) both; } .tm_globalSearchBackdrop { animation: tm_tmFadeIn 130ms ease-out both; } .tm_globalSearchPanel { animation: tm_tmRiseIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_menu { animation: tm_tmPopIn 120ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_card { transition: transform 120ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out; } .tm_card:hover { transform: translateY(-1px); } .tm_reactFlowNodeEnter { animation: tm_tmCardIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_stackCell { transition: transform 120ms ease-out, box-shadow 160ms ease-out; } .tm_stackCell:hover { transform: translateY(-2px); } .tm_wsFrameLabel { transition: color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out; } .tm_wsFrameLabel:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } .tm_toast { animation: tm_tmRiseIn 160ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_snippetCode { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.94em; padding: 0 3px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); } .tm_snippetLink { color: var(--dsw-alias-brand-primary); } @media (prefers-reduced-motion: reduce) { .tm_drawerBackdrop, .tm_drawerBackdropOut, .tm_drawer, .tm_drawerOut, .tm_globalSearchBackdrop, .tm_globalSearchPanel, .tm_menu, .tm_toast, .tm_reactFlowNodeEnter { animation: none; } .tm_card, .tm_stackCell, .tm_wsFrameLabel { transition: none; } .tm_card:hover, .tm_stackCell:hover { transform: none; } } .tm_drawerSearchRow { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; } .tm_drawerSearch { flex: 1; min-width: 0; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 10px; outline: none; } .tm_drawerSearch:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerSearchGo { flex: none; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_drawerSearchGo:hover { color: var(--dsw-alias-label-primary); } .tm_drawerSearchState { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); flex: none; } .tm_drawerSearchError { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_drawerEmpty { grid-column: 1 / -1; padding: 10px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_drawerHits { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2); } .tm_drawerHitsHead { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); letter-spacing: 0.04em; } .tm_drawerHit { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; } .tm_drawerHit:hover { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerRoleChip { flex: none; margin-right: 6px; padding: 0 5px; border-radius: 4px; font-size: calc(9.5px + var(--tm-font-step, 0px)); line-height: 1.6; color: var(--dsw-alias-label-secondary); background: rgba(255, 255, 255, 0.07); } .tm_drawerRoleChip[data-talkmap-role="user"] { color: rgba(160, 210, 255, 0.95); background: rgba(90, 160, 255, 0.14); } .tm_hitMark { color: #0b0b0c; background: rgb(255, 214, 106); border-radius: 3px; padding: 0 2px; } .tm_drawerHitHead { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_drawerAgentChip { flex: none; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1.5; color: var(--dsw-alias-label-secondary); letter-spacing: 0.02em; } .tm_drawerAgentChipSub { color: rgb(255, 214, 106); border-color: rgba(255, 214, 106, 0.5); background: rgba(255, 214, 106, 0.1); } .tm_drawerHitTitle { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); background: transparent; border: none; padding: 0 0 2px; cursor: pointer; } .tm_drawerHitTitle:hover { color: var(--dsw-alias-brand-primary); } .tm_peek { position: fixed; z-index: 80; width: min(500px, 88vw); max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); } .tm_peekTitle { font-size: calc(11.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_peekLine { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.55; color: var(--dsw-alias-label-primary); white-space: pre-wrap; word-break: break-word; } .tm_peekHint { margin-top: 6px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); opacity: 0.7; } .tm_drawerHitMore { align-self: flex-start; margin-top: 2px; font: inherit; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; cursor: pointer; } .tm_drawerHitMore:hover { color: var(--dsw-alias-brand-primary); } .tm_drawerHitBlock { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; padding-left: 2px; } .tm_drawerHitLine { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; border-left: 2px solid var(--dsw-alias-border-l2); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tm_drawerHitLine:hover { color: var(--dsw-alias-label-primary); border-left-color: var(--dsw-alias-brand-primary); } .tm_drawerScroll { overscroll-behavior: contain; scroll-behavior: auto; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: grid; grid-template-columns: repeat(auto-fill, 224px); justify-content: center; align-content: start; gap: 12px; padding: 16px; } .tm_drawerCard[draggable="true"] { cursor: grab; } .tm_drawerCard[data-talkmap-drag="1"] { cursor: grabbing; opacity: 0.55; transform: scale(0.98); } .tm_cardLinks { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; } .tm_cardLinkChip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; border-radius: 4px; font-size: calc(9.5px + var(--tm-font-step, 0px)); line-height: 1.7; color: var(--dsw-alias-label-secondary); background: rgba(255, 255, 255, 0.06); } .tm_cardLinkChip[data-talkmap-link="out"] { color: rgba(255, 214, 106, 0.9); background: rgba(255, 214, 106, 0.12); } .tm_drawerCard { width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.5; } .tm_wsFrameResize:hover { opacity: 1; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResizeN { cursor: ns-resize; border-top: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 14px 0 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeW { cursor: ew-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 0 0 14px; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeNw, .tm_wsFrameResizeNe, .tm_wsFrameResizeSw, .tm_wsFrameResizeSe { width: 26px; height: 26px; z-index: 3; } .tm_wsFrameResizeNw { cursor: nwse-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-left-radius: 14px; } .tm_wsFrameResizeNe { cursor: nesw-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-right-radius: 14px; } .tm_wsFrameResizeSw { cursor: nesw-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-left-radius: 14px; } .tm_wsFrameResizeSe { cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_batchBar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2); } .tm_batchCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); white-space: nowrap; } .tm_batchSpace { width: 6px; } .tm_batchAction { padding: 5px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_batchAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_batchAction:disabled { opacity: 0.5; cursor: default; } .tm_batchDanger { color: var(--dsw-alias-state-error-primary); } .tm_pickBox { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--dsw-alias-border-l3); border-radius: 4px; background: var(--dsw-alias-bg-base); color: transparent; font-size: calc(11px + var(--tm-font-step, 0px)); line-height: 1; pointer-events: none; } .tm_pickBoxChecked { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-brand-primary); color: #fff; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-2); } .tm_colorToolbarLabel { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); margin-right: 2px; white-space: nowrap; } .tm_colorSwatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1; } .tm_colorSwatchClear:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); } .tm_drawerWires { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; } .tm_drawerScroll { position: relative; } .tm_drawerScroll > .tm_card, .tm_drawerScroll > [data-stack-card] { position: relative; z-index: 1; } .tm_canvas .react-flow__edges { z-index: 0 !important; } .tm_canvas .react-flow__nodes { z-index: 1 !important; }`;
+var __css = `.tm_toggleButton { display: flex; align-items: center; justify-content: center; gap: 6px; width: 32px; height: 32px; padding: 0; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_toggleButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleButtonActive { background: var(--dsw-alias-interactive-bg-active); color: var(--dsw-alias-brand-primary); } .tm_toggleRow { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 10px; border: none; border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; text-align: left; } .tm_toggleRow:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_toggleLabel { white-space: nowrap; } .tm_toggleIcon { width: 18px; height: 18px; flex: none; } .tm_panel { height: 100%; min-height: 0; box-sizing: border-box; display: flex; flex-direction: column; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); } .tm_header { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); flex: none; } .tm_backButton { display: inline-flex; align-items: center; gap: 6px; flex: none; height: 38px; padding: 0 18px 0 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; line-height: 1; cursor: pointer; } .tm_backButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_globalSearch { position: relative; display: flex; align-items: center; gap: 6px; margin-right: 8px; } .tm_globalSearchInput { width: 200px; font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 9px; outline: none; } .tm_globalSearchInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_globalSearchButton { font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_globalSearchButton:hover { color: var(--dsw-alias-label-primary); } .tm_globalSearchBackdrop { position: fixed; inset: 0; z-index: 70; background: rgba(0, 0, 0, 0.45); display: flex; align-items: flex-start; justify-content: center; padding-top: 9vh; } .tm_globalSearchPanel { width: min(980px, 92vw); max-height: 76vh; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.5); overflow: hidden; } .tm_globalSearchHead { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_globalSearchTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_globalSearchBody { padding: 0 16px 14px; overflow-y: auto; overscroll-behavior: contain; } .tm_searchInlineLoading { display: flex; align-items: center; padding: 4px 0 2px 10px; } .tm_searchInlineLoading > span { width: 62%; } .tm_drawerScrollSensor { width: 100%; height: 1px; opacity: 0; } .tm_fontGroup { display: flex; align-items: center; gap: 4px; margin-right: 6px; } .tm_fontButton { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-width: 46px; height: 28px; padding: 0 8px; line-height: 1; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font: inherit; font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_fontButton:hover:not(:disabled) { color: var(--dsw-alias-label-primary); border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_fontButton:disabled { opacity: 0.4; cursor: default; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { display: inline-block; width: calc(9px + 0px); text-align: center; line-height: 1; } .tm_fontGlyphSmall, .tm_fontGlyphLarge { font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_fontSign { display: inline-block; font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1; transform: translateY(-3px); } .tm_fontReset { min-width: 50px; } .tm_fontReset { min-width: 44px; } .tm_headerSpace { flex: 1; } .tm_langButton { flex: none; min-width: 72px; height: 34px; padding: 0 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_langButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_closeButton { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 38px; height: 38px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; } .tm_closeButton:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_zoomResetLabel { font-size: calc(9px + var(--tm-font-step, 0px)); font-weight: 700; letter-spacing: -0.5px; } .tm_canvas { flex: 1; min-height: 0; position: relative; } @media (prefers-reduced-motion: reduce) { .tm_canvas .react-flow__edge circle { opacity: 0.28; } } .tm_canvas .react-flow__node { transition: transform 200ms cubic-bezier(0.2, 0.8, 0.25, 1); } .tm_canvas .react-flow__node.dragging, .tm_canvas .react-flow__node.tmDragging { transition: none; } .tm_canvas .react-flow__nodesselection, .tm_canvas .react-flow__nodesselection-rect { display: none !important; pointer-events: none !important; } .tm_card { position: relative; width: 224px; min-height: 104px; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); color: var(--dsw-alias-label-primary); box-shadow: 0 1px 3px var(--dsw-alias-bg-mask-1); font-size: calc(13px + var(--tm-font-step, 0px)); } .tm_cardSelected { border-color: var(--dsw-alias-brand-primary); } .tm_cardGhost { opacity: 0.55; border-style: dashed; } .tm_cardTop { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_cardTitle { font-weight: 600; font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_runningDot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #ffffff; animation: tm_talkmap-pulse 1.6s ease-in-out infinite; } @keyframes tm_talkmap-pulse { 50% { opacity: 0.35; } } .tm_cardNext { display: flex; align-items: baseline; gap: 6px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); min-width: 0; } .tm_cardNextLabel { flex: none; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-brand-primary); font-weight: 600; } .tm_cardNextText { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; } .tm_cardStale { flex: none; color: var(--dsw-alias-state-warn-primary); font-size: calc(12px + var(--tm-font-step, 0px)); } .tm_cardFooter { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_cardTime { flex: none; } .tm_cardChip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); font-weight: 600; white-space: nowrap; border: 1px solid transparent; } .tm_cardChipRunning { color: #ffffff; background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.35); } .tm_cardChipWaiting { color: rgb(245, 178, 46); background: rgba(245, 178, 46, 0.14); border-color: rgba(245, 178, 46, 0.42); } .tm_cardChipDone { color: rgb(52, 199, 89); background: rgba(52, 199, 89, 0.14); border-color: rgba(52, 199, 89, 0.42); } .tm_cardChipError { color: rgb(242, 78, 78); background: rgba(242, 78, 78, 0.14); border-color: rgba(242, 78, 78, 0.45); } .tm_cardChipDraft { color: rgb(255, 197, 61); background: rgba(255, 197, 61, 0.18); border-color: rgba(255, 197, 61, 0.5); } .tm_cardChipInterrupted { color: rgb(214, 158, 92); background: rgba(214, 158, 92, 0.14); border-color: rgba(214, 158, 92, 0.42); } .tm_cardSummary { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.45; color: var(--dsw-alias-label-secondary); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; } .tm_cardBadgeWaiting { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-warn-label); background: var(--dsw-alias-state-warn-tertiary); } .tm_cardBadgeDone { padding: 1px 7px; border-radius: 999px; font-size: calc(10px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-success-primary); background: var(--dsw-alias-state-success-tertiary); } .tm_cardLampRunning { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.34), 0 0 16px 2px rgba(255, 255, 255, 0.2), 0 0 40px 9px rgba(255, 255, 255, 0.1); } .tm_dialogBackdrop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px); animation: tm_tmFadeIn 140ms ease-out; } .tm_digestDialog { width: min(720px, 86vw); max-height: 82vh; display: flex; flex-direction: column; gap: 8px; padding: 16px 18px 14px; border-radius: 14px; background: var(--dsw-alias-bg-elevated, #232323); border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); animation: tm_tmRiseIn 200ms cubic-bezier(0.16, 1, 0.3, 1); } .tm_digestDialogHead { display: flex; align-items: baseline; gap: 8px; min-width: 0; } .tm_digestDialogTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_digestDialogFrom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_digestLabel { margin-top: 4px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary, rgba(255, 255, 255, 0.5)); } .tm_digestText { width: 100%; min-height: 96px; max-height: 30vh; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); color: var(--dsw-alias-label-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: calc(11.5px + var(--tm-font-step, 0px)); line-height: 1.62; resize: none; } .tm_digestEmpty { padding: 18px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_digestActions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; } .tm_renameBackdrop { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, 0.42); display: flex; align-items: flex-start; justify-content: center; padding-top: 22vh; } .tm_renameDialog { width: min(420px, 90vw); background: var(--dsw-alias-bg-layer-1); border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; box-shadow: 0 18px 42px rgba(0, 0, 0, 0.42); padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 10px; } .tm_renameHeading { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_renameInput { width: 100%; box-sizing: border-box; font: inherit; font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 8px 10px; outline: none; } .tm_renameInput:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.35)); } .tm_renameError { font-size: calc(12px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_renameActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_renameButton { font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 12px; cursor: pointer; } .tm_renameButton:hover { color: var(--dsw-alias-label-primary); } .tm_renamePrimary { color: #0b0b0c; background: rgb(255, 214, 106); border-color: rgb(255, 214, 106); } .tm_renamePrimary:disabled { opacity: 0.5; cursor: default; } .tm_cardPin { display: inline-flex; align-items: center; flex: none; color: rgb(255, 214, 106); filter: drop-shadow(0 0 5px rgba(255, 214, 106, 0.85)); animation: tm_talkmap-pin-glow 2.6s ease-in-out infinite; } @keyframes tm_talkmap-pin-glow { 0%, 100% { filter: drop-shadow(0 0 4px rgba(255, 214, 106, 0.6)); opacity: 0.92; } 50% { filter: drop-shadow(0 0 9px rgba(255, 214, 106, 1)); opacity: 1; } } .tm_cardReticle { position: absolute; inset: -5px; pointer-events: none; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.45)); } .tm_cardReticle i { position: absolute; width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.9); } .tm_cardReticle i:nth-child(1) { left: 0; top: 0; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; } .tm_cardReticle i:nth-child(2) { right: 0; top: 0; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; } .tm_cardReticle i:nth-child(3) { left: 0; bottom: 0; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; } .tm_cardReticle i:nth-child(4) { right: 0; bottom: 0; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; } .tm_cardQuiet { opacity: 0.62; transition: opacity 140ms ease; } .tm_cardQuiet:hover { opacity: 1; } .tm_stackBadgeBusy { color: rgb(255, 197, 61); border-color: rgba(255, 197, 61, 0.5); } @property --tm-ring-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; } .tm_cardLampRunning::after { content: ''; position: absolute; inset: -2px; border-radius: 12px; padding: 2px; background: conic-gradient( from var(--tm-ring-angle), rgba(255, 255, 255, 0) 0deg, rgba(255, 255, 255, 0) 190deg, rgba(255, 255, 255, 0.18) 250deg, rgba(255, 255, 255, 0.55) 292deg, rgba(255, 255, 255, 1) 325deg, rgba(255, 255, 255, 0.4) 352deg, rgba(255, 255, 255, 0) 360deg ); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; animation: tm_talkmap-ring-sweep 1.8s linear infinite; pointer-events: none; } @keyframes tm_talkmap-ring-sweep { to { --tm-ring-angle: 360deg; } } .tm_cardLampDone { animation: tm_talkmap-lamp-green 2.8s ease-in-out infinite; } .tm_cardLampError { animation: tm_talkmap-lamp-red 1.9s ease-in-out infinite; } .tm_cardLampWaiting { animation: tm_talkmap-lamp-amber 3.4s ease-in-out infinite; } @keyframes tm_talkmap-lamp-green { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.40), 0 0 14px 1px rgba(52, 199, 89, 0.26), 0 0 34px 8px rgba(52, 199, 89, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(52, 199, 89, 0.72), 0 0 24px 5px rgba(52, 199, 89, 0.46), 0 0 62px 20px rgba(52, 199, 89, 0.22); } } @keyframes tm_talkmap-lamp-amber { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.42), 0 0 14px 1px rgba(245, 178, 46, 0.24), 0 0 34px 8px rgba(245, 178, 46, 0.11); } 50% { box-shadow: inset 0 0 0 1px rgba(245, 178, 46, 0.72), 0 0 24px 5px rgba(245, 178, 46, 0.44), 0 0 60px 19px rgba(245, 178, 46, 0.20); } } @keyframes tm_talkmap-lamp-red { 0%, 100% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.46), 0 0 14px 1px rgba(242, 78, 78, 0.28), 0 0 34px 8px rgba(242, 78, 78, 0.12); } 50% { box-shadow: inset 0 0 0 1px rgba(242, 78, 78, 0.80), 0 0 26px 6px rgba(242, 78, 78, 0.52), 0 0 66px 22px rgba(242, 78, 78, 0.26); } } .tm_cardRemove { align-self: flex-start; padding: 3px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_cardRemove:hover { background: var(--dsw-alias-interactive-bg-hover-danger); color: var(--dsw-alias-state-error-primary); } .tm_cardHandle { width: 10px; height: 10px; background: var(--dsw-alias-border-l3); border: 2px solid var(--dsw-alias-bg-layer-1); opacity: 0; } .tm_card:hover .tm_cardHandle, .tm_canvasConnecting .tm_cardHandle { opacity: 1; } .tm_cardHandle:hover { background: var(--dsw-alias-brand-primary); } .tm_cardRefresh { flex: none; margin-left: auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--dsw-alias-label-tertiary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; opacity: 0; transition: opacity 120ms ease; } .tm_card:hover .tm_cardRefresh { opacity: 1; } .tm_cardRefresh:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_cardRefreshBusy { opacity: 1; animation: tm_talkmap-spin 1s linear infinite; } @keyframes tm_talkmap-spin { to { transform: rotate(360deg); } } .tm_spawnPanel { position: absolute; right: 24px; top: 24px; z-index: 6; width: 420px; max-width: calc(100% - 48px); display: flex; flex-direction: column; gap: 8px; padding: 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_spawnHeading { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_spawnFrom { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_spawnModes { display: flex; gap: 6px; } .tm_spawnModeBtn { flex: 1; padding: 5px 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnModeBtn:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_spawnModeActive { border-color: var(--dsw-alias-brand-primary); color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_spawnHint { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_spawnTextarea { width: 100%; resize: vertical; min-height: 140px; padding: 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); line-height: 1.5; font-family: inherit; } .tm_spawnError { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_spawnActions { display: flex; justify-content: flex-end; gap: 8px; } .tm_spawnBtnPrimary { padding: 6px 16px; border: none; border-radius: 8px; background: var(--dsw-alias-button-primary-fill); color: var(--dsw-alias-label-primary-foreground); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnPrimary:hover { background: var(--dsw-alias-button-primary-hover); } .tm_spawnBtnPrimary:disabled { background: var(--dsw-alias-button-primary-dimmed); cursor: default; } .tm_spawnBtnGhost { padding: 6px 16px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; } .tm_spawnBtnGhost:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_wsFrame { position: relative; border: 1.5px dashed var(--dsw-alias-border-l2); border-radius: 16px; background: transparent; } .tm_wsFrameBlocked { border-color: rgb(242, 78, 78) !important; box-shadow: 0 0 0 1px rgba(242, 78, 78, 0.45) inset; } .tm_wsFrameSelected { border-style: solid; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameLabel { position: absolute; top: -12px; left: 14px; display: flex; align-items: center; gap: 6px; padding: 2px 10px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-1); font-size: calc(12px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); white-space: nowrap; pointer-events: auto; cursor: grab; z-index: 5; } .tm_wsFrameLabel:active { cursor: grabbing; } .tm_wsFrameEdge { position: absolute; pointer-events: auto; cursor: grab; } .tm_wsFrameEdge:active { cursor: grabbing; } .tm_wsFrameCount { font-weight: 400; color: var(--dsw-alias-label-tertiary); } .tm_menu { position: absolute; z-index: 60; min-width: 200px; max-width: 280px; max-height: 380px; overflow-y: auto; display: flex; flex-direction: column; padding: 6px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 30px var(--dsw-alias-bg-mask-2); } .tm_menuTitle { flex: none; padding: 4px 10px 6px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuSearch { flex: none; box-sizing: border-box; width: calc(100% - 8px); margin: 2px 4px 6px; padding: 5px 8px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 7px; background: var(--dsw-alias-bg-base); color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); font-family: inherit; } .tm_menuHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-dimmed); } .tm_menuPreview { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); word-break: break-all; } .tm_menuError { flex: none; padding: 0 10px 4px; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-state-error-primary); word-break: break-all; } .tm_menuEmpty { padding: 8px 10px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_menuItem { flex: none; display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 6px 10px; border: none; border-radius: 7px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(13px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_menuIcon { flex: none; width: 14px; height: 14px; color: var(--dsw-alias-label-secondary); } .tm_menuItemDanger { color: rgb(242, 78, 78); } .tm_menuItemDanger .tm_menuIcon { color: rgb(242, 78, 78); } .tm_menuItem:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_menuItem:disabled { color: var(--dsw-alias-label-dimmed); cursor: default; } .tm_wsFrameHidden { font-weight: 400; color: var(--dsw-alias-state-warn-primary); } .tm_emptyHint { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: calc(13px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); pointer-events: none; z-index: 4; } .tm_toast { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 8; max-width: 70%; padding: 7px 16px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 4px 16px var(--dsw-alias-bg-mask-2); font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); pointer-events: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .tm_stackCell { position: relative; width: 224px; height: 104px; cursor: pointer; } .tm_stackSheetBack, .tm_stackSheetMid { position: absolute; inset: 0; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); } .tm_stackSheetBack { transform: translate(11px, 11px) scale(0.95); opacity: 0.35; } .tm_stackSheetMid { transform: translate(5px, 5px) scale(0.977); opacity: 0.6; } .tm_stackFace { position: absolute; inset: 0; box-sizing: border-box; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 12px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 12px; background: var(--dsw-alias-bg-layer-1); transition: border-color 140ms ease, transform 140ms ease; } .tm_stackCell:hover .tm_stackFace { border-color: var(--dsw-alias-brand-primary); transform: translateY(-1px); } .tm_stackFaceTitle { font-size: calc(13px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; } .tm_stackBadge { flex: none; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-secondary); font-size: calc(11px + var(--tm-font-step, 0px)); font-variant-numeric: tabular-nums; } .tm_drawerBackdrop { position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center; background: var(--dsw-alias-bg-mask-2); } .tm_drawer { width: min(1120px, 94%); max-height: 84%; box-sizing: border-box; display: flex; flex-direction: column; border: 1px solid var(--dsw-alias-border-l1); border-radius: 16px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 18px 48px var(--dsw-alias-bg-mask-2); overflow: hidden; } .tm_drawerHead { display: flex; align-items: center; gap: 10px; flex: none; padding: 12px 14px; border-bottom: 1px solid var(--dsw-alias-border-l1); } .tm_drawerTitle { font-size: calc(14px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); } .tm_drawerCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerSpace { flex: 1; } .tm_drawerHint { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); } .tm_drawerClose { flex: none; width: 30px; height: 30px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(16px + var(--tm-font-step, 0px)); line-height: 1; cursor: pointer; } .tm_drawerClose:hover { background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-primary); } .tm_drawerHits > .tm_drawerHit { animation: tm_tmPopIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerHits > .tm_drawerHit:nth-child(1) { animation-delay: 20ms; } .tm_drawerHits > .tm_drawerHit:nth-child(2) { animation-delay: 34ms; } .tm_drawerHits > .tm_drawerHit:nth-child(3) { animation-delay: 48ms; } .tm_drawerHits > .tm_drawerHit:nth-child(4) { animation-delay: 62ms; } .tm_drawerHits > .tm_drawerHit:nth-child(5) { animation-delay: 76ms; } .tm_drawerHits > .tm_drawerHit:nth-child(n+6) { animation-delay: 90ms; } .tm_searchLoading { display: flex; flex-direction: column; gap: 8px; padding: 6px 0 2px; } .tm_searchLoadingBar { position: relative; height: 2px; border-radius: 2px; overflow: hidden; background: rgba(255, 255, 255, 0.07); } .tm_searchLoadingBar > i { position: absolute; inset: 0 auto 0 0; width: 34%; border-radius: 2px; background: linear-gradient(90deg, transparent, var(--dsw-alias-brand-primary), transparent); animation: tm_tmSlideBar 1150ms cubic-bezier(0.4, 0, 0.2, 1) infinite; } @keyframes tm_tmSlideBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(320%); } } .tm_searchSkeletonRow { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; } .tm_searchSkeletonTitle, .tm_searchSkeletonLine { display: block; height: 9px; border-radius: 4px; background: linear-gradient(90deg, rgba(255,255,255,0.05), rgba(255,255,255,0.12), rgba(255,255,255,0.05)); background-size: 220% 100%; animation: tm_tmShimmer 1300ms ease-in-out infinite; } .tm_searchSkeletonTitle { width: 38%; } .tm_searchSkeletonLine { width: 78%; } @keyframes tm_tmShimmer { 0% { background-position: 120% 0; } 100% { background-position: -60% 0; } } @media (prefers-reduced-motion: reduce) { .tm_drawerHits > .tm_drawerHit, .tm_searchLoadingBar > i, .tm_searchSkeletonTitle, .tm_searchSkeletonLine { animation: none; } } @keyframes tm_tmFadeIn { from { opacity: 0; } to { opacity: 1; } } @keyframes tm_tmFadeOut { from { opacity: 1; } to { opacity: 0; } } @keyframes tm_tmRiseIn { from { opacity: 0; transform: translateY(26px) scale(0.94); } 60% { opacity: 1; } to { opacity: 1; transform: none; } } @keyframes tm_tmRiseOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.985); } } @keyframes tm_tmPopIn { from { opacity: 0; transform: translateY(6px) scale(0.97); } to { opacity: 1; transform: none; } } @keyframes tm_tmCardIn { from { opacity: 0; transform: translateY(6px) scale(0.99); } to { opacity: 1; transform: none; } } .tm_drawerBackdrop { animation: tm_tmFadeIn 180ms cubic-bezier(0.16, 1, 0.3, 1) both; } .tm_drawerBackdropOut { animation: tm_tmFadeOut 130ms ease-in both; } .tm_drawer { animation: tm_tmRiseIn 260ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_drawerOut { animation: tm_tmRiseOut 150ms cubic-bezier(0.4, 0, 0.7, 0.2) both; } .tm_globalSearchBackdrop { animation: tm_tmFadeIn 130ms ease-out both; } .tm_globalSearchPanel { animation: tm_tmRiseIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; } .tm_menu { animation: tm_tmPopIn 120ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_card { transition: transform 120ms ease-out, box-shadow 160ms ease-out, opacity 160ms ease-out; } .tm_card:hover { transform: translateY(-1px); } .tm_reactFlowNodeEnter { animation: tm_tmCardIn 170ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_stackCell { transition: transform 120ms ease-out, box-shadow 160ms ease-out; } .tm_stackCell:hover { transform: translateY(-2px); } .tm_wsFrameLabel { transition: color 120ms ease-out, background 120ms ease-out, box-shadow 120ms ease-out; } .tm_wsFrameLabel:hover { box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35); } .tm_toast { animation: tm_tmRiseIn 160ms cubic-bezier(0.2, 0.9, 0.25, 1) both; } .tm_snippetCode { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.94em; padding: 0 3px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); } .tm_snippetLink { color: var(--dsw-alias-brand-primary); } @media (prefers-reduced-motion: reduce) { .tm_drawerBackdrop, .tm_drawerBackdropOut, .tm_drawer, .tm_drawerOut, .tm_globalSearchBackdrop, .tm_globalSearchPanel, .tm_menu, .tm_toast, .tm_reactFlowNodeEnter { animation: none; } .tm_card, .tm_stackCell, .tm_wsFrameLabel { transition: none; } .tm_card:hover, .tm_stackCell:hover { transform: none; } } .tm_drawerSearchRow { display: flex; align-items: center; gap: 8px; padding: 0 14px 8px; } .tm_drawerSearch { flex: 1; min-width: 0; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-primary); background: var(--dsw-alias-bg-layer-2, rgba(255, 255, 255, 0.06)); border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 6px 10px; outline: none; } .tm_drawerSearch:focus { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerSearchGo { flex: none; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 5px 10px; cursor: pointer; } .tm_drawerSearchGo:hover { color: var(--dsw-alias-label-primary); } .tm_drawerSearchState { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); flex: none; } .tm_drawerSearchError { flex: none; max-width: 52%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: calc(11px + var(--tm-font-step, 0px)); color: rgb(242, 78, 78); } .tm_drawerEmpty { grid-column: 1 / -1; padding: 10px 4px; font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); } .tm_drawerHits { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--dsw-alias-border-l2); } .tm_drawerHitsHead { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); letter-spacing: 0.04em; } .tm_drawerHit { display: flex; flex-direction: column; gap: 3px; text-align: left; padding: 8px 10px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 9px; background: transparent; color: var(--dsw-alias-label-primary); font: inherit; cursor: pointer; } .tm_drawerHit:hover { border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.3)); } .tm_drawerRoleChip { flex: none; margin-right: 6px; padding: 0 5px; border-radius: 4px; font-size: calc(9.5px + var(--tm-font-step, 0px)); line-height: 1.6; color: var(--dsw-alias-label-secondary); background: rgba(255, 255, 255, 0.07); } .tm_drawerRoleChip[data-talkmap-role="user"] { color: rgba(160, 210, 255, 0.95); background: rgba(90, 160, 255, 0.14); } .tm_hitMark { color: #0b0b0c; background: rgb(255, 214, 106); border-radius: 3px; padding: 0 2px; } .tm_drawerHitHead { display: flex; align-items: center; gap: 6px; min-width: 0; } .tm_drawerAgentChip { flex: none; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--dsw-alias-border-l2); font-size: calc(10px + var(--tm-font-step, 0px)); line-height: 1.5; color: var(--dsw-alias-label-secondary); letter-spacing: 0.02em; } .tm_drawerAgentChipSub { color: rgb(255, 214, 106); border-color: rgba(255, 214, 106, 0.5); background: rgba(255, 214, 106, 0.1); } .tm_drawerHitTitle { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(12.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-primary); background: transparent; border: none; padding: 0 0 2px; cursor: pointer; } .tm_drawerHitTitle:hover { color: var(--dsw-alias-brand-primary); } .tm_peek { position: fixed; z-index: 80; width: min(500px, 88vw); max-height: 42vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--dsw-alias-border-l2); background: var(--dsw-alias-bg-layer-1); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); } .tm_peekTitle { font-size: calc(11.5px + var(--tm-font-step, 0px)); font-weight: 600; color: var(--dsw-alias-label-secondary); padding-bottom: 4px; margin-bottom: 2px; border-bottom: 1px solid var(--dsw-alias-border-l2); } .tm_peekLine { font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1.55; color: var(--dsw-alias-label-primary); white-space: pre-wrap; word-break: break-word; } .tm_peekHint { margin-top: 6px; font-size: calc(10.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); opacity: 0.7; } .tm_drawerHitMore { align-self: flex-start; margin-top: 2px; font: inherit; font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; cursor: pointer; } .tm_drawerHitMore:hover { color: var(--dsw-alias-brand-primary); } .tm_drawerHitBlock { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; padding-left: 2px; } .tm_drawerHitLine { display: block; width: 100%; text-align: left; font: inherit; font-size: calc(11.5px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); background: transparent; border: none; padding: 2px 0 2px 10px; border-left: 2px solid var(--dsw-alias-border-l2); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tm_drawerHitLine:hover { color: var(--dsw-alias-label-primary); border-left-color: var(--dsw-alias-brand-primary); } .tm_drawerScroll { overscroll-behavior: contain; scroll-behavior: auto; flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y proximity; display: grid; grid-template-columns: repeat(auto-fill, 224px); justify-content: center; align-content: start; gap: 12px; padding: 16px; } .tm_drawerCard[draggable="true"] { cursor: grab; } .tm_drawerCard[data-talkmap-drag="1"] { cursor: grabbing; opacity: 0.55; transform: scale(0.98); } .tm_cardLinks { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 4px; } .tm_cardLinkChip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; border-radius: 4px; font-size: calc(9.5px + var(--tm-font-step, 0px)); line-height: 1.7; color: var(--dsw-alias-label-secondary); background: rgba(255, 255, 255, 0.06); } .tm_cardLinkChip[data-talkmap-link="out"] { color: rgba(255, 214, 106, 0.9); background: rgba(255, 214, 106, 0.12); } .tm_drawerCard { width: 224px; box-sizing: border-box; scroll-snap-align: start; text-align: left; font: inherit; cursor: pointer; background: var(--dsw-alias-bg-layer-1); } .tm_drawerCard:hover { border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResize { position: absolute; z-index: 2; pointer-events: auto; opacity: 0.5; } .tm_wsFrameResize:hover { opacity: 1; border-color: var(--dsw-alias-brand-primary); } .tm_wsFrameResizeN { cursor: ns-resize; border-top: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 14px 0 0; } .tm_wsFrameResizeS { cursor: ns-resize; border-bottom: 3px solid var(--dsw-alias-border-l3); border-radius: 0 0 14px 14px; } .tm_wsFrameResizeW { cursor: ew-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-radius: 14px 0 0 14px; } .tm_wsFrameResizeE { cursor: ew-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-radius: 0 14px 14px 0; } .tm_wsFrameResizeNw, .tm_wsFrameResizeNe, .tm_wsFrameResizeSw, .tm_wsFrameResizeSe { width: 26px; height: 26px; z-index: 3; } .tm_wsFrameResizeNw { cursor: nwse-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-left-radius: 14px; } .tm_wsFrameResizeNe { cursor: nesw-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-top: 3px solid var(--dsw-alias-border-l3); border-top-right-radius: 14px; } .tm_wsFrameResizeSw { cursor: nesw-resize; border-left: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-left-radius: 14px; } .tm_wsFrameResizeSe { cursor: nwse-resize; border-right: 3px solid var(--dsw-alias-border-l3); border-bottom: 3px solid var(--dsw-alias-border-l3); border-bottom-right-radius: 14px; } .tm_batchBar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 8px 24px var(--dsw-alias-bg-mask-2); } .tm_batchCount { font-size: calc(12px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-secondary); white-space: nowrap; } .tm_batchSpace { width: 6px; } .tm_batchAction { padding: 5px 14px; border: 1px solid var(--dsw-alias-border-l2); border-radius: 999px; background: transparent; color: var(--dsw-alias-label-primary); font-size: calc(12px + var(--tm-font-step, 0px)); cursor: pointer; white-space: nowrap; } .tm_batchAction:hover:not(:disabled) { background: var(--dsw-alias-interactive-bg-hover); } .tm_batchAction:disabled { opacity: 0.5; cursor: default; } .tm_batchDanger { color: var(--dsw-alias-state-error-primary); } .tm_pickBox { position: absolute; top: 6px; right: 6px; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--dsw-alias-border-l3); border-radius: 4px; background: var(--dsw-alias-bg-base); color: transparent; font-size: calc(11px + var(--tm-font-step, 0px)); line-height: 1; pointer-events: none; } .tm_pickBoxChecked { border-color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-brand-primary); color: #fff; } .tm_colorToolbar { position: absolute; top: 12px; left: 12px; z-index: 20; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--dsw-alias-border-l1); border-radius: 999px; background: var(--dsw-alias-bg-layer-1); box-shadow: 0 6px 20px var(--dsw-alias-bg-mask-2); } .tm_colorToolbarLabel { font-size: calc(11px + var(--tm-font-step, 0px)); color: var(--dsw-alias-label-tertiary); margin-right: 2px; white-space: nowrap; } .tm_colorSwatch { width: 16px; height: 16px; padding: 0; border: 1px solid var(--dsw-alias-border-l2); border-radius: 50%; cursor: pointer; } .tm_colorSwatch:hover { transform: scale(1.15); } .tm_colorSwatchClear { display: flex; align-items: center; justify-content: center; background: transparent; color: var(--dsw-alias-label-secondary); font-size: calc(12px + var(--tm-font-step, 0px)); line-height: 1; } .tm_colorSwatchClear:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); } .tm_drawerWires { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: visible; } .tm_drawerScroll { position: relative; } .tm_drawerScroll > .tm_card, .tm_drawerScroll > [data-stack-card] { position: relative; z-index: 1; } .tm_canvas .react-flow__edges { z-index: 0 !important; } .tm_canvas .react-flow__nodes { z-index: 1 !important; } .tm_statusRail { position: absolute; left: 0; top: 50%; transform: translateY(-50%); z-index: 6; display: flex; align-items: flex-start; pointer-events: none; } .tm_statusRailTab { pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 6px; border: 1px solid var(--dsw-alias-border-secondary); border-left: none; border-radius: 0 10px 10px 0; background: var(--dsw-alias-interactive-bg-hover); color: var(--dsw-alias-label-secondary); cursor: pointer; font: inherit; transition: color 120ms ease, background 120ms ease; } .tm_statusRailTab:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_statusRailOpen .tm_statusRailTab { color: var(--dsw-alias-brand-primary); background: var(--dsw-alias-interactive-bg-active); } .tm_statusRailTabIcon { font-size: 13px; line-height: 1; } .tm_statusRailTabCount { font-size: 10px; line-height: 1; padding: 2px 4px; border-radius: 999px; background: var(--dsw-alias-brand-primary); color: var(--dsw-alias-label-onbrand, #0b0d12); font-variant-numeric: tabular-nums; } .tm_statusRailPanel { pointer-events: auto; width: 232px; max-height: 60vh; overflow-y: auto; margin-left: 6px; padding: 8px; border: 1px solid var(--dsw-alias-border-secondary); border-radius: 12px; background: var(--dsw-alias-bg-elevated, rgba(20, 22, 28, 0.96)); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35); backdrop-filter: blur(8px); } .tm_statusRailHead { display: flex; align-items: center; gap: 6px; padding: 2px 2px 8px; } .tm_statusRailTitle { flex: 1; font-size: 12px; color: var(--dsw-alias-label-secondary); } .tm_statusRailClose { border: none; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px; border-radius: 6px; } .tm_statusRailClose:hover { color: var(--dsw-alias-label-primary); background: var(--dsw-alias-interactive-bg-hover); } .tm_statusRailEmpty { padding: 10px 6px 12px; font-size: 12px; line-height: 1.5; color: var(--dsw-alias-label-secondary); } .tm_statusRailRow { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 8px; cursor: grab; font-size: 12px; color: var(--dsw-alias-label-primary); } .tm_statusRailRow:hover { background: var(--dsw-alias-interactive-bg-hover); } .tm_statusRailRow:active { cursor: grabbing; } .tm_statusRailLamp { flex: none; width: 7px; height: 7px; border-radius: 999px; background: var(--dsw-alias-label-tertiary, #6b7280); } .tm_statusRailLamp_running { background: #e9ecf3; box-shadow: 0 0 6px rgba(233, 236, 243, 0.7); } .tm_statusRailLamp_waiting { background: #f5b22e; box-shadow: 0 0 6px rgba(245, 178, 46, 0.7); } .tm_statusRailLamp_done { background: #34c759; box-shadow: 0 0 6px rgba(52, 199, 89, 0.6); } .tm_statusRailLamp_error { background: #f24e4e; box-shadow: 0 0 6px rgba(242, 78, 78, 0.7); } .tm_statusRailRowTitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .tm_statusRailRowLamp { flex: none; font-size: 10px; color: var(--dsw-alias-label-secondary); }`;
 if (typeof document !== "undefined") {
   const __selector = "style[data-plugin-css=" + JSON.stringify(__tagId) + "]";
   if (document.querySelector(__selector) === null) {
@@ -1374,7 +1390,7 @@ if (typeof document !== "undefined") {
     document.head.appendChild(__tag);
   }
 }
-var talk_map_default = { "backButton": "tm_backButton", "batchAction": "tm_batchAction", "batchBar": "tm_batchBar", "batchCount": "tm_batchCount", "batchDanger": "tm_batchDanger", "batchSpace": "tm_batchSpace", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardChip": "tm_cardChip", "cardChipDone": "tm_cardChipDone", "cardChipDraft": "tm_cardChipDraft", "cardChipError": "tm_cardChipError", "cardChipInterrupted": "tm_cardChipInterrupted", "cardChipRunning": "tm_cardChipRunning", "cardChipWaiting": "tm_cardChipWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardLinkChip": "tm_cardLinkChip", "cardLinks": "tm_cardLinks", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardPin": "tm_cardPin", "cardQuiet": "tm_cardQuiet", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardReticle": "tm_cardReticle", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "dialogBackdrop": "tm_dialogBackdrop", "digestActions": "tm_digestActions", "digestDialog": "tm_digestDialog", "digestDialogFrom": "tm_digestDialogFrom", "digestDialogHead": "tm_digestDialogHead", "digestDialogTitle": "tm_digestDialogTitle", "digestEmpty": "tm_digestEmpty", "digestLabel": "tm_digestLabel", "digestText": "tm_digestText", "drawer": "tm_drawer", "drawerAgentChip": "tm_drawerAgentChip", "drawerAgentChipSub": "tm_drawerAgentChipSub", "drawerBackdrop": "tm_drawerBackdrop", "drawerBackdropOut": "tm_drawerBackdropOut", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerEmpty": "tm_drawerEmpty", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerHit": "tm_drawerHit", "drawerHitBlock": "tm_drawerHitBlock", "drawerHitHead": "tm_drawerHitHead", "drawerHitLine": "tm_drawerHitLine", "drawerHitMore": "tm_drawerHitMore", "drawerHitTitle": "tm_drawerHitTitle", "drawerHits": "tm_drawerHits", "drawerHitsHead": "tm_drawerHitsHead", "drawerOut": "tm_drawerOut", "drawerRoleChip": "tm_drawerRoleChip", "drawerScroll": "tm_drawerScroll", "drawerScrollSensor": "tm_drawerScrollSensor", "drawerSearch": "tm_drawerSearch", "drawerSearchError": "tm_drawerSearchError", "drawerSearchGo": "tm_drawerSearchGo", "drawerSearchRow": "tm_drawerSearchRow", "drawerSearchState": "tm_drawerSearchState", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "drawerWires": "tm_drawerWires", "emptyHint": "tm_emptyHint", "fontButton": "tm_fontButton", "fontGlyphLarge": "tm_fontGlyphLarge", "fontGlyphSmall": "tm_fontGlyphSmall", "fontGroup": "tm_fontGroup", "fontReset": "tm_fontReset", "fontSign": "tm_fontSign", "globalSearch": "tm_globalSearch", "globalSearchBackdrop": "tm_globalSearchBackdrop", "globalSearchBody": "tm_globalSearchBody", "globalSearchButton": "tm_globalSearchButton", "globalSearchHead": "tm_globalSearchHead", "globalSearchInput": "tm_globalSearchInput", "globalSearchPanel": "tm_globalSearchPanel", "globalSearchTitle": "tm_globalSearchTitle", "header": "tm_header", "headerSpace": "tm_headerSpace", "hitMark": "tm_hitMark", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuIcon": "tm_menuIcon", "menuItem": "tm_menuItem", "menuItemDanger": "tm_menuItemDanger", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "panel": "tm_panel", "peek": "tm_peek", "peekHint": "tm_peekHint", "peekLine": "tm_peekLine", "peekTitle": "tm_peekTitle", "pickBox": "tm_pickBox", "pickBoxChecked": "tm_pickBoxChecked", "reactFlowNodeEnter": "tm_reactFlowNodeEnter", "renameActions": "tm_renameActions", "renameBackdrop": "tm_renameBackdrop", "renameButton": "tm_renameButton", "renameDialog": "tm_renameDialog", "renameError": "tm_renameError", "renameHeading": "tm_renameHeading", "renameInput": "tm_renameInput", "renamePrimary": "tm_renamePrimary", "runningDot": "tm_runningDot", "searchInlineLoading": "tm_searchInlineLoading", "searchLoading": "tm_searchLoading", "searchLoadingBar": "tm_searchLoadingBar", "searchSkeletonLine": "tm_searchSkeletonLine", "searchSkeletonRow": "tm_searchSkeletonRow", "searchSkeletonTitle": "tm_searchSkeletonTitle", "snippetCode": "tm_snippetCode", "snippetLink": "tm_snippetLink", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackBadgeBusy": "tm_stackBadgeBusy", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameBlocked": "tm_wsFrameBlocked", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeN": "tm_wsFrameResizeN", "wsFrameResizeNe": "tm_wsFrameResizeNe", "wsFrameResizeNw": "tm_wsFrameResizeNw", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameResizeSe": "tm_wsFrameResizeSe", "wsFrameResizeSw": "tm_wsFrameResizeSw", "wsFrameResizeW": "tm_wsFrameResizeW", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
+var talk_map_default = { "backButton": "tm_backButton", "batchAction": "tm_batchAction", "batchBar": "tm_batchBar", "batchCount": "tm_batchCount", "batchDanger": "tm_batchDanger", "batchSpace": "tm_batchSpace", "canvas": "tm_canvas", "canvasConnecting": "tm_canvasConnecting", "card": "tm_card", "cardBadgeDone": "tm_cardBadgeDone", "cardBadgeWaiting": "tm_cardBadgeWaiting", "cardChip": "tm_cardChip", "cardChipDone": "tm_cardChipDone", "cardChipDraft": "tm_cardChipDraft", "cardChipError": "tm_cardChipError", "cardChipInterrupted": "tm_cardChipInterrupted", "cardChipRunning": "tm_cardChipRunning", "cardChipWaiting": "tm_cardChipWaiting", "cardFooter": "tm_cardFooter", "cardGhost": "tm_cardGhost", "cardHandle": "tm_cardHandle", "cardLampDone": "tm_cardLampDone", "cardLampError": "tm_cardLampError", "cardLampRunning": "tm_cardLampRunning", "cardLampWaiting": "tm_cardLampWaiting", "cardLinkChip": "tm_cardLinkChip", "cardLinks": "tm_cardLinks", "cardNext": "tm_cardNext", "cardNextLabel": "tm_cardNextLabel", "cardNextText": "tm_cardNextText", "cardPin": "tm_cardPin", "cardQuiet": "tm_cardQuiet", "cardRefresh": "tm_cardRefresh", "cardRefreshBusy": "tm_cardRefreshBusy", "cardRemove": "tm_cardRemove", "cardReticle": "tm_cardReticle", "cardSelected": "tm_cardSelected", "cardStale": "tm_cardStale", "cardSummary": "tm_cardSummary", "cardTime": "tm_cardTime", "cardTitle": "tm_cardTitle", "cardTop": "tm_cardTop", "closeButton": "tm_closeButton", "colorSwatch": "tm_colorSwatch", "colorSwatchClear": "tm_colorSwatchClear", "colorToolbar": "tm_colorToolbar", "colorToolbarLabel": "tm_colorToolbarLabel", "dialogBackdrop": "tm_dialogBackdrop", "digestActions": "tm_digestActions", "digestDialog": "tm_digestDialog", "digestDialogFrom": "tm_digestDialogFrom", "digestDialogHead": "tm_digestDialogHead", "digestDialogTitle": "tm_digestDialogTitle", "digestEmpty": "tm_digestEmpty", "digestLabel": "tm_digestLabel", "digestText": "tm_digestText", "drawer": "tm_drawer", "drawerAgentChip": "tm_drawerAgentChip", "drawerAgentChipSub": "tm_drawerAgentChipSub", "drawerBackdrop": "tm_drawerBackdrop", "drawerBackdropOut": "tm_drawerBackdropOut", "drawerCard": "tm_drawerCard", "drawerClose": "tm_drawerClose", "drawerCount": "tm_drawerCount", "drawerEmpty": "tm_drawerEmpty", "drawerHead": "tm_drawerHead", "drawerHint": "tm_drawerHint", "drawerHit": "tm_drawerHit", "drawerHitBlock": "tm_drawerHitBlock", "drawerHitHead": "tm_drawerHitHead", "drawerHitLine": "tm_drawerHitLine", "drawerHitMore": "tm_drawerHitMore", "drawerHitTitle": "tm_drawerHitTitle", "drawerHits": "tm_drawerHits", "drawerHitsHead": "tm_drawerHitsHead", "drawerOut": "tm_drawerOut", "drawerRoleChip": "tm_drawerRoleChip", "drawerScroll": "tm_drawerScroll", "drawerScrollSensor": "tm_drawerScrollSensor", "drawerSearch": "tm_drawerSearch", "drawerSearchError": "tm_drawerSearchError", "drawerSearchGo": "tm_drawerSearchGo", "drawerSearchRow": "tm_drawerSearchRow", "drawerSearchState": "tm_drawerSearchState", "drawerSpace": "tm_drawerSpace", "drawerTitle": "tm_drawerTitle", "drawerWires": "tm_drawerWires", "emptyHint": "tm_emptyHint", "fontButton": "tm_fontButton", "fontGlyphLarge": "tm_fontGlyphLarge", "fontGlyphSmall": "tm_fontGlyphSmall", "fontGroup": "tm_fontGroup", "fontReset": "tm_fontReset", "fontSign": "tm_fontSign", "globalSearch": "tm_globalSearch", "globalSearchBackdrop": "tm_globalSearchBackdrop", "globalSearchBody": "tm_globalSearchBody", "globalSearchButton": "tm_globalSearchButton", "globalSearchHead": "tm_globalSearchHead", "globalSearchInput": "tm_globalSearchInput", "globalSearchPanel": "tm_globalSearchPanel", "globalSearchTitle": "tm_globalSearchTitle", "header": "tm_header", "headerSpace": "tm_headerSpace", "hitMark": "tm_hitMark", "langButton": "tm_langButton", "menu": "tm_menu", "menuEmpty": "tm_menuEmpty", "menuError": "tm_menuError", "menuHint": "tm_menuHint", "menuIcon": "tm_menuIcon", "menuItem": "tm_menuItem", "menuItemDanger": "tm_menuItemDanger", "menuPreview": "tm_menuPreview", "menuSearch": "tm_menuSearch", "menuTitle": "tm_menuTitle", "panel": "tm_panel", "peek": "tm_peek", "peekHint": "tm_peekHint", "peekLine": "tm_peekLine", "peekTitle": "tm_peekTitle", "pickBox": "tm_pickBox", "pickBoxChecked": "tm_pickBoxChecked", "reactFlowNodeEnter": "tm_reactFlowNodeEnter", "renameActions": "tm_renameActions", "renameBackdrop": "tm_renameBackdrop", "renameButton": "tm_renameButton", "renameDialog": "tm_renameDialog", "renameError": "tm_renameError", "renameHeading": "tm_renameHeading", "renameInput": "tm_renameInput", "renamePrimary": "tm_renamePrimary", "runningDot": "tm_runningDot", "searchInlineLoading": "tm_searchInlineLoading", "searchLoading": "tm_searchLoading", "searchLoadingBar": "tm_searchLoadingBar", "searchSkeletonLine": "tm_searchSkeletonLine", "searchSkeletonRow": "tm_searchSkeletonRow", "searchSkeletonTitle": "tm_searchSkeletonTitle", "snippetCode": "tm_snippetCode", "snippetLink": "tm_snippetLink", "spawnActions": "tm_spawnActions", "spawnBtnGhost": "tm_spawnBtnGhost", "spawnBtnPrimary": "tm_spawnBtnPrimary", "spawnError": "tm_spawnError", "spawnFrom": "tm_spawnFrom", "spawnHeading": "tm_spawnHeading", "spawnHint": "tm_spawnHint", "spawnModeActive": "tm_spawnModeActive", "spawnModeBtn": "tm_spawnModeBtn", "spawnModes": "tm_spawnModes", "spawnPanel": "tm_spawnPanel", "spawnTextarea": "tm_spawnTextarea", "stackBadge": "tm_stackBadge", "stackBadgeBusy": "tm_stackBadgeBusy", "stackCell": "tm_stackCell", "stackFace": "tm_stackFace", "stackFaceTitle": "tm_stackFaceTitle", "stackSheetBack": "tm_stackSheetBack", "stackSheetMid": "tm_stackSheetMid", "statusRail": "tm_statusRail", "statusRailClose": "tm_statusRailClose", "statusRailEmpty": "tm_statusRailEmpty", "statusRailHead": "tm_statusRailHead", "statusRailLamp": "tm_statusRailLamp", "statusRailLamp_done": "tm_statusRailLamp_done", "statusRailLamp_error": "tm_statusRailLamp_error", "statusRailLamp_running": "tm_statusRailLamp_running", "statusRailLamp_waiting": "tm_statusRailLamp_waiting", "statusRailOpen": "tm_statusRailOpen", "statusRailPanel": "tm_statusRailPanel", "statusRailRow": "tm_statusRailRow", "statusRailRowLamp": "tm_statusRailRowLamp", "statusRailRowTitle": "tm_statusRailRowTitle", "statusRailTab": "tm_statusRailTab", "statusRailTabCount": "tm_statusRailTabCount", "statusRailTabIcon": "tm_statusRailTabIcon", "statusRailTitle": "tm_statusRailTitle", "toast": "tm_toast", "toggleButton": "tm_toggleButton", "toggleButtonActive": "tm_toggleButtonActive", "toggleIcon": "tm_toggleIcon", "toggleLabel": "tm_toggleLabel", "toggleRow": "tm_toggleRow", "wsFrame": "tm_wsFrame", "wsFrameBlocked": "tm_wsFrameBlocked", "wsFrameCount": "tm_wsFrameCount", "wsFrameEdge": "tm_wsFrameEdge", "wsFrameHidden": "tm_wsFrameHidden", "wsFrameLabel": "tm_wsFrameLabel", "wsFrameResize": "tm_wsFrameResize", "wsFrameResizeE": "tm_wsFrameResizeE", "wsFrameResizeN": "tm_wsFrameResizeN", "wsFrameResizeNe": "tm_wsFrameResizeNe", "wsFrameResizeNw": "tm_wsFrameResizeNw", "wsFrameResizeS": "tm_wsFrameResizeS", "wsFrameResizeSe": "tm_wsFrameResizeSe", "wsFrameResizeSw": "tm_wsFrameResizeSw", "wsFrameResizeW": "tm_wsFrameResizeW", "wsFrameSelected": "tm_wsFrameSelected", "zoomResetLabel": "tm_zoomResetLabel" };
 
 // src/client/markdown-inline.tsx
 var import_jsx_runtime = require("react/jsx-runtime");
@@ -1651,7 +1667,7 @@ function GlobalSearch(props) {
 }
 
 // src/client/MapCanvas.tsx
-var import_react12 = require("react");
+var import_react13 = require("react");
 
 // node_modules/@xyflow/react/dist/esm/index.js
 var import_jsx_runtime4 = require("react/jsx-runtime");
@@ -13654,8 +13670,182 @@ function StackNode(props) {
   );
 }
 
-// src/client/use-dark.ts
+// src/client/StatusRail.tsx
 var import_react11 = require("react");
+var import_jsx_runtime15 = require("react/jsx-runtime");
+var OPEN_KEY = "dsh.talk-map.status-rail.open.v1";
+var ORDER_KEY = "dsh.talk-map.status-rail.order.v1";
+function readOpen() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(OPEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeOpen(open) {
+  try {
+    window.localStorage.setItem(OPEN_KEY, open ? "1" : "0");
+  } catch {
+  }
+}
+function readOrder() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(ORDER_KEY);
+    const parsed = raw === null ? [] : JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item) => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function writeOrder(order) {
+  try {
+    window.localStorage.setItem(ORDER_KEY, JSON.stringify(order));
+  } catch {
+  }
+}
+function lampLabel(lamp) {
+  return t(`statusRail.lamp.${lamp}`);
+}
+function StatusRail(props) {
+  const [open, setOpen] = (0, import_react11.useState)(() => readOpen());
+  const [order, setOrder] = (0, import_react11.useState)(() => readOrder());
+  const seenRef = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
+  const dragFrom = (0, import_react11.useRef)(null);
+  const signature = (0, import_react11.useMemo)(
+    () => props.entries.map((entry) => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join("|"),
+    [props.entries]
+  );
+  (0, import_react11.useEffect)(() => {
+    const seen = seenRef.current;
+    const fresh = [];
+    for (const entry of props.entries) {
+      const before = seen.get(entry.cardId);
+      const now2 = `${entry.lamp}:${entry.stamp}`;
+      if (before !== now2) fresh.push(entry.cardId);
+      seen.set(entry.cardId, now2);
+    }
+    const alive = new Set(props.entries.map((entry) => entry.cardId));
+    setOrder((current) => {
+      const kept = current.filter((cardId) => alive.has(cardId));
+      const next = [...fresh.filter((cardId) => alive.has(cardId)).reverse(), ...kept];
+      for (const entry of props.entries) {
+        if (!next.includes(entry.cardId)) next.push(entry.cardId);
+      }
+      const deduped = [...new Set(next)];
+      if (deduped.length === kept.length && deduped.every((cardId, index2) => cardId === kept[index2])) return kept;
+      writeOrder(deduped);
+      return deduped;
+    });
+    for (const cardId of [...seen.keys()]) {
+      if (!alive.has(cardId)) seen.delete(cardId);
+    }
+  }, [signature]);
+  const ordered = (0, import_react11.useMemo)(() => {
+    const byId2 = new Map(props.entries.map((entry) => [entry.cardId, entry]));
+    const rows = [];
+    for (const cardId of order) {
+      const entry = byId2.get(cardId);
+      if (entry !== void 0) rows.push(entry);
+    }
+    for (const entry of props.entries) {
+      if (!order.includes(entry.cardId)) rows.push(entry);
+    }
+    return rows;
+  }, [order, props.entries]);
+  const toggle = (0, import_react11.useCallback)(() => {
+    setOpen((current) => {
+      writeOpen(!current);
+      return !current;
+    });
+  }, []);
+  const move = (0, import_react11.useCallback)((from, to) => {
+    if (from === to) return;
+    setOrder((current) => {
+      const alive = current.filter((cardId) => cardId !== from);
+      const at = alive.indexOf(to);
+      if (at < 0) return current;
+      const next = [...alive.slice(0, at), from, ...alive.slice(at)];
+      writeOrder(next);
+      return next;
+    });
+  }, []);
+  const count = props.entries.length;
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: `${talk_map_default["statusRail"]}${open ? ` ${talk_map_default["statusRailOpen"]}` : ""}`, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+      "button",
+      {
+        type: "button",
+        className: talk_map_default["statusRailTab"],
+        "aria-expanded": open,
+        "aria-label": open ? t("statusRail.close") : t("statusRail.open"),
+        title: open ? t("statusRail.close") : t("statusRail.open"),
+        onClick: toggle,
+        children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailTabIcon"], "aria-hidden": "true", children: "◧" }),
+          count > 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailTabCount"], children: count }) : null
+        ]
+      }
+    ),
+    open ? /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["statusRailPanel"], role: "list", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["statusRailHead"], children: [
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailTitle"], children: t("statusRail.title") }),
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+          "button",
+          {
+            type: "button",
+            className: talk_map_default["statusRailClose"],
+            "aria-label": t("statusRail.close"),
+            onClick: toggle,
+            children: "×"
+          }
+        )
+      ] }),
+      ordered.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["statusRailEmpty"], children: t("statusRail.empty") }) : null,
+      ordered.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+        "div",
+        {
+          role: "listitem",
+          className: talk_map_default["statusRailRow"],
+          draggable: true,
+          onDragStart: (event) => {
+            dragFrom.current = entry.cardId;
+            event.dataTransfer.effectAllowed = "move";
+            event.dataTransfer.setData("text/plain", entry.cardId);
+          },
+          onDragOver: (event) => {
+            if (dragFrom.current === null) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+          },
+          onDrop: (event) => {
+            event.preventDefault();
+            const from = dragFrom.current ?? event.dataTransfer.getData("text/plain");
+            dragFrom.current = null;
+            if (from !== "") move(from, entry.cardId);
+          },
+          onDragEnd: () => {
+            dragFrom.current = null;
+          },
+          onClick: () => {
+            props.onFocus(entry.cardId);
+          },
+          title: entry.title,
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: `${talk_map_default["statusRailLamp"]} ${talk_map_default[`statusRailLamp_${entry.lamp}`] ?? ""}`, "aria-hidden": "true" }),
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailRowTitle"], children: entry.title }),
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["statusRailRowLamp"], children: lampLabel(entry.lamp) })
+          ]
+        },
+        entry.cardId
+      ))
+    ] }) : null
+  ] });
+}
+
+// src/client/use-dark.ts
+var import_react12 = require("react");
 var DARK_ATTRIBUTE = "data-ds-dark-theme";
 function subscribe(listener) {
   if (typeof document === "undefined") return () => {
@@ -13671,11 +13861,11 @@ function getSnapshot() {
   return document.body.hasAttribute(DARK_ATTRIBUTE);
 }
 function useDsDarkTheme() {
-  return (0, import_react11.useSyncExternalStore)(subscribe, getSnapshot);
+  return (0, import_react12.useSyncExternalStore)(subscribe, getSnapshot);
 }
 
 // src/client/MapCanvas.tsx
-var import_jsx_runtime15 = require("react/jsx-runtime");
+var import_jsx_runtime16 = require("react/jsx-runtime");
 var TALK_MAP_EDGE_TYPE = "talkMap";
 var nodeTypes = {
   sessionCard: SessionCardNode,
@@ -13730,14 +13920,14 @@ function fitRect(members) {
 }
 function CanvasInner(props) {
   const dark = useDsDarkTheme();
-  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  const canvasState = (0, import_react13.useSyncExternalStore)(canvas.subscribe, canvas.get);
   const sessions = props.useSessions((state3) => state3);
   const workspaces = props.useWorkspaces((state3) => state3);
   const statusById = typeof props.useSessionStatus === "function" ? props.useSessionStatus((status) => status) : EMPTY_SESSION_STATUS;
-  const alertById = (0, import_react12.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
-  const finishedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
-  const interruptedById = (0, import_react12.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
-  (0, import_react12.useEffect)(() => {
+  const alertById = (0, import_react13.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
+  const finishedById = (0, import_react13.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
+  const interruptedById = (0, import_react13.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getInterrupted);
+  (0, import_react13.useEffect)(() => {
     const onUnload = () => {
       sessionActivity.recordShutdown(statusById, sessions.byId);
     };
@@ -13746,14 +13936,14 @@ function CanvasInner(props) {
       window.removeEventListener("beforeunload", onUnload);
     };
   }, [statusById, sessions]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     sessionActivity.beginPanelSession();
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     sessionActivity.observe(statusById, sessions.byId);
   }, [statusById, sessions]);
-  const draftSessions = (0, import_react12.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
-  (0, import_react12.useEffect)(() => {
+  const draftSessions = (0, import_react13.useSyncExternalStore)(draftWatch.subscribe, draftWatch.getSnapshot);
+  (0, import_react13.useEffect)(() => {
     draftWatch.refresh();
     const timer4 = setInterval(() => {
       draftWatch.refresh();
@@ -13762,22 +13952,22 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  const [previews, setPreviews] = (0, import_react12.useState)(readPreviewTexts);
-  const previewStamp = (0, import_react12.useRef)(
+  const [previews, setPreviews] = (0, import_react13.useState)(readPreviewTexts);
+  const previewStamp = (0, import_react13.useRef)(
     // Only entries that still make a usable body count as cached: a rule fix that
     // empties an old entry must trigger a refetch, not leave a blank card.
     new Map(Object.entries(loadPreviewCache()).filter(([, entry]) => typeof entry?.text === "string" && cleanPreviewText(entry.text) !== "").map(([sessionId, entry]) => [sessionId, entry.stamp]))
   );
-  const { screenToFlowPosition, zoomTo, setNodes } = useReactFlow();
-  const [selectedIds, setSelectedIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [connecting, setConnecting] = (0, import_react12.useState)(false);
-  const connectCancelledRef = (0, import_react12.useRef)(false);
-  const [toast, setToast] = (0, import_react12.useState)(null);
-  const toastTimer = (0, import_react12.useRef)(void 0);
-  const [pendingSpawn, setPendingSpawn] = (0, import_react12.useState)(null);
-  const [menu, setMenu] = (0, import_react12.useState)(null);
-  const [drawer, setDrawer] = (0, import_react12.useState)(() => {
+  const { screenToFlowPosition, zoomTo, setNodes, setCenter, getZoom } = useReactFlow();
+  const [selectedIds, setSelectedIds] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
+  const [selectedEdgeIds, setSelectedEdgeIds] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
+  const [connecting, setConnecting] = (0, import_react13.useState)(false);
+  const connectCancelledRef = (0, import_react13.useRef)(false);
+  const [toast, setToast] = (0, import_react13.useState)(null);
+  const toastTimer = (0, import_react13.useRef)(void 0);
+  const [pendingSpawn, setPendingSpawn] = (0, import_react13.useState)(null);
+  const [menu, setMenu] = (0, import_react13.useState)(null);
+  const [drawer, setDrawer] = (0, import_react13.useState)(() => {
     const remembered = drawerState.readGroup();
     return remembered === null ? null : { groupId: remembered };
   });
@@ -13785,11 +13975,11 @@ function CanvasInner(props) {
     setDrawer(null);
     drawerState.clear();
   };
-  const [digestTarget, setDigestTarget] = (0, import_react12.useState)(null);
-  const [pushEpoch, setPushEpoch] = (0, import_react12.useState)(0);
+  const [digestTarget, setDigestTarget] = (0, import_react13.useState)(null);
+  const [pushEpoch, setPushEpoch] = (0, import_react13.useState)(0);
   const LINEAGE_KEY = "dsh.talk-map.lineage-hidden.v1";
   const LINEAGE_CUT_KEY = "dsh.talk-map.lineage-cut.v1";
-  const [lineageCut, setLineageCut] = (0, import_react12.useState)(() => {
+  const [lineageCut, setLineageCut] = (0, import_react13.useState)(() => {
     try {
       const raw = window.localStorage.getItem(LINEAGE_CUT_KEY);
       const parsed = raw === null ? [] : JSON.parse(raw);
@@ -13810,7 +14000,7 @@ function CanvasInner(props) {
       return next;
     });
   };
-  const [lineageHidden, setLineageHiddenState] = (0, import_react12.useState)(() => {
+  const [lineageHidden, setLineageHiddenState] = (0, import_react13.useState)(() => {
     try {
       return localStorage.getItem("dsh.talk-map.lineage-hidden.v1") === "1";
     } catch {
@@ -13824,34 +14014,34 @@ function CanvasInner(props) {
     } catch {
     }
   };
-  const [renameTarget, setRenameTarget] = (0, import_react12.useState)(null);
-  const [renamedTitles, setRenamedTitles] = (0, import_react12.useState)({});
-  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react12.useState)({});
-  const [batchMode, setBatchMode] = (0, import_react12.useState)(false);
-  const [batchPicks, setBatchPicks] = (0, import_react12.useState)(/* @__PURE__ */ new Set());
-  const [batchBusy, setBatchBusy] = (0, import_react12.useState)(false);
-  const wrapperRef = (0, import_react12.useRef)(null);
-  const [draggingCardId, setDraggingCardId] = (0, import_react12.useState)(null);
-  const [liveFrame, setLiveFrame] = (0, import_react12.useState)(null);
-  const [blockedFrame, setBlockedFrame] = (0, import_react12.useState)(null);
-  const [dragCenter, setDragCenter] = (0, import_react12.useState)(null);
-  const [isSelecting, setIsSelecting] = (0, import_react12.useState)(false);
-  const frozenRef = (0, import_react12.useRef)(null);
-  const locale = (0, import_react12.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const sessionWs = (0, import_react12.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
-  const wsTitles = (0, import_react12.useMemo)(
+  const [renameTarget, setRenameTarget] = (0, import_react13.useState)(null);
+  const [renamedTitles, setRenamedTitles] = (0, import_react13.useState)({});
+  const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react13.useState)({});
+  const [batchMode, setBatchMode] = (0, import_react13.useState)(false);
+  const [batchPicks, setBatchPicks] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
+  const [batchBusy, setBatchBusy] = (0, import_react13.useState)(false);
+  const wrapperRef = (0, import_react13.useRef)(null);
+  const [draggingCardId, setDraggingCardId] = (0, import_react13.useState)(null);
+  const [liveFrame, setLiveFrame] = (0, import_react13.useState)(null);
+  const [blockedFrame, setBlockedFrame] = (0, import_react13.useState)(null);
+  const [dragCenter, setDragCenter] = (0, import_react13.useState)(null);
+  const [isSelecting, setIsSelecting] = (0, import_react13.useState)(false);
+  const frozenRef = (0, import_react13.useRef)(null);
+  const locale = (0, import_react13.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const sessionWs = (0, import_react13.useMemo)(() => sessionWorkspaceIndex(workspaces), [workspaces]);
+  const wsTitles = (0, import_react13.useMemo)(
     () => new Map(workspaces.items.map((item) => [item.workspaceId, item.title])),
     [workspaces]
   );
   const workspacesReady = workspaces.baselinesReady !== false;
-  const pinnedSessions = (0, import_react12.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
-  const boardSessionIds = (0, import_react12.useMemo)(
+  const pinnedSessions = (0, import_react13.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
+  const boardSessionIds = (0, import_react13.useMemo)(
     () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
     [canvasState.cards]
   );
   const wsFrames = canvasState.global?.wsFrames ?? {};
   const layoutVersion = canvasState.global?.layoutVersion ?? 1;
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (canvasState.phase !== "ready" || layoutVersion >= LAYOUT_VERSION || !workspacesReady) return;
     const byGroup = /* @__PURE__ */ new Map();
     for (const card of Object.values(canvasState.cards)) {
@@ -13870,7 +14060,7 @@ function CanvasInner(props) {
     }
     canvas.patchGlobalNow({ layoutVersion: LAYOUT_VERSION, wsFrames: framesNext });
   }, [canvasState.phase, layoutVersion, workspacesReady, canvasState.cards, canvasState.global, sessionWs]);
-  const visibleCards = (0, import_react12.useMemo)(() => {
+  const visibleCards = (0, import_react13.useMemo)(() => {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
@@ -13878,11 +14068,11 @@ function CanvasInner(props) {
     }
     return out;
   }, [canvasState.cards, sessions]);
-  const previewInputs = (0, import_react12.useRef)({ cards: visibleCards, sessions });
+  const previewInputs = (0, import_react13.useRef)({ cards: visibleCards, sessions });
   previewInputs.current = { cards: visibleCards, sessions };
-  const previewTick = (0, import_react12.useRef)(() => {
+  const previewTick = (0, import_react13.useRef)(() => {
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     const tick = () => {
       const { cards, sessions: latest } = previewInputs.current;
       const pending = [];
@@ -13914,10 +14104,10 @@ function CanvasInner(props) {
       clearInterval(timer4);
     };
   }, []);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     previewTick.current();
   }, [visibleCards]);
-  const membersByGroup = (0, import_react12.useMemo)(() => {
+  const membersByGroup = (0, import_react13.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       const groupId = sessionWs.get(card.sessionId);
@@ -13926,7 +14116,7 @@ function CanvasInner(props) {
     }
     return index2;
   }, [visibleCards, sessionWs]);
-  const frameRects = (0, import_react12.useMemo)(() => {
+  const frameRects = (0, import_react13.useMemo)(() => {
     const out = {};
     for (const [groupId, stored] of Object.entries(wsFrames)) {
       const base = liveFrame !== null && liveFrame.groupId === groupId ? liveFrame.rect : stored;
@@ -13934,7 +14124,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [wsFrames, liveFrame]);
-  const folderLayouts = (0, import_react12.useMemo)(() => {
+  const folderLayouts = (0, import_react13.useMemo)(() => {
     const out = {};
     for (const [groupId, rect] of Object.entries(frameRects)) {
       const members = (membersByGroup.get(groupId) ?? []).map((cardId) => {
@@ -13966,21 +14156,21 @@ function CanvasInner(props) {
     }
     return out;
   }, [frameRects, membersByGroup, visibleCards, pinnedSessions, draggingCardId, dragCenter]);
-  const cardLayout = (0, import_react12.useMemo)(() => {
+  const cardLayout = (0, import_react13.useMemo)(() => {
     const out = {};
     for (const layout of Object.values(folderLayouts)) {
       Object.assign(out, layoutFor(layout.rect, layout.ordered));
     }
     return out;
   }, [folderLayouts]);
-  const foldedCards = (0, import_react12.useMemo)(() => {
+  const foldedCards = (0, import_react13.useMemo)(() => {
     const out = {};
     for (const [groupId, layout] of Object.entries(folderLayouts)) {
       if (layout.folded.length > 0) out[groupId] = layout.folded;
     }
     return out;
   }, [folderLayouts]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const timer4 = window.setTimeout(() => {
@@ -13995,8 +14185,8 @@ function CanvasInner(props) {
     }, 140);
     return () => window.clearTimeout(timer4);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
-  const foldedSet = (0, import_react12.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
-  (0, import_react12.useEffect)(() => {
+  const foldedSet = (0, import_react13.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
+  (0, import_react13.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
     const seen = lastActivitySeen;
@@ -14031,8 +14221,8 @@ function CanvasInner(props) {
     for (const [sessionId, stamp] of stamps) seen.set(sessionId, stamp);
     if (Object.keys(promoted).length > 0) canvas.moveCards(promoted);
   }, [canvasState.phase, visibleCards, sessions, folderLayouts, draggingCardId, liveFrame, pinnedSessions]);
-  const autoSyncedRef = (0, import_react12.useRef)(false);
-  (0, import_react12.useEffect)(() => {
+  const autoSyncedRef = (0, import_react13.useRef)(false);
+  (0, import_react13.useEffect)(() => {
     if (canvasState.phase !== "ready" || !workspacesReady || autoSyncedRef.current) return;
     autoSyncedRef.current = true;
     const remembered = canvasState.global?.layoutMemory ?? {};
@@ -14092,7 +14282,7 @@ function CanvasInner(props) {
     }
     if (Object.keys(added).length > 0) canvas.addCards(added);
   }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
     const onKeyDown = (event) => {
@@ -14113,7 +14303,7 @@ function CanvasInner(props) {
       release();
     };
   }, [connecting]);
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     const onKeyDown = (event) => {
       if (!(event.metaKey || event.ctrlKey) || event.code !== "KeyZ") return;
       const target = event.target;
@@ -14128,7 +14318,7 @@ function CanvasInner(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  const liveSelectedIds = (0, import_react12.useMemo)(() => {
+  const liveSelectedIds = (0, import_react13.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedIds) {
       if (id2.startsWith("frame-")) {
@@ -14139,7 +14329,7 @@ function CanvasInner(props) {
     }
     return next;
   }, [selectedIds, visibleCards, wsFrames]);
-  const liveSelectedEdgeIds = (0, import_react12.useMemo)(() => {
+  const liveSelectedEdgeIds = (0, import_react13.useMemo)(() => {
     const next = /* @__PURE__ */ new Set();
     for (const id2 of selectedEdgeIds) {
       if (canvasState.edges[id2] !== void 0) next.add(id2);
@@ -14147,7 +14337,7 @@ function CanvasInner(props) {
     return next;
   }, [selectedEdgeIds, canvasState.edges]);
   const hasSelection = liveSelectedIds.size > 0 || liveSelectedEdgeIds.size > 0;
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!hasSelection) return;
     const release = mapUi.claimEscape("selection");
     const onKeyDown = (event) => {
@@ -14176,7 +14366,7 @@ function CanvasInner(props) {
       release();
     };
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     if (!batchMode) return;
     const release = mapUi.claimEscape("batch-mode");
     const onKeyDown = (event) => {
@@ -14269,7 +14459,33 @@ function CanvasInner(props) {
     if (status?.completionUnread === true || finishedById.has(sessionId)) return "done";
     return void 0;
   };
-  const liveNodes = (0, import_react12.useMemo)(() => {
+  const statusEntries = (0, import_react13.useMemo)(() => {
+    const rows = [];
+    for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (card.boardId !== INBOX_BOARD_ID) continue;
+      const lamp = glowOf(card.sessionId);
+      if (lamp === void 0) continue;
+      const summary = sessions.byId[card.sessionId];
+      rows.push({
+        cardId,
+        sessionId: card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        lamp,
+        stamp: summary?.updatedAt ?? 0,
+        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
+      });
+    }
+    return rows;
+  }, [visibleCards, sessions, renamedTitles, statusById, alertById, finishedById]);
+  const focusCard = (0, import_react13.useCallback)((cardId) => {
+    const slot = cardLayout[cardId];
+    const card = visibleCards[cardId];
+    const point = slot ?? (card === void 0 ? void 0 : { x: card.x, y: card.y });
+    setSelectedIds([cardId]);
+    if (point === void 0) return;
+    setCenter(point.x + CARD_W / 2, point.y + CARD_H / 2, { zoom: getZoom(), duration: 320 });
+  }, [cardLayout, visibleCards, setCenter, getZoom, setSelectedIds]);
+  const liveNodes = (0, import_react13.useMemo)(() => {
     const wsColors = canvasState.global?.wsColors ?? {};
     const frameNodes = Object.entries(frameRects).map(([groupId, rect]) => {
       const members = membersByGroup.get(groupId) ?? [];
@@ -14380,7 +14596,7 @@ function CanvasInner(props) {
     });
     return [...frameNodes, ...cardNodes, ...stackNodes];
   }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale]);
-  const sessionIdToCardId = (0, import_react12.useMemo)(() => {
+  const sessionIdToCardId = (0, import_react13.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
@@ -14414,8 +14630,8 @@ function CanvasInner(props) {
   };
   const CARD_PAINTED_W = 250;
   const CARD_PAINTED_H = 129;
-  const [boardTick, setBoardTick] = (0, import_react12.useState)(0);
-  (0, import_react12.useEffect)(() => {
+  const [boardTick, setBoardTick] = (0, import_react13.useState)(0);
+  (0, import_react13.useEffect)(() => {
     const timer4 = window.setTimeout(() => setBoardTick((value) => value + 1), 150);
     return () => window.clearTimeout(timer4);
   }, []);
@@ -14453,7 +14669,7 @@ function CanvasInner(props) {
     const picked = sideHandles(fromCardId, toCardId);
     return { sourceHandle: picked.fromHandle, targetHandle: picked.toHandle };
   };
-  const liveEdges = (0, import_react12.useMemo)(() => {
+  const liveEdges = (0, import_react13.useMemo)(() => {
     const out = [];
     const present = new Set(Object.keys(visibleCards).filter((cardId) => !foldedSet.has(cardId)));
     const explicitPairs = /* @__PURE__ */ new Set();
@@ -14557,7 +14773,7 @@ function CanvasInner(props) {
     }
     return out;
   }, [visibleCards, canvasState.edges, sessions, sessionIdToCardId, liveSelectedEdgeIds, foldedSet, locale, pushEpoch, lineageHidden, liveNodes, boardTick]);
-  const drawerWireLinks = (0, import_react12.useMemo)(() => {
+  const drawerWireLinks = (0, import_react13.useMemo)(() => {
     if (drawer === null) return [];
     const layout = folderLayouts[drawer.groupId];
     const inFolder = new Set(layout === void 0 ? [] : [...layout.shown, ...layout.folded]);
@@ -14687,8 +14903,8 @@ function CanvasInner(props) {
     }
     if (removedIds.length > 0) canvas.removeEdges(removedIds);
   };
-  const mountedRef = (0, import_react12.useRef)(true);
-  (0, import_react12.useEffect)(() => {
+  const mountedRef = (0, import_react13.useRef)(true);
+  (0, import_react13.useEffect)(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
@@ -14844,7 +15060,7 @@ function CanvasInner(props) {
     agent: hit.agent,
     depth: hit.depth
   });
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     setTitleResolver((sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle);
     setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
       cardId,
@@ -14954,11 +15170,11 @@ function CanvasInner(props) {
       canvas.moveCard(id2, point.x, point.y);
     });
   };
-  const selectedCardIds = (0, import_react12.useMemo)(
+  const selectedCardIds = (0, import_react13.useMemo)(
     () => [...batchPicks].filter((id2) => visibleCards[id2] !== void 0),
     [batchPicks, visibleCards]
   );
-  const selectedFrameWs = (0, import_react12.useMemo)(
+  const selectedFrameWs = (0, import_react13.useMemo)(
     () => [...liveSelectedIds].filter((id2) => id2.startsWith("frame-")).map((id2) => id2.slice("frame-".length)),
     [liveSelectedIds]
   );
@@ -15095,7 +15311,7 @@ function CanvasInner(props) {
       view: "root"
     });
   };
-  const menuState = (0, import_react12.useMemo)(() => {
+  const menuState = (0, import_react13.useMemo)(() => {
     if (menu === null) return null;
     const close = () => {
       setMenu(null);
@@ -15367,7 +15583,7 @@ function CanvasInner(props) {
   }, [menu, workspaces.items, sessions, boardSessionIds, wsFrames, wsTitles, canvasState.cards, canvasState.edges, canvasState.digests, pinnedSessions, locale]);
   const savedCamera = canvas.savedCamera(INBOX_BOARD_ID);
   const hasContent = Object.keys(visibleCards).length > 0 || Object.keys(wsFrames).length > 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
     "div",
     {
       ref: wrapperRef,
@@ -15391,7 +15607,7 @@ function CanvasInner(props) {
         if (menu !== null) setMenu(null);
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
           index,
           {
             nodes,
@@ -15459,14 +15675,15 @@ function CanvasInner(props) {
             proOptions: { hideAttribution: true },
             ...savedCamera !== void 0 ? { defaultViewport: savedCamera } : { fitView: hasContent },
             children: [
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
+              /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Background, { variant: BackgroundVariant.Dots, gap: GRID, size: 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(Controls, { showInteractive: false, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(ControlButton, { title: t("map.zoom100"), onClick: () => {
                 void zoomTo(1, { duration: 200 });
-              }, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
+              }, children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["zoomResetLabel"], children: "1:1" }) }) })
             ]
           }
         ),
-        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(StatusRail, { entries: statusEntries, onFocus: focusCard }),
+        batchMode ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           BatchBar,
           {
             count: selectedCardIds.length,
@@ -15483,14 +15700,14 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
-        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ContextMenu, { menu: menuState, onClose: () => {
+        hasContent ? null : /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.empty") }),
+        menuState !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(ContextMenu, { menu: menuState, onClose: () => {
           setMenu(null);
         } }, menu?.view ?? "root") : null,
-        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
+        pendingSpawn !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(SpawnPreview, { pending: pendingSpawn, onClose: () => {
           setPendingSpawn(null);
         } }) : null,
-        digestTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        digestTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           DigestDialog,
           {
             title: digestTarget.title,
@@ -15500,7 +15717,7 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        renameTarget !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           RenameDialog,
           {
             target: renameTarget,
@@ -15517,7 +15734,7 @@ function CanvasInner(props) {
             }
           }
         ) : null,
-        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+        drawer !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           StackDrawer,
           {
             workspaceTitle: renamedWorkspaces[drawer.groupId] ?? wsTitles.get(drawer.groupId) ?? t("frame.unknown"),
@@ -15542,16 +15759,16 @@ function CanvasInner(props) {
             onClose: closeDrawer
           }
         ) : null,
-        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
+        toast !== null ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["toast"], children: toast }) : null
       ]
     }
   );
 }
 function BatchBar(props) {
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["batchSpace"] }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["batchBar"], role: "toolbar", "aria-label": t("batch.title"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["batchCount"], children: t("batch.count", { n: String(props.count) }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["batchSpace"] }),
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
       "button",
       {
         type: "button",
@@ -15561,7 +15778,7 @@ function BatchBar(props) {
         children: t("batch.archive")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
       "button",
       {
         type: "button",
@@ -15571,7 +15788,7 @@ function BatchBar(props) {
         children: t("batch.delete")
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
       "button",
       {
         type: "button",
@@ -15585,18 +15802,18 @@ function BatchBar(props) {
 }
 var DRAW_LINEAGE_LINKS = true;
 function MapCanvas(props) {
-  const canvasState = (0, import_react12.useSyncExternalStore)(canvas.subscribe, canvas.get);
-  (0, import_react12.useEffect)(() => {
+  const canvasState = (0, import_react13.useSyncExternalStore)(canvas.subscribe, canvas.get);
+  (0, import_react13.useEffect)(() => {
     canvas.ensureLoaded();
     canvas.refresh();
     return canvas.connect();
   }, []);
   if (canvasState.phase === "error") {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["emptyHint"], children: [
       t("map.loadError"),
       " ",
       canvasState.error,
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+      /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
         "button",
         {
           type: "button",
@@ -15611,17 +15828,17 @@ function MapCanvas(props) {
     ] }) });
   }
   if (canvasState.phase !== "ready") {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
+    return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["canvas"], children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("div", { className: talk_map_default["emptyHint"], children: t("map.loading") }) });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(CanvasInner, { ...props }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(ReactFlowProvider, { children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(CanvasInner, { ...props }) });
 }
 
 // src/client/MapOverlay.tsx
-var import_jsx_runtime16 = require("react/jsx-runtime");
+var import_jsx_runtime17 = require("react/jsx-runtime");
 function FontSizeButtons() {
-  const step2 = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  const step2 = (0, import_react15.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: talk_map_default["fontGroup"], role: "group", "aria-label": t("font.group"), children: [
+    /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
       "button",
       {
         type: "button",
@@ -15633,12 +15850,12 @@ function FontSizeButtons() {
           fontScale.decrease();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["fontGlyphSmall"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["fontSign"], children: "−" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+    /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
       "button",
       {
         type: "button",
@@ -15650,12 +15867,12 @@ function FontSizeButtons() {
           fontScale.increase();
         },
         children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["fontGlyphLarge"], children: "A" }),
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["fontSign"], children: "+" })
         ]
       }
     ),
-    /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
       "button",
       {
         type: "button",
@@ -15672,15 +15889,15 @@ function FontSizeButtons() {
   ] });
 }
 function BackIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M15 5l-7 7 7 7" }) });
 }
 function CloseIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
+  return /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", "aria-hidden": "true", children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M6 6l12 12M18 6L6 18" }) });
 }
 function MapOverlay(props) {
-  (0, import_react14.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
-  const fontStep = (0, import_react14.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
-  (0, import_react14.useEffect)(() => {
+  (0, import_react15.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const fontStep = (0, import_react15.useSyncExternalStore)(fontScale.subscribe, fontScale.getSnapshot);
+  (0, import_react15.useEffect)(() => {
     mapUi.setOpen(true);
     hideSidebarForMap();
     return () => {
@@ -15688,7 +15905,7 @@ function MapOverlay(props) {
       restoreSidebarAfterMap();
     };
   }, []);
-  (0, import_react14.useEffect)(() => {
+  (0, import_react15.useEffect)(() => {
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       if (mapUi.escapeClaimed()) return;
@@ -15700,7 +15917,7 @@ function MapOverlay(props) {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
   }, []);
-  return /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
     "div",
     {
       className: talk_map_default["panel"],
@@ -15709,8 +15926,8 @@ function MapOverlay(props) {
       "aria-label": t("map.title"),
       style: { "--tm-font-step": `${fontStep}px` },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)("div", { className: talk_map_default["header"], children: [
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+        /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: talk_map_default["header"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
             "button",
             {
               type: "button",
@@ -15719,17 +15936,17 @@ function MapOverlay(props) {
               "aria-label": t("map.back"),
               onClick: closeMapPanel,
               children: [
-                /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(BackIcon, {}),
-                /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { children: t("map.back") })
+                /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(BackIcon, {}),
+                /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { children: t("map.back") })
               ]
             }
           ),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)("span", { className: talk_map_default["headerSpace"] }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["headerSpace"] }),
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(GlobalSearch, { onOpenSession: (sessionId) => {
             openSessionInUi(sessionId);
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(FontSizeButtons, {}),
-          /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(FontSizeButtons, {}),
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(
             "button",
             {
               type: "button",
@@ -15737,36 +15954,36 @@ function MapOverlay(props) {
               title: t("map.close"),
               "aria-label": t("map.close"),
               onClick: closeMapPanel,
-              children: /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(CloseIcon, {})
+              children: /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(CloseIcon, {})
             }
           )
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(MapCanvas, { ...props })
+        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(MapCanvas, { ...props })
       ]
     }
   );
 }
 
 // src/client/MapToggleButton.tsx
-var import_react15 = require("react");
-var import_jsx_runtime17 = require("react/jsx-runtime");
+var import_react16 = require("react");
+var import_jsx_runtime18 = require("react/jsx-runtime");
 function MapIcon() {
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M9 4v14" }),
-    /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("path", { d: "M15 6v14" })
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("svg", { className: talk_map_default["toggleIcon"], viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("path", { d: "M9 4 3.5 6v14L9 18l6 2 5.5-2V4L15 6 9 4Z" }),
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("path", { d: "M9 4v14" }),
+    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("path", { d: "M15 6v14" })
   ] });
 }
 function MapToggleButton(props) {
-  const open = (0, import_react15.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
-  const locale = (0, import_react15.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
+  const open = (0, import_react16.useSyncExternalStore)(mapUi.subscribe, () => mapUi.get().open);
+  const locale = (0, import_react16.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const wide = props.wide;
-  (0, import_react15.useEffect)(() => {
+  (0, import_react16.useEffect)(() => {
     reportSidebarWide(wide);
   }, [wide]);
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
-  return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
     "button",
     {
       type: "button",
@@ -15779,8 +15996,8 @@ function MapToggleButton(props) {
         mapUi.toggle();
       },
       children: [
-        /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(MapIcon, {}),
-        wide ? /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(MapIcon, {}),
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
       ]
     }
   );
