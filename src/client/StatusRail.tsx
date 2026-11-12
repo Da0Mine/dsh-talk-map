@@ -132,6 +132,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   orderRef.current = order
   const dragRef = useRef<DragState | null>(null)
   dragRef.current = drag
+  /** Did this press travel far enough to count as a drag? */
+  const movedRef = useRef(false)
 
   const signature = useMemo(
     () => props.entries.map(entry => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join('|'),
@@ -228,6 +230,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     }
 
     const onMove = (event: PointerEvent): void => {
+      const startY = dragRef.current?.startPointerY
+      if (startY !== undefined && Math.abs(event.clientY - startY) > 4) movedRef.current = true
       const hover = indexUnder(event.clientY)
       setDrag(current => (current === null
         ? null
@@ -236,6 +240,13 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
 
     const onUp = (): void => {
       const current = dragRef.current
+      // Press without travel = "take me to this card".
+      if (current !== null && movedRef.current === false) {
+        prevTops.current.clear()
+        setDrag(null)
+        props.onFocus(current.cardId)
+        return
+      }
       if (current !== null && current.hover !== current.origin) {
         setOrder(existing => {
           const from = existing.indexOf(current.cardId)
@@ -276,6 +287,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     // so position:fixed there is viewport-relative — use viewport numbers, not panel ones.
     event.preventDefault()
     const index = Math.max(0, orderRef.current.indexOf(cardId))
+    movedRef.current = false
     setDrag({
       cardId,
       origin: index,
@@ -293,7 +305,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     <div
       className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
       onPointerDown={floating ? undefined : (event) => { beginDrag(event, entry.cardId) }}
-      onClick={() => { if (!floating && dragRef.current === null) props.onFocus(entry.cardId) }}
       title={entry.title}
     >
       <div className={styles['cardTop']}>

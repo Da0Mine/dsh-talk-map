@@ -465,7 +465,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b67 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b68 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -633,7 +633,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b67 · Search cards on the map",
+  "global.searchPlaceholder": "b68 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13791,6 +13791,7 @@ function StatusRail(props) {
   orderRef.current = order;
   const dragRef = (0, import_react11.useRef)(null);
   dragRef.current = drag;
+  const movedRef = (0, import_react11.useRef)(false);
   const signature = (0, import_react11.useMemo)(
     () => props.entries.map((entry) => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join("|"),
     [props.entries]
@@ -13876,11 +13877,19 @@ function StatusRail(props) {
       return best;
     };
     const onMove = (event) => {
+      const startY = dragRef.current?.startPointerY;
+      if (startY !== void 0 && Math.abs(event.clientY - startY) > 4) movedRef.current = true;
       const hover = indexUnder(event.clientY);
       setDrag((current) => current === null ? null : { ...current, pointerY: event.clientY, hover });
     };
     const onUp = () => {
       const current = dragRef.current;
+      if (current !== null && movedRef.current === false) {
+        prevTops.current.clear();
+        setDrag(null);
+        props.onFocus(current.cardId);
+        return;
+      }
       if (current !== null && current.hover !== current.origin) {
         setOrder((existing) => {
           const from = existing.indexOf(current.cardId);
@@ -13915,6 +13924,7 @@ function StatusRail(props) {
     const rect = element.getBoundingClientRect();
     event.preventDefault();
     const index2 = Math.max(0, orderRef.current.indexOf(cardId));
+    movedRef.current = false;
     setDrag({
       cardId,
       origin: index2,
@@ -13933,9 +13943,6 @@ function StatusRail(props) {
       className: `${talk_map_default["card"]} ${talk_map_default[LAMP_CLASS3[entry.lamp]] ?? ""} ${talk_map_default["statusRailCard"]}${floating ? ` ${talk_map_default["statusRailCardDragging"]}` : ""}`,
       onPointerDown: floating ? void 0 : (event) => {
         beginDrag(event, entry.cardId);
-      },
-      onClick: () => {
-        if (!floating && dragRef.current === null) props.onFocus(entry.cardId);
       },
       title: entry.title,
       children: [
