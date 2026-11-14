@@ -89,6 +89,19 @@ export const talkMapApi = {
     return postJson('/talk-map/last-user', { sessionIds })
   },
   /**
+   * The live window: what the model is given right now, minus everything compaction
+   * already pruned. Powers the fork panel's "current context" mode.
+   */
+  contextWindow(sessionId: string, maxChars?: number): Promise<{
+    text: string
+    chars: number
+    entries: number
+    prunedRecords: number
+    truncated: boolean
+  }> {
+    return postJson('/talk-map/context-window', { sessionId, ...(maxChars !== undefined ? { maxChars } : {}) })
+  },
+  /**
    * Full-text search across every conversation, done Host-side. This is the
    * fallback when the shared connection's RPC surface is unavailable, so the
    * drawer's search never silently degrades to title-only matching.

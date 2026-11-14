@@ -280,6 +280,13 @@ var talkMapApi = {
     return postJson("/talk-map/last-user", { sessionIds });
   },
   /**
+   * The live window: what the model is given right now, minus everything compaction
+   * already pruned. Powers the fork panel's "current context" mode.
+   */
+  contextWindow(sessionId, maxChars) {
+    return postJson("/talk-map/context-window", { sessionId, ...maxChars !== void 0 ? { maxChars } : {} });
+  },
+  /**
    * Full-text search across every conversation, done Host-side. This is the
    * fallback when the shared connection's RPC surface is unavailable, so the
    * drawer's search never silently degrades to title-only matching.
@@ -367,6 +374,14 @@ var zh = {
   "spawn.cancel": "取消",
   "spawn.mode.none": "不继承",
   "spawn.mode.digest": "摘要注入",
+  "spawn.mode.context": "当前上下文",
+  "spawn.contextHint": "注入这段对话「当前」发给模型的上下文（已经被压缩掉的历史不在里面）。可以编辑后再开：",
+  "spawn.contextLoading": "正在读取当前上下文……",
+  "spawn.contextEmpty": "这段对话暂时没有可注入的内容（可能刚压缩完，或还没有消息）。",
+  "spawn.contextLoaded": "已读取 {n} 个字符、{m} 条记录。",
+  "spawn.contextTruncated": "内容过长，只保留最近 {n} 个字符。",
+  "inject.contextHeader": "【上下文注入 · 当前上下文 · 来自】",
+  "inject.contextNote": "（以上是母对话当前仍在上下文里的内容；更早的部分已被压缩，不在其中。）",
   "spawn.mode.full": "完整对话",
   "spawn.noneHint": "全新对话，只保留一条关联线。输入第一句话（回车发送）：",
   "spawn.fullHint": "新对话将携带这段对话的完整历史继续（dsh 原生分叉）。",
@@ -465,7 +480,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b68 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b69 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -542,6 +557,14 @@ var en = {
   "spawn.cancel": "Cancel",
   "spawn.mode.none": "No context",
   "spawn.mode.digest": "Inject digest",
+  "spawn.mode.context": "Current context",
+  "spawn.contextHint": "Inject the context this conversation is currently given (already-compressed history is excluded). Edit it before you start:",
+  "spawn.contextLoading": "Reading the current context…",
+  "spawn.contextEmpty": "Nothing to inject right now (freshly compacted, or no messages yet).",
+  "spawn.contextLoaded": "Read {n} characters across {m} records.",
+  "spawn.contextTruncated": "Too long: kept the most recent {n} characters.",
+  "inject.contextHeader": "[Context injection · current context · from]",
+  "inject.contextNote": "(The above is what the parent still has in context; earlier parts were compacted away.)",
   "spawn.mode.full": "Full history",
   "spawn.noneHint": "A fresh conversation, linked visually only. Type the first message (Enter sends):",
   "spawn.fullHint": "The new conversation continues with this one's FULL history (dsh-native fork).",
@@ -633,7 +656,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b68 · Search cards on the map",
+  "global.searchPlaceholder": "b69 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12723,6 +12746,8 @@ function SpawnPreview(props) {
   const [mode, setMode] = (0, import_react9.useState)("full");
   const [text, setText] = (0, import_react9.useState)(() => buildInjectionText(pending.parent.title, digest));
   const [firstMessage, setFirstMessage] = (0, import_react9.useState)("");
+  const [contextBusy, setContextBusy] = (0, import_react9.useState)(false);
+  const [contextNote, setContextNote] = (0, import_react9.useState)(void 0);
   const [busy, setBusy] = (0, import_react9.useState)(false);
   const [error, setError] = (0, import_react9.useState)(void 0);
   (0, import_react9.useEffect)(() => {
@@ -12739,6 +12764,29 @@ function SpawnPreview(props) {
       release();
     };
   }, []);
+  (0, import_react9.useEffect)(() => {
+    if (mode !== "context") return;
+    let alive = true;
+    setContextBusy(true);
+    setContextNote(void 0);
+    void talkMapApi.contextWindow(pending.parent.sessionId).then((page) => {
+      if (!alive) return;
+      const body = page.text.trim();
+      setText(body === "" ? "" : `${t("inject.contextHeader")}「${pending.parent.title}」
+
+${body}
+
+${t("inject.contextNote")}`);
+      setContextNote(body === "" ? t("spawn.contextEmpty") : page.truncated ? t("spawn.contextTruncated", { n: String(page.chars) }) : t("spawn.contextLoaded", { n: String(page.chars), m: String(page.entries) }));
+    }).catch((error2) => {
+      if (alive) setContextNote(String(error2?.message ?? error2));
+    }).finally(() => {
+      if (alive) setContextBusy(false);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [mode, pending.parent.sessionId]);
   const addCardAndEdge = (sessionId, kind, injectedText) => {
     const cardId = newCardId();
     const card = {
@@ -12793,6 +12841,16 @@ function SpawnPreview(props) {
         jumpIn(created2.sessionId);
         return;
       }
+      if (mode === "context") {
+        if (text.trim() === "") throw new Error(t("spawn.needText"));
+        const created2 = await createSession();
+        await talkMapApi.injectContext(created2.sessionId, [
+          { sessionId: pending.parent.sessionId, text }
+        ]);
+        addCardAndEdge(created2.sessionId, "context", text);
+        jumpIn(created2.sessionId);
+        return;
+      }
       if (mode === "full") {
         const childId = await forkSessionInUi(pending.parent.sessionId);
         addCardAndEdge(childId, "full");
@@ -12816,6 +12874,7 @@ function SpawnPreview(props) {
   };
   const modes = [
     { id: "digest", label: t("spawn.mode.digest") },
+    { id: "context", label: t("spawn.mode.context") },
     { id: "full", label: t("spawn.mode.full") }
   ];
   return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: talk_map_default["spawnPanel"], role: "dialog", "aria-label": t("spawn.heading"), children: [
@@ -12845,6 +12904,21 @@ function SpawnPreview(props) {
         {
           className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
           value: text,
+          rows: 9,
+          onChange: (event) => {
+            setText(event.target.value);
+          }
+        }
+      )
+    ] }) : mode === "context" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.contextHint") }),
+      contextNote !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: contextNote }) : null,
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        "textarea",
+        {
+          className: `${talk_map_default["spawnTextarea"]} nodrag nowheel`,
+          value: contextBusy ? t("spawn.contextLoading") : text,
+          readOnly: contextBusy,
           rows: 9,
           onChange: (event) => {
             setText(event.target.value);
@@ -12892,7 +12966,7 @@ function SpawnPreview(props) {
           onClick: () => {
             void confirm();
           },
-          disabled: busy || mode === "digest" && text.trim() === "" || mode === "none" && firstMessage.trim() === "",
+          disabled: busy || contextBusy || mode === "digest" && text.trim() === "" || mode === "context" && text.trim() === "" || mode === "none" && firstMessage.trim() === "",
           children: busy ? t("spawn.busy") : t("spawn.confirm")
         }
       )
@@ -13792,6 +13866,8 @@ function StatusRail(props) {
   const dragRef = (0, import_react11.useRef)(null);
   dragRef.current = drag;
   const movedRef = (0, import_react11.useRef)(false);
+  const clickTimer = (0, import_react11.useRef)(null);
+  const lastTap = (0, import_react11.useRef)(null);
   const signature = (0, import_react11.useMemo)(
     () => props.entries.map((entry) => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join("|"),
     [props.entries]
@@ -13885,9 +13961,27 @@ function StatusRail(props) {
     const onUp = () => {
       const current = dragRef.current;
       if (current !== null && movedRef.current === false) {
+        const cardId2 = current.cardId;
         prevTops.current.clear();
         setDrag(null);
-        props.onFocus(current.cardId);
+        const now2 = Date.now();
+        const previous = lastTap.current;
+        if (previous !== null && previous.cardId === cardId2 && now2 - previous.at < 320) {
+          lastTap.current = null;
+          if (clickTimer.current !== null) {
+            window.clearTimeout(clickTimer.current);
+            clickTimer.current = null;
+          }
+          props.onFocus(cardId2);
+          return;
+        }
+        lastTap.current = { cardId: cardId2, at: now2 };
+        if (clickTimer.current !== null) window.clearTimeout(clickTimer.current);
+        clickTimer.current = window.setTimeout(() => {
+          clickTimer.current = null;
+          lastTap.current = null;
+          props.onOpen(cardId2);
+        }, 240);
         return;
       }
       if (current !== null && current.hover !== current.origin) {
@@ -15225,6 +15319,10 @@ function CanvasInner(props) {
     sessionActivity.acknowledge(sessionId);
     if (openSessionInUi(sessionId)) closeMapPanel();
   };
+  const openRailCard = (0, import_react13.useCallback)((cardId) => {
+    const card = visibleCards[cardId];
+    if (card !== void 0) openSession(card.sessionId);
+  }, [visibleCards, openSession]);
   const openSearchHit = (sessionId) => {
     openSession(sessionId);
   };
@@ -15904,7 +16002,15 @@ function CanvasInner(props) {
             ]
           }
         ),
-        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(StatusRail, { entries: statusEntries, cardWidth: CARD_W, onFocus: focusCard }),
+        /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
+          StatusRail,
+          {
+            entries: statusEntries,
+            cardWidth: CARD_W,
+            onFocus: focusCard,
+            onOpen: openRailCard
+          }
+        ),
         batchMode ? /* @__PURE__ */ (0, import_jsx_runtime16.jsx)(
           BatchBar,
           {

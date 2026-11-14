@@ -26,7 +26,7 @@ export interface PendingSpawn {
   y: number
 }
 
-type SpawnMode = 'digest' | 'full'
+type SpawnMode = 'digest' | 'context' | 'full'
 
 export function SpawnPreview(props: {
   pending: PendingSpawn
@@ -39,6 +39,9 @@ export function SpawnPreview(props: {
   const [mode, setMode] = useState<SpawnMode>('full')
   const [text, setText] = useState(() => buildInjectionText(pending.parent.title, digest))
   const [firstMessage, setFirstMessage] = useState('')
+  /** Fetching the live window (mode 'context' only). */
+  const [contextBusy, setContextBusy] = useState(false)
+  const [contextNote, setContextNote] = useState<string | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
 
@@ -57,6 +60,34 @@ export function SpawnPreview(props: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Picking "current context" loads it once: the preview is editable text, exactly like
+  // the digest mode, so it can be trimmed before the new conversation starts.
+  useEffect(() => {
+    if (mode !== 'context') return
+    let alive = true
+    setContextBusy(true)
+    setContextNote(undefined)
+    void talkMapApi.contextWindow(pending.parent.sessionId)
+      .then((page) => {
+        if (!alive) return
+        const body = page.text.trim()
+        setText(body === ''
+          ? ''
+          : `${t('inject.contextHeader')}「${pending.parent.title}」\n\n${body}\n\n${t('inject.contextNote')}`)
+        setContextNote(body === ''
+          ? t('spawn.contextEmpty')
+          : page.truncated
+            ? t('spawn.contextTruncated', { n: String(page.chars) })
+            : t('spawn.contextLoaded', { n: String(page.chars), m: String(page.entries) }))
+      })
+      .catch((error: unknown) => {
+        if (alive) setContextNote(String((error as Error | undefined)?.message ?? error))
+      })
+      .finally(() => { if (alive) setContextBusy(false) })
+    return () => { alive = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, pending.parent.sessionId])
 
   const addCardAndEdge = (sessionId: string, kind: EdgeInjection['kind'], injectedText?: string): string => {
     const cardId = newCardId()
@@ -117,6 +148,16 @@ export function SpawnPreview(props: {
         jumpIn(created.sessionId)
         return
       }
+      if (mode === 'context') {
+        if (text.trim() === '') throw new Error(t('spawn.needText'))
+        const created = await createSession()
+        await talkMapApi.injectContext(created.sessionId, [
+          { sessionId: pending.parent.sessionId, text },
+        ])
+        addCardAndEdge(created.sessionId, 'context', text)
+        jumpIn(created.sessionId)
+        return
+      }
       if (mode === 'full') {
         // dsh-native fork: the child carries the parent's full history.
         const childId = await forkSessionInUi(pending.parent.sessionId)
@@ -145,6 +186,7 @@ export function SpawnPreview(props: {
 
   const modes: { id: SpawnMode; label: string }[] = [
     { id: 'digest', label: t('spawn.mode.digest') },
+    { id: 'context', label: t('spawn.mode.context') },
     { id: 'full', label: t('spawn.mode.full') },
   ]
 
@@ -176,7 +218,23 @@ export function SpawnPreview(props: {
               />
             </>
           )
-        : mode === 'none'
+        : mode === 'context'
+          ? (
+              <>
+                <div className={styles['spawnHint']}>{t('spawn.contextHint')}</div>
+                {contextNote !== undefined
+                  ? <div className={styles['spawnHint']}>{contextNote}</div>
+                  : null}
+                <textarea
+                  className={`${styles['spawnTextarea']} nodrag nowheel`}
+                  value={contextBusy ? t('spawn.contextLoading') : text}
+                  readOnly={contextBusy}
+                  rows={9}
+                  onChange={(event) => { setText(event.target.value) }}
+                />
+              </>
+            )
+          : mode === 'none'
           ? (
               <>
                 <div className={styles['spawnHint']}>{t('spawn.noneHint')}</div>
@@ -210,8 +268,9 @@ export function SpawnPreview(props: {
           type="button"
           className={styles['spawnBtnPrimary']}
           onClick={() => { void confirm() }}
-          disabled={busy
+          disabled={busy || contextBusy
             || (mode === 'digest' && text.trim() === '')
+            || (mode === 'context' && text.trim() === '')
             || (mode === 'none' && firstMessage.trim() === '')}
         >
           {busy ? t('spawn.busy') : t('spawn.confirm')}

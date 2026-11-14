@@ -1573,8 +1573,8 @@ try {
     await page.waitForTimeout(200)
     const spawnModes = await page.evaluate(() =>
       [...document.querySelectorAll('[class*="spawnModes"] button')].map(node => node.textContent.trim()))
-    check('只剩「摘要注入 / 完整对话」两种模式（不继承已删除）',
-      spawnModes.length === 2 && spawnModes.includes('完整对话'), JSON.stringify(spawnModes))
+    check('分叉面板共三种模式：摘要注入 / 当前上下文 / 完整对话（不继承已删除）',
+      spawnModes.length === 3 && spawnModes.includes('摘要注入') && spawnModes.includes('当前上下文') && spawnModes.includes('完整对话') && !spawnModes.includes('不继承'), JSON.stringify(spawnModes))
     const spawnHasButton = await page.evaluate(() =>
       document.querySelectorAll('[class*="spawnBtnPrimary"]').length > 0)
     check('新建面板有首条消息输入框和确认按钮', spawnHasButton === true, String(spawnHasButton))

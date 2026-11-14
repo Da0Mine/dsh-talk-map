@@ -917,7 +917,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return rows
   }, [visibleCards, sessions, renamedTitles, previews, pinnedSessions, statusById, alertById, finishedById])
 
-  /** Bring one card into view and select it (a click on a rail row). */
+  /** Bring one card into view and select it (a double click on a rail row). */
   const focusCard = useCallback((cardId: string) => {
     const slot = cardLayout[cardId]
     const card = visibleCards[cardId]
@@ -1696,6 +1696,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    * reference plugin in the market (dsh-find-all) does the same — it opens the
    * session and leaves the scroll position to the shell.
    */
+  /** A rail tap opens that conversation (the same path a card's double click takes). */
+  const openRailCard = useCallback((cardId: string) => {
+    const card = visibleCards[cardId]
+    if (card !== undefined) openSession(card.sessionId)
+  }, [visibleCards, openSession])
+
   const openSearchHit = (sessionId: string): void => {
     openSession(sessionId)
   }
@@ -2500,7 +2506,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           </ControlButton>
         </Controls>
       </ReactFlow>
-      <StatusRail entries={statusEntries} cardWidth={CARD_W} onFocus={focusCard} />
+      <StatusRail
+        entries={statusEntries}
+        cardWidth={CARD_W}
+        onFocus={focusCard}
+        onOpen={openRailCard}
+      />
       {batchMode
         ? (
             <BatchBar

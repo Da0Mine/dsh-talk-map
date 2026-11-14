@@ -403,6 +403,115 @@ export function mountTalkMapRoutes(
           return
         }
 
+        if (route === 'POST /talk-map/context-window') {
+          // "What the model is being given right now": every record the log still carries,
+          // minus the ones compaction pruned (compaction/prune names them by seq). That is
+          // the live window — older, already-compressed history is deliberately absent.
+          const body = (await readJsonBody(request)) as { sessionId?: unknown; maxChars?: unknown }
+          const sessionId = typeof body?.sessionId === 'string' ? body.sessionId : ''
+          if (sessionId === '') {
+            sendJson(response, 400, { error: 'sessionId is required' })
+            return
+          }
+          const requested = typeof body?.maxChars === 'number' ? Math.round(body.maxChars) : 40000
+          const maxChars = Math.min(Math.max(requested, 4000), 400000)
+          const query = runtime.sessionQuery
+          if (query === undefined) {
+            sendJson(response, 503, { error: 'session surface unavailable' })
+            return
+          }
+          const surface = await query.readSurface(sessionId)
+          // 1) seqs compaction threw away
+          const pruned = new Set<number>()
+          for (const raw of surface.events) {
+            const event = raw as { type?: string; data?: { shadowedSeqs?: unknown } }
+            if (event.type !== 'compaction/prune') continue
+            const seqs = event.data?.shadowedSeqs
+            if (!Array.isArray(seqs)) continue
+            for (const seq of seqs) if (typeof seq === 'number') pruned.add(seq)
+          }
+          // 2) everything else, in order
+          const lines: string[] = []
+          for (const raw of surface.events) {
+            const event = raw as {
+              type?: string
+              seq?: number
+              data?: {
+                content?: unknown
+                message?: { content?: unknown }
+                name?: unknown
+                toolName?: unknown
+                arguments?: unknown
+                input?: unknown
+                output?: unknown
+              }
+            }
+            const seq = typeof event.seq === 'number' ? event.seq : -1
+            if (pruned.has(seq)) continue
+            if (event.type === 'user/message') {
+              const said = textOfBlocks(event.data?.content)
+              if (said !== '') lines.push(`USER: ${said}`)
+            } else if (event.type === 'assistant/message') {
+              const said = textOfBlocks(event.data?.message?.content)
+              if (said !== '') lines.push(`ASSISTANT: ${said}`)
+            } else if (event.type === 'tool/call') {
+              const name = typeof event.data?.name === 'string'
+                ? event.data.name
+                : typeof event.data?.toolName === 'string' ? event.data.toolName : 'tool'
+              let args = ''
+              try {
+                args = JSON.stringify(event.data?.arguments ?? event.data?.input ?? {})
+              } catch {
+                args = ''
+              }
+              lines.push(`TOOL ${name}(${args.slice(0, 160)})`)
+            } else if (event.type === 'tool/result') {
+              const said = textOfBlocks(event.data?.content)
+              const body = said !== '' ? said : typeof event.data?.output === 'string' ? event.data.output : ''
+              if (body !== '') lines.push(`RESULT: ${body.length > 240 ? `${body.slice(0, 240)}…` : body}`)
+            }
+          }
+          // Tool output is the bulk (a real 34k-record log: 5106 tool lines vs 1229 human
+          // ones, 2.4M chars) and the model does not need every byte of it. Over budget:
+          // keep the human/assistant line first, then add tool lines from the newest end
+          // while they fit. That keeps the conversation readable instead of truncating
+          // the tail into a tool-output wall.
+          const essential = lines.filter(line => !line.startsWith('TOOL ') && !line.startsWith('RESULT: '))
+          const tooling = lines.filter(line => line.startsWith('TOOL ') || line.startsWith('RESULT: '))
+          let text = essential.join('\n\n')
+          let truncated = false
+          if (text.length > maxChars) {
+            text = text.slice(text.length - maxChars)
+            const cut = text.indexOf('\n\n')
+            if (cut > 0 && cut < 400) text = text.slice(cut + 2)
+            truncated = true
+          } else {
+            const room = maxChars - text.length
+            const kept: string[] = []
+            let used = 0
+            for (let index = tooling.length - 1; index >= 0; index -= 1) {
+              const line = tooling[index]!
+              if (used + line.length + 2 > room) { truncated = true; break }
+              kept.push(line)
+              used += line.length + 2
+            }
+            if (kept.length > 0) {
+              kept.reverse()
+              text = `${text}\n\n[tool activity]\n${kept.join('\n\n')}`
+            }
+            if (kept.length < tooling.length) truncated = true
+          }
+          sendJson(response, 200, {
+            sessionId,
+            text,
+            chars: text.length,
+            entries: lines.length,
+            prunedRecords: pruned.size,
+            truncated,
+          })
+          return
+        }
+
         if (route === 'POST /talk-map/digest/refresh') {
           if (runtime.digest === undefined) {
             sendJson(response, 503, { error: 'digest layer unavailable (llm service missing)' })

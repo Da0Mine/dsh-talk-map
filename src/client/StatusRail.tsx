@@ -34,7 +34,10 @@ export interface StatusRailProps {
   entries: readonly StatusRailEntry[]
   /** The board's card width, so a rail card is exactly as wide as a map card. */
   cardWidth: number
+  /** Double click: select the card and centre the map on it. */
   onFocus: (cardId: string) => void
+  /** Single click: open that conversation. */
+  onOpen: (cardId: string) => void
 }
 
 interface DragState {
@@ -134,6 +137,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   dragRef.current = drag
   /** Did this press travel far enough to count as a drag? */
   const movedRef = useRef(false)
+  /** Single click is delayed so a double click can cancel it. */
+  const clickTimer = useRef<number | null>(null)
+  const lastTap = useRef<{ cardId: string; at: number } | null>(null)
 
   const signature = useMemo(
     () => props.entries.map(entry => `${entry.cardId}:${entry.lamp}:${entry.stamp}`).join('|'),
@@ -240,11 +246,30 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
 
     const onUp = (): void => {
       const current = dragRef.current
-      // Press without travel = "take me to this card".
+      // Press without travel is a tap: one tap opens the conversation, a quick second
+      // tap (double click) locates the card on the map instead.
       if (current !== null && movedRef.current === false) {
+        const cardId = current.cardId
         prevTops.current.clear()
         setDrag(null)
-        props.onFocus(current.cardId)
+        const now = Date.now()
+        const previous = lastTap.current
+        if (previous !== null && previous.cardId === cardId && now - previous.at < 320) {
+          lastTap.current = null
+          if (clickTimer.current !== null) {
+            window.clearTimeout(clickTimer.current)
+            clickTimer.current = null
+          }
+          props.onFocus(cardId)
+          return
+        }
+        lastTap.current = { cardId, at: now }
+        if (clickTimer.current !== null) window.clearTimeout(clickTimer.current)
+        clickTimer.current = window.setTimeout(() => {
+          clickTimer.current = null
+          lastTap.current = null
+          props.onOpen(cardId)
+        }, 240)
         return
       }
       if (current !== null && current.hover !== current.origin) {
