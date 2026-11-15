@@ -2525,31 +2525,3 @@
 }
 
 
-/* ── the rail's "current task" block (top) ──────────────────────────────── */
-.statusRailCurrent {
-  flex: none;
-  padding: 0 0 10px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--dsw-alias-border-secondary);
-}
-
-.statusRailCurrentHead {
-  padding: 0 4px 6px;
-  font-size: 12px;
-  letter-spacing: 0.02em;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.statusRailCurrentCard {
-  cursor: pointer;
-  box-shadow: 0 0 0 1px var(--dsw-alias-brand-primary) inset;
-}
-
-.statusRailCurrentCard:hover {
-  transform: translateY(-1px);
-}
-
-.statusRailCurrentBack {
-  font-size: 10px;
-  color: var(--dsw-alias-brand-primary);
-}

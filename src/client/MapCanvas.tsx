@@ -55,7 +55,7 @@ import {
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
-import { StatusRail, type StatusRailCurrent, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
+import { StatusRail, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
@@ -1706,38 +1706,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (openSessionInUi(sessionId)) closeMapPanel()
   }
 
-  /**
-   * Open a conversation found by a search.
-   *
-   * No attempt to scroll to the matched record: the transcript exposes no
-   * per-message anchor (no data-seq / id) and only the messages near the
-   * viewport are mounted, so a plugin cannot place the view precisely. The
-   * reference plugin in the market (dsh-find-all) does the same — it opens the
-   * session and leaves the scroll position to the shell.
-   */
-  /**
-   * The conversation the map was opened from, as the rail's top block. Absent when that
-   * session has no card on this board (nothing to jump back to).
-   */
-  const currentRailEntry = useMemo<StatusRailCurrent | undefined>(() => {
-    const sessionId = currentSessionId()
-    if (sessionId === undefined) return undefined
-    for (const [cardId, card] of Object.entries(visibleCards)) {
-      if (card.sessionId !== sessionId || card.boardId !== INBOX_BOARD_ID) continue
-      const summary = sessions.byId[sessionId]
-      const lamp = glowOf(sessionId)
-      const draft = draftTexts[sessionId]
-      const body = draft !== undefined && draft !== '' ? draft : previews[sessionId]
-      return {
-        cardId,
-        title: renamedTitles[sessionId] ?? summary?.displayTitle ?? sessionId,
-        ...(lamp !== undefined ? { lamp } : {}),
-        ...(body !== undefined ? { preview: body } : {}),
-        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
-      }
-    }
-    return undefined
-  }, [visibleCards, sessions, renamedTitles, previews, draftTexts, statusById, alertById, finishedById])
   
   /** A rail tap opens that conversation (the same path a card's double click takes). */
   const openRailCard = useCallback((cardId: string) => {
@@ -2554,7 +2522,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         cardWidth={CARD_W}
         onFocus={focusCard}
         onOpen={openRailCard}
-        {...(currentRailEntry !== undefined ? { current: currentRailEntry } : {})}
       />
       {batchMode
         ? (
