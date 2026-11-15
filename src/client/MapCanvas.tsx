@@ -1244,6 +1244,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
                 ? t('edge.none')
                 : kind === 'full'
                   ? t('edge.full')
+                  : kind === 'context'
+                    ? t('edge.context')
                   : t('edge.injected'),
               ...(kind === 'none' ? { style: { opacity: 0.45 } } : {}),
             }),

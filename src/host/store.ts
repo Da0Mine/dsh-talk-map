@@ -43,7 +43,7 @@ export type Card = z.infer<typeof cardSchema>
 export const edgeInjectionSchema = z.object({
   /** 'link' = a plain association drawn between two EXISTING cards (no
    * spawn, no text); 'none' = a fork edge whose child inherited nothing. */
-  kind: z.enum(['digest', 'full', 'selection', 'none', 'link']),
+  kind: z.enum(['digest', 'context', 'full', 'selection', 'none', 'link']),
   /** What was actually injected (post-edit), kept for provenance display. */
   injectedText: z.string().optional(),
 })
