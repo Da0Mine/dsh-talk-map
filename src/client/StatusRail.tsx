@@ -368,10 +368,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>
-        <div className={styles['statusRailHead']}>
-          <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
-          <span className={styles['statusRailCount']}>{props.entries.length}</span>
-        </div>
         {props.current !== undefined
           ? (
             <div className={styles['statusRailCurrent']} data-talkmap-current="1">
@@ -410,6 +406,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
             </div>
           )
           : null}
+        <div className={styles['statusRailHead']}>
+          <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
+          <span className={styles['statusRailCount']}>{props.entries.length}</span>
+        </div>
         <div className={styles['statusRailList']} role="list">
           {ordered.length === 0
             ? <div className={styles['statusRailEmpty']}>{t('statusRail.empty')}</div>

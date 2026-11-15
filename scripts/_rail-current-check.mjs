@@ -47,5 +47,29 @@ await page.evaluate(() => {
   const sid = window.__harness.sessions?.()?.[0]?.sessionId
   return sid
 })
+// 重新打开地图 + 侧栏，再读顺序与截图
+await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
+await page.waitForTimeout(800)
+if (await page.evaluate(() => document.querySelector('.tm_statusRail')?.getAttribute('data-open')) !== '1') {
+  await page.click('button.tm_statusRailTab')
+  await page.waitForTimeout(600)
+}
+const order = await page.evaluate(() => {
+  const panel = document.querySelector('[class*="statusRailPanel"]')
+  return [...(panel?.children ?? [])].map(el => ({
+    cls: (el.className || '').split(' ').filter(c => c.includes('statusRail')).join('.'),
+    text: (el.innerText || '').trim().replace(/\s+/g, ' ').slice(0, 24),
+  }))
+})
+console.log('面板子元素顺序:', JSON.stringify(order, null, 1))
+const shot = process.argv.includes('--shot') ? process.argv[process.argv.indexOf('--shot') + 1] : 'test/shots/rail-current.png'
+if (await page.evaluate(() => document.querySelector('.tm_statusRail') === null)) {
+  await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F', code: 'KeyF', altKey: true })))
+  await page.waitForTimeout(700)
+  const o = await page.evaluate(() => document.querySelector('.tm_statusRail')?.getAttribute('data-open'))
+  if (o !== '1') { await page.click('button.tm_statusRailTab'); await page.waitForTimeout(500) }
+}
+await page.screenshot({ path: shot, clip: { x: 0, y: 0, width: 420, height: 700 } })
+console.log('shot:', shot)
 console.log('errors:', JSON.stringify(errors))
 await browser.close(); child.kill()

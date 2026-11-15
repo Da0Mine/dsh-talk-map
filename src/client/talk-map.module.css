@@ -2257,7 +2257,8 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 2px 4px 0;
+  flex: none;
+  padding: 0 4px 6px;
 }
 
 .statusRailTitle {
@@ -2527,15 +2528,15 @@
 /* ── the rail's "current task" block (top) ──────────────────────────────── */
 .statusRailCurrent {
   flex: none;
-  padding: 2px 0 10px;
-  margin-bottom: 4px;
+  padding: 0 0 10px;
+  margin-bottom: 8px;
   border-bottom: 1px solid var(--dsw-alias-border-secondary);
 }
 
 .statusRailCurrentHead {
   padding: 0 4px 6px;
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   color: var(--dsw-alias-label-secondary);
 }
 
