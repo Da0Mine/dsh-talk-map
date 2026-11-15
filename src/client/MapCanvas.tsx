@@ -35,7 +35,7 @@ import { drawerState } from './drawer-state.ts'
 import { callRpc, fetchSearchContext, fetchSessionHits, searchSessions, type ContentHit } from './rpc.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import { sessionActivity } from './session-activity.ts'
-import { draftWatch } from './draft-watch.ts'
+import { draftWatch, readDraftTexts } from './draft-watch.ts'
 import { cleanPreviewText } from './preview-text.ts'
 import { loadPreviewCache, putPreview, readPreviewTexts } from './preview-cache.ts'
 import { ContextMenu, type MenuItem, type MenuState } from './ContextMenu.tsx'
@@ -55,7 +55,7 @@ import {
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
-import { StatusRail, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
+import { StatusRail, type StatusRailCurrent, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
@@ -185,11 +185,25 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // Sessions whose composer holds unsent text — read from the shell's own
   // conversation store in localStorage (there is no service for it).
   const draftSessions = useSyncExternalStore(draftWatch.subscribe, draftWatch.getSnapshot)
+  // 待发送时卡片正文显示"将要发出去的那句话"，而不是上一句已发送的。
+  const [draftTexts, setDraftTexts] = useState<Record<string, string>>(() => readDraftTexts())
   useEffect(() => {
     draftWatch.refresh()
     // Same-document storage writes fire no event, so while the panel is up we
     // just re-read the store; refresh() publishes only on a real change.
-    const timer = setInterval(() => { draftWatch.refresh() }, 1500)
+    const syncTexts = (): void => {
+      const next = readDraftTexts()
+      setDraftTexts((current) => {
+        const keys = Object.keys(next)
+        if (keys.length === Object.keys(current).length && keys.every(key => current[key] === next[key])) return current
+        return next
+      })
+    }
+    syncTexts()
+    const timer = setInterval(() => {
+      draftWatch.refresh()
+      syncTexts()
+    }, 1500)
     return () => { clearInterval(timer) }
   }, [])
 
@@ -915,7 +929,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       })
     }
     return rows
-  }, [visibleCards, sessions, renamedTitles, previews, pinnedSessions, statusById, alertById, finishedById])
+  }, [visibleCards, sessions, renamedTitles, previews, draftTexts, pinnedSessions, statusById, alertById, finishedById])
 
   /** Bring one card into view and select it (a double click on a rail row). */
   const focusCard = useCallback((cardId: string) => {
@@ -978,7 +992,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           running: status?.running ?? summary?.running ?? false,
           ghost: summary === undefined,
           updatedAt: summary?.updatedAt,
-          ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
+          // 待发送优先：卡片正文显示草稿本身，而不是上一句已发送的内容。
+          ...((draftTexts[card.sessionId] ?? '') !== ''
+            ? { preview: draftTexts[card.sessionId] }
+            : previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
           waiting: status !== undefined ? status.pendingInteraction !== undefined : summary?.pendingInteraction !== undefined,
           done: status?.completionUnread === true,
           glow: glowOf(card.sessionId),
@@ -1047,7 +1064,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     })
     return [...frameNodes, ...cardNodes, ...stackNodes]
-  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale])
+  }, [frameRects, folderLayouts, foldedCards, foldedSet, cardLayout, draggingCardId, membersByGroup, wsTitles, visibleCards, canvasState.digests, canvasState.global, sessions, statusById, alertById, finishedById, interruptedById, draftSessions, previews, draftTexts, pinnedSessions, renamedTitles, renamedWorkspaces, liveSelectedIds, batchMode, batchPicks, locale])
 
   const sessionIdToCardId = useMemo(() => {
     const index = new Map<string, string>()
@@ -1698,6 +1715,30 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    * reference plugin in the market (dsh-find-all) does the same — it opens the
    * session and leaves the scroll position to the shell.
    */
+  /**
+   * The conversation the map was opened from, as the rail's top block. Absent when that
+   * session has no card on this board (nothing to jump back to).
+   */
+  const currentRailEntry = useMemo<StatusRailCurrent | undefined>(() => {
+    const sessionId = currentSessionId()
+    if (sessionId === undefined) return undefined
+    for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (card.sessionId !== sessionId || card.boardId !== INBOX_BOARD_ID) continue
+      const summary = sessions.byId[sessionId]
+      const lamp = glowOf(sessionId)
+      const draft = draftTexts[sessionId]
+      const body = draft !== undefined && draft !== '' ? draft : previews[sessionId]
+      return {
+        cardId,
+        title: renamedTitles[sessionId] ?? summary?.displayTitle ?? sessionId,
+        ...(lamp !== undefined ? { lamp } : {}),
+        ...(body !== undefined ? { preview: body } : {}),
+        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+      }
+    }
+    return undefined
+  }, [visibleCards, sessions, renamedTitles, previews, draftTexts, statusById, alertById, finishedById])
+  
   /** A rail tap opens that conversation (the same path a card's double click takes). */
   const openRailCard = useCallback((cardId: string) => {
     const card = visibleCards[cardId]
@@ -2513,6 +2554,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         cardWidth={CARD_W}
         onFocus={focusCard}
         onOpen={openRailCard}
+        {...(currentRailEntry !== undefined ? { current: currentRailEntry } : {})}
       />
       {batchMode
         ? (

@@ -34,6 +34,37 @@ function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return true
 }
 
+/** The unsent text of one session, or '' when it has none. */
+export function readDraftText(sessionId: string): string {
+  if (typeof localStorage === 'undefined') return ''
+  try {
+    const raw = localStorage.getItem(STORE_PREFIX + sessionId)
+    if (raw === null) return ''
+    const stored: unknown = JSON.parse(raw)
+    const draft = stored !== null && typeof stored === 'object'
+      ? (stored as { draft?: unknown }).draft
+      : undefined
+    return draftTextOf(draft)
+  } catch {
+    return ''
+  }
+}
+
+/** Every session's unsent text, for cards that show the pending message. */
+export function readDraftTexts(): Record<string, string> {
+  const out: Record<string, string> = {}
+  if (typeof localStorage === 'undefined') return out
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index)
+    if (key === null || !key.startsWith(STORE_PREFIX)) continue
+    const sessionId = key.slice(STORE_PREFIX.length)
+    if (sessionId === '') continue
+    const text = readDraftText(sessionId)
+    if (text.trim() !== '') out[sessionId] = text
+  }
+  return out
+}
+
 /** Which sessions currently hold unsent text, straight from the shell's store. */
 export function readDraftSessions(): Set<string> {
   const out = new Set<string>()

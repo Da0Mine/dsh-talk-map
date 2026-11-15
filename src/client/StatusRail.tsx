@@ -38,6 +38,17 @@ export interface StatusRailProps {
   onFocus: (cardId: string) => void
   /** Single click: open that conversation. */
   onOpen: (cardId: string) => void
+  /** The conversation the map was opened from — the rail's "current task" block. */
+  current?: StatusRailCurrent
+}
+
+export interface StatusRailCurrent {
+  cardId: string
+  title: string
+  /** Only when it also carries a lamp (running / waiting / unread). */
+  lamp?: StatusLamp
+  preview?: string
+  updatedAt?: number
 }
 
 interface DragState {
@@ -361,6 +372,44 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
           <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
           <span className={styles['statusRailCount']}>{props.entries.length}</span>
         </div>
+        {props.current !== undefined
+          ? (
+            <div className={styles['statusRailCurrent']} data-talkmap-current="1">
+              <div className={styles['statusRailCurrentHead']}>{t('statusRail.current')}</div>
+              <div
+                className={`${styles['card']} ${props.current.lamp !== undefined ? styles[LAMP_CLASS[props.current.lamp]] ?? '' : ''} ${styles['statusRailCard']} ${styles['statusRailCurrentCard']}`}
+                role="button"
+                tabIndex={0}
+                title={t('statusRail.currentHint')}
+                onClick={() => { props.onOpen(props.current!.cardId) }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    props.onOpen(props.current!.cardId)
+                  }
+                }}
+              >
+                <div className={styles['cardTop']}>
+                  <span className={styles['cardTitle']}>{props.current.title}</span>
+                </div>
+                {props.current.preview !== undefined && props.current.preview !== ''
+                  ? <div className={styles['cardSummary']}>{props.current.preview}</div>
+                  : null}
+                <div className={styles['cardFooter']}>
+                  <span className={styles['cardTime']}>{relativeTime(props.current.updatedAt)}</span>
+                  {props.current.lamp !== undefined
+                    ? (
+                      <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[props.current.lamp].className]}`}>
+                        {LAMP_CHIP[props.current.lamp].dot ? <span className={styles['runningDot']} /> : null}
+                        {t(LAMP_CHIP[props.current.lamp].key)}
+                      </span>
+                    )
+                    : <span className={styles['statusRailCurrentBack']}>{t('statusRail.currentBack')}</span>}
+                </div>
+              </div>
+            </div>
+          )
+          : null}
         <div className={styles['statusRailList']} role="list">
           {ordered.length === 0
             ? <div className={styles['statusRailEmpty']}>{t('statusRail.empty')}</div>
