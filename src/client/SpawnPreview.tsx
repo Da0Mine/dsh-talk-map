@@ -42,6 +42,10 @@ export function SpawnPreview(props: {
   /** Fetching the live window (mode 'context' only). */
   const [contextBusy, setContextBusy] = useState(false)
   const [contextNote, setContextNote] = useState<string | undefined>(undefined)
+  /** Character budget for the 'context' mode — the old 40k hard cap surprised people. */
+  // 0 = 不截断：把本次会话实际携带的上下文整份注入（默认）
+  const [contextBudget, setContextBudget] = useState(0)
+  const [contextStats, setContextStats] = useState<{ available: number; kept: number; tokens: number } | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | undefined>(undefined)
 
@@ -68,18 +72,23 @@ export function SpawnPreview(props: {
     let alive = true
     setContextBusy(true)
     setContextNote(undefined)
-    void talkMapApi.contextWindow(pending.parent.sessionId)
+    void talkMapApi.contextWindow(pending.parent.sessionId, contextBudget)
       .then((page) => {
         if (!alive) return
         const body = page.text.trim()
         setText(body === ''
           ? ''
           : `${t('inject.contextHeader')}「${pending.parent.title}」\n\n${body}\n\n${t('inject.contextNote')}`)
+        setContextStats({ available: page.availableChars, kept: page.chars, tokens: page.approxTokens })
         setContextNote(body === ''
           ? t('spawn.contextEmpty')
-          : page.truncated
-            ? t('spawn.contextTruncated', { n: String(page.chars) })
-            : t('spawn.contextLoaded', { n: String(page.chars), m: String(page.entries) }))
+          : t(page.truncated ? 'spawn.contextTruncated' : 'spawn.contextLoaded', {
+              n: String(page.chars),
+              m: String(page.entries),
+              a: String(page.availableChars),
+              e: String(page.essentialChars),
+              u: String(page.toolChars),
+            }))
       })
       .catch((error: unknown) => {
         if (alive) setContextNote(String((error as Error | undefined)?.message ?? error))
@@ -87,7 +96,7 @@ export function SpawnPreview(props: {
       .finally(() => { if (alive) setContextBusy(false) })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, pending.parent.sessionId])
+  }, [mode, pending.parent.sessionId, contextBudget])
 
   const addCardAndEdge = (sessionId: string, kind: EdgeInjection['kind'], injectedText?: string): string => {
     const cardId = newCardId()
@@ -222,8 +231,29 @@ export function SpawnPreview(props: {
           ? (
               <>
                 <div className={styles['spawnHint']}>{t('spawn.contextHint')}</div>
+                <div className={styles['spawnModes']} role="group" aria-label={t('spawn.contextBudget')}>
+                  {[
+                    { chars: 0, label: t('spawn.budget.all') },
+                    { chars: 40000, label: t('spawn.budget.40k') },
+                    { chars: 100000, label: t('spawn.budget.100k') },
+                    { chars: 300000, label: t('spawn.budget.300k') },
+                    { chars: 600000, label: t('spawn.budget.600k') },
+                  ].map(option => (
+                    <button
+                      key={option.chars}
+                      type="button"
+                      className={`${styles['spawnModeBtn']}${contextBudget === option.chars ? ` ${styles['spawnModeActive']}` : ''}`}
+                      onClick={() => { setContextBudget(option.chars) }}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
                 {contextNote !== undefined
                   ? <div className={styles['spawnHint']}>{contextNote}</div>
+                  : null}
+                {contextStats !== undefined
+                  ? <div className={styles['spawnHint']}>{t('spawn.contextAvailable', { a: String(contextStats.available), t: String(contextStats.tokens) })}</div>
                   : null}
                 <textarea
                   className={`${styles['spawnTextarea']} nodrag nowheel`}

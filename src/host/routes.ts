@@ -31,7 +31,7 @@ export interface TalkMapRuntime {
   presetDefault?: () => string
 }
 
-const MAX_BODY_BYTES = 1024 * 1024
+const MAX_BODY_BYTES = 64 * 1024 * 1024
 
 /** Concatenate the text blocks of a message payload (tool results have none). */
 function textOfBlocks(content: unknown): string {
@@ -413,8 +413,9 @@ export function mountTalkMapRoutes(
             sendJson(response, 400, { error: 'sessionId is required' })
             return
           }
-          const requested = typeof body?.maxChars === 'number' ? Math.round(body.maxChars) : 40000
-          const maxChars = Math.min(Math.max(requested, 4000), 400000)
+          const requested = typeof body?.maxChars === 'number' ? Math.round(body.maxChars) : 0
+          // 0 = 不截断（按本次会话实际携带的全部内容注入）
+          const maxChars = requested <= 0 ? 0 : Math.min(Math.max(requested, 4000), 3000000)
           const query = runtime.sessionQuery
           if (query === undefined) {
             sendJson(response, 503, { error: 'session surface unavailable' })
@@ -450,7 +451,9 @@ export function mountTalkMapRoutes(
             if (pruned.has(seq)) continue
             if (event.type === 'user/message') {
               const said = textOfBlocks(event.data?.content)
-              if (said !== '') lines.push(`USER: ${said}`)
+              const kind = (event.data as { source?: { kind?: unknown } } | undefined)?.source?.kind
+              const label = kind === 'compact-checkpoint' ? 'COMPACTED HISTORY (summary)' : typeof kind === 'string' && kind !== 'user' ? `USER/${kind}` : 'USER'
+              if (said !== '') lines.push(`${label}: ${said}`)
             } else if (event.type === 'assistant/message') {
               const said = textOfBlocks(event.data?.message?.content)
               if (said !== '') lines.push(`ASSISTANT: ${said}`)
@@ -480,12 +483,16 @@ export function mountTalkMapRoutes(
           const tooling = lines.filter(line => line.startsWith('TOOL ') || line.startsWith('RESULT: '))
           let text = essential.join('\n\n')
           let truncated = false
-          if (text.length > maxChars) {
+          if (maxChars === 0) {
+            // Everything, exactly as the session carries it.
+            const all = lines.join('\n\n')
+            text = all
+          } else if (text.length > maxChars) {
             text = text.slice(text.length - maxChars)
             const cut = text.indexOf('\n\n')
             if (cut > 0 && cut < 400) text = text.slice(cut + 2)
             truncated = true
-          } else {
+          } else if (maxChars > 0) {
             const room = maxChars - text.length
             const kept: string[] = []
             let used = 0
@@ -501,6 +508,8 @@ export function mountTalkMapRoutes(
             }
             if (kept.length < tooling.length) truncated = true
           }
+          const essentialChars = essential.join('\n\n').length
+          const toolChars = tooling.join('\n\n').length
           sendJson(response, 200, {
             sessionId,
             text,
@@ -508,6 +517,14 @@ export function mountTalkMapRoutes(
             entries: lines.length,
             prunedRecords: pruned.size,
             truncated,
+            // So the panel can say "available X, kept Y" instead of surprising the user.
+            availableChars: essentialChars + toolChars,
+            essentialChars,
+            toolChars,
+            essentialEntries: essential.length,
+            toolEntries: tooling.length,
+            // 4 chars/token: the same rough ratio the shell shows for this corpus (mixed zh/code).
+            approxTokens: Math.round((essentialChars + toolChars) / 4),
           })
           return
         }

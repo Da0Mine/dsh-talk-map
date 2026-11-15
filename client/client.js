@@ -375,11 +375,18 @@ var zh = {
   "spawn.mode.none": "不继承",
   "spawn.mode.digest": "摘要注入",
   "spawn.mode.context": "当前上下文",
-  "spawn.contextHint": "注入这段对话「当前」发给模型的上下文（已经被压缩掉的历史不在里面）。可以编辑后再开：",
+  "spawn.contextBudget": "注入体积",
+  "spawn.budget.40k": "4 万字符",
+  "spawn.budget.100k": "10 万",
+  "spawn.budget.300k": "30 万",
+  "spawn.budget.600k": "60 万",
+  "spawn.budget.all": "完整（不截断）",
+  "spawn.contextAvailable": "本次会话可注入约 {a} 个字符（≈{t} tokens，按 4 字符/token 粗估）。",
+  "spawn.contextHint": "把这段对话当前携带的上下文整份注入（含已压缩历史的检查点摘要；系统提示词与工具定义不注入，新会话有自己的）。可以编辑后再开：",
   "spawn.contextLoading": "正在读取当前上下文……",
   "spawn.contextEmpty": "这段对话暂时没有可注入的内容（可能刚压缩完，或还没有消息）。",
-  "spawn.contextLoaded": "已读取 {n} 个字符、{m} 条记录。",
-  "spawn.contextTruncated": "内容过长，只保留最近 {n} 个字符。",
+  "spawn.contextLoaded": "已注入 {n} 个字符、{m} 条记录（人机 {e} 字符，工具 {u} 字符）。",
+  "spawn.contextTruncated": "超出所选的注入体积，只保留最近 {n} 个字符（可注入总量 {a} 字符：人机 {e}、工具 {u}）。",
   "inject.contextHeader": "【上下文注入 · 当前上下文 · 来自】",
   "inject.contextNote": "（以上是母对话当前仍在上下文里的内容；更早的部分已被压缩，不在其中。）",
   "spawn.mode.full": "完整对话",
@@ -480,7 +487,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b69 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b70 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -558,11 +565,18 @@ var en = {
   "spawn.mode.none": "No context",
   "spawn.mode.digest": "Inject digest",
   "spawn.mode.context": "Current context",
-  "spawn.contextHint": "Inject the context this conversation is currently given (already-compressed history is excluded). Edit it before you start:",
+  "spawn.contextBudget": "Injection size",
+  "spawn.budget.40k": "40k chars",
+  "spawn.budget.100k": "100k",
+  "spawn.budget.300k": "300k",
+  "spawn.budget.600k": "600k",
+  "spawn.budget.all": "Everything",
+  "spawn.contextAvailable": "This session carries about {a} characters (≈{t} tokens at a rough 4 chars/token).",
+  "spawn.contextHint": "Inject the whole context this conversation currently carries (compacted history arrives as its checkpoint summaries; system prompt and tool definitions are not injected — the new session has its own). Edit it before you start:",
   "spawn.contextLoading": "Reading the current context…",
   "spawn.contextEmpty": "Nothing to inject right now (freshly compacted, or no messages yet).",
-  "spawn.contextLoaded": "Read {n} characters across {m} records.",
-  "spawn.contextTruncated": "Too long: kept the most recent {n} characters.",
+  "spawn.contextLoaded": "Injected {n} characters across {m} records ({e} human, {u} tool).",
+  "spawn.contextTruncated": "Over the chosen size: kept the most recent {n} characters (available {a}: {e} human, {u} tool).",
   "inject.contextHeader": "[Context injection · current context · from]",
   "inject.contextNote": "(The above is what the parent still has in context; earlier parts were compacted away.)",
   "spawn.mode.full": "Full history",
@@ -656,7 +670,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b69 · Search cards on the map",
+  "global.searchPlaceholder": "b70 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -12748,6 +12762,8 @@ function SpawnPreview(props) {
   const [firstMessage, setFirstMessage] = (0, import_react9.useState)("");
   const [contextBusy, setContextBusy] = (0, import_react9.useState)(false);
   const [contextNote, setContextNote] = (0, import_react9.useState)(void 0);
+  const [contextBudget, setContextBudget] = (0, import_react9.useState)(0);
+  const [contextStats, setContextStats] = (0, import_react9.useState)(void 0);
   const [busy, setBusy] = (0, import_react9.useState)(false);
   const [error, setError] = (0, import_react9.useState)(void 0);
   (0, import_react9.useEffect)(() => {
@@ -12769,7 +12785,7 @@ function SpawnPreview(props) {
     let alive = true;
     setContextBusy(true);
     setContextNote(void 0);
-    void talkMapApi.contextWindow(pending.parent.sessionId).then((page) => {
+    void talkMapApi.contextWindow(pending.parent.sessionId, contextBudget).then((page) => {
       if (!alive) return;
       const body = page.text.trim();
       setText(body === "" ? "" : `${t("inject.contextHeader")}「${pending.parent.title}」
@@ -12777,7 +12793,14 @@ function SpawnPreview(props) {
 ${body}
 
 ${t("inject.contextNote")}`);
-      setContextNote(body === "" ? t("spawn.contextEmpty") : page.truncated ? t("spawn.contextTruncated", { n: String(page.chars) }) : t("spawn.contextLoaded", { n: String(page.chars), m: String(page.entries) }));
+      setContextStats({ available: page.availableChars, kept: page.chars, tokens: page.approxTokens });
+      setContextNote(body === "" ? t("spawn.contextEmpty") : t(page.truncated ? "spawn.contextTruncated" : "spawn.contextLoaded", {
+        n: String(page.chars),
+        m: String(page.entries),
+        a: String(page.availableChars),
+        e: String(page.essentialChars),
+        u: String(page.toolChars)
+      }));
     }).catch((error2) => {
       if (alive) setContextNote(String(error2?.message ?? error2));
     }).finally(() => {
@@ -12786,7 +12809,7 @@ ${t("inject.contextNote")}`);
     return () => {
       alive = false;
     };
-  }, [mode, pending.parent.sessionId]);
+  }, [mode, pending.parent.sessionId, contextBudget]);
   const addCardAndEdge = (sessionId, kind, injectedText) => {
     const cardId = newCardId();
     const card = {
@@ -12912,7 +12935,26 @@ ${t("inject.contextNote")}`);
       )
     ] }) : mode === "context" ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.contextHint") }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnModes"], role: "group", "aria-label": t("spawn.contextBudget"), children: [
+        { chars: 0, label: t("spawn.budget.all") },
+        { chars: 4e4, label: t("spawn.budget.40k") },
+        { chars: 1e5, label: t("spawn.budget.100k") },
+        { chars: 3e5, label: t("spawn.budget.300k") },
+        { chars: 6e5, label: t("spawn.budget.600k") }
+      ].map((option) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
+        "button",
+        {
+          type: "button",
+          className: `${talk_map_default["spawnModeBtn"]}${contextBudget === option.chars ? ` ${talk_map_default["spawnModeActive"]}` : ""}`,
+          onClick: () => {
+            setContextBudget(option.chars);
+          },
+          children: option.label
+        },
+        option.chars
+      )) }),
       contextNote !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: contextNote }) : null,
+      contextStats !== void 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: talk_map_default["spawnHint"], children: t("spawn.contextAvailable", { a: String(contextStats.available), t: String(contextStats.tokens) }) }) : null,
       /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(
         "textarea",
         {

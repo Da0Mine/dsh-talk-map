@@ -98,6 +98,11 @@ export const talkMapApi = {
     entries: number
     prunedRecords: number
     truncated: boolean
+    availableChars: number
+    essentialChars: number
+    toolChars: number
+    essentialEntries: number
+    toolEntries: number
   }> {
     return postJson('/talk-map/context-window', { sessionId, ...(maxChars !== undefined ? { maxChars } : {}) })
   },
