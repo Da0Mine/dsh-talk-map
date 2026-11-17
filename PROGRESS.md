@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏队列布局改用内联样式**（`0.1.80`）：查出宿主真实容器 —— `footArea{flex-direction:column; flex:none; align-items:center}` 里放 `footerActions{display:flex}`（**行**）。之前按钮和队列并排、按钮被垂直居中，就是因为依赖 CSS 类且受行布局影响。现在外层/控制行/队列块/卡片宽度全部走内联样式（`flex-direction:column`、`width:100%`、`flex:1 1 100%`、`maxHeight:46vh`、列表 `overflowY:auto`），不再受安装副本里 CSS 是否生效影响。实测（镜像宿主容器、390px 侧栏）：卡片 x=12 w=365 撑满、按钮 y=862 在底部、`buttonsVisible:true`、点击 opened:1。
+
 - **侧栏队列与地图侧栏对齐**（`0.1.79`）：只显示**带灯**的卡片（与地图 rail 的 `glowOf` 同一套判定：alert→error、`pendingInteraction`→waiting、`running`→running、`completed`/activity→done），不再把整板 100+ 张卡塞进去；卡片 `width:100%`+`box-sizing:border-box` 撑满侧栏（原来继承 rail 的固定宽度，右边被截、左边像留白）；整块上限收到 `30vh` 并内部滚动，工作区列表不再被压扁。实测：3 张带灯卡、卡片宽 177/容器 203、两个按钮可见、点击 opened:1。
 
 - **侧栏队列改用真实卡片**（`0.1.78`）：数据全部客户端读（卡片集来自 `canvas` store、标题来自 `getServices().sessions.list`、正文用 `/talk-map/last-user` 批量取前 14 张、草稿优先），渲染直接复用地图 rail 的 `.card + .statusRailCard`，所以外观与地图侧栏卡片一致（标题/两行正文/时间/「待发送」胶囊）。footer 改为纵向（队列在上、`.toggleControls` 一行在下），队列 `max-height:42vh` 内部滚动，**两个原按钮不再被挤出屏幕**。实测：24 张卡、列表 355/2688 可滚动、`buttonsVisible:true`、点击 `opened:1`。

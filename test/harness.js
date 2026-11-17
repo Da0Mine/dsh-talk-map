@@ -765,7 +765,7 @@
         'data-harness-sidebar': sidebarCollapsed ? 'rail' : 'wide',
         style: {
           flex: 'none',
-          width: sidebarCollapsed ? 56 : 220,
+          width: sidebarCollapsed ? 56 : 390,
           borderRight: '1px solid #33363d',
           display: 'flex',
           flexDirection: 'column',
@@ -774,7 +774,25 @@
           boxSizing: 'border-box',
           background: '#1f2126',
         },
-      }, Toggle === undefined ? null : h(Toggle, { wide: !sidebarCollapsed })),
+      },
+      // Mirror the host's real sidebar-footer container:
+      //   .footerButtons { display:flex; width:100%; align-items:center;
+      //                    flex-direction:column; gap:2px }
+      // Its align-items:center is what makes a child that does not claim full width sit
+      // centred with a gap on the leading edge — reproduce it here, or the bug is invisible.
+      h('div', {
+        'data-harness-footer': '1',
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          flex: 'none',
+        },
+      },
+      h('div', {
+        'data-harness-footer-actions': '1',
+        style: { display: 'flex', width: '100%', minWidth: 0, flex: 'none' },
+      }, Toggle === undefined ? null : h(Toggle, { wide: !sidebarCollapsed })))),
       h('div', { style: { flex: 1, minWidth: 0, position: 'relative', display: 'flex', flexDirection: 'column' } },
         selectedPanel === 'talk-map' && MapPanel !== undefined
           ? h(MapPanel, props)

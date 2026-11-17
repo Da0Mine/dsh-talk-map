@@ -108,12 +108,21 @@ export function SidebarQueue(): React.JSX.Element | null {
   if (rows.length === 0) return null
 
   return (
-    <div className={styles['sidebarQueue']} lang={locale} data-talkmap-queue-root="1">
+    <div
+      className={styles['sidebarQueue']}
+      lang={locale}
+      data-talkmap-queue-root="1"
+      style={{ display: 'flex', flexDirection: 'column', width: '100%', minWidth: 0, minHeight: 0, maxHeight: '46vh', overflow: 'hidden', flex: '1 1 auto' }}
+    >
       <div className={styles['sidebarQueueHead']}>
         <span className={styles['sidebarQueueHeadText']}>{t('statusRail.title')}</span>
         <span className={styles['sidebarQueueCount']}>{rows.length}</span>
       </div>
-      <div className={styles['sidebarQueueList']} role="list">
+      <div
+        className={styles['sidebarQueueList']}
+        role="list"
+        style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 4px 6px', overscrollBehavior: 'contain' }}
+      >
         {rows.map((row) => {
           const draft = row.draft
           const body = draft !== undefined && draft.trim() !== ''
@@ -124,6 +133,7 @@ export function SidebarQueue(): React.JSX.Element | null {
             <div
               key={row.cardId}
               className={`${styles['card']} ${styles[LAMP_CLASS[row.lamp]] ?? ''} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
+              style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', flex: 'none', alignSelf: 'stretch' }}
               data-talkmap-queue={row.sessionId}
               data-lamp={row.lamp}
               title={row.title}

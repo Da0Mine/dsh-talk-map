@@ -47,13 +47,23 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
   const backTitle = t('map.backToCurrent')
 
   return (
-    <div className={`${styles['toggleWrap']}${wide ? ` ${styles['toggleWrapWide']}` : ''}`}>
+    <div
+      className={`${styles['toggleWrap']}${wide ? ` ${styles['toggleWrapWide']}` : ''}`}
+      // The host puts footer entries in a ROW (.footerActions{display:flex}) whose parent
+      // centres them (.footArea{align-items:center}) — with a plain class the queue ended up
+      // beside the buttons and the buttons floated mid-height. Inline styles win regardless
+      // of which CSS survived in the installed copy.
+      style={wide ? { display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6, width: '100%', minWidth: 0, flex: '1 1 100%' } : undefined}
+    >
       {/* The queue fills the empty space under the workspace list; it only makes sense
           when the sidebar is expanded into its wide form. */}
       {wide ? <SidebarQueue /> : null}
       {/* The two original controls keep their own row, so a long queue can never push
           them off the bottom of the sidebar. */}
-      <div className={styles['toggleControls']}>
+      <div
+        className={styles['toggleControls']}
+        style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 'none' }}
+      >
       <button
         type="button"
         className={classNames.filter(Boolean).join(' ')}

@@ -492,7 +492,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b79 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b80 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -679,7 +679,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b79 · Search cards on the map",
+  "global.searchPlaceholder": "b80 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -16460,50 +16460,68 @@ function SidebarQueue() {
     });
   }, [rows]);
   if (rows.length === 0) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: talk_map_default["sidebarQueue"], lang: locale, "data-talkmap-queue-root": "1", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: talk_map_default["sidebarQueueHead"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["sidebarQueueHeadText"], children: t("statusRail.title") }),
-      /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["sidebarQueueCount"], children: rows.length })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: talk_map_default["sidebarQueueList"], role: "list", children: rows.map((row) => {
-      const draft = row.draft;
-      const body = draft !== void 0 && draft.trim() !== "" ? draft : previews[row.sessionId];
-      const chip = LAMP_CHIP[row.lamp];
-      return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
-        "div",
-        {
-          className: `${talk_map_default["card"]} ${talk_map_default[LAMP_CLASS[row.lamp]] ?? ""} ${talk_map_default["statusRailCard"]} ${talk_map_default["sidebarQueueCard"]}`,
-          "data-talkmap-queue": row.sessionId,
-          "data-lamp": row.lamp,
-          title: row.title,
-          role: "button",
-          tabIndex: 0,
-          onClick: () => {
-            closeMapPanel();
-            openSessionInUi(row.sessionId);
-          },
-          onKeyDown: (event) => {
-            if (event.key !== "Enter" && event.key !== " ") return;
-            event.preventDefault();
-            closeMapPanel();
-            openSessionInUi(row.sessionId);
-          },
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["cardTitle"], children: row.title }) }),
-            body !== void 0 && body.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: talk_map_default["cardSummary"], children: body }) : null,
-            /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
-              /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(row.updatedAt) }),
-              /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[chip.className]}`, children: [
-                chip.dot === true ? /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
-                t(chip.key)
-              ] })
-            ] })
-          ]
-        },
-        row.cardId
-      );
-    }) })
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
+    "div",
+    {
+      className: talk_map_default["sidebarQueue"],
+      lang: locale,
+      "data-talkmap-queue-root": "1",
+      style: { display: "flex", flexDirection: "column", width: "100%", minWidth: 0, minHeight: 0, maxHeight: "46vh", overflow: "hidden", flex: "1 1 auto" },
+      children: [
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: talk_map_default["sidebarQueueHead"], children: [
+          /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["sidebarQueueHeadText"], children: t("statusRail.title") }),
+          /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["sidebarQueueCount"], children: rows.length })
+        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime18.jsx)(
+          "div",
+          {
+            className: talk_map_default["sidebarQueueList"],
+            role: "list",
+            style: { display: "flex", flexDirection: "column", gap: 6, flex: "1 1 auto", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 4px 6px", overscrollBehavior: "contain" },
+            children: rows.map((row) => {
+              const draft = row.draft;
+              const body = draft !== void 0 && draft.trim() !== "" ? draft : previews[row.sessionId];
+              const chip = LAMP_CHIP[row.lamp];
+              return /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)(
+                "div",
+                {
+                  className: `${talk_map_default["card"]} ${talk_map_default[LAMP_CLASS[row.lamp]] ?? ""} ${talk_map_default["statusRailCard"]} ${talk_map_default["sidebarQueueCard"]}`,
+                  style: { width: "100%", maxWidth: "100%", boxSizing: "border-box", flex: "none", alignSelf: "stretch" },
+                  "data-talkmap-queue": row.sessionId,
+                  "data-lamp": row.lamp,
+                  title: row.title,
+                  role: "button",
+                  tabIndex: 0,
+                  onClick: () => {
+                    closeMapPanel();
+                    openSessionInUi(row.sessionId);
+                  },
+                  onKeyDown: (event) => {
+                    if (event.key !== "Enter" && event.key !== " ") return;
+                    event.preventDefault();
+                    closeMapPanel();
+                    openSessionInUi(row.sessionId);
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: talk_map_default["cardTop"], children: /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["cardTitle"], children: row.title }) }),
+                    body !== void 0 && body.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("div", { className: talk_map_default["cardSummary"], children: body }) : null,
+                    /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
+                      /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(row.updatedAt) }),
+                      /* @__PURE__ */ (0, import_jsx_runtime18.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[chip.className]}`, children: [
+                        chip.dot === true ? /* @__PURE__ */ (0, import_jsx_runtime18.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                        t(chip.key)
+                      ] })
+                    ] })
+                  ]
+                },
+                row.cardId
+              );
+            })
+          }
+        )
+      ]
+    }
+  );
 }
 
 // src/client/MapToggleButton.tsx
@@ -16532,47 +16550,61 @@ function MapToggleButton(props) {
   const classNames = [wide ? talk_map_default["toggleRow"] : talk_map_default["toggleButton"]];
   if (open) classNames.push(talk_map_default["toggleButtonActive"]);
   const backTitle = t("map.backToCurrent");
-  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("div", { className: `${talk_map_default["toggleWrap"]}${wide ? ` ${talk_map_default["toggleWrapWide"]}` : ""}`, children: [
-    wide ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(SidebarQueue, {}) : null,
-    /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("div", { className: talk_map_default["toggleControls"], children: [
-      /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(
-        "button",
-        {
-          type: "button",
-          className: classNames.filter(Boolean).join(" "),
-          lang: locale,
-          title: t("map.toggle"),
-          "aria-label": t("map.toggle"),
-          "aria-pressed": open,
-          onClick: () => {
-            mapUi.toggle();
-          },
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(MapIcon, {}),
-            wide ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
-          ]
-        }
-      ),
-      /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(
-        "button",
-        {
-          type: "button",
-          className: talk_map_default["backToCurrent"],
-          lang: locale,
-          title: backTitle,
-          "aria-label": backTitle,
-          "data-talkmap-back": "1",
-          onClick: () => {
-            const sessionId = currentSessionId();
-            if (sessionId === void 0) return;
-            closeMapPanel();
-            openSessionInUi(sessionId);
-          },
-          children: /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(BackIcon2, {})
-        }
-      )
-    ] })
-  ] });
+  return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(
+    "div",
+    {
+      className: `${talk_map_default["toggleWrap"]}${wide ? ` ${talk_map_default["toggleWrapWide"]}` : ""}`,
+      style: wide ? { display: "flex", flexDirection: "column", alignItems: "stretch", gap: 6, width: "100%", minWidth: 0, flex: "1 1 100%" } : void 0,
+      children: [
+        wide ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(SidebarQueue, {}) : null,
+        /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(
+          "div",
+          {
+            className: talk_map_default["toggleControls"],
+            style: { display: "flex", alignItems: "center", gap: 4, flex: "none" },
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(
+                "button",
+                {
+                  type: "button",
+                  className: classNames.filter(Boolean).join(" "),
+                  lang: locale,
+                  title: t("map.toggle"),
+                  "aria-label": t("map.toggle"),
+                  "aria-pressed": open,
+                  onClick: () => {
+                    mapUi.toggle();
+                  },
+                  children: [
+                    /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(MapIcon, {}),
+                    wide ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["toggleLabel"], children: t("map.toggle") }) : null
+                  ]
+                }
+              ),
+              /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(
+                "button",
+                {
+                  type: "button",
+                  className: talk_map_default["backToCurrent"],
+                  lang: locale,
+                  title: backTitle,
+                  "aria-label": backTitle,
+                  "data-talkmap-back": "1",
+                  onClick: () => {
+                    const sessionId = currentSessionId();
+                    if (sessionId === void 0) return;
+                    closeMapPanel();
+                    openSessionInUi(sessionId);
+                  },
+                  children: /* @__PURE__ */ (0, import_jsx_runtime19.jsx)(BackIcon2, {})
+                }
+              )
+            ]
+          }
+        )
+      ]
+    }
+  );
 }
 
 // src/client/index.ts
