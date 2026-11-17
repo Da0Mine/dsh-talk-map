@@ -27,22 +27,29 @@ export function RenameDialog(props: RenameDialogProps): React.JSX.Element {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
+  // Mount-only: keep the latest onDone without re-running the effect on every render.
+  // Depending on `props` re-focused and re-selected the input after EVERY keystroke,
+  // so typing overwrote what you had already written.
+  const onDoneRef = useRef(props.onDone)
+  onDoneRef.current = props.onDone
 
   useEffect(() => {
     const release = mapUi.claimEscape('rename-dialog')
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
       event.stopPropagation()
-      props.onDone(null)
+      onDoneRef.current(null)
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
+    // Select-all exactly once, on open: that is the "type to replace the old name"
+    // affordance. Doing it per render broke ordinary appending.
     inputRef.current?.focus()
     inputRef.current?.select()
     return () => {
       release()
       window.removeEventListener('keydown', onKeyDown, { capture: true })
     }
-  }, [props])
+  }, [])
 
   const submit = async (): Promise<void> => {
     const title = value.trim()

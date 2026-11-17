@@ -488,7 +488,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b74 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b75 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -675,7 +675,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b74 · Search cards on the map",
+  "global.searchPlaceholder": "b75 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -10935,19 +10935,21 @@ var import_react4 = require("react");
 var import_jsx_runtime5 = require("react/jsx-runtime");
 function DigestDialog(props) {
   const textRef = (0, import_react4.useRef)(null);
+  const onCloseRef = (0, import_react4.useRef)(props.onClose);
+  onCloseRef.current = props.onClose;
   (0, import_react4.useEffect)(() => {
     const release = mapUi.claimEscape("digest-dialog");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       event.stopPropagation();
-      props.onClose();
+      onCloseRef.current();
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     return () => {
       window.removeEventListener("keydown", onKeyDown, { capture: true });
       release();
     };
-  }, [props]);
+  }, []);
   const empty2 = digestIsEmpty2(props.digest);
   const pushText = empty2 ? "" : buildPushText(props.title, props.digest);
   const injectText = empty2 ? "" : buildInjectionText(props.title, props.digest);
@@ -12556,12 +12558,14 @@ function RenameDialog(props) {
   const [busy, setBusy] = (0, import_react7.useState)(false);
   const [error, setError] = (0, import_react7.useState)(null);
   const inputRef = (0, import_react7.useRef)(null);
+  const onDoneRef = (0, import_react7.useRef)(props.onDone);
+  onDoneRef.current = props.onDone;
   (0, import_react7.useEffect)(() => {
     const release = mapUi.claimEscape("rename-dialog");
     const onKeyDown = (event) => {
       if (event.key !== "Escape") return;
       event.stopPropagation();
-      props.onDone(null);
+      onDoneRef.current(null);
     };
     window.addEventListener("keydown", onKeyDown, { capture: true });
     inputRef.current?.focus();
@@ -12570,7 +12574,7 @@ function RenameDialog(props) {
       release();
       window.removeEventListener("keydown", onKeyDown, { capture: true });
     };
-  }, [props]);
+  }, []);
   const submit = async () => {
     const title = value.trim();
     if (title === "" || busy) return;

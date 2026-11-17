@@ -20,20 +20,24 @@ export interface DigestDialogProps {
 
 export function DigestDialog(props: DigestDialogProps): React.JSX.Element {
   const textRef = useRef<HTMLTextAreaElement | null>(null)
+  // Same trap as the rename dialog: `props` changes identity every render, so the ESC
+  // listener was torn down and re-added on each keystroke. Keep the callback in a ref.
+  const onCloseRef = useRef(props.onClose)
+  onCloseRef.current = props.onClose
 
   useEffect(() => {
     const release = mapUi.claimEscape('digest-dialog')
     const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key !== 'Escape') return
       event.stopPropagation()
-      props.onClose()
+      onCloseRef.current()
     }
     window.addEventListener('keydown', onKeyDown, { capture: true })
     return () => {
       window.removeEventListener('keydown', onKeyDown, { capture: true })
       release()
     }
-  }, [props])
+  }, [])
 
   const empty = digestIsEmpty(props.digest)
   const pushText = empty ? '' : buildPushText(props.title, props.digest as Digest)
