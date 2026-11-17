@@ -12,6 +12,7 @@ import { canvas } from './canvas-store.ts'
 import { DEFAULT_HOTKEY, hotkeyMatches } from './hotkey.ts'
 import { attachServices, mapUi, MAP_PANEL_ID } from './map-state.ts'
 import { MapOverlay } from './MapOverlay.tsx'
+import { RemoteControlPanel, installRemoteEntryHiding } from './RemoteEntry.tsx'
 import { MapToggleButton } from './MapToggleButton.tsx'
 import { attachAlertSource } from './session-alerts.ts'
 import { t } from './i18n.ts'
@@ -101,6 +102,15 @@ export function apply(ctx: TalkMapClientContext): void {
       order: 10,
       label: () => t('map.toggle'),
     }, MapToggleButton), 'sidebar.footer.action')
+    // The remote-control plugin's only entry is a sidebar footer button; the user
+    // wants it in the settings page instead. Hide it there, host it here.
+    installRemoteEntryHiding()
+    registerSafely('settings.section', () => ctx.slots.register({
+      name: 'settings.section',
+      id: 'talk-map-remote',
+      order: 30,
+      label: () => t('remote.section'),
+    }, RemoteControlPanel), 'settings.section')
     registerSafely('main', () => ctx.slots.register({
       name: 'main',
       key: MAP_PANEL_ID,

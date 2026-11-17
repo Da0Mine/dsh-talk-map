@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **远程控制按钮移出侧栏**（`0.1.82`）：之前误以为是本插件的十字准心，已回退（十字准心回到侧栏 footer）。真正的目标是 `ds-harness-remote@0.6.5` —— 它只注册 `shell.overlay` + `sidebar.footer.action`（id `ds-harness-remote-workspace`，class `.dshRemoteSidebarEntry`，无快捷键/无设置入口）。做法：本插件注入一条全局样式 `.dshRemoteSidebarEntry{display:none!important}`（style id `dsh-talk-map-hide-remote-entry`）把它从侧栏藏起来，同时注册 `settings.section`（id `talk-map-remote`，标题「远程控制」）承载一个按钮，点击那个被隐藏的节点来打开它的面板。不改第三方包，删掉 `src/client/RemoteEntry.tsx` 的两处注册即还原。实测：样式注入成功、节点 `display:none`、隐藏节点仍可 `.click()`、侧栏按钮恢复为「对话地图 + 回到当前对话」。
+
 - **侧栏只留地图开关 + 队列可拖动调高**（`0.1.81`）：十字准心「回到当前对话」从侧栏 footer 移到地图面板头部（`MapOverlay` 的 header，`data-talkmap-back` 随之搬走），footer 只剩一个「对话地图」；队列顶部加了 hover 才显形的手柄（`.queueGrip`，opacity 0→1，`cursor:ns-resize`），拖动改高度并写 `localStorage['dsh.talk-map.queueHeight']`，范围 76px～70vh，双击还原自适应。实测：手柄藏/显 0→1、拖 120px 高度 312→438 且落盘 432、地图按钮仍可见、面板头部十字准心 title=回到当前对话。
 
 - **侧栏队列布局改用内联样式**（`0.1.80`）：查出宿主真实容器 —— `footArea{flex-direction:column; flex:none; align-items:center}` 里放 `footerActions{display:flex}`（**行**）。之前按钮和队列并排、按钮被垂直居中，就是因为依赖 CSS 类且受行布局影响。现在外层/控制行/队列块/卡片宽度全部走内联样式（`flex-direction:column`、`width:100%`、`flex:1 1 100%`、`maxHeight:46vh`、列表 `overflowY:auto`），不再受安装副本里 CSS 是否生效影响。实测（镜像宿主容器、390px 侧栏）：卡片 x=12 w=365 撑满、按钮 y=862 在底部、`buttonsVisible:true`、点击 opened:1。

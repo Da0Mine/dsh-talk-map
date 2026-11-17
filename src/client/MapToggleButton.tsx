@@ -6,7 +6,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import type { SidebarFooterActionOwnerProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
-import { mapUi, reportSidebarWide } from './map-state.ts'
+import { closeMapPanel, currentSessionId, mapUi, openSessionInUi, reportSidebarWide } from './map-state.ts'
 import { SidebarQueue } from './SidebarQueue.tsx'
 import styles from './talk-map.module.css'
 
@@ -21,6 +21,16 @@ function MapIcon(): React.JSX.Element {
 }
 
 
+/** Crosshair: "come back to the conversation this map was opened from". */
+function BackIcon(): React.JSX.Element {
+  return (
+    <svg className={styles['backToCurrentIcon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      <circle cx="12" cy="12" r="6.5" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M12 1.8v4.2M12 18v4.2M1.8 12h4.2M18 12h4.2" />
+    </svg>
+  )
+}
 export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX.Element {
   const open = useSyncExternalStore(mapUi.subscribe, () => mapUi.get().open)
   // This button lives outside the overlay, so it needs its own subscription
@@ -30,6 +40,7 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
   // The map collapses the sidebar when it opens; this is how it learns whether
   // the sidebar is already a rail (the layout service has no read-only probe).
   useEffect(() => { reportSidebarWide(wide) }, [wide])
+  const backTitle = t('map.backToCurrent')
   const classNames = [wide ? styles['toggleRow'] : styles['toggleButton']]
   if (open) classNames.push(styles['toggleButtonActive'])
 
@@ -63,6 +74,24 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
       >
         <MapIcon />
         {wide ? <span className={styles['toggleLabel']}>{t('map.toggle')}</span> : null}
+      </button>
+      <button
+        type="button"
+        className={styles['backToCurrent']}
+        lang={locale}
+        title={backTitle}
+        aria-label={backTitle}
+        data-talkmap-back="1"
+        onClick={() => {
+          const sessionId = currentSessionId()
+          if (sessionId === undefined) return
+          // Leaving the map (if it is what you are looking at) and revealing the
+          // conversation is one gesture: the shell then shows that session again.
+          closeMapPanel()
+          openSessionInUi(sessionId)
+        }}
+      >
+        <BackIcon />
       </button>
       </div>
     </div>

@@ -13,6 +13,10 @@ export type Locale = 'zh' | 'en'
 
 const zh: Record<string, string> = {
   'map.title': '对话地图 ·v2',
+  'remote.section': '远程控制',
+  'remote.note': '远程控制的入口已从左侧栏移到这里（它原本只有侧栏那一个按钮）。点下面按钮打开它的面板；想恢复侧栏按钮，删掉 RemoteEntry.tsx 里那条隐藏样式即可。',
+  'remote.open': '打开远程控制面板',
+  'remote.missing': '没找到远程控制插件的入口节点——它可能被禁用或未安装。',
   'map.close': '关闭地图（Esc）',
   'map.back': '返回',
   'map.toggle': '对话地图',
@@ -173,7 +177,7 @@ const zh: Record<string, string> = {
   'digest.empty': '这条对话还没有摘要，先刷新摘要再来看。',
   'digest.copy': '复制',
   'digest.close': '关闭',
-  'global.searchPlaceholder': 'b81 · 搜地图上的卡片（标题/正文）',
+  'global.searchPlaceholder': 'b82 · 搜地图上的卡片（标题/正文）',
   'global.searchRun': '搜索',
   'global.searchTitle': '搜索地图',
   'font.group': '文字大小',
@@ -205,6 +209,10 @@ const zh: Record<string, string> = {
 }
 const en: Record<string, string> = {
   'map.title': 'Talk Map ·v2',
+  'remote.section': 'Remote control',
+  'remote.note': 'The remote-control entry moved here from the sidebar (its only entry used to be that sidebar button). Open it below; to put the sidebar button back, delete the hiding rule in RemoteEntry.tsx.',
+  'remote.open': 'Open the remote control panel',
+  'remote.missing': 'The remote-control entry node was not found — the plugin may be disabled or missing.',
   'map.close': 'Close map (Esc)',
   'map.back': 'Back',
   'map.toggle': 'Talk Map',
@@ -361,7 +369,7 @@ const en: Record<string, string> = {
   'menu.noGroup': 'Remove from group (free card)',
   'menu.open': 'Open conversation',
   'menu.markUnread': 'Mark as unread',
-  'global.searchPlaceholder': 'b81 · Search cards on the map',
+  'global.searchPlaceholder': 'b82 · Search cards on the map',
   'global.searchRun': 'Search',
   'global.searchTitle': 'Search the map',
   'font.group': 'Text size',
