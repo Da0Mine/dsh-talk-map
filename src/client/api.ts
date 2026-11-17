@@ -92,6 +92,10 @@ export const talkMapApi = {
    * The live window: what the model is given right now, minus everything compaction
    * already pruned. Powers the fork panel's "current context" mode.
    */
+  /** The map's queue for the native sidebar: cards joined with session titles. */
+  queue(): Promise<{ entries: { cardId: string; sessionId: string; title: string; updatedAt?: number }[] }> {
+    return postJson('/talk-map/queue', {})
+  },
   contextWindow(sessionId: string, maxChars?: number): Promise<{
     text: string
     chars: number

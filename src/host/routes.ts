@@ -24,7 +24,11 @@ export interface TalkMapRuntime {
   digest?: DigestPipeline
   spawner?: Spawner
   /** Read a session's surface — powers the card body (user's last message). */
-  sessionQuery?: { readSurface(sessionId: string): Promise<{ events: readonly unknown[]; capturedThroughSeq: number | null }> }
+  sessionQuery?: {
+    readSurface(sessionId: string): Promise<{ events: readonly unknown[]; capturedThroughSeq: number | null }>
+    /** Session records (header.id / header.title / header.updatedAt) for the queue. */
+    listSessions?(): Promise<readonly unknown[]>
+  }
   /** Deployment default model route (from ctx.agentDefaultModel). */
   modelDefault?: () => { provider: string; model: string; reasoningEffort?: string }
   /** Deployment default agent preset id (from ctx.agentPresets). */
@@ -400,6 +404,49 @@ export function mountTalkMapRoutes(
             }))
           }
           sendJson(response, 200, { texts })
+          return
+        }
+
+        if (route === 'POST /talk-map/queue') {
+          // The native sidebar's queue list. Cards live in this plugin's store; titles and
+          // timestamps come from the Host's session records, sorted newest first.
+          const cards: { cardId: string; sessionId: string }[] = []
+          for (const [cardId, card] of store.cards.entries()) {
+            const sessionId = (card as { sessionId?: unknown }).sessionId
+            if (typeof sessionId === 'string') cards.push({ cardId, sessionId })
+          }
+          let records: readonly unknown[] = []
+          const query = runtime.sessionQuery
+          if (query !== undefined && typeof query.listSessions === 'function') {
+            try {
+              records = await query.listSessions()
+            } catch {
+              records = []
+            }
+          }
+          const byId = new Map<string, Record<string, unknown>>()
+          for (const raw of records) {
+            const record = raw as { header?: { id?: unknown } }
+            const id = record?.header?.id
+            if (typeof id === 'string') byId.set(id, raw as Record<string, unknown>)
+          }
+          const entries = cards.map((card) => {
+            const record = byId.get(card.sessionId)
+            const header = (record?.header ?? {}) as Record<string, unknown>
+            const title = typeof header.title === 'string' && header.title !== ''
+              ? header.title
+              : typeof record?.title === 'string' ? record.title : ''
+            const updated = [header.updatedAt, record?.updatedAt, header.lastActivityAt]
+              .find(value => typeof value === 'number')
+            return {
+              cardId: card.cardId,
+              sessionId: card.sessionId,
+              title: title === '' ? card.sessionId : title,
+              ...(typeof updated === 'number' ? { updatedAt: updated } : {}),
+            }
+          })
+          entries.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+          sendJson(response, 200, { entries })
           return
         }
 

@@ -8,6 +8,7 @@ import { useEffect, useSyncExternalStore } from 'react'
 import type { SidebarFooterActionOwnerProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { closeMapPanel, currentSessionId, mapUi, openSessionInUi, reportSidebarWide } from './map-state.ts'
+import { SidebarQueue } from './SidebarQueue.tsx'
 import styles from './talk-map.module.css'
 
 function MapIcon(): React.JSX.Element {
@@ -47,6 +48,9 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
 
   return (
     <div className={`${styles['toggleWrap']}${wide ? ` ${styles['toggleWrapWide']}` : ''}`}>
+      {/* The queue fills the empty space under the workspace list; it only makes sense
+          when the sidebar is expanded into its wide form. */}
+      {wide ? <SidebarQueue /> : null}
       <button
         type="button"
         className={classNames.filter(Boolean).join(' ')}

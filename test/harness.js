@@ -446,6 +446,23 @@
       posts.push({ path, body })
       // Behave like the real host: persist card writes into the served state, so
       // a later /talk-map/state read reflects them (the client refreshes on open).
+      // The native sidebar queue: cards joined with their session titles.
+      if (path.includes('/talk-map/queue')) {
+        const sessionIds = Object.values(payload.cards ?? {}).map(card => card.sessionId)
+        // 会话摘要在 sessionsState.byId 里，不在 payload 上
+        const byId = sessionsState?.byId ?? {}
+        const entries = sessionIds.map((sessionId, index) => {
+          const summary = byId[sessionId]
+          return {
+            cardId: Object.keys(payload.cards).find(id => payload.cards[id].sessionId === sessionId) ?? `card-${index}`,
+            sessionId,
+            title: summary?.displayTitle ?? sessionId,
+            ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+          }
+        })
+        entries.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+        return json({ entries })
+      }
       if (path.includes('/talk-map/cards/upsert') && body !== null) {
         Object.assign(payload.cards, body.cards ?? {})
       }
