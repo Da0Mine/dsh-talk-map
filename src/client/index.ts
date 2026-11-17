@@ -109,7 +109,7 @@ export function apply(ctx: TalkMapClientContext): void {
       name: 'settings.section',
       id: 'talk-map-remote',
       order: 30,
-      label: () => t('remote.section'),
+      label: t('remote.section'),
     }, RemoteControlPanel), 'settings.section')
     registerSafely('main', () => ctx.slots.register({
       name: 'main',
