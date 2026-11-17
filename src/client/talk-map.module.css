@@ -1825,7 +1825,7 @@
   position: fixed;
   z-index: 80;
   width: min(500px, 88vw);
-  max-height: 42vh;
+  max-height: 30vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2553,7 +2553,7 @@
   min-height: 0;
   width: 100%;
   /* Leave room for the toggle row underneath: never claim more than this. */
-  max-height: 42vh;
+  max-height: 30vh;
   padding: 4px 0 2px;
   margin-top: 4px;
   overflow: hidden;
@@ -2597,8 +2597,11 @@
 
 /* A rail card, squeezed into the sidebar's width (the rail's own width is wider). */
 .sidebarQueueCard {
-  width: auto;
-  max-width: none;
+  /* .statusRailCard pins the rail's own card width; in the sidebar the card must fill the
+     column instead, or it renders narrow with a gap on the leading edge. */
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   flex: none;
   /* These cards are navigated, never dragged — the rail's grab cursor does not apply. */
   cursor: pointer;

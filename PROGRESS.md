@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏队列与地图侧栏对齐**（`0.1.79`）：只显示**带灯**的卡片（与地图 rail 的 `glowOf` 同一套判定：alert→error、`pendingInteraction`→waiting、`running`→running、`completed`/activity→done），不再把整板 100+ 张卡塞进去；卡片 `width:100%`+`box-sizing:border-box` 撑满侧栏（原来继承 rail 的固定宽度，右边被截、左边像留白）；整块上限收到 `30vh` 并内部滚动，工作区列表不再被压扁。实测：3 张带灯卡、卡片宽 177/容器 203、两个按钮可见、点击 opened:1。
+
 - **侧栏队列改用真实卡片**（`0.1.78`）：数据全部客户端读（卡片集来自 `canvas` store、标题来自 `getServices().sessions.list`、正文用 `/talk-map/last-user` 批量取前 14 张、草稿优先），渲染直接复用地图 rail 的 `.card + .statusRailCard`，所以外观与地图侧栏卡片一致（标题/两行正文/时间/「待发送」胶囊）。footer 改为纵向（队列在上、`.toggleControls` 一行在下），队列 `max-height:42vh` 内部滚动，**两个原按钮不再被挤出屏幕**。实测：24 张卡、列表 355/2688 可滚动、`buttonsVisible:true`、点击 `opened:1`。
 
 - **原生侧栏队列**（`0.1.76`）：`sidebar.workspaces` 是单槽（替换会顶掉原生工作区列表），所以队列挂在已有的 `sidebar.footer.action` 列表槽上——该入口渲染成"队列卡片在上、地图开关行在下"的一列，向上占满工作区下方的空白。数据来自新路由 `POST /talk-map/queue`（store 里的卡片 join `sessionQuery.listSessions()` 的标题/时间），因为卡片状态 hooks 只注入 `main` 面板、拿不到侧栏 action 里。宽侧栏（wide）才显示；点击 = 关地图面板 + `openSessionInUi`。实测：24 条、显示前 6 条、标题正确、点击 opened=1。

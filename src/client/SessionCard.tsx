@@ -12,7 +12,7 @@ import styles from './talk-map.module.css'
 /** Which lamp the card wears; see the priority order in MapCanvas. */
 export type CardGlow = 'running' | 'done' | 'error' | 'waiting'
 
-const LAMP_CLASS: Record<CardGlow, string> = {
+export const LAMP_CLASS: Record<CardGlow, string> = {
   running: 'cardLampRunning',
   done: 'cardLampDone',
   error: 'cardLampError',
