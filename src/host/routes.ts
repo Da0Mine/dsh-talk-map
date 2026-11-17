@@ -410,6 +410,9 @@ export function mountTalkMapRoutes(
         if (route === 'POST /talk-map/queue') {
           // The native sidebar's queue list. Cards live in this plugin's store; titles and
           // timestamps come from the Host's session records, sorted newest first.
+          // `store` is NOT in scope here — every route opens it through storeReady (the
+          // table is created lazily), which is what the neighbouring handlers do too.
+          const store = await storeReady
           const cards: { cardId: string; sessionId: string }[] = []
           for (const [cardId, card] of store.cards.entries()) {
             const sessionId = (card as { sessionId?: unknown }).sessionId
