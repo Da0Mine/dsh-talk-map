@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏队列改用真实卡片**（`0.1.78`）：数据全部客户端读（卡片集来自 `canvas` store、标题来自 `getServices().sessions.list`、正文用 `/talk-map/last-user` 批量取前 14 张、草稿优先），渲染直接复用地图 rail 的 `.card + .statusRailCard`，所以外观与地图侧栏卡片一致（标题/两行正文/时间/「待发送」胶囊）。footer 改为纵向（队列在上、`.toggleControls` 一行在下），队列 `max-height:42vh` 内部滚动，**两个原按钮不再被挤出屏幕**。实测：24 张卡、列表 355/2688 可滚动、`buttonsVisible:true`、点击 `opened:1`。
+
 - **原生侧栏队列**（`0.1.76`）：`sidebar.workspaces` 是单槽（替换会顶掉原生工作区列表），所以队列挂在已有的 `sidebar.footer.action` 列表槽上——该入口渲染成"队列卡片在上、地图开关行在下"的一列，向上占满工作区下方的空白。数据来自新路由 `POST /talk-map/queue`（store 里的卡片 join `sessionQuery.listSessions()` 的标题/时间），因为卡片状态 hooks 只注入 `main` 面板、拿不到侧栏 action 里。宽侧栏（wide）才显示；点击 = 关地图面板 + `openSessionInUi`。实测：24 条、显示前 6 条、标题正确、点击 opened=1。
 
 - **重命名窗口打字被全选覆盖**（`0.1.75`）：`RenameDialog` 的 `useEffect(..., [props])` 依赖了 `props` 对象——函数组件每次渲染都是新引用，于是每输入一个字就重跑 effect 并执行 `input.select()`，下一个字覆盖全文。改为 `onDoneRef` 持有最新回调 + `[]` 仅挂载时执行一次（打开时仍全选一次，保留"直接输入替换旧名"的行为）。`DigestDialog` 同款写法一并修（它每次渲染都重挂 ESC 监听）。
@@ -22,7 +24,7 @@
 
 ## 下一步
 
-重启 DSH 后展开左侧栏（收起地图侧栏才会展开），确认工作区下方出现「队列中的任务」卡片列并可点击跳转。
+重启 DSH 后展开左侧栏（收起地图侧栏才会展开），确认工作区下方是卡片式队列、可滚动、底部「对话地图」与十字准心两个按钮仍在。
 
 ## 坑与未决
 

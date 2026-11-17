@@ -2472,7 +2472,21 @@
 }
 
 .toggleWrapWide {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
+  min-height: 0;
+}
+
+/* The queue may grow and scroll, but this row never shrinks: the map button and the
+   back-to-current button stay visible no matter how many sessions are on the board. */
+.toggleControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
 }
 
 .toggleWrapWide .toggleRow {
@@ -2527,26 +2541,42 @@
 
 
 
-/* ── the queue inside the native sidebar ────────────────────────────────── */
+/* ── the queue inside the native sidebar ────────────────────────────────────
+   It renders the SAME card markup the map rail uses (.card + .statusRailCard), so the
+   sidebar shows real cards, not a separate list widget. The block is capped and scrolls
+   internally, which is what keeps the two original buttons (map / back-to-current) on
+   screen instead of being pushed below the viewport. */
 .sidebarQueue {
   display: flex;
   flex-direction: column;
+  flex: 0 1 auto;
   min-height: 0;
   width: 100%;
+  /* Leave room for the toggle row underneath: never claim more than this. */
+  max-height: 42vh;
   padding: 4px 0 2px;
   margin-top: 4px;
+  overflow: hidden;
 }
 
 .sidebarQueueHead {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex: none;
   padding: 2px 10px 6px;
   font-size: 11px;
   color: var(--dsw-alias-label-secondary);
 }
 
+.sidebarQueueHeadText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .sidebarQueueCount {
+  flex: none;
   font-size: 10px;
   color: var(--dsw-alias-label-tertiary, #6b7280);
   font-variant-numeric: tabular-nums;
@@ -2555,58 +2585,25 @@
 .sidebarQueueList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  /* The footer slot is anchored to the bottom of the sidebar, so the list grows upward
-     into the empty area under the workspace list and scrolls once it runs out. */
-  max-height: 46vh;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 8px 6px;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
-.sidebarQueueItem {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 8px;
-  border: 1px solid var(--dsw-alias-border-secondary);
-  border-radius: 8px;
-  background: var(--dsw-alias-bg-layer-1, rgba(255, 255, 255, 0.03));
-  color: var(--dsw-alias-label-primary);
-  font: inherit;
-  text-align: left;
+/* A rail card, squeezed into the sidebar's width (the rail's own width is wider). */
+.sidebarQueueCard {
+  width: auto;
+  max-width: none;
+  flex: none;
+  /* These cards are navigated, never dragged — the rail's grab cursor does not apply. */
   cursor: pointer;
 }
 
-.sidebarQueueItem:hover {
-  background: var(--dsw-alias-interactive-bg-hover);
-}
-
-.sidebarQueueTitle {
-  font-size: 12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebarQueueMeta {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 10px;
-  color: var(--dsw-alias-label-secondary);
-}
-
-.sidebarQueueDraft {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--dsw-alias-brand-primary);
-}
-
-.sidebarQueueTime {
-  flex: none;
-  font-variant-numeric: tabular-nums;
+.sidebarQueueCard:active {
+  cursor: pointer;
 }

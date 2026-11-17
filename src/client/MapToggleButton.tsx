@@ -51,6 +51,9 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
       {/* The queue fills the empty space under the workspace list; it only makes sense
           when the sidebar is expanded into its wide form. */}
       {wide ? <SidebarQueue /> : null}
+      {/* The two original controls keep their own row, so a long queue can never push
+          them off the bottom of the sidebar. */}
+      <div className={styles['toggleControls']}>
       <button
         type="button"
         className={classNames.filter(Boolean).join(' ')}
@@ -81,6 +84,7 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
       >
         <BackIcon />
       </button>
+      </div>
     </div>
   )
 }
