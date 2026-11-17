@@ -1,13 +1,12 @@
 /**
- * Sidebar footer action row: the map toggle plus a small "back to this conversation"
- * button on its right. The second button exists because leaving the map for another panel
- * (plugins, settings, …) otherwise means walking back through the map to find the session
- * you came from — this jumps straight back to it.
+ * Sidebar footer action row: the map's queue (wide sidebar) and, under it, the map toggle.
+ * The "back to this conversation" crosshair that used to sit beside the toggle now lives in
+ * the map panel's header, where it belongs to the panel rather than to the sidebar chrome.
  */
 import { useEffect, useSyncExternalStore } from 'react'
 import type { SidebarFooterActionOwnerProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
-import { closeMapPanel, currentSessionId, mapUi, openSessionInUi, reportSidebarWide } from './map-state.ts'
+import { mapUi, reportSidebarWide } from './map-state.ts'
 import { SidebarQueue } from './SidebarQueue.tsx'
 import styles from './talk-map.module.css'
 
@@ -21,16 +20,6 @@ function MapIcon(): React.JSX.Element {
   )
 }
 
-/** Crosshair: "come back to the conversation this map was opened from". */
-function BackIcon(): React.JSX.Element {
-  return (
-    <svg className={styles['backToCurrentIcon']} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="6.5" />
-      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
-      <path d="M12 1.8v4.2M12 18v4.2M1.8 12h4.2M18 12h4.2" />
-    </svg>
-  )
-}
 
 export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX.Element {
   const open = useSyncExternalStore(mapUi.subscribe, () => mapUi.get().open)
@@ -44,7 +33,6 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
   const classNames = [wide ? styles['toggleRow'] : styles['toggleButton']]
   if (open) classNames.push(styles['toggleButtonActive'])
 
-  const backTitle = t('map.backToCurrent')
 
   return (
     <div
@@ -75,24 +63,6 @@ export function MapToggleButton(props: SidebarFooterActionOwnerProps): React.JSX
       >
         <MapIcon />
         {wide ? <span className={styles['toggleLabel']}>{t('map.toggle')}</span> : null}
-      </button>
-      <button
-        type="button"
-        className={styles['backToCurrent']}
-        lang={locale}
-        title={backTitle}
-        aria-label={backTitle}
-        data-talkmap-back="1"
-        onClick={() => {
-          const sessionId = currentSessionId()
-          if (sessionId === undefined) return
-          // Leaving the map panel (if it is what you are looking at) and revealing the
-          // conversation is one gesture: the shell then shows that session again.
-          closeMapPanel()
-          openSessionInUi(sessionId)
-        }}
-      >
-        <BackIcon />
       </button>
       </div>
     </div>

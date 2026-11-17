@@ -2610,3 +2610,39 @@
 .sidebarQueueCard:active {
   cursor: pointer;
 }
+
+/* ── drag handle: the queue's top edge ──────────────────────────────────── */
+.queueGrip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 10px;
+  margin: -4px 0 0;
+  cursor: ns-resize;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  touch-action: none;
+}
+
+/* Only appears while the pointer is over the queue block. */
+.sidebarQueue:hover .queueGrip,
+.queueGrip:active {
+  opacity: 1;
+}
+
+.queueGripBar {
+  width: 32px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--dsw-alias-label-tertiary, #6b7280);
+}
+
+
+/* The crosshair as a panel-header button (it used to be a footer icon). */
+.header .backToCurrent {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--dsw-alias-label-secondary);
+}

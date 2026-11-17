@@ -14,7 +14,7 @@ import type { RootSlotStandardProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { fontScale } from './font-scale.ts'
 import { GlobalSearch } from './GlobalSearch.tsx'
-import { closeMapPanel, hideSidebarForMap, mapUi, openSessionInUi, restoreSidebarAfterMap } from './map-state.ts'
+import { closeMapPanel, currentSessionId, hideSidebarForMap, mapUi, openSessionInUi, restoreSidebarAfterMap } from './map-state.ts'
 import { MapCanvas } from './MapCanvas.tsx'
 import styles from './talk-map.module.css'
 
@@ -79,6 +79,16 @@ function CloseIcon(): React.JSX.Element {
   )
 }
 
+/** Crosshair: "come back to the conversation this map was opened from". */
+function BackToCurrentIcon(): React.JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+      <circle cx="12" cy="12" r="6.5" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M12 1.8v4.2M12 18v4.2M1.8 12h4.2M18 12h4.2" />
+    </svg>
+  )
+}
 export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   // Subscribing here re-renders the whole panel on a language switch;
   // MapCanvas re-keys its own memos so the React-Flow nodes follow.
@@ -130,6 +140,23 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
         >
           <BackIcon />
           <span>{t('map.back')}</span>
+        </button>
+        <button
+          type="button"
+          className={styles['backToCurrent']}
+          lang={activeLocale()}
+          title={t('map.backToCurrent')}
+          aria-label={t('map.backToCurrent')}
+          data-talkmap-back="1"
+          onClick={() => {
+            const sessionId = currentSessionId()
+            if (sessionId === undefined) return
+            // Leaving the map and revealing that conversation is one gesture.
+            closeMapPanel()
+            openSessionInUi(sessionId)
+          }}
+        >
+          <BackToCurrentIcon />
         </button>
         <span className={styles['headerSpace']} />
         <GlobalSearch onOpenSession={(sessionId) => { openSessionInUi(sessionId) }} />

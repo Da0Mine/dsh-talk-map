@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏只留地图开关 + 队列可拖动调高**（`0.1.81`）：十字准心「回到当前对话」从侧栏 footer 移到地图面板头部（`MapOverlay` 的 header，`data-talkmap-back` 随之搬走），footer 只剩一个「对话地图」；队列顶部加了 hover 才显形的手柄（`.queueGrip`，opacity 0→1，`cursor:ns-resize`），拖动改高度并写 `localStorage['dsh.talk-map.queueHeight']`，范围 76px～70vh，双击还原自适应。实测：手柄藏/显 0→1、拖 120px 高度 312→438 且落盘 432、地图按钮仍可见、面板头部十字准心 title=回到当前对话。
+
 - **侧栏队列布局改用内联样式**（`0.1.80`）：查出宿主真实容器 —— `footArea{flex-direction:column; flex:none; align-items:center}` 里放 `footerActions{display:flex}`（**行**）。之前按钮和队列并排、按钮被垂直居中，就是因为依赖 CSS 类且受行布局影响。现在外层/控制行/队列块/卡片宽度全部走内联样式（`flex-direction:column`、`width:100%`、`flex:1 1 100%`、`maxHeight:46vh`、列表 `overflowY:auto`），不再受安装副本里 CSS 是否生效影响。实测（镜像宿主容器、390px 侧栏）：卡片 x=12 w=365 撑满、按钮 y=862 在底部、`buttonsVisible:true`、点击 opened:1。
 
 - **侧栏队列与地图侧栏对齐**（`0.1.79`）：只显示**带灯**的卡片（与地图 rail 的 `glowOf` 同一套判定：alert→error、`pendingInteraction`→waiting、`running`→running、`completed`/activity→done），不再把整板 100+ 张卡塞进去；卡片 `width:100%`+`box-sizing:border-box` 撑满侧栏（原来继承 rail 的固定宽度，右边被截、左边像留白）；整块上限收到 `30vh` 并内部滚动，工作区列表不再被压扁。实测：3 张带灯卡、卡片宽 177/容器 203、两个按钮可见、点击 opened:1。
