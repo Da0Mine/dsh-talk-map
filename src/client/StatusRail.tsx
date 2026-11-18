@@ -22,12 +22,15 @@ export interface StatusRailEntry {
   cardId: string
   sessionId: string
   title: string
-  lamp: StatusLamp
+  /** Absent for a draft-only card: it has unsent text but no lamp right now. */
+  lamp?: StatusLamp
   /** Changes whenever the lamp or the session's stamp advances. */
   stamp: number
   updatedAt?: number
   preview?: string
   pinned?: boolean
+  /** Has unsent text (shown as the 待发送 chip when there is no lamp). */
+  draft?: boolean
 }
 
 export interface StatusRailProps {
@@ -179,12 +182,16 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     const rows: StatusRailEntry[] = []
     for (const cardId of order) {
       const entry = byId.get(cardId)
-      if (entry !== undefined) rows.push(entry)
+      if (entry !== undefined && entry.lamp !== undefined) rows.push(entry)
     }
     for (const entry of props.entries) {
-      if (!order.includes(entry.cardId)) rows.push(entry)
+      if (entry.lamp !== undefined && !order.includes(entry.cardId)) rows.push(entry)
     }
-    return rows
+    // Draft-only cards always sit at the bottom (lowest priority), newest first.
+    const drafts = props.entries
+      .filter(entry => entry.lamp === undefined)
+      .sort((a, b) => b.stamp - a.stamp)
+    return [...rows, ...drafts]
   }, [order, props.entries])
 
   // FLIP for status-driven moves; dragging has its own gap logic below.
@@ -328,7 +335,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
 
   const renderCard = (entry: StatusRailEntry, floating: boolean): React.JSX.Element => (
     <div
-      className={`${styles['card']} ${styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
+      className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
       onPointerDown={floating ? undefined : (event) => { beginDrag(event, entry.cardId) }}
       title={entry.title}
     >
@@ -340,10 +347,14 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <div className={styles['cardFooter']}>
         <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
-        <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
-          {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
-          {t(LAMP_CHIP[entry.lamp].key)}
-        </span>
+        {entry.lamp === undefined
+          ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
+          : (
+            <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
+              {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
+              {t(LAMP_CHIP[entry.lamp].key)}
+            </span>
+          )}
       </div>
     </div>
   )

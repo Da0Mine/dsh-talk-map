@@ -156,24 +156,32 @@ export function SidebarQueue(): React.JSX.Element | null {
 
   // Only lamped cards, exactly like the rail.
   const rows = useMemo(() => {
-    const out: { cardId: string; sessionId: string; title: string; lamp: CardGlow; updatedAt?: number; draft?: string }[] = []
+    const out: { cardId: string; sessionId: string; title: string; lamp?: CardGlow; draft?: boolean; draftText?: string; updatedAt?: number }[] = []
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue
       const summary = sessions.byId[card.sessionId]
       const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts, finished)
-      if (lamp === undefined) continue
-      // Opened from here already: stop showing the "done, unread" card, it is read now.
-      if (lamp === 'done' && opened.has(card.sessionId)) continue
+            // Draft-only cards join at the lowest priority (after every lamped card).
+            const draftText = drafts[card.sessionId]
+            const hasDraft = draftText !== undefined && draftText.trim() !== ''
+            if (lamp === undefined && !hasDraft) continue
+            if (lamp === 'done' && opened.has(card.sessionId)) continue
+            const draftOnly = lamp === undefined
       out.push({
         cardId,
         sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
-        lamp,
+        ...(draftOnly ? { draft: true } : { lamp }),
+        ...(draftText !== undefined ? { draftText } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
-        ...(drafts[card.sessionId] !== undefined ? { draft: drafts[card.sessionId] } : {}),
       })
     }
-    out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    out.sort((a, b) => {
+      const aDraft = a.draft === true ? 1 : 0
+      const bDraft = b.draft === true ? 1 : 0
+      if (aDraft !== bDraft) return aDraft - bDraft
+      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
+    })
     return out
   }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened])
 
@@ -242,18 +250,19 @@ export function SidebarQueue(): React.JSX.Element | null {
         style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 4px 6px', overscrollBehavior: 'contain' }}
       >
         {rows.map((row) => {
-          const draft = row.draft
-          const body = draft !== undefined && draft.trim() !== ''
-            ? draft
+          // Unsent text wins (it is what the card is about), otherwise the last message.
+          const draftText = row.draftText
+          const body = draftText !== undefined && draftText.trim() !== ''
+            ? draftText
             : previews[row.sessionId]
-          const chip = LAMP_CHIP[row.lamp]
+          const chip = row.lamp === undefined ? undefined : LAMP_CHIP[row.lamp]
           return (
             <div
               key={row.cardId}
-              className={`${styles['card']} ${styles[LAMP_CLASS[row.lamp]] ?? ''} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
+              className={`${styles['card']} ${row.lamp === undefined ? '' : styles[LAMP_CLASS[row.lamp]] ?? ''} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
               style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', flex: 'none', alignSelf: 'stretch' }}
               data-talkmap-queue={row.sessionId}
-              data-lamp={row.lamp}
+              data-lamp={row.lamp ?? 'draft'}
               title={row.title}
               role="button"
               tabIndex={0}
@@ -283,10 +292,14 @@ export function SidebarQueue(): React.JSX.Element | null {
                 : null}
               <div className={styles['cardFooter']}>
                 <span className={styles['cardTime']}>{relativeTime(row.updatedAt)}</span>
-                <span className={`${styles['cardChip']} ${styles[chip.className]}`}>
-                  {chip.dot === true ? <span className={styles['runningDot']} /> : null}
-                  {t(chip.key)}
-                </span>
+                {chip === undefined
+                  ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
+                  : (
+                    <span className={`${styles['cardChip']} ${styles[chip.className]}`}>
+                      {chip.dot === true ? <span className={styles['runningDot']} /> : null}
+                      {t(chip.key)}
+                    </span>
+                  )}
               </div>
             </div>
           )

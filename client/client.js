@@ -497,7 +497,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b86 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b87 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -689,7 +689,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b86 · Search cards on the map",
+  "global.searchPlaceholder": "b87 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13991,12 +13991,13 @@ function StatusRail(props) {
     const rows = [];
     for (const cardId of order) {
       const entry = byId2.get(cardId);
-      if (entry !== void 0) rows.push(entry);
+      if (entry !== void 0 && entry.lamp !== void 0) rows.push(entry);
     }
     for (const entry of props.entries) {
-      if (!order.includes(entry.cardId)) rows.push(entry);
+      if (entry.lamp !== void 0 && !order.includes(entry.cardId)) rows.push(entry);
     }
-    return rows;
+    const drafts = props.entries.filter((entry) => entry.lamp === void 0).sort((a, b) => b.stamp - a.stamp);
+    return [...rows, ...drafts];
   }, [order, props.entries]);
   (0, import_react11.useLayoutEffect)(() => {
     if (drag !== null) return;
@@ -14124,7 +14125,7 @@ function StatusRail(props) {
   const renderCard = (entry, floating) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
     "div",
     {
-      className: `${talk_map_default["card"]} ${talk_map_default[LAMP_CLASS3[entry.lamp]] ?? ""} ${talk_map_default["statusRailCard"]}${floating ? ` ${talk_map_default["statusRailCardDragging"]}` : ""}`,
+      className: `${talk_map_default["card"]} ${entry.lamp === void 0 ? "" : talk_map_default[LAMP_CLASS3[entry.lamp]] ?? ""} ${talk_map_default["statusRailCard"]}${floating ? ` ${talk_map_default["statusRailCardDragging"]}` : ""}`,
       onPointerDown: floating ? void 0 : (event) => {
         beginDrag(event, entry.cardId);
       },
@@ -14134,7 +14135,7 @@ function StatusRail(props) {
         entry.preview !== void 0 && entry.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["cardSummary"], children: entry.preview }) : null,
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(entry.updatedAt) }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[entry.lamp].className]}`, children: [
+          entry.lamp === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[entry.lamp].className]}`, children: [
             LAMP_CHIP[entry.lamp].dot ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
             t(LAMP_CHIP[entry.lamp].key)
           ] })
@@ -14850,7 +14851,22 @@ function CanvasInner(props) {
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue;
       const lamp = glowOf(card.sessionId);
-      if (lamp === void 0) continue;
+      if (lamp === void 0) {
+        const draftText = draftTexts[card.sessionId];
+        if (draftText === void 0 || draftText.trim() === "") continue;
+        const draftSummary = sessions.byId[card.sessionId];
+        rows.push({
+          cardId,
+          sessionId: card.sessionId,
+          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.sessionId,
+          stamp: draftSummary?.updatedAt ?? 0,
+          draft: true,
+          ...draftSummary?.updatedAt !== void 0 ? { updatedAt: draftSummary.updatedAt } : {},
+          preview: draftText,
+          ...pinnedSessions.has(card.sessionId) ? { pinned: true } : {}
+        });
+        continue;
+      }
       const summary = sessions.byId[card.sessionId];
       rows.push({
         cardId,
@@ -16545,18 +16561,26 @@ function SidebarQueue() {
       if (card.boardId !== INBOX_BOARD_ID) continue;
       const summary = sessions.byId[card.sessionId];
       const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts2, finished2);
-      if (lamp === void 0) continue;
+      const draftText = drafts[card.sessionId];
+      const hasDraft = draftText !== void 0 && draftText.trim() !== "";
+      if (lamp === void 0 && !hasDraft) continue;
       if (lamp === "done" && opened.has(card.sessionId)) continue;
+      const draftOnly = lamp === void 0;
       out.push({
         cardId,
         sessionId: card.sessionId,
         title: summary?.displayTitle ?? card.sessionId,
-        lamp,
-        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
-        ...drafts[card.sessionId] !== void 0 ? { draft: drafts[card.sessionId] } : {}
+        ...draftOnly ? { draft: true } : { lamp },
+        ...draftText !== void 0 ? { draftText } : {},
+        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
     }
-    out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+    out.sort((a, b) => {
+      const aDraft = a.draft === true ? 1 : 0;
+      const bDraft = b.draft === true ? 1 : 0;
+      if (aDraft !== bDraft) return aDraft - bDraft;
+      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+    });
     return out;
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened]);
   (0, import_react18.useEffect)(() => {
@@ -16625,16 +16649,16 @@ function SidebarQueue() {
             role: "list",
             style: { display: "flex", flexDirection: "column", gap: 6, flex: "1 1 auto", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 4px 6px", overscrollBehavior: "contain" },
             children: rows.map((row) => {
-              const draft = row.draft;
-              const body = draft !== void 0 && draft.trim() !== "" ? draft : previews[row.sessionId];
-              const chip = LAMP_CHIP[row.lamp];
+              const draftText = row.draftText;
+              const body = draftText !== void 0 && draftText.trim() !== "" ? draftText : previews[row.sessionId];
+              const chip = row.lamp === void 0 ? void 0 : LAMP_CHIP[row.lamp];
               return /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)(
                 "div",
                 {
-                  className: `${talk_map_default["card"]} ${talk_map_default[LAMP_CLASS[row.lamp]] ?? ""} ${talk_map_default["statusRailCard"]} ${talk_map_default["sidebarQueueCard"]}`,
+                  className: `${talk_map_default["card"]} ${row.lamp === void 0 ? "" : talk_map_default[LAMP_CLASS[row.lamp]] ?? ""} ${talk_map_default["statusRailCard"]} ${talk_map_default["sidebarQueueCard"]}`,
                   style: { width: "100%", maxWidth: "100%", boxSizing: "border-box", flex: "none", alignSelf: "stretch" },
                   "data-talkmap-queue": row.sessionId,
-                  "data-lamp": row.lamp,
+                  "data-lamp": row.lamp ?? "draft",
                   title: row.title,
                   role: "button",
                   tabIndex: 0,
@@ -16657,7 +16681,7 @@ function SidebarQueue() {
                     body !== void 0 && body.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("div", { className: talk_map_default["cardSummary"], children: body }) : null,
                     /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
                       /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(row.updatedAt) }),
-                      /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[chip.className]}`, children: [
+                      chip === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[chip.className]}`, children: [
                         chip.dot === true ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
                         t(chip.key)
                       ] })

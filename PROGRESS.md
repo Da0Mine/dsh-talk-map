@@ -7,6 +7,9 @@
 
 ## 已完成
 
+- **两侧栏都显示「待发送」卡片，优先级最低**（`0.1.87`）：`StatusRailEntry.lamp` 改为可选并加 `draft` 标记；地图 `statusEntries` 在 `glowOf` 为空时若该会话有草稿就补一条（`draft:true`、正文=草稿）；侧栏 `rows` 同理。排序：带灯的手动顺序不变，待发送一律 append 到最后（按更新时间倒序）。无灯时卡片不加灯阴影、胶囊换成黄色「待发送」。踩坑：侧栏原来有 `...(drafts[id] ? { draft: drafts[id] } : {})` 把布尔 `draft` 覆盖成字符串，导致排序失效（已删）；StatusRail 的 `ordered` 用字符串锚点替换没匹配上（静默无效），改按行号替换才生效。实测两侧栏顺序均为 正在运行 → 等你回复 → 待查看×2 → 待发送×3。
+- **已知遗留（非本版引入）**：probe「拉伸撞到相邻文件夹就停住」稳定差 2px（右边缘 902 vs 邻居 900），stash 掉本版改动后照样复现，说明是更早版本的问题，待单独修。
+
 - **点开后「待查看」立即消失**（`0.1.86`）：原来要等开地图才消失，原因有三层——① 宿主 `uiSession` 只在 `reconcileStatus` 里、且 `byId[id].retainedBy.mainView > 0` 时才清 `completionUnread`，是异步的；② 本插件自己的 `sessionActivity.finished` 只有 `forget()` 能清，而全项目无人调用它；③ 侧栏原本没有任何乐观更新。修法：点击/回车时 `sessionActivity.forget(id)` + 记入本地 `opened` 集合（只屏蔽 `done` 卡，宿主的判定一旦不再说 done 就自动移出该集合）；`lampOf` 里 `retainedBy.mainView > 0` 直接视为已读；另加一个 effect 把主视图会话的 finished 标记就地清掉。实测点击 s3 后卡片列表 ["s1","s2","s3","s15"] → ["s1","s2","s15"]。
 
 - **侧栏队列与地图侧栏灯判定改为同源**（`0.1.85`）：原来侧栏用会话摘要的 `completed` 推「待查看」，而地图 rail 用 `uiSession.sessionStatus` 的 `completionUnread`——结果侧栏漏掉「待查看」卡片（用户实测 2 张只显示 1 张）。现在 `SidebarQueue` 直接订阅 `getServices().ctx.get('uiSession').sessionStatus`（正是面板 `useSessionStatus` 的底层 store），lampOf 与 glowOf 逐条一致：alert→error、`pendingInteraction`→waiting、`running`→running、`completionUnread`/activity→done。harness 里补了同款 stub。实测两边都是 4 张（正在运行/等你回复/待查看/待查看）一一对应。

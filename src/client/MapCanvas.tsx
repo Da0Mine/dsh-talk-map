@@ -915,7 +915,23 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue
       const lamp = glowOf(card.sessionId) as StatusLamp | undefined
-      if (lamp === undefined) continue
+            if (lamp === undefined) {
+              // Unsent text with no lamp: lowest priority, listed after every lamped card.
+              const draftText = draftTexts[card.sessionId]
+              if (draftText === undefined || draftText.trim() === '') continue
+              const draftSummary = sessions.byId[card.sessionId]
+              rows.push({
+                cardId,
+                sessionId: card.sessionId,
+                title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.sessionId,
+                stamp: draftSummary?.updatedAt ?? 0,
+                draft: true,
+                ...(draftSummary?.updatedAt !== undefined ? { updatedAt: draftSummary.updatedAt } : {}),
+                preview: draftText,
+                ...(pinnedSessions.has(card.sessionId) ? { pinned: true } : {}),
+              })
+              continue
+            }
       const summary = sessions.byId[card.sessionId]
       rows.push({
         cardId,
