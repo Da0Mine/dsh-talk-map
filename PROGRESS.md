@@ -7,6 +7,10 @@
 
 ## 已完成
 
+- **文件夹拉伸压邻居 2px**（`0.1.88`）：`.wsFrame` 是 `content-box`，几何却按外框算，1px 边框被额外加上 → 视觉右边缘比几何多 2px。加 `box-sizing: border-box` 后镜像页实测 overlap 2 → 0（daily right 945 / medkit x 945）。
+- **`/talk-map/client-boot` 每秒 404**（`0.1.88`）：客户端 `rpc.ts`（搜索/跳转失败上报）与 `jump-highlight.ts`（跳转诊断）一直在打这个路由，宿主从未实现。选择"保留诊断、补宿主空路由"：`POST /talk-map/client-boot` 只读请求体并回 `{ok:true}`，不落盘。
+- **探针安全闸**（同批）：`test/probe.mjs` 加四道闸——CDP 端口被占用即拒跑、要求 `/json/version` 的 Browser 以 `Edg/` 开头、改用 `context.newPage()` 而非 `pages()[0]`、目标页是 DSH（38373 / `__DSH_BOOT__`）则抛错。**原因：2026-11-18 该探针把 8791 的测试页导航进了 DSH 桌面窗口，随后停服务导致 `Desktop page failed to load … ERR_CONNECTION_REFUSED`，整个 app 退出。**
+
 - **两侧栏都显示「待发送」卡片，优先级最低**（`0.1.87`）：`StatusRailEntry.lamp` 改为可选并加 `draft` 标记；地图 `statusEntries` 在 `glowOf` 为空时若该会话有草稿就补一条（`draft:true`、正文=草稿）；侧栏 `rows` 同理。排序：带灯的手动顺序不变，待发送一律 append 到最后（按更新时间倒序）。无灯时卡片不加灯阴影、胶囊换成黄色「待发送」。踩坑：侧栏原来有 `...(drafts[id] ? { draft: drafts[id] } : {})` 把布尔 `draft` 覆盖成字符串，导致排序失效（已删）；StatusRail 的 `ordered` 用字符串锚点替换没匹配上（静默无效），改按行号替换才生效。实测两侧栏顺序均为 正在运行 → 等你回复 → 待查看×2 → 待发送×3。
 - **已知遗留（非本版引入）**：probe「拉伸撞到相邻文件夹就停住」稳定差 2px（右边缘 902 vs 邻居 900），stash 掉本版改动后照样复现，说明是更早版本的问题，待单独修。
 
@@ -44,6 +48,8 @@
 重启 DSH 后展开左侧栏（收起地图侧栏才会展开），确认工作区下方是卡片式队列、可滚动、底部「对话地图」与十字准心两个按钮仍在。
 
 ## 坑与未决
+
+- **别在固定 CDP 端口上"等到有响应就开始操作"**：那可能是别人的浏览器/宿主窗口。必须校验身份并开新页；停本地静态服务前先确认没有界面正在加载它（否则 ERR_CONNECTION_REFUSED 会把整个 Desktop 带下去）。
 
 - `useEffect` 依赖写 `[props]` 等于"每次渲染都跑"：函数组件 props 每次都是新对象。改动对话框/弹层时一律用 ref 持有回调 + `[]`。
 - 按文本锚点打补丁容易切在块内嵌套的 `: null}` 上，删代码块一律按行号定位后用 splice。

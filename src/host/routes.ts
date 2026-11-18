@@ -407,6 +407,18 @@ export function mountTalkMapRoutes(
           return
         }
 
+        if (route === 'POST /talk-map/client-boot') {
+          // Client-side diagnostics (search/jump failures). Accepted and acknowledged only:
+          // the route existed on the client for months while the Host never registered it,
+          // so every report came back 404. No disk I/O — this must stay cheap.
+          try {
+            const body = await readJsonBody(request)
+            if (runtime.debugLog !== undefined) runtime.debugLog('client-boot', body)
+          } catch { /* an unreadable report is still acknowledged */ }
+          sendJson(response, 200, { ok: true })
+          return
+        }
+
         if (route === 'POST /talk-map/queue') {
           // The native sidebar's queue list. Cards live in this plugin's store; titles and
           // timestamps come from the Host's session records, sorted newest first.

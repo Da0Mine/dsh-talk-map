@@ -1078,6 +1078,9 @@
 
 .wsFrame {
   position: relative;
+  /* x/width describe the OUTER box: with content-box the 1px border was added on top
+     and the frame overlapped its right-hand neighbour by 2px when stretched. */
+  box-sizing: border-box;
   border: 1.5px dashed var(--dsw-alias-border-l2);
   border-radius: 16px;
   background: transparent;

@@ -15,6 +15,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import net from 'node:net'
 import http from 'node:http'
 import { chromium } from 'playwright-core'
 
@@ -55,6 +56,21 @@ await new Promise(resolve => server.listen(PORT, '127.0.0.1', resolve))
 
 // ---- headless Edge ------------------------------------------------------
 if (EDGE === undefined) throw new Error('Microsoft Edge not found')
+// A browser already listening on our CDP port means we would drive SOMEONE ELSE'S window
+// (that is how the DSH app got navigated to the probe page and crashed). Refuse instead.
+{
+  const taken = await new Promise((resolve) => {
+    const socket = new net.Socket()
+    socket.setTimeout(600)
+    socket.once('connect', () => { socket.destroy(); resolve(true) })
+    socket.once('timeout', () => { socket.destroy(); resolve(false) })
+    socket.once('error', () => resolve(false))
+    socket.connect(CDP, '127.0.0.1')
+  })
+  if (taken) {
+    throw new Error(`CDP port ${CDP} is already in use — refusing to attach to a foreign browser`)
+  }
+}
 fs.rmSync(profileDir, { recursive: true, force: true })
 const edge = spawn(EDGE, [
   `--remote-debugging-port=${CDP}`,
@@ -85,11 +101,26 @@ let failures = 0
 const consoleErrors = []
 try {
   const version = await waitForCdp()
+  if (typeof version.Browser !== 'string' || !version.Browser.startsWith('Edg/')) {
+    throw new Error(`refusing to drive ${String(version.Browser)} — this probe only drives its own Edge`)
+  }
   console.log(`Edge ${version.Browser} via CDP :${CDP}\n`)
   fs.mkdirSync(shots, { recursive: true })
   browser = await chromium.connectOverCDP(`http://127.0.0.1:${CDP}`)
   const context = browser.contexts()[0] ?? await browser.newContext()
-  const page = context.pages()[0] ?? await context.newPage()
+  // Never reuse pages()[0]: with a stray browser that page IS the user's window.
+  const page = await context.newPage()
+  if (!page.url().startsWith('about:')) {
+    throw new Error(`new probe page is ${page.url()} — expected about:blank, aborting`)
+  }
+  {
+    const looksLikeApp = await page.evaluate(() => (
+      location.port === '38373'
+      || location.href.startsWith('dsh-app://')
+      || typeof window.__DSH_BOOT__ !== 'undefined'
+    )).catch(() => false)
+    if (looksLikeApp) throw new Error('this page is the running DSH app — probe refuses to drive it')
+  }
   page.on('pageerror', error => consoleErrors.push(String(error)))
   page.on('console', (message) => {
     if (message.type() === 'error') consoleErrors.push(message.text())
