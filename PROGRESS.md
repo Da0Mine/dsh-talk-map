@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏底部按钮放大**（`0.1.84`）：「对话地图」行 `min-height:40px`（原 ~30px）、内边距 9/12、字号基准 13→14px、图标 18→20px；准心按钮 24→32px（图标 15→20px）。实测 `mapButton h=40`、`backButton 32×32`、`buttonsVisible:true`。
+
 - **远程控制按钮移出侧栏**（`0.1.82` → `0.1.83` 把 settings.section 的 label 从函数改成字符串，与已工作的 dsh-meme 一致）：之前误以为是本插件的十字准心，已回退（十字准心回到侧栏 footer）。真正的目标是 `ds-harness-remote@0.6.5` —— 它只注册 `shell.overlay` + `sidebar.footer.action`（id `ds-harness-remote-workspace`，class `.dshRemoteSidebarEntry`，无快捷键/无设置入口）。做法：本插件注入一条全局样式 `.dshRemoteSidebarEntry{display:none!important}`（style id `dsh-talk-map-hide-remote-entry`）把它从侧栏藏起来，同时注册 `settings.section`（id `talk-map-remote`，标题「远程控制」）承载一个按钮，点击那个被隐藏的节点来打开它的面板。不改第三方包，删掉 `src/client/RemoteEntry.tsx` 的两处注册即还原。实测：样式注入成功、节点 `display:none`、隐藏节点仍可 `.click()`、侧栏按钮恢复为「对话地图 + 回到当前对话」。
 
 - **侧栏只留地图开关 + 队列可拖动调高**（`0.1.81`）：十字准心「回到当前对话」从侧栏 footer 移到地图面板头部（`MapOverlay` 的 header，`data-talkmap-back` 随之搬走），footer 只剩一个「对话地图」；队列顶部加了 hover 才显形的手柄（`.queueGrip`，opacity 0→1，`cursor:ns-resize`），拖动改高度并写 `localStorage['dsh.talk-map.queueHeight']`，范围 76px～70vh，双击还原自适应。实测：手柄藏/显 0→1、拖 120px 高度 312→438 且落盘 432、地图按钮仍可见、面板头部十字准心 title=回到当前对话。
