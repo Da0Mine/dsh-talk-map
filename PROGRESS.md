@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **侧栏队列与地图侧栏灯判定改为同源**（`0.1.85`）：原来侧栏用会话摘要的 `completed` 推「待查看」，而地图 rail 用 `uiSession.sessionStatus` 的 `completionUnread`——结果侧栏漏掉「待查看」卡片（用户实测 2 张只显示 1 张）。现在 `SidebarQueue` 直接订阅 `getServices().ctx.get('uiSession').sessionStatus`（正是面板 `useSessionStatus` 的底层 store），lampOf 与 glowOf 逐条一致：alert→error、`pendingInteraction`→waiting、`running`→running、`completionUnread`/activity→done。harness 里补了同款 stub。实测两边都是 4 张（正在运行/等你回复/待查看/待查看）一一对应。
+
 - **侧栏底部按钮放大**（`0.1.84`）：「对话地图」行 `min-height:40px`（原 ~30px）、内边距 9/12、字号基准 13→14px、图标 18→20px；准心按钮 24→32px（图标 15→20px）。实测 `mapButton h=40`、`backButton 32×32`、`buttonsVisible:true`。
 
 - **远程控制按钮移出侧栏**（`0.1.82` → `0.1.83` 把 settings.section 的 label 从函数改成字符串，与已工作的 dsh-meme 一致）：之前误以为是本插件的十字准心，已回退（十字准心回到侧栏 footer）。真正的目标是 `ds-harness-remote@0.6.5` —— 它只注册 `shell.overlay` + `sidebar.footer.action`（id `ds-harness-remote-workspace`，class `.dshRemoteSidebarEntry`，无快捷键/无设置入口）。做法：本插件注入一条全局样式 `.dshRemoteSidebarEntry{display:none!important}`（style id `dsh-talk-map-hide-remote-entry`）把它从侧栏藏起来，同时注册 `settings.section`（id `talk-map-remote`，标题「远程控制」）承载一个按钮，点击那个被隐藏的节点来打开它的面板。不改第三方包，删掉 `src/client/RemoteEntry.tsx` 的两处注册即还原。实测：样式注入成功、节点 `display:none`、隐藏节点仍可 `.click()`、侧栏按钮恢复为「对话地图 + 回到当前对话」。

@@ -14,7 +14,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'reac
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID } from './canvas-store.ts'
 import { readDraftTexts } from './draft-watch.ts'
-import type { SessionListState, SessionSummary } from './dsh.ts'
+import type { SessionListState, SessionStatusFact, SessionSummary } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { closeMapPanel, getServices, openSessionInUi } from './map-state.ts'
 import type { CardGlow } from './SessionCard.tsx'
@@ -24,8 +24,10 @@ import { sessionAlerts } from './session-alerts.ts'
 import styles from './talk-map.module.css'
 
 const EMPTY_SESSIONS: SessionListState = { ids: [], byId: {} }
+const EMPTY_STATUS: ReadonlyMap<string, SessionStatusFact> = new Map()
 const NO_SUBSCRIBE = (): (() => void) => () => {}
 const emptySnapshot = (): SessionListState => EMPTY_SESSIONS
+const emptyStatus = (): ReadonlyMap<string, SessionStatusFact> => EMPTY_STATUS
 /** Remembered queue height in px (the handle drags it; clamped on use). */
 const HEIGHT_KEY = 'dsh.talk-map.queueHeight'
 const MIN_HEIGHT = 76
@@ -50,16 +52,22 @@ function storedHeight(): number | undefined {
 const PREVIEW_LIMIT = 14
 
 /** The rail's lamp rules, over sources a sidebar action can actually read. */
+/**
+ * The rail's lamp rules, verbatim. `status` is the same uiSession.sessionStatus snapshot the
+ * map panel reads through its `useSessionStatus` prop, so both rails agree — deriving "done"
+ * from the session summary instead made this side miss "waiting to be read" cards.
+ */
 function lampOf(
   sessionId: string,
+  status: SessionStatusFact | undefined,
   summary: SessionSummary | undefined,
   alerts: ReadonlySet<string>,
   finished: ReadonlyMap<string, unknown>,
 ): CardGlow | undefined {
   if (alerts.has(sessionId)) return 'error'
-  if (summary?.pendingInteraction !== undefined) return 'waiting'
-  if (summary?.running === true) return 'running'
-  if (summary?.completed === true || finished.has(sessionId)) return 'done'
+  if (status?.pendingInteraction !== undefined) return 'waiting'
+  if (status?.running === true || summary?.running === true) return 'running'
+  if (status?.completionUnread === true || finished.has(sessionId)) return 'done'
   return undefined
 }
 
@@ -70,6 +78,13 @@ export function SidebarQueue(): React.JSX.Element | null {
   const sessions = useSyncExternalStore(
     list === undefined ? NO_SUBSCRIBE : (listener) => list.subscribe(listener),
     list === undefined ? emptySnapshot : () => list.getSnapshot(),
+  )
+  // uiSession.sessionStatus: the exact store behind the panel's useSessionStatus hook.
+  const statusStore = (services?.ctx?.get?.('uiSession') as
+    { sessionStatus?: { getSnapshot(): ReadonlyMap<string, SessionStatusFact>; subscribe(l: () => void): () => void } } | undefined)?.sessionStatus
+  const statusById = useSyncExternalStore(
+    statusStore === undefined ? NO_SUBSCRIBE : (listener) => statusStore.subscribe(listener),
+    statusStore === undefined ? emptyStatus : () => statusStore.getSnapshot(),
   )
   const alerts = useSyncExternalStore(sessionAlerts.subscribe, sessionAlerts.getSnapshot)
   const finished = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getSnapshot)
@@ -117,7 +132,7 @@ export function SidebarQueue(): React.JSX.Element | null {
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue
       const summary = sessions.byId[card.sessionId]
-      const lamp = lampOf(card.sessionId, summary, alerts, finished)
+      const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts, finished)
       if (lamp === undefined) continue
       out.push({
         cardId,
@@ -130,7 +145,7 @@ export function SidebarQueue(): React.JSX.Element | null {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return out
-  }, [canvasState.cards, sessions, alerts, finished, drafts])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts])
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {

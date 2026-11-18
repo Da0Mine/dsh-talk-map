@@ -497,7 +497,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b84 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b85 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -689,7 +689,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b84 · Search cards on the map",
+  "global.searchPlaceholder": "b85 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -16437,9 +16437,11 @@ var import_react19 = require("react");
 var import_react18 = require("react");
 var import_jsx_runtime19 = require("react/jsx-runtime");
 var EMPTY_SESSIONS = { ids: [], byId: {} };
+var EMPTY_STATUS = /* @__PURE__ */ new Map();
 var NO_SUBSCRIBE = () => () => {
 };
 var emptySnapshot = () => EMPTY_SESSIONS;
+var emptyStatus = () => EMPTY_STATUS;
 var HEIGHT_KEY = "dsh.talk-map.queueHeight";
 var MIN_HEIGHT = 76;
 function clampHeight(value) {
@@ -16457,11 +16459,11 @@ function storedHeight() {
   }
 }
 var PREVIEW_LIMIT = 14;
-function lampOf(sessionId, summary, alerts2, finished2) {
+function lampOf(sessionId, status, summary, alerts2, finished2) {
   if (alerts2.has(sessionId)) return "error";
-  if (summary?.pendingInteraction !== void 0) return "waiting";
-  if (summary?.running === true) return "running";
-  if (summary?.completed === true || finished2.has(sessionId)) return "done";
+  if (status?.pendingInteraction !== void 0) return "waiting";
+  if (status?.running === true || summary?.running === true) return "running";
+  if (status?.completionUnread === true || finished2.has(sessionId)) return "done";
   return void 0;
 }
 function SidebarQueue() {
@@ -16471,6 +16473,11 @@ function SidebarQueue() {
   const sessions = (0, import_react18.useSyncExternalStore)(
     list === void 0 ? NO_SUBSCRIBE : (listener) => list.subscribe(listener),
     list === void 0 ? emptySnapshot : () => list.getSnapshot()
+  );
+  const statusStore = services2?.ctx?.get?.("uiSession")?.sessionStatus;
+  const statusById = (0, import_react18.useSyncExternalStore)(
+    statusStore === void 0 ? NO_SUBSCRIBE : (listener) => statusStore.subscribe(listener),
+    statusStore === void 0 ? emptyStatus : () => statusStore.getSnapshot()
   );
   const alerts2 = (0, import_react18.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
   const finished2 = (0, import_react18.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
@@ -16515,7 +16522,7 @@ function SidebarQueue() {
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue;
       const summary = sessions.byId[card.sessionId];
-      const lamp = lampOf(card.sessionId, summary, alerts2, finished2);
+      const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts2, finished2);
       if (lamp === void 0) continue;
       out.push({
         cardId,
@@ -16528,7 +16535,7 @@ function SidebarQueue() {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     return out;
-  }, [canvasState.cards, sessions, alerts2, finished2, drafts]);
+  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts]);
   (0, import_react18.useEffect)(() => {
     const wanted = rows.slice(0, PREVIEW_LIMIT).map((row) => row.sessionId).filter((id2) => !askedRef.current.has(id2));
     if (wanted.length === 0) return;

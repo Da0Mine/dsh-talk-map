@@ -726,7 +726,14 @@
         }
       },
     },
-    get(name) { return ctx[name] },
+    get(name) {
+      // uiSession.sessionStatus is the store behind useSessionStatus; expose the same map so
+      // the sidebar queue and the map rail agree in the offline harness too.
+      if (name === 'uiSession') {
+        return { sessionStatus: { getSnapshot: () => statusById, subscribe: () => () => {} } }
+      }
+      return ctx[name]
+    },
     inject() {},
     // The Host event stream: api-session/error is what the red lamp reads.
     remote: {
