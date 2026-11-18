@@ -67,7 +67,10 @@ function lampOf(
   if (alerts.has(sessionId)) return 'error'
   if (status?.pendingInteraction !== undefined) return 'waiting'
   if (status?.running === true || summary?.running === true) return 'running'
-  if (status?.completionUnread === true || finished.has(sessionId)) return 'done'
+  // A session that is currently the main view has been read — the Host reconciles this
+  // asynchronously, so honour the same rule here instead of keeping a stale lamp.
+  const isMain = (summary?.retainedBy?.mainView ?? 0) > 0
+  if (!isMain && (status?.completionUnread === true || finished.has(sessionId))) return 'done'
   return undefined
 }
 
@@ -94,6 +97,9 @@ export function SidebarQueue(): React.JSX.Element | null {
   // Manual height: undefined = fit the cards, a number = what the user dragged to.
   const [height, setHeight] = useState<number | undefined>(() => storedHeight())
   const drag = useRef<{ startY: number; startHeight: number } | null>(null)
+  // Sessions the user just opened from here. The Host clears "unread" only after the shell
+  // reports the session as the main view, so without this the card lingers for a while.
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
   const askedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -126,6 +132,28 @@ export function SidebarQueue(): React.JSX.Element | null {
     } catch { /* storage refused: the drag still applies for this session */ }
   }
 
+  useEffect(() => {
+    for (const sessionId of finished) {
+      const summary = sessions.byId[sessionId]
+      if ((summary?.retainedBy?.mainView ?? 0) > 0) sessionActivity.forget(sessionId)
+    }
+  }, [finished, sessions])
+
+  useEffect(() => {
+    if (opened.size === 0) return
+    const stale = [...opened].filter((sessionId) => {
+      const summary = sessions.byId[sessionId]
+      const lamp = lampOf(sessionId, statusById.get(sessionId), summary, alerts, finished)
+      return lamp !== 'done'
+    })
+    if (stale.length === 0) return
+    setOpened((current) => {
+      const next = new Set(current)
+      for (const id of stale) next.delete(id)
+      return next
+    })
+  }, [opened, sessions, statusById, alerts, finished])
+
   // Only lamped cards, exactly like the rail.
   const rows = useMemo(() => {
     const out: { cardId: string; sessionId: string; title: string; lamp: CardGlow; updatedAt?: number; draft?: string }[] = []
@@ -134,6 +162,8 @@ export function SidebarQueue(): React.JSX.Element | null {
       const summary = sessions.byId[card.sessionId]
       const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts, finished)
       if (lamp === undefined) continue
+      // Opened from here already: stop showing the "done, unread" card, it is read now.
+      if (lamp === 'done' && opened.has(card.sessionId)) continue
       out.push({
         cardId,
         sessionId: card.sessionId,
@@ -145,7 +175,7 @@ export function SidebarQueue(): React.JSX.Element | null {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return out
-  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened])
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
@@ -228,12 +258,19 @@ export function SidebarQueue(): React.JSX.Element | null {
               role="button"
               tabIndex={0}
               onClick={() => {
+                // Drop this plugin's own "finished, unread" mark immediately: it is only
+                // ever cleared when the map panel remounts, which is why the card used to
+                // linger until the map was opened.
+                sessionActivity.forget(row.sessionId)
+                setOpened((current) => new Set(current).add(row.sessionId))
                 closeMapPanel()
                 openSessionInUi(row.sessionId)
               }}
               onKeyDown={(event) => {
                 if (event.key !== 'Enter' && event.key !== ' ') return
                 event.preventDefault()
+                sessionActivity.forget(row.sessionId)
+                setOpened((current) => new Set(current).add(row.sessionId))
                 closeMapPanel()
                 openSessionInUi(row.sessionId)
               }}

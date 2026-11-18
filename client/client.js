@@ -497,7 +497,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b85 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b86 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -689,7 +689,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b85 · Search cards on the map",
+  "global.searchPlaceholder": "b86 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -16463,7 +16463,8 @@ function lampOf(sessionId, status, summary, alerts2, finished2) {
   if (alerts2.has(sessionId)) return "error";
   if (status?.pendingInteraction !== void 0) return "waiting";
   if (status?.running === true || summary?.running === true) return "running";
-  if (status?.completionUnread === true || finished2.has(sessionId)) return "done";
+  const isMain = (summary?.retainedBy?.mainView ?? 0) > 0;
+  if (!isMain && (status?.completionUnread === true || finished2.has(sessionId))) return "done";
   return void 0;
 }
 function SidebarQueue() {
@@ -16486,6 +16487,7 @@ function SidebarQueue() {
   const [previews, setPreviews] = (0, import_react18.useState)({});
   const [height, setHeight] = (0, import_react18.useState)(() => storedHeight());
   const drag = (0, import_react18.useRef)(null);
+  const [opened, setOpened] = (0, import_react18.useState)(() => /* @__PURE__ */ new Set());
   const askedRef = (0, import_react18.useRef)(/* @__PURE__ */ new Set());
   (0, import_react18.useEffect)(() => {
     const timer4 = setInterval(() => {
@@ -16517,6 +16519,26 @@ function SidebarQueue() {
     } catch {
     }
   };
+  (0, import_react18.useEffect)(() => {
+    for (const sessionId of finished2) {
+      const summary = sessions.byId[sessionId];
+      if ((summary?.retainedBy?.mainView ?? 0) > 0) sessionActivity.forget(sessionId);
+    }
+  }, [finished2, sessions]);
+  (0, import_react18.useEffect)(() => {
+    if (opened.size === 0) return;
+    const stale = [...opened].filter((sessionId) => {
+      const summary = sessions.byId[sessionId];
+      const lamp = lampOf(sessionId, statusById.get(sessionId), summary, alerts2, finished2);
+      return lamp !== "done";
+    });
+    if (stale.length === 0) return;
+    setOpened((current) => {
+      const next = new Set(current);
+      for (const id2 of stale) next.delete(id2);
+      return next;
+    });
+  }, [opened, sessions, statusById, alerts2, finished2]);
   const rows = (0, import_react18.useMemo)(() => {
     const out = [];
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
@@ -16524,6 +16546,7 @@ function SidebarQueue() {
       const summary = sessions.byId[card.sessionId];
       const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts2, finished2);
       if (lamp === void 0) continue;
+      if (lamp === "done" && opened.has(card.sessionId)) continue;
       out.push({
         cardId,
         sessionId: card.sessionId,
@@ -16535,7 +16558,7 @@ function SidebarQueue() {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     return out;
-  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts]);
+  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened]);
   (0, import_react18.useEffect)(() => {
     const wanted = rows.slice(0, PREVIEW_LIMIT).map((row) => row.sessionId).filter((id2) => !askedRef.current.has(id2));
     if (wanted.length === 0) return;
@@ -16616,12 +16639,16 @@ function SidebarQueue() {
                   role: "button",
                   tabIndex: 0,
                   onClick: () => {
+                    sessionActivity.forget(row.sessionId);
+                    setOpened((current) => new Set(current).add(row.sessionId));
                     closeMapPanel();
                     openSessionInUi(row.sessionId);
                   },
                   onKeyDown: (event) => {
                     if (event.key !== "Enter" && event.key !== " ") return;
                     event.preventDefault();
+                    sessionActivity.forget(row.sessionId);
+                    setOpened((current) => new Set(current).add(row.sessionId));
                     closeMapPanel();
                     openSessionInUi(row.sessionId);
                   },

@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **点开后「待查看」立即消失**（`0.1.86`）：原来要等开地图才消失，原因有三层——① 宿主 `uiSession` 只在 `reconcileStatus` 里、且 `byId[id].retainedBy.mainView > 0` 时才清 `completionUnread`，是异步的；② 本插件自己的 `sessionActivity.finished` 只有 `forget()` 能清，而全项目无人调用它；③ 侧栏原本没有任何乐观更新。修法：点击/回车时 `sessionActivity.forget(id)` + 记入本地 `opened` 集合（只屏蔽 `done` 卡，宿主的判定一旦不再说 done 就自动移出该集合）；`lampOf` 里 `retainedBy.mainView > 0` 直接视为已读；另加一个 effect 把主视图会话的 finished 标记就地清掉。实测点击 s3 后卡片列表 ["s1","s2","s3","s15"] → ["s1","s2","s15"]。
+
 - **侧栏队列与地图侧栏灯判定改为同源**（`0.1.85`）：原来侧栏用会话摘要的 `completed` 推「待查看」，而地图 rail 用 `uiSession.sessionStatus` 的 `completionUnread`——结果侧栏漏掉「待查看」卡片（用户实测 2 张只显示 1 张）。现在 `SidebarQueue` 直接订阅 `getServices().ctx.get('uiSession').sessionStatus`（正是面板 `useSessionStatus` 的底层 store），lampOf 与 glowOf 逐条一致：alert→error、`pendingInteraction`→waiting、`running`→running、`completionUnread`/activity→done。harness 里补了同款 stub。实测两边都是 4 张（正在运行/等你回复/待查看/待查看）一一对应。
 
 - **侧栏底部按钮放大**（`0.1.84`）：「对话地图」行 `min-height:40px`（原 ~30px）、内边距 9/12、字号基准 13→14px、图标 18→20px；准心按钮 24→32px（图标 15→20px）。实测 `mapButton h=40`、`backButton 32×32`、`buttonsVisible:true`。
