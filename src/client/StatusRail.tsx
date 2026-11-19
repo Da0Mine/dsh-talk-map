@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
+import { sortQueueRows } from './queue-order.ts'
 import styles from './talk-map.module.css'
 
 export type StatusLamp = CardGlow
@@ -178,20 +179,15 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   }, [signature])
 
   const ordered = useMemo(() => {
-    const byId = new Map(props.entries.map(entry => [entry.cardId, entry]))
-    const rows: StatusRailEntry[] = []
-    for (const cardId of order) {
-      const entry = byId.get(cardId)
-      if (entry !== undefined && entry.lamp !== undefined) rows.push(entry)
+    // Drag position only orders cards inside their own priority bucket.
+    const manualIndex = (cardId: string): number => {
+      const index = order.indexOf(cardId)
+      return index < 0 ? Number.MAX_SAFE_INTEGER : index
     }
-    for (const entry of props.entries) {
-      if (entry.lamp !== undefined && !order.includes(entry.cardId)) rows.push(entry)
-    }
-    // Draft-only cards always sit at the bottom (lowest priority), newest first.
-    const drafts = props.entries
-      .filter(entry => entry.lamp === undefined)
-      .sort((a, b) => b.stamp - a.stamp)
-    return [...rows, ...drafts]
+    return sortQueueRows(props.entries.map(entry => ({
+      ...entry,
+      manualIndex: manualIndex(entry.cardId),
+    })))
   }, [order, props.entries])
 
   // FLIP for status-driven moves; dragging has its own gap logic below.

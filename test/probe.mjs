@@ -25,7 +25,20 @@ const EDGE = [
   'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
 ].find(candidate => fs.existsSync(candidate))
 const PORT = 8791
-const CDP = 9333
+// Never a fixed port: a leftover browser there (earlier versions did exactly that) would
+// make us attach to and drive a window we do not own — the 2026-11-18 crash.
+const CDP = await (async () => {
+  const { createServer } = await import('node:net')
+  return await new Promise((resolve, reject) => {
+    const server = createServer()
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address()
+      const port = typeof address === 'object' && address !== null ? address.port : 0
+      server.close(() => resolve(port))
+    })
+  })
+})()
 const headed = process.argv.includes('--headed')
 const profileDir = path.join(os.tmpdir(), 'talkmap-edge-profile')
 const shots = path.join(ROOT, 'test/shots')

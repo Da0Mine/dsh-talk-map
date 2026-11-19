@@ -497,7 +497,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b88 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b89 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -689,7 +689,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b88 · Search cards on the map",
+  "global.searchPlaceholder": "b89 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -13885,6 +13885,28 @@ function StackNode(props) {
 
 // src/client/StatusRail.tsx
 var import_react11 = require("react");
+
+// src/client/queue-order.ts
+function queueRank(lamp, draft) {
+  if (lamp === "error") return 0;
+  if (lamp === "waiting") return 1;
+  if (lamp === "done") return 2;
+  if (lamp === "running") return 3;
+  return draft ? 4 : 5;
+}
+function compareQueueRows(a, b) {
+  const byRank = queueRank(a.lamp, a.draft === true) - queueRank(b.lamp, b.draft === true);
+  if (byRank !== 0) return byRank;
+  const aIndex = a.manualIndex ?? Number.MAX_SAFE_INTEGER;
+  const bIndex = b.manualIndex ?? Number.MAX_SAFE_INTEGER;
+  if (aIndex !== bIndex) return aIndex - bIndex;
+  return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
+}
+function sortQueueRows(rows) {
+  return [...rows].sort(compareQueueRows);
+}
+
+// src/client/StatusRail.tsx
 var import_jsx_runtime15 = require("react/jsx-runtime");
 var OPEN_KEY = "dsh.talk-map.status-rail.open.v1";
 var ORDER_KEY = "dsh.talk-map.status-rail.order.v1";
@@ -13987,17 +14009,14 @@ function StatusRail(props) {
     }
   }, [signature]);
   const ordered = (0, import_react11.useMemo)(() => {
-    const byId2 = new Map(props.entries.map((entry) => [entry.cardId, entry]));
-    const rows = [];
-    for (const cardId of order) {
-      const entry = byId2.get(cardId);
-      if (entry !== void 0 && entry.lamp !== void 0) rows.push(entry);
-    }
-    for (const entry of props.entries) {
-      if (entry.lamp !== void 0 && !order.includes(entry.cardId)) rows.push(entry);
-    }
-    const drafts = props.entries.filter((entry) => entry.lamp === void 0).sort((a, b) => b.stamp - a.stamp);
-    return [...rows, ...drafts];
+    const manualIndex = (cardId) => {
+      const index2 = order.indexOf(cardId);
+      return index2 < 0 ? Number.MAX_SAFE_INTEGER : index2;
+    };
+    return sortQueueRows(props.entries.map((entry) => ({
+      ...entry,
+      manualIndex: manualIndex(entry.cardId)
+    })));
   }, [order, props.entries]);
   (0, import_react11.useLayoutEffect)(() => {
     if (drag !== null) return;
@@ -16575,13 +16594,7 @@ function SidebarQueue() {
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
     }
-    out.sort((a, b) => {
-      const aDraft = a.draft === true ? 1 : 0;
-      const bDraft = b.draft === true ? 1 : 0;
-      if (aDraft !== bDraft) return aDraft - bDraft;
-      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0);
-    });
-    return out;
+    return sortQueueRows(out);
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened]);
   (0, import_react18.useEffect)(() => {
     const wanted = rows.slice(0, PREVIEW_LIMIT).map((row) => row.sessionId).filter((id2) => !askedRef.current.has(id2));

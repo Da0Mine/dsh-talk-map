@@ -19,6 +19,7 @@ import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { closeMapPanel, getServices, openSessionInUi } from './map-state.ts'
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
+import { sortQueueRows } from './queue-order.ts'
 import { sessionActivity } from './session-activity.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import styles from './talk-map.module.css'
@@ -176,13 +177,8 @@ export function SidebarQueue(): React.JSX.Element | null {
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
       })
     }
-    out.sort((a, b) => {
-      const aDraft = a.draft === true ? 1 : 0
-      const bDraft = b.draft === true ? 1 : 0
-      if (aDraft !== bDraft) return aDraft - bDraft
-      return (b.updatedAt ?? 0) - (a.updatedAt ?? 0)
-    })
-    return out
+    // Same rule as the map rail: priority bucket first, then newest inside it.
+    return sortQueueRows(out)
   }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened])
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).

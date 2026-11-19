@@ -7,6 +7,9 @@
 
 ## 已完成
 
+- **两个侧栏共用一套排序**（`0.1.89`）：新增 `src/client/queue-order.ts`，优先级「异常终止(error) > 等你回复(waiting) > 待查看(done) > 正在运行(running) > 待发送(draft)」，同一优先级内按 `updatedAt` 倒序；地图 rail 与原生侧栏都调 `sortQueueRows`，不再各排各的。手动拖拽只在**同一优先级组内**重排（跨不了优先级），所以两边永远同序。实测镜像页两边 chip 序列完全一致：等你回复 → 待查看×2 → 正在运行 → 待发送×2；单测 `test/queue-order.test.mjs` 5/5（阶梯、整体分组、组内时间、拖拽不跨组、compare 对称性）。
+- **探针端口改为运行时挑选空闲端口**（`0.1.89`）：固定 9333 上残留了一个查不到归属的监听（pid 31900 已不可查），闸门正确拒绝连接后把探针改成 `listen(0)` 取空闲端口再 spawn Edge。改完 `node test/probe.mjs` → **148/148**（含此前失败的「拉伸撞到相邻文件夹」）。
+
 - **文件夹拉伸压邻居 2px**（`0.1.88`）：`.wsFrame` 是 `content-box`，几何却按外框算，1px 边框被额外加上 → 视觉右边缘比几何多 2px。加 `box-sizing: border-box` 后镜像页实测 overlap 2 → 0（daily right 945 / medkit x 945）。
 - **`/talk-map/client-boot` 每秒 404**（`0.1.88`）：客户端 `rpc.ts`（搜索/跳转失败上报）与 `jump-highlight.ts`（跳转诊断）一直在打这个路由，宿主从未实现。选择"保留诊断、补宿主空路由"：`POST /talk-map/client-boot` 只读请求体并回 `{ok:true}`，不落盘。
 - **探针安全闸**（同批）：`test/probe.mjs` 加四道闸——CDP 端口被占用即拒跑、要求 `/json/version` 的 Browser 以 `Edg/` 开头、改用 `context.newPage()` 而非 `pages()[0]`、目标页是 DSH（38373 / `__DSH_BOOT__`）则抛错。**原因：2026-11-18 该探针把 8791 的测试页导航进了 DSH 桌面窗口，随后停服务导致 `Desktop page failed to load … ERR_CONNECTION_REFUSED`，整个 app 退出。**
