@@ -87,10 +87,16 @@ function snap(value: number): number {
 }
 
 /** Sessions eligible for a card: top-level, non-empty logs. */
-function placeableSessionIds(sessions: SessionListState): string[] {
+function placeableSessionIds(
+  sessions: SessionListState,
+  archived?: ReadonlySet<string>,
+): string[] {
   return sessions.ids.filter((id) => {
     const summary = sessions.byId[id]
-    return summary !== undefined && !summary.blank && summary.origin !== 'subagent'
+    return summary !== undefined
+      && !summary.blank
+      && summary.origin !== 'subagent'
+      && !(archived?.has(id) ?? false)
   })
 }
 
@@ -328,6 +334,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const workspacesReady = workspaces.baselinesReady !== false
   /** The sidebar's own pin set — the map mirrors it, it does not own it. */
   const pinnedSessions = useMemo(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces])
+  /** The registry's archive set — archiving keeps a session's workspace slot, so the
+   * map must exclude those ids itself or every open re-adds the archived card. */
+  const archivedSessionIds = useMemo(
+    () => new Set(workspaces.archivedSessionIds ?? []),
+    [workspaces],
+  )
   /** Sessions that already own a card (import/auto-sync skip these). */
   const boardSessionIds = useMemo(
     () => new Set(Object.values(canvasState.cards).map(card => card.sessionId)),
@@ -369,10 +381,11 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const out: Record<string, Card> = {}
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue
+      if (archivedSessionIds.has(card.sessionId)) continue
       out[cardId] = card
     }
     return out
-  }, [canvasState.cards, sessions])
+  }, [canvasState.cards, sessions, archivedSessionIds])
 
   // Card bodies: the user's last message, read off the Host's session surface
   // (the LLM digest is no longer displayed).
@@ -609,7 +622,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     // already on the board.
     const framed = new Set(Object.keys(wsFrames))
     const newcomers = new Map<string, string[]>()
-    for (const sessionId of placeableSessionIds(sessions)) {
+    for (const sessionId of placeableSessionIds(sessions, archivedSessionIds)) {
       const groupId = sessionWs.get(sessionId)
       if (groupId === undefined || framed.has(groupId) || boardSessionIds.has(sessionId)) continue
       newcomers.set(groupId, [...(newcomers.get(groupId) ?? []), sessionId])
@@ -646,7 +659,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const existing = (membersByGroup.get(groupId) ?? [])
         .map(cardId => canvasState.cards[cardId])
         .filter((card): card is Card => card !== undefined)
-      const missing = placeableSessionIds(sessions)
+      const missing = placeableSessionIds(sessions, archivedSessionIds)
         .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
         .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
       if (missing.length === 0) continue
@@ -1967,7 +1980,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // ---- import actions -------------------------------------------------
 
   const importWorkspace = (workspaceId: string, atX: number, atY: number): void => {
-    const memberSessions = placeableSessionIds(sessions)
+    const memberSessions = placeableSessionIds(sessions, archivedSessionIds)
       .filter(id => sessionWs.get(id) === workspaceId && !boardSessionIds.has(id))
       .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
     const memory = canvasState.global?.layoutMemory ?? {}
@@ -2027,7 +2040,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const syncGroup = (groupId: string): void => {
     const rect = frameRects[groupId] ?? wsFrames[groupId]
     if (rect === undefined) return
-    const fresh = placeableSessionIds(sessions)
+    const fresh = placeableSessionIds(sessions, archivedSessionIds)
       .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
       .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
     if (fresh.length === 0) return
@@ -2185,7 +2198,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       }
     } else if (menu.view === 'import-session') {
       title = t('menu.importSession')
-      const candidates = placeableSessionIds(sessions)
+      const candidates = placeableSessionIds(sessions, archivedSessionIds)
         .filter(id => !boardSessionIds.has(id))
         .slice(0, 200)
       for (const sessionId of candidates) {
