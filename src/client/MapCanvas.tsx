@@ -86,6 +86,15 @@ function snap(value: number): number {
   return Math.round(value / GRID) * GRID
 }
 
+/**
+ * How many cards one click may place at once. A workspace with ~1000 sessions used to dump
+ * all of them onto the canvas (issue #2); the newest ones are the useful ones and the rest
+ * can be pulled in with the next import.
+ */
+const IMPORT_CAP = 120
+/** Card previews requested per poll tick (one Host read per session). */
+const PREVIEW_BATCH = 40
+
 /** Sessions eligible for a card: top-level, non-empty logs. */
 function placeableSessionIds(
   sessions: SessionListState,
@@ -409,8 +418,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         stamps.push([card.sessionId, stamp])
       }
       if (pending.length === 0) return
-      for (const [sessionId, stamp] of stamps) previewStamp.current.set(sessionId, stamp)
-      void talkMapApi.lastUserMessages(pending)
+      // Ask for the newest PREVIEW_BATCH only; the rest arrive on later ticks, and a board
+      // with a thousand cards must not fire a thousand session reads at once (issue #6).
+      const batch = pending.slice(0, PREVIEW_BATCH)
+      const batchStamps = stamps.slice(0, PREVIEW_BATCH)
+      for (const [sessionId, stamp] of batchStamps) previewStamp.current.set(sessionId, stamp)
+      void talkMapApi.lastUserMessages(batch)
         .then(({ texts }) => {
           const cleaned: Record<string, string> = {}
           for (const [sessionId, text] of Object.entries(texts)) {
@@ -1980,9 +1993,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // ---- import actions -------------------------------------------------
 
   const importWorkspace = (workspaceId: string, atX: number, atY: number): void => {
-    const memberSessions = placeableSessionIds(sessions, archivedSessionIds)
+    const allMembers = placeableSessionIds(sessions, archivedSessionIds)
       .filter(id => sessionWs.get(id) === workspaceId && !boardSessionIds.has(id))
       .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
+    // Newest first, and never more than IMPORT_CAP in one go (issue #2).
+    const memberSessions = allMembers.slice(0, IMPORT_CAP)
+    const skipped = allMembers.length - memberSessions.length
     const memory = canvasState.global?.layoutMemory ?? {}
     const remembered = memberSessions.filter(id => memory[id] !== undefined)
     const fresh = memberSessions.filter(id => memory[id] === undefined)
@@ -2023,6 +2039,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       ? fitRect(placed)
       : { x: snap(atX) - FRAME_PAD, y: snap(atY) - FRAME_PAD - FRAME_LABEL_H, width: 400, height: 260 }
     canvas.setWsFrameRect(workspaceId, rect)
+    if (skipped > 0) {
+      showToast(t('toast.importCapped', { n: String(placed.length), more: String(skipped) }))
+    }
   }
 
   const importSession = (sessionId: string, atX: number, atY: number): void => {
@@ -2043,6 +2062,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const fresh = placeableSessionIds(sessions, archivedSessionIds)
       .filter(id => sessionWs.get(id) === groupId && !boardSessionIds.has(id))
       .sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0))
+        .slice(0, IMPORT_CAP)
     if (fresh.length === 0) return
     const members = (membersByGroup.get(groupId) ?? [])
       .map(id => canvasState.cards[id])

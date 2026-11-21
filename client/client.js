@@ -351,6 +351,7 @@ var zh = {
   "confirm.removeGroup.okHard": "直接删除",
   "confirm.cancel": "取消",
   "toast.workspaceTrashed": "已把 {n} 个会话移入回收站，分组已从地图移除",
+  "toast.importCapped": "已放入 {n} 张卡片，另有 {more} 个会话留到下次导入或同步",
   "toast.workspaceDeleted": "已直接删除 {n} 个会话，分组已从地图移除",
   "statusRail.open": "展开状态栏",
   "statusRail.close": "收起状态栏",
@@ -497,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b89 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b90 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -550,6 +551,7 @@ var en = {
   "confirm.removeGroup.okHard": "Delete for good",
   "confirm.cancel": "Cancel",
   "toast.workspaceTrashed": "Moved {n} conversations to the recycle bin; the group is off the map",
+  "toast.importCapped": "placed {n} cards; {more} sessions left for a later import or sync",
   "toast.workspaceDeleted": "Deleted {n} conversations outright; the group is off the map",
   "statusRail.open": "Open the status rail",
   "statusRail.close": "Close the status rail",
@@ -689,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b89 · Search cards on the map",
+  "global.searchPlaceholder": "b90 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11032,6 +11034,49 @@ function DigestDialog(props) {
   );
 }
 
+// src/client/rpc.ts
+async function callRpc(endpoint, request = {}) {
+  const rpc = connectionService()?.rpc;
+  if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
+  const controller = new AbortController();
+  const result = await rpc.call("/api", endpoint, { args: { request } }, controller.signal);
+  if (result.ok !== true) {
+    const failure = result.error;
+    throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? "failed"}`);
+  }
+  return result.value;
+}
+function reportToHost(payload) {
+  try {
+    void fetch("/talk-map/client-boot", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...payload })
+    }).catch(() => {
+    });
+  } catch {
+  }
+}
+async function fetchSearchContext(sessionId, seq, query) {
+  try {
+    const page = await talkMapApi.searchContext(sessionId, seq, query);
+    return Array.isArray(page.lines) ? page.lines.filter((line) => typeof line === "string" && line !== "") : [];
+  } catch (error) {
+    reportToHost({ phase: "search-context-failed", sessionId, seq, message: String(error?.message ?? error) });
+    return [];
+  }
+}
+async function fetchSessionHits(sessionId, query) {
+  try {
+    const page = await talkMapApi.searchSessionHits(sessionId, query);
+    const blocks = (page.blocks ?? []).filter((block) => Array.isArray(block) && block.length > 0);
+    return { blocks, seqs: blocks.map((_, index2) => typeof page.seqs?.[index2] === "number" ? page.seqs[index2] : null) };
+  } catch (error) {
+    reportToHost({ phase: "search-session-failed", sessionId, message: String(error?.message ?? error) });
+    return { blocks: [], seqs: [] };
+  }
+}
+
 // src/client/session-actions.ts
 var RECYCLE_BIN_ROUTE = "dsh-session-recycle-bin/api";
 async function postRecycleBin(body) {
@@ -11184,49 +11229,6 @@ var drawerState = {
     safeWrite(SCROLL_KEY, null);
   }
 };
-
-// src/client/rpc.ts
-async function callRpc2(endpoint, request = {}) {
-  const rpc = connectionService()?.rpc;
-  if (rpc === void 0) throw new Error(t("spawn.apiUnavailable"));
-  const controller = new AbortController();
-  const result = await rpc.call("/api", endpoint, { args: { request } }, controller.signal);
-  if (result.ok !== true) {
-    const failure = result.error;
-    throw new Error(`${endpoint}: ${failure?.message ?? failure?.code ?? "failed"}`);
-  }
-  return result.value;
-}
-function reportToHost(payload) {
-  try {
-    void fetch("/talk-map/client-boot", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ at: (/* @__PURE__ */ new Date()).toISOString(), ...payload })
-    }).catch(() => {
-    });
-  } catch {
-  }
-}
-async function fetchSearchContext(sessionId, seq, query) {
-  try {
-    const page = await talkMapApi.searchContext(sessionId, seq, query);
-    return Array.isArray(page.lines) ? page.lines.filter((line) => typeof line === "string" && line !== "") : [];
-  } catch (error) {
-    reportToHost({ phase: "search-context-failed", sessionId, seq, message: String(error?.message ?? error) });
-    return [];
-  }
-}
-async function fetchSessionHits(sessionId, query) {
-  try {
-    const page = await talkMapApi.searchSessionHits(sessionId, query);
-    const blocks = (page.blocks ?? []).filter((block) => Array.isArray(block) && block.length > 0);
-    return { blocks, seqs: blocks.map((_, index2) => typeof page.seqs?.[index2] === "number" ? page.seqs[index2] : null) };
-  } catch (error) {
-    reportToHost({ phase: "search-session-failed", sessionId, message: String(error?.message ?? error) });
-    return { blocks: [], seqs: [] };
-  }
-}
 
 // src/client/state-persist.ts
 var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
@@ -12890,7 +12892,7 @@ ${t("inject.contextNote")}`);
     setBusy(true);
     setError(void 0);
     try {
-      const createSession = async () => callRpc2(
+      const createSession = async () => callRpc(
         "session/create",
         pending.parentWorkspaceId !== void 0 ? { workspaceId: pending.parentWorkspaceId } : {}
       );
@@ -12931,7 +12933,7 @@ ${t("inject.contextNote")}`);
       if (firstMessage.trim() === "") throw new Error(t("spawn.needFirstMessage"));
       const created = await createSession();
       addCardAndEdge(created.sessionId, "none");
-      await callRpc2("session/prompt", {
+      await callRpc("session/prompt", {
         sessionId: created.sessionId,
         mode: "queue",
         content: [{ type: "text", text: firstMessage }],
@@ -14275,10 +14277,12 @@ var lastActivitySeen = /* @__PURE__ */ new Map();
 function snap(value) {
   return Math.round(value / GRID) * GRID;
 }
-function placeableSessionIds(sessions) {
+var IMPORT_CAP = 120;
+var PREVIEW_BATCH = 40;
+function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
-    return summary !== void 0 && !summary.blank && summary.origin !== "subagent";
+    return summary !== void 0 && !summary.blank && summary.origin !== "subagent" && !(archived?.has(id2) ?? false);
   });
 }
 function sessionWorkspaceIndex(workspaces) {
@@ -14441,6 +14445,10 @@ function CanvasInner(props) {
   );
   const workspacesReady = workspaces.baselinesReady !== false;
   const pinnedSessions = (0, import_react13.useMemo)(() => new Set(workspaces.pinnedSessionIds ?? []), [workspaces]);
+  const archivedSessionIds = (0, import_react13.useMemo)(
+    () => new Set(workspaces.archivedSessionIds ?? []),
+    [workspaces]
+  );
   const boardSessionIds = (0, import_react13.useMemo)(
     () => new Set(Object.values(canvasState.cards).map((card) => card.sessionId)),
     [canvasState.cards]
@@ -14470,10 +14478,11 @@ function CanvasInner(props) {
     const out = {};
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
       if (sessions.byId[card.sessionId]?.blank === true) continue;
+      if (archivedSessionIds.has(card.sessionId)) continue;
       out[cardId] = card;
     }
     return out;
-  }, [canvasState.cards, sessions]);
+  }, [canvasState.cards, sessions, archivedSessionIds]);
   const previewInputs = (0, import_react13.useRef)({ cards: visibleCards, sessions });
   previewInputs.current = { cards: visibleCards, sessions };
   const previewTick = (0, import_react13.useRef)(() => {
@@ -14490,8 +14499,10 @@ function CanvasInner(props) {
         stamps.push([card.sessionId, stamp]);
       }
       if (pending.length === 0) return;
-      for (const [sessionId, stamp] of stamps) previewStamp.current.set(sessionId, stamp);
-      void talkMapApi.lastUserMessages(pending).then(({ texts }) => {
+      const batch = pending.slice(0, PREVIEW_BATCH);
+      const batchStamps = stamps.slice(0, PREVIEW_BATCH);
+      for (const [sessionId, stamp] of batchStamps) previewStamp.current.set(sessionId, stamp);
+      void talkMapApi.lastUserMessages(batch).then(({ texts }) => {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
           const value = cleanPreviewText(text).slice(0, 240);
@@ -14634,7 +14645,7 @@ function CanvasInner(props) {
     const remembered = canvasState.global?.layoutMemory ?? {};
     const framed = new Set(Object.keys(wsFrames));
     const newcomers = /* @__PURE__ */ new Map();
-    for (const sessionId of placeableSessionIds(sessions)) {
+    for (const sessionId of placeableSessionIds(sessions, archivedSessionIds)) {
       const groupId = sessionWs.get(sessionId);
       if (groupId === void 0 || framed.has(groupId) || boardSessionIds.has(sessionId)) continue;
       newcomers.set(groupId, [...newcomers.get(groupId) ?? [], sessionId]);
@@ -14665,7 +14676,7 @@ function CanvasInner(props) {
       const rect = frameRects[groupId];
       if (rect === void 0) continue;
       const existing = (membersByGroup.get(groupId) ?? []).map((cardId) => canvasState.cards[cardId]).filter((card) => card !== void 0);
-      const missing = placeableSessionIds(sessions).filter((id2) => sessionWs.get(id2) === groupId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
+      const missing = placeableSessionIds(sessions, archivedSessionIds).filter((id2) => sessionWs.get(id2) === groupId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
       if (missing.length === 0) continue;
       const pitchY = CARD_H + GAP_Y;
       const topY = existing.length === 0 ? rect.y + FRAME_PAD + FRAME_LABEL_H : Math.min(...existing.map((card) => card.y));
@@ -15642,7 +15653,9 @@ function CanvasInner(props) {
   };
   const folderAt = (flowX, flowY) => groupAtPoint(flowX, flowY);
   const importWorkspace = (workspaceId, atX, atY) => {
-    const memberSessions = placeableSessionIds(sessions).filter((id2) => sessionWs.get(id2) === workspaceId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
+    const allMembers = placeableSessionIds(sessions, archivedSessionIds).filter((id2) => sessionWs.get(id2) === workspaceId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
+    const memberSessions = allMembers.slice(0, IMPORT_CAP);
+    const skipped = allMembers.length - memberSessions.length;
     const memory = canvasState.global?.layoutMemory ?? {};
     const remembered = memberSessions.filter((id2) => memory[id2] !== void 0);
     const fresh = memberSessions.filter((id2) => memory[id2] === void 0);
@@ -15677,6 +15690,9 @@ function CanvasInner(props) {
     if (placed.length > 0) canvas.addCards(added);
     const rect = placed.length > 0 ? fitRect(placed) : { x: snap(atX) - FRAME_PAD, y: snap(atY) - FRAME_PAD - FRAME_LABEL_H, width: 400, height: 260 };
     canvas.setWsFrameRect(workspaceId, rect);
+    if (skipped > 0) {
+      showToast(t("toast.importCapped", { n: String(placed.length), more: String(skipped) }));
+    }
   };
   const importSession = (sessionId, atX, atY) => {
     canvas.addCards({
@@ -15692,7 +15708,7 @@ function CanvasInner(props) {
   const syncGroup = (groupId) => {
     const rect = frameRects[groupId] ?? wsFrames[groupId];
     if (rect === void 0) return;
-    const fresh = placeableSessionIds(sessions).filter((id2) => sessionWs.get(id2) === groupId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0));
+    const fresh = placeableSessionIds(sessions, archivedSessionIds).filter((id2) => sessionWs.get(id2) === groupId && !boardSessionIds.has(id2)).sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0)).slice(0, IMPORT_CAP);
     if (fresh.length === 0) return;
     const members = (membersByGroup.get(groupId) ?? []).map((id2) => canvasState.cards[id2]).filter((card) => card !== void 0);
     const pitchY = CARD_H + GAP_Y;
@@ -15792,7 +15808,7 @@ function CanvasInner(props) {
             if (services2 === void 0 || parentDir === "") throw new Error("no workspace root available");
             const path = `${parentDir}/${value}`;
             await talkMapApi.ensureDir(path);
-            const created = await callRpc2("workspace/create", { path });
+            const created = await callRpc("workspace/create", { path });
             importWorkspace(created.workspace.workspaceId, menu.flowX, menu.flowY);
             close();
           }
@@ -15824,7 +15840,7 @@ function CanvasInner(props) {
       }
     } else if (menu.view === "import-session") {
       title = t("menu.importSession");
-      const candidates = placeableSessionIds(sessions).filter((id2) => !boardSessionIds.has(id2)).slice(0, 200);
+      const candidates = placeableSessionIds(sessions, archivedSessionIds).filter((id2) => !boardSessionIds.has(id2)).slice(0, 200);
       for (const sessionId of candidates) {
         items.push({
           key: sessionId,

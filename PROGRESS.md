@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **按 issue 修一轮**（`0.1.90`）：合并社区 PR #4（`session-actions.ts` 补 `callRpc` 导入，删除会话不再抛 ReferenceError）与 PR #5（归档会话不再回到地图：`placeableSessionIds` 接收 `archivedSessionIds` 并在 `visibleCards` 里剔除）；#1 的 digest TDZ 经核对在当前 `lib/index.js` 已不复存在（`const session = args[0]` 已在使用之前，且无 `shouldAuto`），属旧版本问题；#2 新增 `IMPORT_CAP=120`（导入工作区/同步文件夹一次最多放 120 张，超出量用 toast 告知），#6 新增 `PREVIEW_BATCH=40`（每次轮询最多请求 40 个会话的末条消息，不再一次性打 1000 个 surface）。probe 148/148。
+
 - **两个侧栏共用一套排序**（`0.1.89`）：新增 `src/client/queue-order.ts`，优先级「异常终止(error) > 等你回复(waiting) > 待查看(done) > 正在运行(running) > 待发送(draft)」，同一优先级内按 `updatedAt` 倒序；地图 rail 与原生侧栏都调 `sortQueueRows`，不再各排各的。手动拖拽只在**同一优先级组内**重排（跨不了优先级），所以两边永远同序。实测镜像页两边 chip 序列完全一致：等你回复 → 待查看×2 → 正在运行 → 待发送×2；单测 `test/queue-order.test.mjs` 5/5（阶梯、整体分组、组内时间、拖拽不跨组、compare 对称性）。
 - **探针端口改为运行时挑选空闲端口**（`0.1.89`）：固定 9333 上残留了一个查不到归属的监听（pid 31900 已不可查），闸门正确拒绝连接后把探针改成 `listen(0)` 取空闲端口再 spawn Edge。改完 `node test/probe.mjs` → **148/148**（含此前失败的「拉伸撞到相邻文件夹」）。
 
