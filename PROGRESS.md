@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **视口渲染：拖拽卡顿主因**（`0.1.91`）：`@xyflow/react` 12.12 的 `onlyRenderVisibleElements` 一直没开，视口外卡片也在挂载。开启（>120 张时）后离线基准（无头 Edge 1600×1000，真实中键拖拽）：800 张 DOM 9308→1036、p95 36→19ms；1600 张 DOM 18108→1036、p95 26→19ms；中位帧稳 17ms。probe 148/148。基准脚本 `scripts/_bench-drag.mjs`（造卡→拖拽→采样帧间隔）。
+
 - **按 issue 修一轮**（`0.1.90`）：合并社区 PR #4（`session-actions.ts` 补 `callRpc` 导入，删除会话不再抛 ReferenceError）与 PR #5（归档会话不再回到地图：`placeableSessionIds` 接收 `archivedSessionIds` 并在 `visibleCards` 里剔除）；#1 的 digest TDZ 经核对在当前 `lib/index.js` 已不复存在（`const session = args[0]` 已在使用之前，且无 `shouldAuto`），属旧版本问题；#2 新增 `IMPORT_CAP=120`（导入工作区/同步文件夹一次最多放 120 张，超出量用 toast 告知），#6 新增 `PREVIEW_BATCH=40`（每次轮询最多请求 40 个会话的末条消息，不再一次性打 1000 个 surface）。probe 148/148。
 
 - **两个侧栏共用一套排序**（`0.1.89`）：新增 `src/client/queue-order.ts`，优先级「异常终止(error) > 等你回复(waiting) > 待查看(done) > 正在运行(running) > 待发送(draft)」，同一优先级内按 `updatedAt` 倒序；地图 rail 与原生侧栏都调 `sortQueueRows`，不再各排各的。手动拖拽只在**同一优先级组内**重排（跨不了优先级），所以两边永远同序。实测镜像页两边 chip 序列完全一致：等你回复 → 待查看×2 → 正在运行 → 待发送×2；单测 `test/queue-order.test.mjs` 5/5（阶梯、整体分组、组内时间、拖拽不跨组、compare 对称性）。

@@ -2487,6 +2487,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       onClick={() => { if (menu !== null) setMenu(null) }}
     >
       <ReactFlow
+        // A board with hundreds of cards must not mount them all: only the viewport (plus
+        // React Flow's own buffer) is rendered. Below the threshold nothing changes.
+        onlyRenderVisibleElements={Object.keys(visibleCards).length > 120}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
