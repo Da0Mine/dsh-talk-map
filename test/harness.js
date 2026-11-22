@@ -871,8 +871,8 @@
       sync()
     },
     /** A brand-new session lands in this workspace (no card yet). */
-    addSession(workspaceId, sessionId, title) {
-      sessionRows[sessionId] = session(sessionId, title, { updatedAt: Date.now() })
+    addSession(workspaceId, sessionId, title, options) {
+      sessionRows[sessionId] = session(sessionId, title, { updatedAt: Date.now(), ...(options || {}) })
       const workspace = workspaceList.find(item => item.workspaceId === workspaceId)
       if (workspace === undefined) throw new Error(`unknown workspace ${workspaceId}`)
       workspace.sessionIds = [...workspace.sessionIds, sessionId]

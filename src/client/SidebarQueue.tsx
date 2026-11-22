@@ -90,6 +90,22 @@ export function SidebarQueue(): React.JSX.Element | null {
     statusStore === undefined ? NO_SUBSCRIBE : (listener) => statusStore.subscribe(listener),
     statusStore === undefined ? emptyStatus : () => statusStore.getSnapshot(),
   )
+  // ctx.workspaces is a ClientWorkspaceModel at runtime (subscribe + getSnapshot); our
+  // type only declares the two methods we call elsewhere, so probe it defensively.
+  const workspaceStore = services?.workspaces as unknown as {
+    getSnapshot?: () => { archivedSessionIds?: readonly string[] }
+    subscribe?: (listener: () => void) => () => void
+  } | undefined
+  const EMPTY_WORKSPACES: { archivedSessionIds?: readonly string[] } = {}
+const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_WORKSPACES
+  const workspaceState = useSyncExternalStore(
+    workspaceStore?.subscribe === undefined ? NO_SUBSCRIBE : (listener) => workspaceStore.subscribe!(listener),
+    workspaceStore?.getSnapshot === undefined ? emptyWorkspaces : () => workspaceStore.getSnapshot!(),
+  )
+  const archivedSessionIds = useMemo(
+    () => new Set(workspaceState.archivedSessionIds ?? []),
+    [workspaceState],
+  )
   const alerts = useSyncExternalStore(sessionAlerts.subscribe, sessionAlerts.getSnapshot)
   const finished = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getSnapshot)
   const locale = useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
@@ -155,31 +171,41 @@ export function SidebarQueue(): React.JSX.Element | null {
     })
   }, [opened, sessions, statusById, alerts, finished])
 
-  // Only lamped cards, exactly like the rail.
+  // Lamped sessions, exactly like the rail — but keyed off the session list, so a
+  // conversation that just started shows up without the map panel ever being opened.
   const rows = useMemo(() => {
-    const out: { cardId: string; sessionId: string; title: string; lamp?: CardGlow; draft?: boolean; draftText?: string; updatedAt?: number }[] = []
+    // Existing card per session, kept only so the map can focus the right card.
+    const cardBySession = new Map<string, string>()
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
-      if (card.boardId !== INBOX_BOARD_ID) continue
-      const summary = sessions.byId[card.sessionId]
-      const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts, finished)
-            // Draft-only cards join at the lowest priority (after every lamped card).
-            const draftText = drafts[card.sessionId]
-            const hasDraft = draftText !== undefined && draftText.trim() !== ''
-            if (lamp === undefined && !hasDraft) continue
-            if (lamp === 'done' && opened.has(card.sessionId)) continue
-            const draftOnly = lamp === undefined
+      if (card.boardId === INBOX_BOARD_ID) cardBySession.set(card.sessionId, cardId)
+    }
+    const out: { cardId: string; sessionId: string; title: string; lamp?: CardGlow; draft?: boolean; draftText?: string; updatedAt?: number }[] = []
+    for (const sessionId of sessions.ids) {
+      const summary = sessions.byId[sessionId]
+      if (summary === undefined) continue
+      // Same eligibility rules the map uses for placing a card.
+      if (summary.blank === true) continue
+      if (summary.origin === 'subagent') continue
+      if (archivedSessionIds.has(sessionId)) continue
+      const lamp = lampOf(sessionId, statusById.get(sessionId), summary, alerts, finished)
+      // Draft-only rows join at the lowest priority (after every lamped row).
+      const draftText = drafts[sessionId]
+      const hasDraft = draftText !== undefined && draftText.trim() !== ''
+      if (lamp === undefined && !hasDraft) continue
+      if (lamp === 'done' && opened.has(sessionId)) continue
+      const draftOnly = lamp === undefined
       out.push({
-        cardId,
-        sessionId: card.sessionId,
-        title: summary?.displayTitle ?? card.sessionId,
+        cardId: cardBySession.get(sessionId) ?? sessionId,
+        sessionId,
+        title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
         ...(draftText !== undefined ? { draftText } : {}),
-        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+        ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
       })
     }
     // Same rule as the map rail: priority bucket first, then newest inside it.
     return sortQueueRows(out)
-  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds])
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {

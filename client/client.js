@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b91 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b92 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b91 · Search cards on the map",
+  "global.searchPlaceholder": "b92 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -16532,6 +16532,17 @@ function SidebarQueue() {
     statusStore === void 0 ? NO_SUBSCRIBE : (listener) => statusStore.subscribe(listener),
     statusStore === void 0 ? emptyStatus : () => statusStore.getSnapshot()
   );
+  const workspaceStore = services2?.workspaces;
+  const EMPTY_WORKSPACES = {};
+  const emptyWorkspaces = () => EMPTY_WORKSPACES;
+  const workspaceState = (0, import_react18.useSyncExternalStore)(
+    workspaceStore?.subscribe === void 0 ? NO_SUBSCRIBE : (listener) => workspaceStore.subscribe(listener),
+    workspaceStore?.getSnapshot === void 0 ? emptyWorkspaces : () => workspaceStore.getSnapshot()
+  );
+  const archivedSessionIds = (0, import_react18.useMemo)(
+    () => new Set(workspaceState.archivedSessionIds ?? []),
+    [workspaceState]
+  );
   const alerts2 = (0, import_react18.useSyncExternalStore)(sessionAlerts.subscribe, sessionAlerts.getSnapshot);
   const finished2 = (0, import_react18.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
   const locale = (0, import_react18.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
@@ -16592,27 +16603,34 @@ function SidebarQueue() {
     });
   }, [opened, sessions, statusById, alerts2, finished2]);
   const rows = (0, import_react18.useMemo)(() => {
-    const out = [];
+    const cardBySession = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
-      if (card.boardId !== INBOX_BOARD_ID) continue;
-      const summary = sessions.byId[card.sessionId];
-      const lamp = lampOf(card.sessionId, statusById.get(card.sessionId), summary, alerts2, finished2);
-      const draftText = drafts[card.sessionId];
+      if (card.boardId === INBOX_BOARD_ID) cardBySession.set(card.sessionId, cardId);
+    }
+    const out = [];
+    for (const sessionId of sessions.ids) {
+      const summary = sessions.byId[sessionId];
+      if (summary === void 0) continue;
+      if (summary.blank === true) continue;
+      if (summary.origin === "subagent") continue;
+      if (archivedSessionIds.has(sessionId)) continue;
+      const lamp = lampOf(sessionId, statusById.get(sessionId), summary, alerts2, finished2);
+      const draftText = drafts[sessionId];
       const hasDraft = draftText !== void 0 && draftText.trim() !== "";
       if (lamp === void 0 && !hasDraft) continue;
-      if (lamp === "done" && opened.has(card.sessionId)) continue;
+      if (lamp === "done" && opened.has(sessionId)) continue;
       const draftOnly = lamp === void 0;
       out.push({
-        cardId,
-        sessionId: card.sessionId,
-        title: summary?.displayTitle ?? card.sessionId,
+        cardId: cardBySession.get(sessionId) ?? sessionId,
+        sessionId,
+        title: summary.displayTitle ?? sessionId,
         ...draftOnly ? { draft: true } : { lamp },
         ...draftText !== void 0 ? { draftText } : {},
-        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
+        ...summary.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
     }
     return sortQueueRows(out);
-  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened]);
+  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds]);
   (0, import_react18.useEffect)(() => {
     const wanted = rows.slice(0, PREVIEW_LIMIT).map((row) => row.sessionId).filter((id2) => !askedRef.current.has(id2));
     if (wanted.length === 0) return;

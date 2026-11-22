@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **新建会话要开地图才出现（侧栏）**（`0.1.92`）：侧栏队列原先行源是 `canvas.cards`，而新会话的卡片由 MapCanvas 挂载时的 effect 才补建 → 不开地图就看不到。改为按**会话列表**建行（`sessions.ids`，过滤 blank / subagent / 归档），带灯即出现；卡片只用来给地图定位。归档集合来自 `ctx.workspaces`（运行时是 `ClientWorkspaceModel`，有 `getSnapshot/subscribe`，`archivedSessionIds` 在其中）。踩坑：给这个订阅写的空快照 `() => ({})` 每次返回新对象，直接触发 React #185 无限重渲染，必须用模块级常量。实测：`addSession(running:true)` 后侧栏立刻出现该会话（`lamp=running`），此时 `hasCard=false`、板上仍是 24 张卡、`selectedPanel=null`（全程没开地图）；probe 148/148；两侧栏顺序仍一致。
+
 - **视口渲染：拖拽卡顿主因**（`0.1.91`）：`@xyflow/react` 12.12 的 `onlyRenderVisibleElements` 一直没开，视口外卡片也在挂载。开启（>120 张时）后离线基准（无头 Edge 1600×1000，真实中键拖拽）：800 张 DOM 9308→1036、p95 36→19ms；1600 张 DOM 18108→1036、p95 26→19ms；中位帧稳 17ms。probe 148/148。基准脚本 `scripts/_bench-drag.mjs`（造卡→拖拽→采样帧间隔）。
 
 - **按 issue 修一轮**（`0.1.90`）：合并社区 PR #4（`session-actions.ts` 补 `callRpc` 导入，删除会话不再抛 ReferenceError）与 PR #5（归档会话不再回到地图：`placeableSessionIds` 接收 `archivedSessionIds` 并在 `visibleCards` 里剔除）；#1 的 digest TDZ 经核对在当前 `lib/index.js` 已不复存在（`const session = args[0]` 已在使用之前，且无 `shouldAuto`），属旧版本问题；#2 新增 `IMPORT_CAP=120`（导入工作区/同步文件夹一次最多放 120 张，超出量用 toast 告知），#6 新增 `PREVIEW_BATCH=40`（每次轮询最多请求 40 个会话的末条消息，不再一次性打 1000 个 surface）。probe 148/148。
