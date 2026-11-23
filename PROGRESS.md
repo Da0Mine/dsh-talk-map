@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.3.5`：消除"两块玻璃叠加"——把手玻璃改为**仅关闭态**挂载（`useEffect` 依赖 `open`），展开态再用 CSS 去掉它的底色/边框/滤镜，只留图标；面板左缘保持 0 圆角、无边框，与左侧连成整体。参数核对：`thickness 100 / bezelWidth 40（实际生效 19，受 radius 20 限制）/ ior 2.5 / specularOpacity 0.5 / bgOpacity 30 / blur 0`，`scale = maxDisp×0.8 = 183px`（插件原公式；窄面板下边缘位移很大，属该算法特性）。probe 148/148；拖拽 17ms。
+
 - 2026-11-24 `0.3.4`：① 侧栏把手也挂同一套折射（实测 `tabFilter = url(#...-2)`、`borderRadius 0 11 11 0`、底色 30%）；② 面板底 `bgOpacity` 50→30，实测面板像素 `rgb(20,20,21)` vs 画布 `rgb(20,20,20)`，视觉上与旁边融为一体。probe 148/148；拖拽 17ms/p95 22ms。
 
 - 2026-11-24 `0.3.3`：按用户要求删掉模糊——`blurAmount` 默认 2→0（该值源自 echo 插件 `liquidGlassParams.blurAmount: 2`），`backdrop-filter` 现在只有 `url(#id)`，纯折射无模糊。实测 `panelFilter = url("...-1")`、面板底 `color(srgb .0823/.0823/.0902 / .5)`、卡片仍是原始 `rgb(35,35,36)`。probe 148/148；拖拽 17ms。

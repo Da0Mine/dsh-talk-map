@@ -139,12 +139,14 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
-  // The handle that opens the rail gets the same material.
+  // The handle only carries its own glass while the rail is closed. Open, the panel is the
+  // single surface — otherwise the two rounded layers overlap at the seam.
   useEffect(() => {
+    if (open) return undefined
     const element = tabRef.current
     if (element === null) return undefined
     return installLiquidGlass(element)
-  }, [])
+  }, [open])
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
