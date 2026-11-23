@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b302 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b303 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b302 · Search cards on the map",
+  "global.searchPlaceholder": "b303 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14053,7 +14053,7 @@ function installLiquidGlass(element, options = {}) {
   const ior = options.ior ?? 2.5;
   const specularOpacity = options.specularOpacity ?? 0.5;
   const bgOpacity = options.bgOpacity ?? 50;
-  const blurAmount = options.blurAmount ?? 2;
+  const blurAmount = options.blurAmount ?? 0;
   const bgVar = options.bgVar ?? "--dsw-alias-bg-base";
   instanceSeq += 1;
   const filterId = `${BASE_ID}-${instanceSeq}`;
