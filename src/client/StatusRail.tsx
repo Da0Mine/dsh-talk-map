@@ -139,6 +139,14 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
+  // Same material as the panel; the specular band is narrower because the handle is 30px wide.
+  useEffect(() => {
+    if (open) return undefined
+    const element = tabRef.current
+    if (element === null) return undefined
+    return installLiquidGlass(element, { specularBezel: 6 })
+  }, [open])
+
 
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
@@ -148,6 +156,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const tabRef = useRef<HTMLButtonElement | null>(null)
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -439,7 +448,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        className={styles['statusRailTab']}
+        ref={tabRef}
+      className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}

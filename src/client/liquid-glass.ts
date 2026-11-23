@@ -291,7 +291,11 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     }
     const profile = calculateRefractionProfile(thickness, safeBezel, squircleSurface, ior, 128)
     const maxDisp = Math.max(...Array.from(profile).map(Math.abs)) || 1
-    const scale = maxDisp * 0.8
+    // The plugin computes scale = maxDisp * 0.8, an ABSOLUTE pixel value that is fine on its
+    // wide player bar but swallows small elements whole (183 px on a 30 px handle leaves no
+    // backdrop inside the element to sample). Clamp it to a quarter of the short side.
+    const scaleCeiling = Math.min(width, height) * 0.25
+    const scale = Math.min(maxDisp * 0.8, scaleCeiling)
     const dispUrl = generateDisplacementMap(width, height, radius, safeBezel, profile, maxDisp)
     const specBand = specularBezel ?? safeBezel * 2.5
     const specUrl = specularOpacity > 0.001 ? generateSpecularMap(width, height, radius, specBand) : ''

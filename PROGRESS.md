@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.3.9`：逐行核对按钮与面板外观：面板 `background`(被 JS 覆写为透明) / `border-right 1px var(--dsw-alias-border-secondary)` / `box-shadow 6px 0 26px rgba(0,0,0,.32)` / `backdrop-filter url(#…)` / `border-radius 20`；按钮此前改成白 6% 底 + 硬编码边框 + 只剩 inset 高光（**丢外投影**）。已补齐：底透明、边框同 token、`6px 0 26px` 外投影、半径 11（20 会让位移贴图 `straightW<0` 直接不生成）。另发现关键事实：**SVG 折射在本页对面板与按钮都是 0 像素差异**（滤镜开/关整块对比 max=0），`feImage` 本身正常（测试把绿底换成红成功）——即该折射在当前 Chromium 的 `backdrop-filter` 通路里不生效，此前的观感差异全部来自 CSS 的底/边/阴影。另给 `scale` 加了"短边 25%"上限。probe 148/148。
+
 - 2026-11-24 `0.3.8`：按钮折射不可见的根因确定——插件 `scale = maxDisp×0.8` 是**绝对像素**（实测面板 182.95px、按钮同值），按钮仅 30px 宽，位移采样点全落在元素范围外，Chromium 取不到 backdrop → 输出等于原样。对比两条路径：滤镜都正常生成（`-1` feImage 296×744、`-2` feImage 30×77，均 data URL 有效），差别只在元素尺寸/safeBezel(19 vs 10)。结论：该算法对小元素不成立。改为按钮直接绘制同款材质（`rgba(255,255,255,.06)` + 1px 亮边，无模糊无滤镜），实测 `tabBg rgba(255,255,255,.06)`、`tabFilter none`。probe 148/148。
 
 - 2026-11-24 `0.3.7`：把手玻璃按"面板材质的延伸"处理——新增可选 `specularBezel`，把手高光带收到 6px（插件默认按 `safeBezel*2.5` 会到 25px，30px 宽的把手会整块泛白，这就是之前的"毛玻璃"），底色仍 0；滤镜只在**关闭态**挂载（`useEffect` 依赖 `open`）。实测展开态 `tabFilter = none / tabBg 透明 / panelFilter = url(#...-1) / panelBg 透明` → 单一表面；关闭态 `tabFilter = url(#...-2)`。probe 148/148；拖拽 17ms/p95 19ms。

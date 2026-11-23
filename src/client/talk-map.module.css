@@ -2699,15 +2699,14 @@
   border-radius: 0 20px 20px 0;
 }
 
-/* Handle: same material as the panel, painted directly.
-   The SVG displacement cannot work here — its scale is an absolute 183 px derived from
-   thickness 100, and a 30 px wide element has almost no interior for the filter to sample,
-   so the result is invisible. A faint white lift plus a 1 px rim reads as the same glass. */
+/* Handle: the panel's recipe, line for line — transparent fill, the same border token and
+   the same drop shadow. Only the radius differs, because the displacement map needs the corner
+   radius to stay below half the width (30px wide → 11px). */
 .statusRailTab {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: transparent;
+  border: 1px solid var(--dsw-alias-border-secondary);
   border-left: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow: 6px 0 26px rgba(0, 0, 0, 0.32);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
