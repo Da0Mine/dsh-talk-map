@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.4.1`：按钮样式回退到 `0.3.3`（即用户说"现在挺好"那一版）——撤掉按钮的 JS 玻璃，只用插件自带 CSS：`background color-mix(bg-elevated 52%)` + `backdrop-filter blur(16px) saturate(1.5)` + `1px rgba(255,255,255,.16)` 边框 + `3px 0 14px rgba(0,0,0,.35)` 投影 + `radius 0 11 11 0`。面板去掉 `border-right` 与 `box-shadow`，与左侧无分界线（保留 `radius 0 20 20 0` 供折射）。实测 open 态：`tabBg oklab(…/0.52)`、`tabFilter blur(16px) saturate(1.5)`、`panelFilter url(#…-1)`、`panelBg 透明`。probe 148/148。
+
 - 2026-11-24 `0.4.0`：按钮恢复"之前那份玻璃"的三要素——`bgOpacity 45`（填充）、`blurAmount 12`（柔化）、显式 `scale 8`（位移可控），边框/投影用插件原值；`liquid-glass.ts` 新增 `scale` 显式覆盖选项（默认仍走 `maxDisp×0.8`）。此前 0.3.x "忠实移植"把这三样全去掉（bg 0 / blur 0 / scale 183px），30px 宽元素上等于零效果，所以只剩透明。实测 `tabFilter url(#…-2) blur(12px)`、`tabBg .45`。probe 148/148。
 
 - 2026-11-24 `0.3.9`：逐行核对按钮与面板外观：面板 `background`(被 JS 覆写为透明) / `border-right 1px var(--dsw-alias-border-secondary)` / `box-shadow 6px 0 26px rgba(0,0,0,.32)` / `backdrop-filter url(#…)` / `border-radius 20`；按钮此前改成白 6% 底 + 硬编码边框 + 只剩 inset 高光（**丢外投影**）。已补齐：底透明、边框同 token、`6px 0 26px` 外投影、半径 11（20 会让位移贴图 `straightW<0` 直接不生成）。另发现关键事实：**SVG 折射在本页对面板与按钮都是 0 像素差异**（滤镜开/关整块对比 max=0），`feImage` 本身正常（测试把绿底换成红成功）——即该折射在当前 Chromium 的 `backdrop-filter` 通路里不生效，此前的观感差异全部来自 CSS 的底/边/阴影。另给 `scale` 加了"短边 25%"上限。probe 148/148。

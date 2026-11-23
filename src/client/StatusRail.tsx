@@ -139,16 +139,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
-  // Same material as the panel; the specular band is narrower because the handle is 30px wide.
-  useEffect(() => {
-    if (open) return undefined
-    const element = tabRef.current
-    if (element === null) return undefined
-    // The look the handle had before: a 45% fill, a soft 12px frost and an 8px displacement.
-    // (The faithful port dropped all three: bgOpacity 0, blur 0, and scale from the formula
-    //  which came out at 183px — i.e. nothing left on a 30px wide element.)
-    return installLiquidGlass(element, { scale: 8, specularBezel: 6, bgOpacity: 45, blurAmount: 12 })
-  }, [open])
 
 
 
@@ -159,7 +149,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
-  const tabRef = useRef<HTMLButtonElement | null>(null)
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -451,8 +440,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        ref={tabRef}
-      className={styles['statusRailTab']}
+        className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}

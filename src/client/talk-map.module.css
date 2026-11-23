@@ -2698,3 +2698,9 @@
 .statusRailPanel {
   border-radius: 0 20px 20px 0;
 }
+
+/* Seamless join with whatever sits to the left: no dividing line, no drop shadow. */
+.statusRailPanel {
+  border-right: none;
+  box-shadow: none;
+}
