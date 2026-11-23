@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-23 `0.1.98`：玻璃按参考图（iOS26 胶囊）重做并取消状态切换——去掉白色雾层（那层白渐变就是"毛玻璃"来源），模糊 22→3px，厚亮边（2px 内亮线 + 外侧白环 + 内阴影做厚度），`data-frozen` 机制整体删除（实测始终模糊拖拽中位 17ms/p95 19–25ms，与冻结态无差）。probe 148/148。
+
 - 2026-11-23 `0.1.97`：侧栏玻璃按 iOS26 清透风格重做（去流动光带、模糊 22→10px、底色 20% + 白高光层、1.5px 亮边、卡片 30% 透明玻璃瓦片）；A/B 拖拽玻璃开/关均中位 16–17ms、p95 19ms；probe 148/148。
 
 - **地图侧栏液态玻璃**（`0.1.96`）：面板从 94% 不透明的实色改成半透明渐变 + `backdrop-filter: blur(16px) saturate(190%) brightness(1.08)`；`::before` 做镜面高光、`::after` 用 mask-composite 做 1px 折射边；`.railSheen` 是缓慢漂移的光带（`prefers-reduced-motion` 下关闭）；侧栏卡片改成 70% 透明的玻璃瓦片 + 菲涅尔边。性能：首次实测侧栏展开时拖拽中位 33ms/p95 91ms（800 张卡），改为「静止才模糊」——画布移动时 `data-frozen=1` 换成静态渐变、卡片去掉嵌套 `backdrop-filter`、冻结状态走独立 store（`rail-glass.ts`，不触发画布重渲染）——同页面 A/B 预热后玻璃开/关均为中位 17ms、p95 19ms；实测 `data-frozen` 拖动中为 1、松手 400ms 后回 0，静止时 `backdrop-filter: blur(16px) saturate(1.9) brightness(1.08)`。probe 148/148。
