@@ -14,7 +14,7 @@ import type { DigestHostServices, SessionQueryService, SpawnHostServices, TalkMa
 import { DigestPipeline } from './host/digest/pipeline.ts'
 import { mountTalkMapRoutes, type TalkMapRuntime } from './host/routes.ts'
 import { Spawner } from './host/spawn.ts'
-import { openTalkMapStore, type TalkMapStore } from './host/store.ts'
+import { openTalkMapStore, type TalkMapStore, pruneDigests } from './host/store.ts'
 
 export const name = 'dsh-talk-map'
 
@@ -48,6 +48,19 @@ export function apply(ctx: OuterContext): void {
         store = opened
         resolveStore(opened)
         services.logger?.info?.('[dsh-talk-map] storage domain open, routes live at /talk-map/')
+        // One pass at startup: digests for sessions that no longer have a card are dead
+        // weight (they were 655 KB of a 1.3 MB store here), and the rest is capped.
+        void pruneDigests(opened)
+          .then((result) => {
+            if (result.orphans + result.overflow > 0) {
+              services.logger?.info?.(
+                `[dsh-talk-map] pruned ${result.orphans} orphaned + ${result.overflow} over-cap digests, ${result.kept} kept`,
+              )
+            }
+          })
+          .catch((error) => {
+            services.logger?.warn?.(`[dsh-talk-map] digest prune failed: ${String(error)}`)
+          })
       }).catch((error) => {
         services.logger?.warn(`[dsh-talk-map] storage domain failed to open: ${String(error)}`)
         rejectStore(error)

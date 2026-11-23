@@ -7,6 +7,8 @@
 
 ## 已完成
 
+- **digest 清理与保留上限**（`0.1.93`）：本机 `talk_map.json` 里 digests 1178 条（655 KB），其中只有 122 条对应存在的卡片。新增 `pruneDigests(store, cap=400)`：启动时删掉没有卡片的 digest，再把可用的按 `generatedAt` 旧→新裁到 400 条，日志打印 `pruned X orphaned + Y over-cap digests, Z kept`。
+
 - **新建会话要开地图才出现（侧栏）**（`0.1.92`）：侧栏队列原先行源是 `canvas.cards`，而新会话的卡片由 MapCanvas 挂载时的 effect 才补建 → 不开地图就看不到。改为按**会话列表**建行（`sessions.ids`，过滤 blank / subagent / 归档），带灯即出现；卡片只用来给地图定位。归档集合来自 `ctx.workspaces`（运行时是 `ClientWorkspaceModel`，有 `getSnapshot/subscribe`，`archivedSessionIds` 在其中）。踩坑：给这个订阅写的空快照 `() => ({})` 每次返回新对象，直接触发 React #185 无限重渲染，必须用模块级常量。实测：`addSession(running:true)` 后侧栏立刻出现该会话（`lamp=running`），此时 `hasCard=false`、板上仍是 24 张卡、`selectedPanel=null`（全程没开地图）；probe 148/148；两侧栏顺序仍一致。
 
 - **视口渲染：拖拽卡顿主因**（`0.1.91`）：`@xyflow/react` 12.12 的 `onlyRenderVisibleElements` 一直没开，视口外卡片也在挂载。开启（>120 张时）后离线基准（无头 Edge 1600×1000，真实中键拖拽）：800 张 DOM 9308→1036、p95 36→19ms；1600 张 DOM 18108→1036、p95 26→19ms；中位帧稳 17ms。probe 148/148。基准脚本 `scripts/_bench-drag.mjs`（造卡→拖拽→采样帧间隔）。

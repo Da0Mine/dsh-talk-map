@@ -126,6 +126,44 @@ export const TALK_MAP_SPEC: DomainSpec = {
   },
 }
 
+/**
+ * Drop digests that no longer have a card, then keep at most `cap` of the rest (oldest
+ * out). Digests are keyed by session id, so a card is what makes one reachable.
+ */
+export async function pruneDigests(
+  store: TalkMapStore,
+  cap = 400,
+): Promise<{ orphans: number; overflow: number; kept: number }> {
+  const cardSessions = new Set<string>()
+  for (const [, card] of store.cards.entries()) cardSessions.add(card.sessionId)
+
+  const orphans: string[] = []
+  const reachable: { key: string; at: number }[] = []
+  for (const [key, digest] of store.digests.entries()) {
+    if (!cardSessions.has(key)) orphans.push(key)
+    else reachable.push({ key, at: digest.generatedAt ?? 0 })
+  }
+
+  const overflow: string[] = []
+  if (reachable.length > cap) {
+    reachable.sort((a, b) => a.at - b.at)
+    for (const row of reachable.slice(0, reachable.length - cap)) overflow.push(row.key)
+  }
+
+  for (const key of [...orphans, ...overflow]) {
+    try {
+      await store.digests.delete(key)
+    } catch {
+      // A failed delete must not stop the rest of the prune.
+    }
+  }
+  return {
+    orphans: orphans.length,
+    overflow: overflow.length,
+    kept: Math.min(reachable.length, cap),
+  }
+}
+
 /** Typed table handles over the untyped structural Domain. */
 export interface TalkMapStore {
   domain: Domain
