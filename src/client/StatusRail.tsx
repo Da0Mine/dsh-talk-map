@@ -142,7 +142,16 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   // Deterministic freeze: React Flow's move callbacks did not fire reliably for a
   // middle-button pan, so pointer down/up on the window drives the state instead.
   useEffect(() => {
-    const onDown = (): void => { railFrozen.freeze() }
+    // Only a press that starts inside the map area freezes the glass; a press anywhere else
+    // (host sidebar, buttons) would otherwise leave the rail stuck without refraction.
+    const onDown = (event: PointerEvent): void => {
+      const target = event.target
+      if (!(target instanceof Element)) return
+      if (target.closest('[class*="canvas"]') === null && target.closest('.react-flow') === null) return
+      railFrozen.freeze()
+      // Watchdog: a lost pointerup must not cost the refraction until the next click.
+      railFrozen.thaw(4000)
+    }
     const onUp = (): void => { railFrozen.thaw() }
     window.addEventListener('pointerdown', onDown, { capture: true })
     window.addEventListener('pointerup', onUp, { capture: true })

@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b203 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b204 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b203 · Search cards on the map",
+  "global.searchPlaceholder": "b204 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14089,11 +14089,11 @@ function filterMarkup(id2, geometry, displacementUrl, specularUrl, scale, specul
   parts.push("</filter>");
   return parts.join("");
 }
-var FILTER_ID = "dsh-talk-map-liquid-glass";
-var SVG_ID = "dsh-talk-map-liquid-glass-svg";
+var BASE_ID = "dsh-talk-map-liquid-glass";
+var instanceSeq = 0;
 function supportsRefraction() {
   if (typeof CSS === "undefined" || typeof CSS.supports !== "function") return false;
-  return CSS.supports("backdrop-filter", `url(#${FILTER_ID})`) || CSS.supports("-webkit-backdrop-filter", `url(#${FILTER_ID})`);
+  return CSS.supports("backdrop-filter", `url(#${BASE_ID})`) || CSS.supports("-webkit-backdrop-filter", `url(#${BASE_ID})`);
 }
 function installLiquidGlass(element, options = {}) {
   const radius = options.radius ?? 22;
@@ -14111,6 +14111,9 @@ function installLiquidGlass(element, options = {}) {
       element.style.removeProperty("-webkit-backdrop-filter");
     };
   }
+  instanceSeq += 1;
+  const filterId = `${BASE_ID}-${instanceSeq}`;
+  const svgId = `${BASE_ID}-svg-${instanceSeq}`;
   let svg;
   let frame2 = 0;
   const disposeSvg = () => {
@@ -14129,14 +14132,14 @@ function installLiquidGlass(element, options = {}) {
     const specularUrl = specular > 0 ? specularMap(geometry) : "";
     disposeSvg();
     svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.setAttribute("id", SVG_ID);
+    svg.setAttribute("id", svgId);
     svg.setAttribute("width", "0");
     svg.setAttribute("height", "0");
     svg.setAttribute("style", "position:absolute;overflow:hidden;pointer-events:none");
     svg.setAttribute("color-interpolation-filters", "sRGB");
-    svg.innerHTML = `<defs>${filterMarkup(FILTER_ID, geometry, displacementUrl, specularUrl, scale, specular)}</defs>`;
+    svg.innerHTML = `<defs>${filterMarkup(filterId, geometry, displacementUrl, specularUrl, scale, specular)}</defs>`;
     document.body.append(svg);
-    const filters = [`url(#${FILTER_ID})`];
+    const filters = [`url(#${filterId})`];
     if (blur > 0.5) filters.push(`blur(${blur.toFixed(1)}px)`);
     element.style.setProperty("backdrop-filter", filters.join(" "));
     element.style.setProperty("-webkit-backdrop-filter", filters.join(" "));
@@ -14247,8 +14250,12 @@ function StatusRail(props) {
     return installLiquidGlass(element, { radius: 22, bezel: 26, thickness: 90, ior: 2.2, scale: 14, specular: 0.3 });
   }, []);
   (0, import_react11.useEffect)(() => {
-    const onDown = () => {
+    const onDown = (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest('[class*="canvas"]') === null && target.closest(".react-flow") === null) return;
       railFrozen.freeze();
+      railFrozen.thaw(4e3);
     };
     const onUp = () => {
       railFrozen.thaw();

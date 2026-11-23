@@ -212,12 +212,13 @@ export interface LiquidGlassOptions {
   blur?: number
 }
 
-const FILTER_ID = 'dsh-talk-map-liquid-glass'
-const SVG_ID = 'dsh-talk-map-liquid-glass-svg'
+const BASE_ID = 'dsh-talk-map-liquid-glass'
+/** Each install gets its own id: sharing one made the later filter shadow the earlier one. */
+let instanceSeq = 0
 
 function supportsRefraction(): boolean {
   if (typeof CSS === 'undefined' || typeof CSS.supports !== 'function') return false
-  return CSS.supports('backdrop-filter', `url(#${FILTER_ID})`) || CSS.supports('-webkit-backdrop-filter', `url(#${FILTER_ID})`)
+  return CSS.supports('backdrop-filter', `url(#${BASE_ID})`) || CSS.supports('-webkit-backdrop-filter', `url(#${BASE_ID})`)
 }
 
 /**
@@ -242,6 +243,10 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     }
   }
 
+  instanceSeq += 1
+  const filterId = `${BASE_ID}-${instanceSeq}`
+  const svgId = `${BASE_ID}-svg-${instanceSeq}`
+
   let svg: SVGSVGElement | undefined
   let frame = 0
 
@@ -264,15 +269,15 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
 
     disposeSvg()
     svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('id', SVG_ID)
+    svg.setAttribute('id', svgId)
     svg.setAttribute('width', '0')
     svg.setAttribute('height', '0')
     svg.setAttribute('style', 'position:absolute;overflow:hidden;pointer-events:none')
     svg.setAttribute('color-interpolation-filters', 'sRGB')
-    svg.innerHTML = `<defs>${filterMarkup(FILTER_ID, geometry, displacementUrl, specularUrl, scale, specular)}</defs>`
+    svg.innerHTML = `<defs>${filterMarkup(filterId, geometry, displacementUrl, specularUrl, scale, specular)}</defs>`
     document.body.append(svg)
 
-    const filters = [`url(#${FILTER_ID})`]
+    const filters = [`url(#${filterId})`]
     if (blur > 0.5) filters.push(`blur(${blur.toFixed(1)}px)`)
     element.style.setProperty('backdrop-filter', filters.join(' '))
     element.style.setProperty('-webkit-backdrop-filter', filters.join(' '))

@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-23 `0.2.4`：修「侧栏折射消失」——面板与把手共用同一个 SVG 滤镜 id，后注册的把前一个顶掉（实测两个 `svg#dsh-talk-map-liquid-glass-svg`、两个 `filter#dsh-talk-map-liquid-glass`，面板那块是 272×844、把手那块 30×77）。改为每个实例自增 id（`-1`/`-2`），实测面板与把手各用自己的滤镜。另：冻结只在画布内起手时触发，并加 4s 看门狗，避免指针事件丢失后一直停在无折射状态。probe 148/148；200 张拖拽 17ms/p95 20ms。
+
 - 2026-11-23 `0.2.3`：顶栏恢复原样（删掉 header 玻璃/悬浮/透明面板/画布偏移，`.panel` 回到不透明）；侧栏折射带宽 40→26（位移仍 14）。拖拽卡顿根因实测：整块面板挂 `backdrop-filter` 时每帧多 ~16ms，与模糊半径无关；改由 window `pointerdown/up` 驱动冻结（React Flow 的 onMoveStart 在脚本拖拽里不触发，mid-pan `data-frozen` 曾一直是 0），拖动期间不采样、加浓底色 → 中位 50→18ms。probe 148/148。
 
 - 2026-11-23 `0.2.2`：顶栏跳位根因是 `.panel` 没有 `position`，绝对定位的 header 以 shell 为参照跑到宿主顶栏上；加 `.panel { position: relative }` 后 `offsetParent` 实测回到 `tm_panel`，黑边与重叠消失。侧栏把手（`.statusRailTab`）也挂上折射。probe 148/148；面板+顶栏+把手三处滤镜拖拽仍 17ms / p95 19ms。
