@@ -222,7 +222,7 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
   const bezelWidth = options.bezelWidth ?? 40
   const ior = options.ior ?? 2.5
   const specularOpacity = options.specularOpacity ?? 0.5
-  const bgOpacity = options.bgOpacity ?? 30
+  const bgOpacity = options.bgOpacity ?? 0
   // The plugin ships blurAmount: 2; the user wants pure refraction, so no blur at all.
   const blurAmount = options.blurAmount ?? 0
   const bgVar = options.bgVar ?? '--dsw-alias-bg-base'

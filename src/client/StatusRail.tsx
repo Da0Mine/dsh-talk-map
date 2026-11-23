@@ -139,14 +139,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
-  // The handle only carries its own glass while the rail is closed. Open, the panel is the
-  // single surface — otherwise the two rounded layers overlap at the seam.
-  useEffect(() => {
-    if (open) return undefined
-    const element = tabRef.current
-    if (element === null) return undefined
-    return installLiquidGlass(element)
-  }, [open])
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -155,7 +147,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
-  const tabRef = useRef<HTMLButtonElement | null>(null)
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -447,8 +438,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        ref={tabRef}
-      className={styles['statusRailTab']}
+        className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}
