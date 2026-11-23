@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b205 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b206 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b205 · Search cards on the map",
+  "global.searchPlaceholder": "b206 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14211,7 +14211,7 @@ function StatusRail(props) {
   (0, import_react11.useEffect)(() => {
     const element = panelRef.current;
     if (element === null) return void 0;
-    return installLiquidGlass(element, { radius: 22, bezel: 26, thickness: 90, ior: 2.2, scale: 14, specular: 0.3 });
+    return installLiquidGlass(element, { radius: 22, bezel: 44, thickness: 120, ior: 2.5, scale: 30, specular: 0.34 });
   }, []);
   const [order, setOrder] = (0, import_react11.useState)(() => readOrder());
   const [drag, setDrag] = (0, import_react11.useState)(null);
@@ -14224,7 +14224,7 @@ function StatusRail(props) {
   (0, import_react11.useEffect)(() => {
     const element = tabRef.current;
     if (element === null) return void 0;
-    return installLiquidGlass(element, { radius: 14, bezel: 14, thickness: 44, ior: 2.2, scale: 8, specular: 0.26 });
+    return installLiquidGlass(element, { radius: 14, bezel: 22, thickness: 60, ior: 2.4, scale: 16, specular: 0.3 });
   }, []);
   const orderRef = (0, import_react11.useRef)(order);
   orderRef.current = order;
