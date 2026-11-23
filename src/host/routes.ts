@@ -5,6 +5,7 @@
  * origin-less local tools (curl); a cross-origin browser POST is refused.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { createPreviewCache, runLimited, PREVIEW_CONCURRENCY } from './preview.ts'
 import { mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { resolve as resolvePath, sep } from 'node:path'
@@ -374,18 +375,43 @@ export function mountTalkMapRoutes(
           }
           return
         }
+        // Preview reads materialise a whole session surface; keep only the extracted text.
+        const previewCache = createPreviewCache(400)
         if (route === 'POST /talk-map/last-user') {
           const body = await readJsonBody(request)
-          const ids = Array.isArray((body as { sessionIds?: unknown }).sessionIds)
-            ? ((body as { sessionIds: unknown[] }).sessionIds.filter(id => typeof id === 'string') as string[]).slice(0, 200)
+          const listed = Array.isArray((body as { sessionIds?: unknown }).sessionIds)
+            ? (body as { sessionIds: unknown[] }).sessionIds
             : []
+          // Plain ids (older callers) or `{ id, stamp }` — the stamp is the client's own
+          // session `updatedAt`, so an unchanged stamp means an unchanged last message.
+          const wanted: { id: string; stamp?: number }[] = []
+          for (const entry of listed) {
+            if (typeof entry === 'string') {
+              wanted.push({ id: entry })
+              continue
+            }
+            if (entry === null || typeof entry !== 'object') continue
+            const id = (entry as { id?: unknown }).id
+            if (typeof id !== 'string') continue
+            const stamp = (entry as { stamp?: unknown }).stamp
+            wanted.push(typeof stamp === 'number' ? { id, stamp } : { id })
+          }
+
           const texts: Record<string, string> = {}
           const query = runtime.sessionQuery
           if (query !== undefined) {
-            // ~250ms per surface read; read them concurrently — a board has ~20.
-            await Promise.all(ids.map(async (sessionId) => {
+            const misses = wanted.filter((item) => {
+              if (item.stamp === undefined) return true
+              const cached = previewCache.get(item.id)
+              if (cached === undefined || cached.stamp !== item.stamp) return true
+              texts[item.id] = cached.text
+              return false
+            })
+            // A single read can cost ~100 MB transiently, so they run a couple at a time
+            // rather than forty (the old shape peaked around 2 GB of host memory).
+            await runLimited(misses, PREVIEW_CONCURRENCY, async (item) => {
               try {
-                const surface = await query.readSurface(sessionId)
+                const surface = await query.readSurface(item.id)
                 let text = ''
                 for (const raw of surface.events) {
                   const event = raw as { type?: string; data?: { source?: MessageSource; content?: unknown } }
@@ -397,11 +423,13 @@ export function mountTalkMapRoutes(
                   const body = textOfBlocks(event.data?.content)
                   if (body !== '') text = body
                 }
-                if (text !== '') texts[sessionId] = text.length > 240 ? text.slice(0, 240) : text
+                const trimmed = text.length > 240 ? text.slice(0, 240) : text
+                if (item.stamp !== undefined) previewCache.set(item.id, { stamp: item.stamp, text: trimmed })
+                if (trimmed !== '') texts[item.id] = trimmed
               } catch {
                 // A session without a readable surface simply has no preview.
               }
-            }))
+            })
           }
           sendJson(response, 200, { texts })
           return

@@ -85,8 +85,11 @@ export const talkMapApi = {
    * The last message the USER sent, per session — what the card body shows now
    * that the LLM summary is gone. Read straight off the Host's session surface.
    */
-  lastUserMessages(sessionIds: readonly string[]): Promise<{ texts: Record<string, string> }> {
-    return postJson('/talk-map/last-user', { sessionIds })
+  lastUserMessages(
+    // A stamp (the session's own `updatedAt`) lets the Host skip a re-read when nothing moved.
+    ids: readonly (string | { id: string; stamp?: number })[],
+  ): Promise<{ texts: Record<string, string> }> {
+    return postJson('/talk-map/last-user', { sessionIds: ids })
   },
   /**
    * The live window: what the model is given right now, minus everything compaction

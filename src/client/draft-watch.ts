@@ -10,6 +10,15 @@
  */
 const STORE_PREFIX = 'dsh.conversation.'
 
+/**
+ * `{"draft":""}` / `{"draft":{}}` is the overwhelmingly common case (one entry per session,
+ * thousands of sessions), and JSON.parse for those dominates the scan. Reject on the raw
+ * string first; anything else goes through the parser as before.
+ */
+function draftMayBeEmpty(raw: string): boolean {
+  return raw.includes('"draft":""') || raw.includes('"draft":{}') || !raw.includes('"draft"')
+}
+
 /** Extract the plain text out of either persisted draft shape. */
 function draftTextOf(value: unknown): string {
   if (typeof value === 'string') return value
@@ -59,6 +68,8 @@ export function readDraftTexts(): Record<string, string> {
     if (key === null || !key.startsWith(STORE_PREFIX)) continue
     const sessionId = key.slice(STORE_PREFIX.length)
     if (sessionId === '') continue
+    const raw = localStorage.getItem(key)
+    if (raw === null || draftMayBeEmpty(raw)) continue
     const text = readDraftText(sessionId)
     if (text.trim() !== '') out[sessionId] = text
   }
@@ -76,7 +87,7 @@ export function readDraftSessions(): Set<string> {
     if (sessionId === '') continue
     try {
       const raw = localStorage.getItem(key)
-      if (raw === null) continue
+      if (raw === null || draftMayBeEmpty(raw)) continue
       const stored: unknown = JSON.parse(raw)
       const draft = stored !== null && typeof stored === 'object'
         ? (stored as { draft?: unknown }).draft

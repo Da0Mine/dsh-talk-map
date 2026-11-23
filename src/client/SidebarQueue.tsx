@@ -120,7 +120,11 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const askedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
-    const timer = setInterval(() => { setDrafts(readDraftTexts()) }, 1500)
+    const timer = setInterval(() => {
+      // A hidden window does not need the scan; the store is tiny but so is the fix.
+      if (typeof document !== 'undefined' && document.hidden) return
+      setDrafts(readDraftTexts())
+    }, 1500)
     return () => { clearInterval(timer) }
   }, [])
 
@@ -212,10 +216,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   useEffect(() => {
     const wanted = rows
       .slice(0, PREVIEW_LIMIT)
-      .map(row => row.sessionId)
-      .filter(id => !askedRef.current.has(id))
+      .filter(row => !askedRef.current.has(row.sessionId))
+      .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
     if (wanted.length === 0) return
-    for (const id of wanted) askedRef.current.add(id)
+    for (const item of wanted) askedRef.current.add(item.id)
     void talkMapApi.lastUserMessages(wanted)
       .then((page) => {
         setPreviews((current) => {

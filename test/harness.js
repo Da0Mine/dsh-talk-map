@@ -521,7 +521,9 @@
     // The card body is the user's last message now, not an LLM digest.
       if (path.indexOf('/talk-map/last-user') >= 0) {
         const texts = {}
-        for (const sessionId of body?.sessionIds ?? []) {
+        for (const entry of body?.sessionIds ?? []) {
+          const sessionId = typeof entry === 'string' ? entry : entry?.id
+          if (typeof sessionId !== 'string') continue
           texts[sessionId] = userMessages[sessionId] ?? '你最后说的那句话'
         }
         if (previewDelayMs <= 0) return json({ texts })

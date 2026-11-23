@@ -276,8 +276,8 @@ var talkMapApi = {
    * The last message the USER sent, per session — what the card body shows now
    * that the LLM summary is gone. Read straight off the Host's session surface.
    */
-  lastUserMessages(sessionIds) {
-    return postJson("/talk-map/last-user", { sessionIds });
+  lastUserMessages(ids) {
+    return postJson("/talk-map/last-user", { sessionIds: ids });
   },
   /**
    * The live window: what the model is given right now, minus everything compaction
@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b94 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b95 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b94 · Search cards on the map",
+  "global.searchPlaceholder": "b95 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11552,6 +11552,9 @@ var sessionActivity = {
 
 // src/client/draft-watch.ts
 var STORE_PREFIX = "dsh.conversation.";
+function draftMayBeEmpty(raw) {
+  return raw.includes('"draft":""') || raw.includes('"draft":{}') || !raw.includes('"draft"');
+}
 function draftTextOf(value) {
   if (typeof value === "string") return value;
   if (value !== null && typeof value === "object") {
@@ -11591,6 +11594,8 @@ function readDraftTexts() {
     if (key === null || !key.startsWith(STORE_PREFIX)) continue;
     const sessionId = key.slice(STORE_PREFIX.length);
     if (sessionId === "") continue;
+    const raw = localStorage.getItem(key);
+    if (raw === null || draftMayBeEmpty(raw)) continue;
     const text = readDraftText(sessionId);
     if (text.trim() !== "") out[sessionId] = text;
   }
@@ -11606,7 +11611,7 @@ function readDraftSessions() {
     if (sessionId === "") continue;
     try {
       const raw = localStorage.getItem(key);
-      if (raw === null) continue;
+      if (raw === null || draftMayBeEmpty(raw)) continue;
       const stored = JSON.parse(raw);
       const draft = stored !== null && typeof stored === "object" ? stored.draft : void 0;
       if (draftTextOf(draft).trim() !== "") out.add(sessionId);
@@ -14279,7 +14284,7 @@ function snap(value) {
   return Math.round(value / GRID) * GRID;
 }
 var IMPORT_CAP = 120;
-var PREVIEW_BATCH = 40;
+var PREVIEW_BATCH = 8;
 function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
@@ -14490,6 +14495,7 @@ function CanvasInner(props) {
   });
   (0, import_react13.useEffect)(() => {
     const tick = () => {
+      if (typeof document !== "undefined" && document.hidden) return;
       const { cards, sessions: latest } = previewInputs.current;
       const pending = [];
       const stamps = [];
@@ -14500,10 +14506,11 @@ function CanvasInner(props) {
         stamps.push([card.sessionId, stamp]);
       }
       if (pending.length === 0) return;
-      const batch = pending.slice(0, PREVIEW_BATCH);
+      stamps.sort((a, b) => b[1] - a[1]);
       const batchStamps = stamps.slice(0, PREVIEW_BATCH);
+      const batch = batchStamps.map(([id2]) => id2);
       for (const [sessionId, stamp] of batchStamps) previewStamp.current.set(sessionId, stamp);
-      void talkMapApi.lastUserMessages(batch).then(({ texts }) => {
+      void talkMapApi.lastUserMessages(batchStamps.map(([id2, stamp]) => ({ id: id2, stamp }))).then(({ texts }) => {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
           const value = cleanPreviewText(text).slice(0, 240);
@@ -16557,6 +16564,7 @@ function SidebarQueue() {
   const askedRef = (0, import_react18.useRef)(/* @__PURE__ */ new Set());
   (0, import_react18.useEffect)(() => {
     const timer4 = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
       setDrafts(readDraftTexts());
     }, 1500);
     return () => {
@@ -16636,9 +16644,9 @@ function SidebarQueue() {
     return sortQueueRows(out);
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds]);
   (0, import_react18.useEffect)(() => {
-    const wanted = rows.slice(0, PREVIEW_LIMIT).map((row) => row.sessionId).filter((id2) => !askedRef.current.has(id2));
+    const wanted = rows.slice(0, PREVIEW_LIMIT).filter((row) => !askedRef.current.has(row.sessionId)).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }));
     if (wanted.length === 0) return;
-    for (const id2 of wanted) askedRef.current.add(id2);
+    for (const item of wanted) askedRef.current.add(item.id);
     void talkMapApi.lastUserMessages(wanted).then((page) => {
       setPreviews((current) => {
         const next = { ...current };

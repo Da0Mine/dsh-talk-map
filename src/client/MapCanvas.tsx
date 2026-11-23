@@ -92,8 +92,8 @@ function snap(value: number): number {
  * can be pulled in with the next import.
  */
 const IMPORT_CAP = 120
-/** Card previews requested per poll tick (one Host read per session). */
-const PREVIEW_BATCH = 40
+/** Card previews requested per poll tick (each one is a session-surface read on the Host). */
+const PREVIEW_BATCH = 8
 
 /** Sessions eligible for a card: top-level, non-empty logs. */
 function placeableSessionIds(
@@ -408,6 +408,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const previewTick = useRef<() => void>(() => {})
   useEffect(() => {
     const tick = (): void => {
+      // Nothing is visible: do not spend Host reads on a hidden window.
+      if (typeof document !== 'undefined' && document.hidden) return
       const { cards, sessions: latest } = previewInputs.current
       const pending: string[] = []
       const stamps: [string, number][] = []
@@ -418,12 +420,13 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         stamps.push([card.sessionId, stamp])
       }
       if (pending.length === 0) return
-      // Ask for the newest PREVIEW_BATCH only; the rest arrive on later ticks, and a board
-      // with a thousand cards must not fire a thousand session reads at once (issue #6).
-      const batch = pending.slice(0, PREVIEW_BATCH)
+      // Newest first, and only PREVIEW_BATCH per tick: a board with a thousand cards must not
+      // fire a thousand session reads at once (issue #6), and the fresh ones matter most.
+      stamps.sort((a, b) => b[1] - a[1])
       const batchStamps = stamps.slice(0, PREVIEW_BATCH)
+      const batch = batchStamps.map(([id]) => id)
       for (const [sessionId, stamp] of batchStamps) previewStamp.current.set(sessionId, stamp)
-      void talkMapApi.lastUserMessages(batch)
+      void talkMapApi.lastUserMessages(batchStamps.map(([id, stamp]) => ({ id, stamp })))
         .then(({ texts }) => {
           const cleaned: Record<string, string> = {}
           for (const [sessionId, text] of Object.entries(texts)) {

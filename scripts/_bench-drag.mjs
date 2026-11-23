@@ -69,6 +69,7 @@ const bootMs = Date.now() - bootStarted
 const before = await page.evaluate(() => ({
   cards: document.querySelectorAll('[data-talkmap-session]').length,
   domNodes: document.getElementsByTagName('*').length,
+  heapMB: performance.memory === undefined ? null : Math.round(performance.memory.usedJSHeapSize / 1048576),
   transform: (() => {
     const el = document.querySelector('.react-flow__viewport')
     return el === null ? null : getComputedStyle(el).transform
@@ -124,6 +125,7 @@ console.log(JSON.stringify({
   bootMs,
   renderedCards: before.cards,
   domNodes: before.domNodes,
+  heapMB: before.heapMB,
   panMoved: before.transform !== result.transform,
   frame: { frames: result.frames, median: result.median, p95: result.p95, worst: result.worst },
   spikesAtMs: result.spikes,
