@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.4.2`：按钮按插件代码重做，参数与侧栏完全一致（`installLiquidGlass(element)` 无覆盖）= `thickness 100 / bezelWidth 40（生效 10，受 radius 11 与短边限制）/ ior 2.5 / specularOpacity 0.5 / bgOpacity 0 / blurAmount 0`，`scale = min(maxDisp×0.8, 短边25%) = min(183, 7.5) = 7.5px`；**模糊已取消**（`tabFilter = url(#…-2)`，无 `blur()`），边框与投影保留插件 CSS 原值。实测 `tabBg 透明`、`tabFilter url(#…-2)`。probe 148/148。
+
 - 2026-11-24 `0.4.1`：按钮样式回退到 `0.3.3`（即用户说"现在挺好"那一版）——撤掉按钮的 JS 玻璃，只用插件自带 CSS：`background color-mix(bg-elevated 52%)` + `backdrop-filter blur(16px) saturate(1.5)` + `1px rgba(255,255,255,.16)` 边框 + `3px 0 14px rgba(0,0,0,.35)` 投影 + `radius 0 11 11 0`。面板去掉 `border-right` 与 `box-shadow`，与左侧无分界线（保留 `radius 0 20 20 0` 供折射）。实测 open 态：`tabBg oklab(…/0.52)`、`tabFilter blur(16px) saturate(1.5)`、`panelFilter url(#…-1)`、`panelBg 透明`。probe 148/148。
 
 - 2026-11-24 `0.4.0`：按钮恢复"之前那份玻璃"的三要素——`bgOpacity 45`（填充）、`blurAmount 12`（柔化）、显式 `scale 8`（位移可控），边框/投影用插件原值；`liquid-glass.ts` 新增 `scale` 显式覆盖选项（默认仍走 `maxDisp×0.8`）。此前 0.3.x "忠实移植"把这三样全去掉（bg 0 / blur 0 / scale 183px），30px 宽元素上等于零效果，所以只剩透明。实测 `tabFilter url(#…-2) blur(12px)`、`tabBg .45`。probe 148/148。
