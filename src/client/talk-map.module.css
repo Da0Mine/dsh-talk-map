@@ -2695,7 +2695,7 @@
 /* ==== liquid glass (refraction) ==== */
 /* The bent backdrop supplies the material; the fill only keeps text legible. */
 .statusRailPanel {
-  background: color-mix(in oklab, var(--dsw-alias-bg-elevated, #14161c) 72%, transparent);
+  background: color-mix(in oklab, var(--dsw-alias-bg-elevated, #14161c) 92%, transparent);
   border-right: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 0 22px 22px 0;
   box-shadow:
@@ -2706,6 +2706,6 @@
 
 .statusRailPanel .card {
   /* No box-shadow here: it would beat the lamp classes (.cardLamp*) and swallow the glow. */
-  background: color-mix(in oklab, var(--dsw-alias-bg-layer-1, #1b1e26) 88%, transparent);
+  background: color-mix(in oklab, var(--dsw-alias-bg-layer-1, #1b1e26) 96%, transparent);
   border-color: rgba(255, 255, 255, 0.14);
 }

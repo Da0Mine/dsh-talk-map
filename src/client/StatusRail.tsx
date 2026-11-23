@@ -135,7 +135,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   useEffect(() => {
     const element = panelRef.current
     if (element === null) return undefined
-    return installLiquidGlass(element, { radius: 22, bezel: 44, thickness: 120, ior: 2.5, scale: 30, specular: 0.34 })
+    return installLiquidGlass(element, { radius: 22, bezel: 36, thickness: 110, ior: 2.45, scale: 22, specular: 0.34 })
   }, [])
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
