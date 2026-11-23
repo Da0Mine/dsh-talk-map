@@ -139,12 +139,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
-  // The handle runs the plugin's own recipe with the panel's values — no blur, no fill.
-  useEffect(() => {
-    const element = tabRef.current
-    if (element === null) return undefined
-    return installLiquidGlass(element)
-  }, [])
 
 
 
@@ -156,7 +150,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
-  const tabRef = useRef<HTMLButtonElement | null>(null)
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -448,8 +441,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        ref={tabRef}
-      className={styles['statusRailTab']}
+        className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}

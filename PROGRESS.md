@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.4.3`：面板与把手拼成一整块玻璃——共用一条外轮廓（面板只画上/下边，把手画上/右/下边，接缝不画竖线），两者均透明底、无阴影、无各自滤镜。核对时发现插件用的 `--dsw-alias-border-secondary` **在宿主主题里不存在**（宿只有 `border-l1 #0000000a` / `border-l2 #0000001a`），所以插件原本那些边框一直是失效的；改用字面值 `rgba(255,255,255,.16)` 后实测 panel `border 1px 0 1px 0`、tab `1px 1px 1px 0`、radius 均 `0 20 20 0`。probe 148/148。
+
 - 2026-11-24 `0.4.2`：按钮按插件代码重做，参数与侧栏完全一致（`installLiquidGlass(element)` 无覆盖）= `thickness 100 / bezelWidth 40（生效 10，受 radius 11 与短边限制）/ ior 2.5 / specularOpacity 0.5 / bgOpacity 0 / blurAmount 0`，`scale = min(maxDisp×0.8, 短边25%) = min(183, 7.5) = 7.5px`；**模糊已取消**（`tabFilter = url(#…-2)`，无 `blur()`），边框与投影保留插件 CSS 原值。实测 `tabBg 透明`、`tabFilter url(#…-2)`。probe 148/148。
 
 - 2026-11-24 `0.4.1`：按钮样式回退到 `0.3.3`（即用户说"现在挺好"那一版）——撤掉按钮的 JS 玻璃，只用插件自带 CSS：`background color-mix(bg-elevated 52%)` + `backdrop-filter blur(16px) saturate(1.5)` + `1px rgba(255,255,255,.16)` 边框 + `3px 0 14px rgba(0,0,0,.35)` 投影 + `radius 0 11 11 0`。面板去掉 `border-right` 与 `box-shadow`，与左侧无分界线（保留 `radius 0 20 20 0` 供折射）。实测 open 态：`tabBg oklab(…/0.52)`、`tabFilter blur(16px) saturate(1.5)`、`panelFilter url(#…-1)`、`panelBg 透明`。probe 148/148。

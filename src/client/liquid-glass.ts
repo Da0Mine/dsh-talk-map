@@ -262,10 +262,11 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     if (markup === '') return
     const filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter')
     filter.setAttribute('id', filterId)
-    filter.setAttribute('x', '0%')
-    filter.setAttribute('y', '0%')
-    filter.setAttribute('width', '100%')
-    filter.setAttribute('height', '100%')
+    filter.setAttribute('filterUnits', 'userSpaceOnUse')
+    filter.setAttribute('x', '0')
+    filter.setAttribute('y', '0')
+    filter.setAttribute('width', String(element.offsetWidth))
+    filter.setAttribute('height', String(element.offsetHeight))
     filter.innerHTML = markup
     defs.append(filter)
   }
