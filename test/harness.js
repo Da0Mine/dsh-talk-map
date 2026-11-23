@@ -410,6 +410,8 @@
   let searchRouteFails = false
   let searchRouteMessage = 'host search route down'
   const posts = []
+  /** last-user 拨测计数（本文件是测试桩，不属于产品代码）。 */
+  const lastUserCalls = { calls: 0, ids: 0 }
   /** Every POST the map makes to dsh-recycle-bin's route. */
   const recycleCalls = []
   /** Simulate the host refusing a move because the session still has work. */
@@ -832,6 +834,7 @@
     },
     sync,
     posts,
+    lastUserCalls: () => ({ ...lastUserCalls }),
     log: logEntries,
     state: () => payload,
     getRoot: () => root,
