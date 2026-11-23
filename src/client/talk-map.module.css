@@ -2692,19 +2692,9 @@
   color: var(--dsw-alias-state-error-primary);
 }
 
-/* ==== liquid glass paint ==== */
-/* No white layers anywhere: echo-liquid-glass only refracts and adds a specular rim inside the
-   SVG filter. The fill is the plugin's own dark colour at reduced alpha, nothing else. */
+/* ==== liquid glass ==== */
+/* Only what the refraction needs: a non-zero corner radius. No fill, no border, no shadow,
+   no extra layers — the plugin's own filter supplies the material. */
 .statusRailPanel {
-  /* No white: the theme's own layer colour at reduced alpha, so it reads lighter than the
-     canvas without any haze. */
-  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 74%, transparent);
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 0 20px 20px 0;
-  box-shadow: 10px 0 34px rgba(0, 0, 0, 0.3);
-}
-
-.statusRailPanel .card {
-  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 90%, transparent);
-  border-color: rgba(255, 255, 255, 0.12);
 }

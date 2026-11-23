@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.3.2`：**完全照搬 echo-liquid-glass**——`liquid-glass.ts` 重写为逐行对应其实现（Snell 剖面 → 位移贴图 → `feDisplacementMap`；`scale = maxDisp * 0.8`；滤镜属性 `x/y/width/height` 用百分比；specular 贴图带宽 = `safeBezel * 2.5`），参数取源码默认值 `thickness 100 / bezelWidth 40 / ior 2.5 / specularOpacity 0.5 / bgOpacity 50 / blurAmount 2`，背景由 JS 写 `color-mix(in srgb, var(--dsw-alias-bg-base) 50%, transparent)`。CSS 只剩一条 `border-radius: 0 20px 20px 0`（折射需要非零半径），删掉此前所有自加的白色渐变/边框/阴影/卡片覆盖；把手不再单独挂玻璃。实测：面板 `rgb(21,21,22)`、卡片 `rgb(35,35,36)`（原始 token）、画布 `rgb(20,20,20)`。probe 148/148；拖拽 17ms。
+
 - 2026-11-24 `0.3.1`：删掉自己加的白色雾层（`rgba(255,255,255,.14/.08/.12)` 渐变与白色描边环）——echo-liquid-glass 本身不含任何白色填充，只有折射 + 滤镜内的高光。改为纯主题色半透明：面板 `color-mix(bg-layer-1 74%)`、卡片 90%；实测 面板 `rgb(31,31,32)`、卡片 `rgb(35,35,35)`、画布 `rgb(20,20,20)`，无白色叠加。probe 148/148；拖拽 17ms/p95 19ms。
 
 - 2026-11-24 `0.3.0`：**亮度问题真因**——`--dsw-alias-bg-elevated` 在宿主主题里不存在（实测只有 bg-base / bg-layer-1..3），我前几轮所有 `color-mix(var(--dsw-alias-bg-elevated, #14161c) N%)` 都落到回退色 `#14161c`（近黑），所以"调大不透明度"= 覆盖更多黑色，用户观感就是一轮比一轮暗。改为不依赖该变量：面板 = 白色渐变提亮 + `rgba(18,20,26,.5)`，卡片 = 白渐变 + `rgba(30,32,38,.62)`。实测像素：面板 `rgb(52,53,55)`、卡片 `rgb(62,63,67)`，画布 `rgb(20,20,20)`（改造前约 20,22,28，现在明显更亮且半透明）。拖拽 17–18ms。probe 148/148。
