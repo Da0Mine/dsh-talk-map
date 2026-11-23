@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-23 `0.2.0`：侧栏卡片加鸿蒙光效（`installGlow`：跟随光标的径向填充 + mask 2px 内描边，plus-lighter）+ 地图顶部条也做成折射玻璃。踩坑：给每张卡单独挂 `feDisplacementMap` 后拖拽中位帧从 17ms 掉到 50ms（8 个滤镜同时重算），改为卡片只用光效、折射只留面板与顶栏 → 回到 17ms / p95 19ms。probe 148/148。
+
 - 2026-11-23 `0.1.99`：移植 EchoMusic `echo-liquid-glass` 的真实折射（Snell 剖面 → Canvas 位移贴图 → SVG `feDisplacementMap` 作为 `backdrop-filter`），新增 `src/client/liquid-glass.ts`，`StatusRail` 挂载；面板底色 44%、圆角 22、描边高光。性能：200 张卡拖拽中位 17ms/p95 26ms；1600 张 p95 49–55ms（折射滤镜随背景重算）。probe 148/148。
 
 - 2026-11-23 `0.1.98`：玻璃按参考图（iOS26 胶囊）重做并取消状态切换——去掉白色雾层（那层白渐变就是"毛玻璃"来源），模糊 22→3px，厚亮边（2px 内亮线 + 外侧白环 + 内阴影做厚度），`data-frozen` 机制整体删除（实测始终模糊拖拽中位 17ms/p95 19–25ms，与冻结态无差）。probe 148/148。

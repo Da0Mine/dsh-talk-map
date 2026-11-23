@@ -298,3 +298,44 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     element.style.removeProperty('-webkit-backdrop-filter')
   }
 }
+
+export interface GlowOptions {
+  /** Colour of the glow; defaults to white. */
+  color?: string
+  /** Radius of the soft radial fill. */
+  radius?: number
+  /** Radius of the border-light mask (HarmonyOS style). */
+  borderRadius?: number
+}
+
+/**
+ * HarmonyOS-style cursor glow, ported from echo-liquid-glass: a radial fill plus a masked
+ * 2px inner border, both following the pointer through `--glow-x` / `--glow-y`.
+ */
+export function installGlow(element: HTMLElement, options: GlowOptions = {}): () => void {
+  element.setAttribute('data-liquid-glow', '1')
+  element.style.setProperty('--glow-color', options.color ?? 'rgba(255, 255, 255, 0.95)')
+  element.style.setProperty('--glow-radius', `${options.radius ?? 170}px`)
+  element.style.setProperty('--border-glow-radius', `${options.borderRadius ?? 120}px`)
+
+  let frame = 0
+  const onMove = (event: PointerEvent): void => {
+    if (frame !== 0) return
+    frame = requestAnimationFrame(() => {
+      frame = 0
+      const rect = element.getBoundingClientRect()
+      element.style.setProperty('--glow-x', `${event.clientX - rect.left}px`)
+      element.style.setProperty('--glow-y', `${event.clientY - rect.top}px`)
+    })
+  }
+  element.addEventListener('pointermove', onMove, { passive: true })
+
+  return () => {
+    element.removeEventListener('pointermove', onMove)
+    if (frame !== 0) cancelAnimationFrame(frame)
+    element.removeAttribute('data-liquid-glow')
+    for (const name of ['--glow-color', '--glow-radius', '--border-glow-radius', '--glow-x', '--glow-y']) {
+      element.style.removeProperty(name)
+    }
+  }
+}

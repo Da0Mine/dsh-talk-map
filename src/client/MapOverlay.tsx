@@ -9,7 +9,8 @@
  * selected, so mount/unmount is the real open/closed state and the sidebar
  * button mirrors it.
  */
-import { useEffect, useSyncExternalStore } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { installGlow, installLiquidGlass } from './liquid-glass.ts'
 import type { RootSlotStandardProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { fontScale } from './font-scale.ts'
@@ -85,6 +86,19 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
   const fontStep = useSyncExternalStore(fontScale.subscribe, fontScale.getSnapshot)
 
+  // Top bar of the map: same liquid glass as the rail (refraction + HarmonyOS glow).
+  const headerRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const element = headerRef.current
+    if (element === null) return undefined
+    const disposeGlass = installLiquidGlass(element, { radius: 16, bezel: 18, thickness: 60, ior: 2.3, scale: 34, specular: 0.34 })
+    const disposeGlow = installGlow(element, { radius: 220, borderRadius: 150 })
+    return () => {
+      disposeGlass()
+      disposeGlow()
+    }
+  }, [])
+
   // The shell selected this panel: publish that so the sidebar button, the
   // hotkey and the context menu all agree on the state — and give the map the
   // width it needs by folding the sidebar away for as long as the panel is up
@@ -120,7 +134,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
       // One variable drives every font size in the panel (see talk-map.module.css).
       style={{ '--tm-font-step': `${fontStep}px` } as React.CSSProperties}
     >
-      <div className={styles['header']}>
+      <div className={styles['header']} ref={headerRef}>
         <button
           type="button"
           className={styles['backButton']}
