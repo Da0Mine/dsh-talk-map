@@ -144,6 +144,14 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const tabRef = useRef<HTMLButtonElement | null>(null)
+
+  // The handle that opens the rail is glass too.
+  useEffect(() => {
+    const element = tabRef.current
+    if (element === null) return undefined
+    return installLiquidGlass(element, { radius: 14, bezel: 14, thickness: 44, ior: 2.2, scale: 8, specular: 0.26 })
+  }, [])
   const orderRef = useRef(order)
   orderRef.current = order
   const dragRef = useRef<DragState | null>(null)
@@ -434,7 +442,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        className={styles['statusRailTab']}
+        ref={tabRef}
+      className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}
