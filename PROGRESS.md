@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.3.4`：① 侧栏把手也挂同一套折射（实测 `tabFilter = url(#...-2)`、`borderRadius 0 11 11 0`、底色 30%）；② 面板底 `bgOpacity` 50→30，实测面板像素 `rgb(20,20,21)` vs 画布 `rgb(20,20,20)`，视觉上与旁边融为一体。probe 148/148；拖拽 17ms/p95 22ms。
+
 - 2026-11-24 `0.3.3`：按用户要求删掉模糊——`blurAmount` 默认 2→0（该值源自 echo 插件 `liquidGlassParams.blurAmount: 2`），`backdrop-filter` 现在只有 `url(#id)`，纯折射无模糊。实测 `panelFilter = url("...-1")`、面板底 `color(srgb .0823/.0823/.0902 / .5)`、卡片仍是原始 `rgb(35,35,36)`。probe 148/148；拖拽 17ms。
 
 - 2026-11-24 `0.3.2`：**完全照搬 echo-liquid-glass**——`liquid-glass.ts` 重写为逐行对应其实现（Snell 剖面 → 位移贴图 → `feDisplacementMap`；`scale = maxDisp * 0.8`；滤镜属性 `x/y/width/height` 用百分比；specular 贴图带宽 = `safeBezel * 2.5`），参数取源码默认值 `thickness 100 / bezelWidth 40 / ior 2.5 / specularOpacity 0.5 / bgOpacity 50 / blurAmount 2`，背景由 JS 写 `color-mix(in srgb, var(--dsw-alias-bg-base) 50%, transparent)`。CSS 只剩一条 `border-radius: 0 20px 20px 0`（折射需要非零半径），删掉此前所有自加的白色渐变/边框/阴影/卡片覆盖；把手不再单独挂玻璃。实测：面板 `rgb(21,21,22)`、卡片 `rgb(35,35,36)`（原始 token）、画布 `rgb(20,20,20)`。probe 148/148；拖拽 17ms。

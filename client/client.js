@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b303 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b304 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b303 · Search cards on the map",
+  "global.searchPlaceholder": "b304 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14052,7 +14052,7 @@ function installLiquidGlass(element, options = {}) {
   const bezelWidth = options.bezelWidth ?? 40;
   const ior = options.ior ?? 2.5;
   const specularOpacity = options.specularOpacity ?? 0.5;
-  const bgOpacity = options.bgOpacity ?? 50;
+  const bgOpacity = options.bgOpacity ?? 30;
   const blurAmount = options.blurAmount ?? 0;
   const bgVar = options.bgVar ?? "--dsw-alias-bg-base";
   instanceSeq += 1;
@@ -14219,6 +14219,11 @@ function StatusRail(props) {
     if (element === null) return void 0;
     return installLiquidGlass(element);
   }, []);
+  (0, import_react11.useEffect)(() => {
+    const element = tabRef.current;
+    if (element === null) return void 0;
+    return installLiquidGlass(element);
+  }, []);
   const [order, setOrder] = (0, import_react11.useState)(() => readOrder());
   const [drag, setDrag] = (0, import_react11.useState)(null);
   const [shift, setShift] = (0, import_react11.useState)({});
@@ -14226,6 +14231,7 @@ function StatusRail(props) {
   const slotsRef = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
   const prevTops = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
   const panelRef = (0, import_react11.useRef)(null);
+  const tabRef = (0, import_react11.useRef)(null);
   const orderRef = (0, import_react11.useRef)(order);
   orderRef.current = order;
   const dragRef = (0, import_react11.useRef)(null);
@@ -14472,6 +14478,7 @@ function StatusRail(props) {
           "button",
           {
             type: "button",
+            ref: tabRef,
             className: talk_map_default["statusRailTab"],
             "aria-expanded": open,
             "aria-label": open ? t("statusRail.close") : t("statusRail.open"),
