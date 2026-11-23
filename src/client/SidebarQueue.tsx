@@ -199,6 +199,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         sessionId,
         title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
+      ...(hasDraft ? { draft: true } : {}),
         ...(draftText !== undefined ? { draftText } : {}),
         ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
       })
@@ -314,14 +315,18 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 : null}
               <div className={styles['cardFooter']}>
                 <span className={styles['cardTime']}>{relativeTime(row.updatedAt)}</span>
-                {chip === undefined
-                  ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
-                  : (
-                    <span className={`${styles['cardChip']} ${styles[chip.className]}`}>
-                      {chip.dot === true ? <span className={styles['runningDot']} /> : null}
-                      {t(chip.key)}
-                    </span>
-                  )}
+                                {/* Draft first, then the status chip: they can both be true. */}
+                                {row.draft === true
+                                  ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
+                                  : null}
+                                {row.lamp === undefined
+                                  ? null
+                                  : (
+                                    <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[row.lamp].className]}`}>
+                                      {LAMP_CHIP[row.lamp].dot ? <span className={styles['runningDot']} /> : null}
+                                      {t(LAMP_CHIP[row.lamp].key)}
+                                    </span>
+                                  )}
               </div>
             </div>
           )

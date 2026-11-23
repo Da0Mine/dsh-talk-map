@@ -343,14 +343,18 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <div className={styles['cardFooter']}>
         <span className={styles['cardTime']}>{relativeTime(entry.updatedAt)}</span>
-        {entry.lamp === undefined
-          ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
-          : (
-            <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
-              {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
-              {t(LAMP_CHIP[entry.lamp].key)}
-            </span>
-          )}
+                {/* Unsent text is independent of the lamp: show it next to the status chip. */}
+                {entry.draft === true
+                  ? <span className={`${styles['cardChip']} ${styles['cardChipDraft']}`}>{t('card.draft')}</span>
+                  : null}
+                {entry.lamp === undefined
+                  ? null
+                  : (
+                    <span className={`${styles['cardChip']} ${styles[LAMP_CHIP[entry.lamp].className]}`}>
+                      {LAMP_CHIP[entry.lamp].dot ? <span className={styles['runningDot']} /> : null}
+                      {t(LAMP_CHIP[entry.lamp].key)}
+                    </span>
+                  )}
       </div>
     </div>
   )

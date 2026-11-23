@@ -964,6 +964,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         sessionId: card.sessionId,
         title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
         lamp,
+        // A lamped card can still hold unsent text: the footer shows both chips.
+        ...((draftTexts[card.sessionId] ?? '').trim() !== '' ? { draft: true } : {}),
         stamp: summary?.updatedAt ?? 0,
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),

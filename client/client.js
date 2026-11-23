@@ -14156,7 +14156,8 @@ function StatusRail(props) {
         entry.preview !== void 0 && entry.preview !== "" ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["cardSummary"], children: entry.preview }) : null,
         /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
           /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(entry.updatedAt) }),
-          entry.lamp === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[entry.lamp].className]}`, children: [
+          entry.draft === true ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : null,
+          entry.lamp === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[entry.lamp].className]}`, children: [
             LAMP_CHIP[entry.lamp].dot ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
             t(LAMP_CHIP[entry.lamp].key)
           ] })
@@ -14903,6 +14904,8 @@ function CanvasInner(props) {
         sessionId: card.sessionId,
         title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
         lamp,
+        // A lamped card can still hold unsent text: the footer shows both chips.
+        ...(draftTexts[card.sessionId] ?? "").trim() !== "" ? { draft: true } : {},
         stamp: summary?.updatedAt ?? 0,
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
@@ -16625,6 +16628,7 @@ function SidebarQueue() {
         sessionId,
         title: summary.displayTitle ?? sessionId,
         ...draftOnly ? { draft: true } : { lamp },
+        ...hasDraft ? { draft: true } : {},
         ...draftText !== void 0 ? { draftText } : {},
         ...summary.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
@@ -16729,9 +16733,10 @@ function SidebarQueue() {
                     body !== void 0 && body.trim() !== "" ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("div", { className: talk_map_default["cardSummary"], children: body }) : null,
                     /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("div", { className: talk_map_default["cardFooter"], children: [
                       /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["cardTime"], children: relativeTime(row.updatedAt) }),
-                      chip === void 0 ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[chip.className]}`, children: [
-                        chip.dot === true ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
-                        t(chip.key)
+                      row.draft === true ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default["cardChipDraft"]}`, children: t("card.draft") }) : null,
+                      row.lamp === void 0 ? null : /* @__PURE__ */ (0, import_jsx_runtime19.jsxs)("span", { className: `${talk_map_default["cardChip"]} ${talk_map_default[LAMP_CHIP[row.lamp].className]}`, children: [
+                        LAMP_CHIP[row.lamp].dot ? /* @__PURE__ */ (0, import_jsx_runtime19.jsx)("span", { className: talk_map_default["runningDot"] }) : null,
+                        t(LAMP_CHIP[row.lamp].key)
                       ] })
                     ] })
                   ]
