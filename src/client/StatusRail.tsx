@@ -372,7 +372,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>
-        <span className={styles['railSheen']} aria-hidden="true" />
         <div className={styles['statusRailHead']}>
           <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
           <span className={styles['statusRailCount']}>{props.entries.length}</span>
