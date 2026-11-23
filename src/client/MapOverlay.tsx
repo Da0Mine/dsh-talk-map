@@ -10,7 +10,7 @@
  * button mirrors it.
  */
 import { useEffect, useRef, useSyncExternalStore } from 'react'
-import { installGlow, installLiquidGlass } from './liquid-glass.ts'
+import { installLiquidGlass } from './liquid-glass.ts'
 import type { RootSlotStandardProps } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
 import { fontScale } from './font-scale.ts'
@@ -91,12 +91,7 @@ export function MapOverlay(props: RootSlotStandardProps): React.JSX.Element {
   useEffect(() => {
     const element = headerRef.current
     if (element === null) return undefined
-    const disposeGlass = installLiquidGlass(element, { radius: 16, bezel: 18, thickness: 60, ior: 2.3, scale: 34, specular: 0.34 })
-    const disposeGlow = installGlow(element, { radius: 220, borderRadius: 150 })
-    return () => {
-      disposeGlass()
-      disposeGlow()
-    }
+    return installLiquidGlass(element, { radius: 16, bezel: 28, thickness: 60, ior: 2.2, scale: 10, specular: 0.3 })
   }, [])
 
   // The shell selected this panel: publish that so the sidebar button, the

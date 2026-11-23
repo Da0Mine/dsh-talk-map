@@ -12,7 +12,7 @@
  * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { installGlow, installLiquidGlass } from './liquid-glass.ts'
+import { installLiquidGlass } from './liquid-glass.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -135,12 +135,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   useEffect(() => {
     const element = panelRef.current
     if (element === null) return undefined
-    const disposeGlass = installLiquidGlass(element, { radius: 22, bezel: 26, thickness: 90, ior: 2.4, scale: 58, specular: 0.42 })
-    const disposeGlow = installGlow(element, { radius: 240, borderRadius: 170 })
-    return () => {
-      disposeGlass()
-      disposeGlow()
-    }
+    return installLiquidGlass(element, { radius: 22, bezel: 40, thickness: 90, ior: 2.2, scale: 14, specular: 0.3 })
   }, [])
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -343,38 +338,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     })
   }, [])
 
-  // Cards are re-created on every reorder, so they are decorated by scanning the panel
-  // instead of by a ref callback (a ref would re-install on every render).
-  useEffect(() => {
-    const root = panelRef.current
-    if (root === null) return undefined
-    const installed = new Map<HTMLElement, () => void>()
-    const decorate = (): void => {
-      for (const element of root.querySelectorAll<HTMLElement>('[data-glass-card]')) {
-        if (installed.has(element)) continue
-        // Cards keep the glow but no displacement filter: they sit on an already-refracted
-        // panel, and one extra SVG filter per card cost 33 ms per frame here (median 17 -> 50).
-        const disposeGlow = installGlow(element, { radius: 130, borderRadius: 90 })
-        installed.set(element, disposeGlow)
-      }
-      for (const [element, dispose] of installed) {
-        if (element.isConnected) continue
-        dispose()
-        installed.delete(element)
-      }
-    }
-    decorate()
-    const observer = new MutationObserver(decorate)
-    observer.observe(root, { childList: true, subtree: true })
-    return () => {
-      observer.disconnect()
-      for (const dispose of installed.values()) dispose()
-    }
-  }, [])
-
   const renderCard = (entry: StatusRailEntry, floating: boolean): React.JSX.Element => (
     <div
-      data-glass-card="1"
       className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
       onPointerDown={floating ? undefined : (event) => { beginDrag(event, entry.cardId) }}
       title={entry.title}
