@@ -2231,7 +2231,7 @@
   /* .card is content-box: 224 content + 13px padding each side paints 250 wide. */
   --rail-card-outer: calc(var(--rail-card-w) + 26px);
   /* +2px: the card's own 1px border on each side must not be clipped */
-  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2 + 2px);
+  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2 + 26px);
 }
 
 .statusRailPanel {
@@ -2695,7 +2695,7 @@
 /* ==== liquid glass (refraction) ==== */
 /* The bent backdrop supplies the material; the fill only keeps text legible. */
 .statusRailPanel {
-  background: color-mix(in oklab, var(--dsw-alias-bg-elevated, #14161c) 44%, transparent);
+  background: color-mix(in oklab, var(--dsw-alias-bg-elevated, #14161c) 72%, transparent);
   border-right: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 0 22px 22px 0;
   box-shadow:
@@ -2705,7 +2705,7 @@
 }
 
 .statusRailPanel .card {
-  background: color-mix(in oklab, var(--dsw-alias-bg-layer-1, #1b1e26) 62%, transparent);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 2px 10px rgba(0, 0, 0, 0.2);
+  /* No box-shadow here: it would beat the lamp classes (.cardLamp*) and swallow the glow. */
+  background: color-mix(in oklab, var(--dsw-alias-bg-layer-1, #1b1e26) 88%, transparent);
+  border-color: rgba(255, 255, 255, 0.14);
 }
