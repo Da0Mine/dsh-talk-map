@@ -12,6 +12,7 @@
  * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { installLiquidGlass } from './liquid-glass.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -128,6 +129,14 @@ function writeOrder(order: readonly string[]): void {
 
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
+
+  // Real refraction on the panel: the backdrop is bent along the bezel by an SVG
+  // displacement filter (ported from EchoMusic's echo-liquid-glass).
+  useEffect(() => {
+    const element = panelRef.current
+    if (element === null) return undefined
+    return installLiquidGlass(element, { radius: 22, bezel: 26, thickness: 90, ior: 2.4, scale: 58, specular: 0.42 })
+  }, [])
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
   const [shift, setShift] = useState<Record<string, number>>({})
