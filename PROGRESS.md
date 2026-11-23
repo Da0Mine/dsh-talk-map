@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-23 `0.2.3`：顶栏恢复原样（删掉 header 玻璃/悬浮/透明面板/画布偏移，`.panel` 回到不透明）；侧栏折射带宽 40→26（位移仍 14）。拖拽卡顿根因实测：整块面板挂 `backdrop-filter` 时每帧多 ~16ms，与模糊半径无关；改由 window `pointerdown/up` 驱动冻结（React Flow 的 onMoveStart 在脚本拖拽里不触发，mid-pan `data-frozen` 曾一直是 0），拖动期间不采样、加浓底色 → 中位 50→18ms。probe 148/148。
+
 - 2026-11-23 `0.2.2`：顶栏跳位根因是 `.panel` 没有 `position`，绝对定位的 header 以 shell 为参照跑到宿主顶栏上；加 `.panel { position: relative }` 后 `offsetParent` 实测回到 `tm_panel`，黑边与重叠消失。侧栏把手（`.statusRailTab`）也挂上折射。probe 148/148；面板+顶栏+把手三处滤镜拖拽仍 17ms / p95 19ms。
 
 - 2026-11-23 `0.2.1`：按反馈修——删掉鸿蒙光晕；折射位移 58→14px、带宽 26→40px（范围更大更平缓，消掉"内容错位/重影"）；顶部栏改为悬浮在画布之上（`.canvas` 用实测 `--tm-header-h` 补偿），并把 `.panel` 改成透明，玻璃后面终于能看到地图；卡片只保留半透明瓦片。probe 148/148；200/800 张卡拖拽中位 17ms、p95 33ms。

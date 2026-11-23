@@ -12,6 +12,7 @@
  * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { railFrozen } from './rail-frozen.ts'
 import { installLiquidGlass } from './liquid-glass.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
@@ -129,14 +130,30 @@ function writeOrder(order: readonly string[]): void {
 
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
+  const frozen = useSyncExternalStore(railFrozen.subscribe, railFrozen.isFrozen)
 
   // Real refraction on the panel: the backdrop is bent along the bezel by an SVG
   // displacement filter (ported from EchoMusic's echo-liquid-glass).
   useEffect(() => {
     const element = panelRef.current
     if (element === null) return undefined
-    return installLiquidGlass(element, { radius: 22, bezel: 40, thickness: 90, ior: 2.2, scale: 14, specular: 0.3 })
+    return installLiquidGlass(element, { radius: 22, bezel: 26, thickness: 90, ior: 2.2, scale: 14, specular: 0.3 })
   }, [])
+  // Deterministic freeze: React Flow's move callbacks did not fire reliably for a
+  // middle-button pan, so pointer down/up on the window drives the state instead.
+  useEffect(() => {
+    const onDown = (): void => { railFrozen.freeze() }
+    const onUp = (): void => { railFrozen.thaw() }
+    window.addEventListener('pointerdown', onDown, { capture: true })
+    window.addEventListener('pointerup', onUp, { capture: true })
+    window.addEventListener('pointercancel', onUp, { capture: true })
+    return () => {
+      window.removeEventListener('pointerdown', onDown, { capture: true })
+      window.removeEventListener('pointerup', onUp, { capture: true })
+      window.removeEventListener('pointercancel', onUp, { capture: true })
+    }
+  }, [])
+
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
   const [shift, setShift] = useState<Record<string, number>>({})
@@ -382,6 +399,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     <div
       className={styles['statusRail']}
       data-open={open ? '1' : '0'}
+      data-frozen={frozen ? '1' : '0'}
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>

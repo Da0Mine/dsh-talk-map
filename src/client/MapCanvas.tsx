@@ -13,6 +13,7 @@
  * menu, left-drag box-selects on the pane and drags nodes.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { railFrozen } from './rail-frozen.ts'
 import {
   Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
   SelectionMode, useReactFlow, type Connection, type Edge, type EdgeChange, type FinalConnectionState,
@@ -2549,7 +2550,9 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             event.preventDefault()
           }
         }}
+        onMoveStart={() => { railFrozen.freeze() }}
         onMoveEnd={(_event, viewport: Viewport) => {
+          railFrozen.thaw()
           canvas.setCamera(INBOX_BOARD_ID, viewport)
         }}
         colorMode={dark ? 'dark' : 'light'}
