@@ -207,6 +207,8 @@ export interface LiquidGlassOptions {
   bgOpacity?: number
   /** Extra blur appended to the backdrop filter. */
   blurAmount?: number
+  /** Explicit displacement in px; overrides the plugin's maxDisp * 0.8 formula. */
+  scale?: number
   /** CSS variable holding the background colour to mix against. */
   bgVar?: string
 }
@@ -229,6 +231,7 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
   const blurAmount = options.blurAmount ?? 0
   const bgVar = options.bgVar ?? '--dsw-alias-bg-base'
   const specularBezel = options.specularBezel
+  const explicitScale = options.scale
 
   instanceSeq += 1
   const filterId = `${BASE_ID}-${instanceSeq}`
@@ -295,7 +298,7 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     // wide player bar but swallows small elements whole (183 px on a 30 px handle leaves no
     // backdrop inside the element to sample). Clamp it to a quarter of the short side.
     const scaleCeiling = Math.min(width, height) * 0.25
-    const scale = Math.min(maxDisp * 0.8, scaleCeiling)
+    const scale = explicitScale ?? Math.min(maxDisp * 0.8, scaleCeiling)
     const dispUrl = generateDisplacementMap(width, height, radius, safeBezel, profile, maxDisp)
     const specBand = specularBezel ?? safeBezel * 2.5
     const specUrl = specularOpacity > 0.001 ? generateSpecularMap(width, height, radius, specBand) : ''

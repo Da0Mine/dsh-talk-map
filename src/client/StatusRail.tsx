@@ -144,7 +144,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     if (open) return undefined
     const element = tabRef.current
     if (element === null) return undefined
-    return installLiquidGlass(element, { specularBezel: 6 })
+    // The look the handle had before: a 45% fill, a soft 12px frost and an 8px displacement.
+    // (The faithful port dropped all three: bgOpacity 0, blur 0, and scale from the formula
+    //  which came out at 183px — i.e. nothing left on a 30px wide element.)
+    return installLiquidGlass(element, { scale: 8, specularBezel: 6, bgOpacity: 45, blurAmount: 12 })
   }, [open])
 
 
