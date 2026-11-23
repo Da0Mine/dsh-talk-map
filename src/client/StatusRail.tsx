@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
+import { railGlass } from './rail-glass.ts'
 import { sortQueueRows } from './queue-order.ts'
 import styles from './talk-map.module.css'
 
@@ -127,6 +128,8 @@ function writeOrder(order: readonly string[]): void {
 }
 
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
+  /** Canvas moving → no live blur (see rail-glass.ts). */
+  const frozen = useSyncExternalStore(railGlass.subscribe, railGlass.isFrozen)
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -365,9 +368,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     <div
       className={styles['statusRail']}
       data-open={open ? '1' : '0'}
+      data-frozen={frozen ? '1' : '0'}
       style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>
+        <span className={styles['railSheen']} aria-hidden="true" />
         <div className={styles['statusRailHead']}>
           <span className={styles['statusRailTitle']}>{t('statusRail.title')}</span>
           <span className={styles['statusRailCount']}>{props.entries.length}</span>

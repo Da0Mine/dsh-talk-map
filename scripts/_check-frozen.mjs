@@ -1,0 +1,26 @@
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'; import { spawn } from 'node:child_process'
+import { createRequire } from 'node:module'
+const require = createRequire(import.meta.url)
+const { chromium } = require('playwright-core')
+const CDP = 9922
+const EDGE=['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(c=>fs.existsSync(c))
+const child=spawn(EDGE,[`--remote-debugging-port=${CDP}`,`--user-data-dir=${path.join(os.tmpdir(),'frozen-'+Date.now())}`,'--no-first-run','--headless=new','--window-size=1500,1000','about:blank'],{stdio:'ignore'})
+let ready=false; const t0=Date.now()
+while(Date.now()-t0<20000&&!ready){ try{ ready=(await fetch(`http://127.0.0.1:${CDP}/json/version`)).ok }catch{}; if(!ready) await new Promise(r=>setTimeout(r,200)) }
+const browser=await chromium.connectOverCDP(`http://127.0.0.1:${CDP}`)
+const page=await browser.contexts()[0].newPage()
+await page.goto('http://127.0.0.1:8793/demo/index.html?demo=1')
+await page.waitForTimeout(1200)
+await page.evaluate(() => localStorage.setItem('dsh.talk-map.status-rail.open.v1','1'))
+await page.reload(); await page.waitForTimeout(3000)
+const frozen = () => page.evaluate(() => document.querySelector('[class*="statusRail"]')?.getAttribute('data-frozen'))
+console.log('静止时 data-frozen:', await frozen())
+await page.mouse.move(900, 500); await page.mouse.down({ button: 'middle' }); await page.mouse.move(960, 530)
+await page.waitForTimeout(80)
+console.log('拖动中 data-frozen:', await frozen())
+await page.mouse.up({ button: 'middle' })
+await page.waitForTimeout(400)
+console.log('松手 400ms 后 data-frozen:', await frozen())
+const blur = await page.evaluate(() => getComputedStyle(document.querySelector('[class*="statusRailPanel"]')).backdropFilter)
+console.log('静止时 backdrop-filter:', blur)
+await page.close(); await browser.close(); child.kill()

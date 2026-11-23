@@ -58,6 +58,8 @@ await page.evaluate((count) => {
   }
   saved.cards = cards
   localStorage.setItem(key, JSON.stringify(saved))
+  // 侧栏展开：玻璃层在场时测一次拖拽帧率
+  localStorage.setItem('dsh.talk-map.status-rail.open.v1', '1')
 }, CARDS)
 
 const bootStarted = Date.now()
