@@ -139,6 +139,16 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     return installLiquidGlass(element)
   }, [])
 
+  // The handle carries the same glass as the panel — the panel's material extended, not a
+  // separate chip. Specular is off: on a 30px wide element that map washes the whole face.
+  useEffect(() => {
+    // Only while closed: open, the panel is the single surface and the handle is just an icon.
+    if (open) return undefined
+    const element = tabRef.current
+    if (element === null) return undefined
+    return installLiquidGlass(element, { specularBezel: 6 })
+  }, [open])
+
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -147,6 +157,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const tabRef = useRef<HTMLButtonElement | null>(null)
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -438,7 +449,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <button
         type="button"
-        className={styles['statusRailTab']}
+        ref={tabRef}
+      className={styles['statusRailTab']}
         aria-expanded={open}
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}

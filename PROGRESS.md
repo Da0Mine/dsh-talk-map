@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.3.7`：把手玻璃按"面板材质的延伸"处理——新增可选 `specularBezel`，把手高光带收到 6px（插件默认按 `safeBezel*2.5` 会到 25px，30px 宽的把手会整块泛白，这就是之前的"毛玻璃"），底色仍 0；滤镜只在**关闭态**挂载（`useEffect` 依赖 `open`）。实测展开态 `tabFilter = none / tabBg 透明 / panelFilter = url(#...-1) / panelBg 透明` → 单一表面；关闭态 `tabFilter = url(#...-2)`。probe 148/148；拖拽 17ms/p95 19ms。
+
 - 2026-11-24 `0.3.6`：`bgOpacity` 30→0（完全透明，只剩折射）。实测把彩色块放面板后面、隐藏卡片后取样：`bgOpacity 0` 时面板内像素与背后原色**完全一致** `(233,73,116)`，即 100% 透过。把手的"毛玻璃"其实来自插件原始 CSS（`.statusRailTab` 注释 "Frosted glass"，`blur(16px) saturate(1.5)` + 52% 底），已连同它自己的折射滤镜一起去掉，现在只是图标。probe 148/148；拖拽 21ms/p95 26ms。
 
 - 2026-11-24 `0.3.5`：消除"两块玻璃叠加"——把手玻璃改为**仅关闭态**挂载（`useEffect` 依赖 `open`），展开态再用 CSS 去掉它的底色/边框/滤镜，只留图标；面板左缘保持 0 圆角、无边框，与左侧连成整体。参数核对：`thickness 100 / bezelWidth 40（实际生效 19，受 radius 20 限制）/ ior 2.5 / specularOpacity 0.5 / bgOpacity 30 / blur 0`，`scale = maxDisp×0.8 = 183px`（插件原公式；窄面板下边缘位移很大，属该算法特性）。probe 148/148；拖拽 17ms。

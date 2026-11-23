@@ -201,6 +201,8 @@ export interface LiquidGlassOptions {
   ior?: number
   /** Rim highlight strength (0 disables the specular pass). */
   specularOpacity?: number
+  /** Width of the specular band in px; defaults to the plugin's safeBezel * 2.5. */
+  specularBezel?: number
   /** Background opacity in percent, mixed against the theme background. */
   bgOpacity?: number
   /** Extra blur appended to the backdrop filter. */
@@ -226,6 +228,7 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
   // The plugin ships blurAmount: 2; the user wants pure refraction, so no blur at all.
   const blurAmount = options.blurAmount ?? 0
   const bgVar = options.bgVar ?? '--dsw-alias-bg-base'
+  const specularBezel = options.specularBezel
 
   instanceSeq += 1
   const filterId = `${BASE_ID}-${instanceSeq}`
@@ -290,7 +293,8 @@ export function installLiquidGlass(element: HTMLElement, options: LiquidGlassOpt
     const maxDisp = Math.max(...Array.from(profile).map(Math.abs)) || 1
     const scale = maxDisp * 0.8
     const dispUrl = generateDisplacementMap(width, height, radius, safeBezel, profile, maxDisp)
-    const specUrl = specularOpacity > 0.001 ? generateSpecularMap(width, height, radius, safeBezel * 2.5) : ''
+    const specBand = specularBezel ?? safeBezel * 2.5
+    const specUrl = specularOpacity > 0.001 ? generateSpecularMap(width, height, radius, specBand) : ''
     writeFilter(buildSVGFilter(filterId, dispUrl, specUrl, scale, width, height, specularOpacity))
   }
 
