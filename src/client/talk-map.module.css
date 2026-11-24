@@ -1155,8 +1155,10 @@
   max-width: 280px;
   max-height: 380px;
   overflow-y: auto;
+  /* Cards keep their size; a wider rail simply fits more columns. */
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-content: flex-start;
   padding: 6px;
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 10px;
@@ -2284,8 +2286,12 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+  /* Row flow with wrapping: cards keep their size, a wider rail simply fits more columns. */
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  align-items: flex-start;
   gap: 10px;
   /* Room for the lamp halo: an overflow:auto box clips on both axes, and the glow spreads
      40px, so the list keeps real padding instead of 2px/0. */
@@ -2301,6 +2307,9 @@
 
 .statusRailSlot {
   position: relative;
+  /* = card outer width, so two slots fit side by side once the rail is wide enough. */
+  width: var(--rail-card-outer);
+  flex: 0 0 auto;
 }
 
 .statusRailSlot[draggable="true"] {
@@ -2712,4 +2721,13 @@
 .statusRailTab {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: none;
+}
+
+/* Rail cards: the panel's material, one step lighter — translucent fill plus a hairline rim.
+   No box-shadow here: it would beat the .cardLamp* rules and swallow the glow. */
+.statusRailPanel .card {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0) 72%),
+    color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 62%, transparent);
+  border-color: rgba(255, 255, 255, 0.14);
 }

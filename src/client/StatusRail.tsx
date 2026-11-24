@@ -12,7 +12,6 @@
  * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { installLiquidGlass } from './liquid-glass.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -65,7 +64,7 @@ const OPEN_KEY = 'dsh.talk-map.status-rail.open.v1'
 const ORDER_KEY = 'dsh.talk-map.status-rail.order.v1'
 const WIDTH_KEY = 'dsh.talk-map.status-rail.width.v1'
 /** Resize bounds in px: never narrower than the default open width, never wider than this. */
-const RAIL_MAX_W = 560
+const RAIL_MAX_W = 640
 const FLIP_MS = 180
 
 const LAMP_CLASS: Record<StatusLamp, string> = {
@@ -155,21 +154,9 @@ function writeOrder(order: readonly string[]): void {
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
 
-  // Real refraction on the panel: the backdrop is bent along the bezel by an SVG
-  // displacement filter (ported from EchoMusic's echo-liquid-glass).
-  useEffect(() => {
-    const element = panelRef.current
-    if (element === null) return undefined
-    // Plugin defaults only: thickness 100, bezel 40, ior 2.5, specular 0.5, bgOpacity 50, blur 2.
-    return installLiquidGlass(element)
-  }, [])
-
-  // The handle runs the plugin's own recipe with the panel's values — no blur, no fill.
-  useEffect(() => {
-    const element = tabRef.current
-    if (element === null) return undefined
-    return installLiquidGlass(element)
-  }, [])
+  // No SVG backdrop filter here: measured zero pixel difference in this host, and resizing the
+  // panel while it is applied leaves a stale-snapshot smear trailing the pointer. The visual
+  // material is pure CSS (translucent fill + hairline rim).
 
 
 
@@ -458,7 +445,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       style={railWidth === null
         ? { ['--rail-card-w' as string]: `${props.cardWidth}px` }
         : {
-            ['--rail-card-w' as string]: `${Math.max(160, railWidth - 84)}px`,
+            ['--rail-card-w' as string]: `${props.cardWidth}px`,
             ['--rail-w' as string]: `${railWidth}px`,
           }}
     >

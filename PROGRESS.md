@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.1`：① 修「向右拖宽拖出错位残影」——面板/把手上的 `backdrop-filter: url(#…)` 会在改宽时留下旧快照（该滤镜实测本就 0 像素效果），全部移除，面板材质改为纯 CSS；② 拖宽不再拉伸卡片：`--rail-card-w` 固定为 `props.cardWidth`，`.statusRailList` 改 `flex-direction: row; flex-wrap: wrap`，`.statusRailSlot` 定宽 `var(--rail-card-outer)`，宽度够就并排（实测 620px → 2 列、卡宽仍 250）；`RAIL_MAX_W` 560→640（两列需 ≥566）；③ 侧栏卡片改液态玻璃：半透底 `color-mix(bg-layer-1 62%)` + 顶部高光渐变 + 1px 亮边，**不加 box-shadow**（否则会盖掉 `.cardLamp*` 光晕）。卡片上也没加 `backdrop-filter`（每卡一层快照会拖慢：17 → 23ms，故只保留 CSS 材质）。probe 150/150；拖拽 17ms/p95 34ms。
+
 - 2026-11-24 `0.5.0`：① 卡片光晕左/上被裁：`.statusRailList` 原 `padding: 2px 0 14px`（`overflow-y:auto` 会双向裁剪），改为 `16px 18px 18px`，并把 `--rail-w` 的额外宽度 26→38px 同步留出空间；② 新增拖拽调宽：展开后横向拖把手（`ew-resize`），宽度钳制 `[默认宽度, 560]`，存 `dsh.talk-map.status-rail.width.v1`，重载保留；卡片宽度跟随 `--rail-w`（`railWidth-84`），拖拽位移 >3px 时吞掉随后的 click，避免误收起。实测 308→428、存储 428、重载仍 428。probe 改为画布类检查先收起侧栏 + 新增 2 条默认展开检查，`150/150`。
 
 - 2026-11-24 `0.4.5`：修「没有任务时侧栏板块消失」——根因是侧栏展开状态默认关闭（`readOpen()` 只在 localStorage 为 `"1"` 时展开），新工作区首次打开只剩一个把手；而空队列时把手不显示计数徽标、叠加 0.4.x 的透明玻璃，看起来就是"板块没了"。改为：`readOpen()` 无记录时默认 **true**（展开），把手补 1px 描边保证任何状态都可见；空列表仍显示 `statusRail.empty`（「暂时没有带状态的卡片」）。probe 148/148。
