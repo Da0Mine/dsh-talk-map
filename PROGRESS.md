@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.4.5`：修「没有任务时侧栏板块消失」——根因是侧栏展开状态默认关闭（`readOpen()` 只在 localStorage 为 `"1"` 时展开），新工作区首次打开只剩一个把手；而空队列时把手不显示计数徽标、叠加 0.4.x 的透明玻璃，看起来就是"板块没了"。改为：`readOpen()` 无记录时默认 **true**（展开），把手补 1px 描边保证任何状态都可见；空列表仍显示 `statusRail.empty`（「暂时没有带状态的卡片」）。probe 148/148。
+
 - 2026-11-24 `0.4.4`：按用户要求把界面回退到 `0.4.2`——用 `git show 4da8edb:<path>` 直接写回 `talk-map.module.css` / `StatusRail.tsx` / `liquid-glass.ts`（`git checkout <ref> -- <path>` 被 CC Safety Net 拦截，改用 git show + 字节写入）。当前界面 = 面板透明底+`border-right none`+无投影+半径 20，按钮 = `installLiquidGlass(element)` 默认参数（`url(#…)`、无 blur、bg 0）。probe 148/148。
 
 - 2026-11-24 `0.4.3`：面板与把手拼成一整块玻璃——共用一条外轮廓（面板只画上/下边，把手画上/右/下边，接缝不画竖线），两者均透明底、无阴影、无各自滤镜。核对时发现插件用的 `--dsw-alias-border-secondary` **在宿主主题里不存在**（宿只有 `border-l1 #0000000a` / `border-l2 #0000001a`），所以插件原本那些边框一直是失效的；改用字面值 `rgba(255,255,255,.16)` 后实测 panel `border 1px 0 1px 0`、tab `1px 1px 1px 0`、radius 均 `0 20 20 0`。probe 148/148。

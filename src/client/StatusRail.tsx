@@ -76,11 +76,14 @@ let openState: boolean | undefined
 const openListeners = new Set<() => void>()
 
 function readOpen(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(OPEN_KEY) === '1'
+    const stored = window.localStorage.getItem(OPEN_KEY)
+    // No stored choice yet: keep the queue board open. It used to start collapsed, which left
+    // nothing but a transparent handle on screen and read as "the board is gone".
+    return stored === null ? true : stored === '1'
   } catch {
-    return false
+    return true
   }
 }
 

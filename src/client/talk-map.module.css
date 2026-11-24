@@ -2704,3 +2704,10 @@
   border-right: none;
   box-shadow: none;
 }
+
+/* The handle must stay discoverable even when the queue is empty (no count badge, no cards).
+   A hairline stroke only — no fill, no blur, so it never turns into a second frosted chip. */
+.statusRailTab {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-left: none;
+}
