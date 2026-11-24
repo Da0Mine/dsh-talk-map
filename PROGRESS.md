@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.3`：面板与把手统一为「薄玻璃」——面板 `linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02) 45%, rgba(255,255,255,.035))` + `inset 0 0 0 1px rgba(255,255,255,.09)`；把手同款（白渐变 + 1px 亮边）并**去掉插件自带 `blur(16px)`+52% 填充**（那就是"毛玻璃"观感）。面板仍无 `backdrop-filter`。卡片 45% 底。说明：`feDisplacementMap` 在本宿主不渲染（多次实测 0 像素差），因此"折射"无法实现，玻璃感只能靠半透 + 高光边。probe 150/150。
+
 - 2026-11-24 `0.5.2`：面板又变不透明的根因——0.5.1 移除 SVG 滤镜时，把 JS 写在面板上的 inline `background: color-mix(bg-base 0%, transparent)` 一并删了，元素回落到插件原生 `rgba(18,20,26,.94)`。改为 CSS 显式 `background: transparent`，并移除插件自带的 `backdrop-filter: blur(10px)`（柔化 + 拖宽残影）。卡片底 62%→45%。实测 `panelBg rgba(0,0,0,0)`、`panelFilter none`；透过率把彩色块放面板后取样：面板内 `(231,73,118)` vs 背后 `(233,73,116)` ≈ 99%。probe 150/150。
 
 - 2026-11-24 `0.5.1`：① 修「向右拖宽拖出错位残影」——面板/把手上的 `backdrop-filter: url(#…)` 会在改宽时留下旧快照（该滤镜实测本就 0 像素效果），全部移除，面板材质改为纯 CSS；② 拖宽不再拉伸卡片：`--rail-card-w` 固定为 `props.cardWidth`，`.statusRailList` 改 `flex-direction: row; flex-wrap: wrap`，`.statusRailSlot` 定宽 `var(--rail-card-outer)`，宽度够就并排（实测 620px → 2 列、卡宽仍 250）；`RAIL_MAX_W` 560→640（两列需 ≥566）；③ 侧栏卡片改液态玻璃：半透底 `color-mix(bg-layer-1 62%)` + 顶部高光渐变 + 1px 亮边，**不加 box-shadow**（否则会盖掉 `.cardLamp*` 光晕）。卡片上也没加 `backdrop-filter`（每卡一层快照会拖慢：17 → 23ms，故只保留 CSS 材质）。probe 150/150；拖拽 17ms/p95 34ms。
