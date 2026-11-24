@@ -2231,7 +2231,7 @@
   /* .card is content-box: 224 content + 13px padding each side paints 250 wide. */
   --rail-card-outer: calc(var(--rail-card-w) + 26px);
   /* +2px: the card's own 1px border on each side must not be clipped */
-  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2 + 26px);
+  --rail-w: calc(var(--rail-card-outer) + var(--rail-pad) * 2 + 38px);
 }
 
 .statusRailPanel {
@@ -2287,7 +2287,9 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 2px 0 14px;
+  /* Room for the lamp halo: an overflow:auto box clips on both axes, and the glow spreads
+     40px, so the list keeps real padding instead of 2px/0. */
+  padding: 16px 18px 18px;
 }
 
 .statusRailEmpty {

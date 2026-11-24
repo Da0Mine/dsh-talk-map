@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.0`：① 卡片光晕左/上被裁：`.statusRailList` 原 `padding: 2px 0 14px`（`overflow-y:auto` 会双向裁剪），改为 `16px 18px 18px`，并把 `--rail-w` 的额外宽度 26→38px 同步留出空间；② 新增拖拽调宽：展开后横向拖把手（`ew-resize`），宽度钳制 `[默认宽度, 560]`，存 `dsh.talk-map.status-rail.width.v1`，重载保留；卡片宽度跟随 `--rail-w`（`railWidth-84`），拖拽位移 >3px 时吞掉随后的 click，避免误收起。实测 308→428、存储 428、重载仍 428。probe 改为画布类检查先收起侧栏 + 新增 2 条默认展开检查，`150/150`。
+
 - 2026-11-24 `0.4.5`：修「没有任务时侧栏板块消失」——根因是侧栏展开状态默认关闭（`readOpen()` 只在 localStorage 为 `"1"` 时展开），新工作区首次打开只剩一个把手；而空队列时把手不显示计数徽标、叠加 0.4.x 的透明玻璃，看起来就是"板块没了"。改为：`readOpen()` 无记录时默认 **true**（展开），把手补 1px 描边保证任何状态都可见；空列表仍显示 `statusRail.empty`（「暂时没有带状态的卡片」）。probe 148/148。
 
 - 2026-11-24 `0.4.4`：按用户要求把界面回退到 `0.4.2`——用 `git show 4da8edb:<path>` 直接写回 `talk-map.module.css` / `StatusRail.tsx` / `liquid-glass.ts`（`git checkout <ref> -- <path>` 被 CC Safety Net 拦截，改用 git show + 字节写入）。当前界面 = 面板透明底+`border-right none`+无投影+半径 20，按钮 = `installLiquidGlass(element)` 默认参数（`url(#…)`、无 blur、bg 0）。probe 148/148。

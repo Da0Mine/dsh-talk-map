@@ -187,6 +187,35 @@ try {
   await page.waitForTimeout(800)
   await page.screenshot({ path: path.join(shots, 'probe-initial.png') })
 
+  // ---- 0a2. the queue rail keeps its board even with nothing to show --------
+  {
+    const railDefault = await page.evaluate(async () => {
+      localStorage.removeItem('dsh.talk-map.status-rail.open.v1')
+      return true
+    })
+    if (railDefault) {
+      await page.reload()
+      await page.waitForSelector('.react-flow__node', { timeout: 10000 })
+      await page.waitForTimeout(700)
+    }
+    const state = await page.evaluate(() => {
+      const rail = document.querySelector('[class*="statusRail"]')
+      const panel = document.querySelector('[class*="statusRailPanel"]')
+      return {
+        dataOpen: rail === null ? null : rail.getAttribute('data-open'),
+        panelX: panel === null ? null : Math.round(panel.getBoundingClientRect().x),
+        title: document.querySelector('[class*="statusRailTitle"]')?.textContent ?? null,
+      }
+    })
+    // The overlay is inset in the harness page, so "open" means near the left edge, not exactly 0.
+    check('无展开记录时侧栏默认展开', state.dataOpen === '1' && state.panelX !== null && state.panelX < 120, JSON.stringify(state))
+    check('侧栏标题常驻', state.title === '队列中的任务', String(state.title))
+    await page.evaluate(() => { localStorage.setItem('dsh.talk-map.status-rail.open.v1', '0') })
+    await page.reload()
+    await page.waitForSelector('.react-flow__node', { timeout: 10000 })
+    await page.waitForTimeout(700)
+  }
+
   // ---- 0b. header: font size controls, no language switch ----------------
   const headerButtons = await page.evaluate(() => ({
     font: document.querySelectorAll('[class*="fontButton"]').length,
