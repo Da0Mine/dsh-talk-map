@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.6`：卡片模糊无效的原因查清——**子元素的 `backdrop-filter` 采样不到画布**（面板/把手自身的 blur 有效，所以之前把手"毛玻璃"看得见；隔离测试里 body 直属 div 也有效）。改为把 blur 挂到面板上：`.statusRailPanel { backdrop-filter: blur(14px) saturate(1.12) }`，卡片保留 58% 半透明玻璃底浮在磨砂列上；卡片自己的 `backdrop-filter` 与临时加的 `.statusRailFrost` 子元素都已移除。证据：面板空白带条纹对比度 blur 开 5.8 / 关 8.5。probe 150/150；拖拽 17ms。
+
 - 2026-11-24 `0.5.5`：① 面板折射参数调大：`thickness 100→160`、`bezelWidth 40→60`、`ior 2.5→2.6`、`specularOpacity 0.5→0.6`、显式 `scale 96`（此前公式值）；因 `feDisplacementMap` 在本宿主仍不渲染，同步加了**可见**的边光（`inset 0 0 0 1px rgba(255,255,255,.12)` + `inset 0 0 26px/.05` + `inset 0 0 64px/.02`）来体现"更大范围"；② 侧栏卡片改玻璃 + 模糊：`color-mix(bg-layer-1 58%)` + `backdrop-filter: blur(10px) saturate(1.15)`，不加 `box-shadow` 以免盖掉 `.cardLamp*`。probe 150/150。
 
 - 2026-11-24 `0.5.4`：按用户要求回退到「加拖动之前」的 `0.4.5` 外观（`git show 360f0c0:` 写回 `talk-map.module.css` 与 `StatusRail.tsx`），**只保留光晕修复**（`.statusRailList` padding `16px 18px 18px`、`--rail-w` 额外 38px）。拖动调宽、宽度记忆、换行多列、卡片玻璃材质全部移除；`railWidth/RAIL_MAX_W/startResize/WIDTH_KEY` 已确认不存在。实测 `panelBg 透明`、`panelFilter url(#…-1)`、`cardBg rgb(35,35,36)`、拖拽 17ms。probe 150/150。
