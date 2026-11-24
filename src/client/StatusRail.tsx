@@ -138,8 +138,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   useEffect(() => {
     const element = panelRef.current
     if (element === null) return undefined
-    // Plugin defaults only: thickness 100, bezel 40, ior 2.5, specular 0.5, bgOpacity 50, blur 2.
-    return installLiquidGlass(element)
+    // Plugin defaults are thickness 100 / bezel 40 / ior 2.5 / specular 0.5. Widened here:
+    // a thicker slab and a 60px bezel push the bent band further into the surface.
+    return installLiquidGlass(element, { thickness: 160, bezelWidth: 60, ior: 2.6, specularOpacity: 0.6, scale: 96 })
   }, [])
 
   // The handle runs the plugin's own recipe with the panel's values — no blur, no fill.

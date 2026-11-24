@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.5`：① 面板折射参数调大：`thickness 100→160`、`bezelWidth 40→60`、`ior 2.5→2.6`、`specularOpacity 0.5→0.6`、显式 `scale 96`（此前公式值）；因 `feDisplacementMap` 在本宿主仍不渲染，同步加了**可见**的边光（`inset 0 0 0 1px rgba(255,255,255,.12)` + `inset 0 0 26px/.05` + `inset 0 0 64px/.02`）来体现"更大范围"；② 侧栏卡片改玻璃 + 模糊：`color-mix(bg-layer-1 58%)` + `backdrop-filter: blur(10px) saturate(1.15)`，不加 `box-shadow` 以免盖掉 `.cardLamp*`。probe 150/150。
+
 - 2026-11-24 `0.5.4`：按用户要求回退到「加拖动之前」的 `0.4.5` 外观（`git show 360f0c0:` 写回 `talk-map.module.css` 与 `StatusRail.tsx`），**只保留光晕修复**（`.statusRailList` padding `16px 18px 18px`、`--rail-w` 额外 38px）。拖动调宽、宽度记忆、换行多列、卡片玻璃材质全部移除；`railWidth/RAIL_MAX_W/startResize/WIDTH_KEY` 已确认不存在。实测 `panelBg 透明`、`panelFilter url(#…-1)`、`cardBg rgb(35,35,36)`、拖拽 17ms。probe 150/150。
 
 - 2026-11-24 `0.5.3`：面板与把手统一为「薄玻璃」——面板 `linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02) 45%, rgba(255,255,255,.035))` + `inset 0 0 0 1px rgba(255,255,255,.09)`；把手同款（白渐变 + 1px 亮边）并**去掉插件自带 `blur(16px)`+52% 填充**（那就是"毛玻璃"观感）。面板仍无 `backdrop-filter`。卡片 45% 底。说明：`feDisplacementMap` 在本宿主不渲染（多次实测 0 像素差），因此"折射"无法实现，玻璃感只能靠半透 + 高光边。probe 150/150。
