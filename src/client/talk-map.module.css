@@ -2722,11 +2722,21 @@
     inset 0 0 64px rgba(255, 255, 255, 0.02);
 }
 
-/* Rail cards: the same glass, with a blur so the canvas behind them melts. No box-shadow here —
-   it would beat .cardLamp* and swallow the lamp glow. */
-.statusRailPanel .card {
-  background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 58%, transparent);
-  border-color: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px) saturate(1.15);
-  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+
+/* The lamp glow was clipped by the scrolling list (an overflow:auto box clips on both axes), so it
+   could never reach the glass edge. Scroll the panel instead and let the list overflow freely —
+   the halo is then bounded by the panel itself, i.e. by the rail's own edge. */
+.statusRailPanel {
+  padding: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.statusRailHead {
+  padding: 10px 10px 0;
+}
+
+.statusRailList {
+  overflow: visible;
+  padding: 10px;
 }
