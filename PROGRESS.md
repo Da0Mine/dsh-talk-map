@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.7`：回退到 `0.5.5`（`git show 248cef9:` 写回两个文件）。原因：`0.5.6` 把 `blur(14px)` 放到**面板**上，整列侧栏被模糊、且观感变成不透明，而用户只要改卡片。回退后面板恢复透明（JS inline `color-mix(bg-base 0%)`）+ `url(#…)` 滤镜 + CSS 边光，卡片保持 58% 玻璃底。已知限制（实测）：卡片自身的 `backdrop-filter` 在本宿主不采样画布，故卡片无模糊。probe 150/150。
+
 - 2026-11-24 `0.5.6`：卡片模糊无效的原因查清——**子元素的 `backdrop-filter` 采样不到画布**（面板/把手自身的 blur 有效，所以之前把手"毛玻璃"看得见；隔离测试里 body 直属 div 也有效）。改为把 blur 挂到面板上：`.statusRailPanel { backdrop-filter: blur(14px) saturate(1.12) }`，卡片保留 58% 半透明玻璃底浮在磨砂列上；卡片自己的 `backdrop-filter` 与临时加的 `.statusRailFrost` 子元素都已移除。证据：面板空白带条纹对比度 blur 开 5.8 / 关 8.5。probe 150/150；拖拽 17ms。
 
 - 2026-11-24 `0.5.5`：① 面板折射参数调大：`thickness 100→160`、`bezelWidth 40→60`、`ior 2.5→2.6`、`specularOpacity 0.5→0.6`、显式 `scale 96`（此前公式值）；因 `feDisplacementMap` 在本宿主仍不渲染，同步加了**可见**的边光（`inset 0 0 0 1px rgba(255,255,255,.12)` + `inset 0 0 26px/.05` + `inset 0 0 64px/.02`）来体现"更大范围"；② 侧栏卡片改玻璃 + 模糊：`color-mix(bg-layer-1 58%)` + `backdrop-filter: blur(10px) saturate(1.15)`，不加 `box-shadow` 以免盖掉 `.cardLamp*`。probe 150/150。

@@ -2727,53 +2727,6 @@
 .statusRailPanel .card {
   background: color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 58%, transparent);
   border-color: rgba(255, 255, 255, 0.15);
-}
-
-/* The panel must not own a backdrop-filter: it turns the panel into a backdrop root, and children
-   would then blur only the (empty) panel content instead of the canvas. The plugin ships
-   blur(10px) here; drop it so the cards can see through to the map. */
-.statusRailPanel {
-  /* Blur belongs on the panel: its own backdrop-filter does render, while a nested one inside a
-     child has nothing to sample. Cards stay translucent and float on this frosted column. */
-  backdrop-filter: blur(14px) saturate(1.12);
-  -webkit-backdrop-filter: blur(14px) saturate(1.12);
-}
-
-/* Slide with left, not transform. An element with a transform becomes a backdrop root in this
-   engine, and every child's backdrop-filter is then clamped to the panel interior — which is why
-   the card blur had nothing to blur. */
-.statusRailPanel {
-  transform: none;
-  left: calc(-1 * var(--rail-w));
-  transition: left 320ms cubic-bezier(0.22, 0.61, 0.36, 1), box-shadow 320ms ease;
-}
-
-.statusRail[data-open="1"] .statusRailPanel {
-  transform: none;
-  left: 0;
-}
-
-/* A strip of frost sitting directly on the canvas, behind the cards. It is a sibling of the panel
-   (not a child) so its backdrop-filter actually sees the map. */
-.statusRailFrost {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: var(--rail-w);
-  z-index: 0;
-  pointer-events: none;
-  backdrop-filter: blur(14px) saturate(1.12);
-  -webkit-backdrop-filter: blur(14px) saturate(1.12);
-  transform: translateX(-101%);
-  transition: transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
-  border-radius: 0 20px 20px 0;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
-    inset 0 0 26px rgba(255, 255, 255, 0.05),
-    inset 0 0 64px rgba(255, 255, 255, 0.02);
-}
-
-.statusRailFrost[data-open="1"] {
-  transform: translateX(0);
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
 }
