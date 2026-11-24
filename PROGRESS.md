@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-24 `0.5.4`：按用户要求回退到「加拖动之前」的 `0.4.5` 外观（`git show 360f0c0:` 写回 `talk-map.module.css` 与 `StatusRail.tsx`），**只保留光晕修复**（`.statusRailList` padding `16px 18px 18px`、`--rail-w` 额外 38px）。拖动调宽、宽度记忆、换行多列、卡片玻璃材质全部移除；`railWidth/RAIL_MAX_W/startResize/WIDTH_KEY` 已确认不存在。实测 `panelBg 透明`、`panelFilter url(#…-1)`、`cardBg rgb(35,35,36)`、拖拽 17ms。probe 150/150。
+
 - 2026-11-24 `0.5.3`：面板与把手统一为「薄玻璃」——面板 `linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02) 45%, rgba(255,255,255,.035))` + `inset 0 0 0 1px rgba(255,255,255,.09)`；把手同款（白渐变 + 1px 亮边）并**去掉插件自带 `blur(16px)`+52% 填充**（那就是"毛玻璃"观感）。面板仍无 `backdrop-filter`。卡片 45% 底。说明：`feDisplacementMap` 在本宿主不渲染（多次实测 0 像素差），因此"折射"无法实现，玻璃感只能靠半透 + 高光边。probe 150/150。
 
 - 2026-11-24 `0.5.2`：面板又变不透明的根因——0.5.1 移除 SVG 滤镜时，把 JS 写在面板上的 inline `background: color-mix(bg-base 0%, transparent)` 一并删了，元素回落到插件原生 `rgba(18,20,26,.94)`。改为 CSS 显式 `background: transparent`，并移除插件自带的 `backdrop-filter: blur(10px)`（柔化 + 拖宽残影）。卡片底 62%→45%。实测 `panelBg rgba(0,0,0,0)`、`panelFilter none`；透过率把彩色块放面板后取样：面板内 `(231,73,118)` vs 背后 `(233,73,116)` ≈ 99%。probe 150/150。

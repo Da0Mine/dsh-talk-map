@@ -12,6 +12,7 @@
  * out of the way — both directions, which is what makes the column read as "making room".
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { installLiquidGlass } from './liquid-glass.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -62,9 +63,6 @@ interface DragState {
 
 const OPEN_KEY = 'dsh.talk-map.status-rail.open.v1'
 const ORDER_KEY = 'dsh.talk-map.status-rail.order.v1'
-const WIDTH_KEY = 'dsh.talk-map.status-rail.width.v1'
-/** Resize bounds in px: never narrower than the default open width, never wider than this. */
-const RAIL_MAX_W = 640
 const FLIP_MS = 180
 
 const LAMP_CLASS: Record<StatusLamp, string> = {
@@ -92,25 +90,6 @@ function readOpen(): boolean {
 function writeOpen(open: boolean): void {
   try {
     window.localStorage.setItem(OPEN_KEY, open ? '1' : '0')
-  } catch {
-    /* a blocked store must not break the map */
-  }
-}
-
-function readRailWidth(): number | null {
-  try {
-    const raw = window.localStorage.getItem(WIDTH_KEY)
-    if (raw === null) return null
-    const value = Number.parseInt(raw, 10)
-    return Number.isFinite(value) ? value : null
-  } catch {
-    return null
-  }
-}
-
-function writeRailWidth(width: number): void {
-  try {
-    window.localStorage.setItem(WIDTH_KEY, String(Math.round(width)))
   } catch {
     /* a blocked store must not break the map */
   }
@@ -154,50 +133,24 @@ function writeOrder(order: readonly string[]): void {
 export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const open = useSyncExternalStore(subscribeOpen, openSnapshot, openSnapshot)
 
-  // No SVG backdrop filter here: measured zero pixel difference in this host, and resizing the
-  // panel while it is applied leaves a stale-snapshot smear trailing the pointer. The visual
-  // material is pure CSS (translucent fill + hairline rim).
-
-
-
-
-  const [railWidth, setRailWidth] = useState<number | null>(() => readRailWidth())
-  /** The default open width: the floor for resizing, derived from the card width. */
-  const minRailWidth = props.cardWidth + 26 + 20 + 38
-  const resizeRef = useRef<{ x: number; w: number; moved: boolean } | null>(null)
-  const suppressClickRef = useRef(false)
-
-  const startResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
-    if (!open || event.button !== 0) return
-    const panel = panelRef.current
-    const current = railWidth ?? (panel === null ? minRailWidth : Math.round(panel.getBoundingClientRect().width))
-    resizeRef.current = { x: event.clientX, w: current, moved: false }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }, [open, railWidth, minRailWidth])
-
-  const moveResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
-    const state = resizeRef.current
-    if (state === null) return
-    const delta = event.clientX - state.x
-    if (!state.moved) {
-      if (Math.abs(delta) < 3) return
-      state.moved = true
-    }
-    setRailWidth(Math.max(minRailWidth, Math.min(RAIL_MAX_W, Math.round(state.w + delta))))
-  }, [minRailWidth])
-
-  const endResize = useCallback((event: React.PointerEvent<HTMLButtonElement>) => {
-    const state = resizeRef.current
-    resizeRef.current = null
-    if (state !== null && state.moved) {
-      suppressClickRef.current = true
-      event.preventDefault()
-    }
+  // Real refraction on the panel: the backdrop is bent along the bezel by an SVG
+  // displacement filter (ported from EchoMusic's echo-liquid-glass).
+  useEffect(() => {
+    const element = panelRef.current
+    if (element === null) return undefined
+    // Plugin defaults only: thickness 100, bezel 40, ior 2.5, specular 0.5, bgOpacity 50, blur 2.
+    return installLiquidGlass(element)
   }, [])
 
+  // The handle runs the plugin's own recipe with the panel's values — no blur, no fill.
   useEffect(() => {
-    if (railWidth !== null) writeRailWidth(railWidth)
-  }, [railWidth])
+    const element = tabRef.current
+    if (element === null) return undefined
+    return installLiquidGlass(element)
+  }, [])
+
+
+
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -376,10 +329,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   }, [drag === null])
 
   const toggle = useCallback(() => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false
-      return
-    }
     setOpenState(!openSnapshot())
   }, [])
 
@@ -442,12 +391,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     <div
       className={styles['statusRail']}
       data-open={open ? '1' : '0'}
-      style={railWidth === null
-        ? { ['--rail-card-w' as string]: `${props.cardWidth}px` }
-        : {
-            ['--rail-card-w' as string]: `${props.cardWidth}px`,
-            ['--rail-w' as string]: `${railWidth}px`,
-          }}
+      style={{ ['--rail-card-w' as string]: `${props.cardWidth}px` }}
     >
       <div className={styles['statusRailPanel']} aria-hidden={!open} ref={panelRef}>
         <div className={styles['statusRailHead']}>
@@ -513,10 +457,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         aria-label={open ? t('statusRail.close') : t('statusRail.open')}
         title={open ? t('statusRail.close') : t('statusRail.open')}
         onClick={toggle}
-        onPointerDown={startResize}
-        onPointerMove={moveResize}
-        onPointerUp={endResize}
-        onPointerCancel={endResize}
       >
         {/* Two bars with two dots under them. */}
         <svg viewBox="0 0 12 28" width="14" height="30" aria-hidden="true">

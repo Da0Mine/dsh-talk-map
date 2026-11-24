@@ -1155,10 +1155,8 @@
   max-width: 280px;
   max-height: 380px;
   overflow-y: auto;
-  /* Cards keep their size; a wider rail simply fits more columns. */
   display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
+  flex-direction: column;
   padding: 6px;
   border: 1px solid var(--dsw-alias-border-l1);
   border-radius: 10px;
@@ -2286,15 +2284,10 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  /* Row flow with wrapping: cards keep their size, a wider rail simply fits more columns. */
   display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 10px;
-  /* Room for the lamp halo: an overflow:auto box clips on both axes, and the glow spreads
-     40px, so the list keeps real padding instead of 2px/0. */
+  /* Room for the lamp halo: an overflow:auto box clips on both axes, and the glow spreads 40px. */
   padding: 16px 18px 18px;
 }
 
@@ -2307,9 +2300,6 @@
 
 .statusRailSlot {
   position: relative;
-  /* = card outer width, so two slots fit side by side once the rail is wide enough. */
-  width: var(--rail-card-outer);
-  flex: 0 0 auto;
 }
 
 .statusRailSlot[draggable="true"] {
@@ -2707,15 +2697,6 @@
 /* Only what the refraction needs: a non-zero corner radius. No fill, no border, no shadow,
    no extra layers — the plugin's own filter supplies the material. */
 .statusRailPanel {
-  /* The JS used to write this inline while the SVG filter was attached; with the filter gone the
-     element fell back to the plugin's own rgba(18,20,26,.94), which is opaque. Keep it clear so
-     the canvas stays visible behind the rail. */
-  /* Thin glass: a whisper of white so the surface reads as a pane, low enough that the canvas
-     stays visible. No backdrop-filter: it cannot refract in this engine and it smears on resize. */
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02) 45%, rgba(255, 255, 255, 0.035));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border-radius: 0 20px 20px 0;
 }
 
@@ -2730,24 +2711,4 @@
 .statusRailTab {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-left: none;
-}
-
-/* Rail cards: the panel's material, one step lighter — translucent fill plus a hairline rim.
-   No box-shadow here: it would beat the .cardLamp* rules and swallow the glow. */
-.statusRailPanel .card {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02) 38%, rgba(255, 255, 255, 0) 72%),
-    color-mix(in srgb, var(--dsw-alias-bg-layer-1, #232529) 45%, transparent);
-  border-color: rgba(255, 255, 255, 0.14);
-}
-
-/* The handle: same thin pane as the panel, no frost. The plugin's own rule paints a 52% chip
-   with blur(16px) saturate(1.5); that is what reads as frosted glass. */
-.statusRailTab {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.025));
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-left: none;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
