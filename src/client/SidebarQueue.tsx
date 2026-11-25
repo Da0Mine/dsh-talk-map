@@ -233,7 +233,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       .catch(() => { for (const id of wanted) askedRef.current.delete(id) })
   }, [rows])
 
-  if (rows.length === 0) return null
+  // The board stays mounted even with nothing queued: hiding it made the whole section vanish
+  // from the sidebar, which read as a bug rather than as "no tasks".
 
   return (
     <div
@@ -276,6 +277,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         role="list"
         style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 4px 6px', overscrollBehavior: 'contain' }}
       >
+        {rows.length === 0
+          ? <div className={styles['sidebarQueueEmpty']}>{t('statusRail.empty')}</div>
+          : null}
         {rows.map((row) => {
           // Unsent text wins (it is what the card is about), otherwise the last message.
           const draftText = row.draftText

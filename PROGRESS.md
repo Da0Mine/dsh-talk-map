@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-25 `0.5.9`：修「没有任务时对话界面侧边栏的队列板块消失」。真正卸掉它的是 `SidebarQueue.tsx` 第 236 行 `if (rows.length === 0) return null`（不是地图那边的 `StatusRail`，那个默认是展开的）。改为始终渲染：标题 + 计数（0）+ 一句 `statusRail.empty`（「暂时没有带状态的卡片」），并新增 `.sidebarQueueEmpty` 样式。probe 150/150。
+
 - 2026-11-24 `0.5.8`：① 卡片回退为**不透明**（删掉我们的 `.statusRailPanel .card` 覆盖，回到插件 `bg-layer-1` = `rgb(35,35,36)`）；② 光晕能画到玻璃边界：裁剪来自列表 `overflow-y:auto`（双向裁剪），改为**滚动上移到面板**（`.statusRailPanel{overflow-y:auto}`），列表 `overflow: visible`、面板 `padding: 0`、列表 `padding: 10px`、`.statusRailHead` 补 `10px 10px 0`。实测 `cardBg rgb(35,35,36)`、panel 透明、滤镜在。probe 150/150。
 
 - 2026-11-24 `0.5.7`：回退到 `0.5.5`（`git show 248cef9:` 写回两个文件）。原因：`0.5.6` 把 `blur(14px)` 放到**面板**上，整列侧栏被模糊、且观感变成不透明，而用户只要改卡片。回退后面板恢复透明（JS inline `color-mix(bg-base 0%)`）+ `url(#…)` 滤镜 + CSS 边光，卡片保持 58% 玻璃底。已知限制（实测）：卡片自身的 `backdrop-filter` 在本宿主不采样画布，故卡片无模糊。probe 150/150。

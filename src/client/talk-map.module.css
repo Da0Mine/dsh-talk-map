@@ -2740,3 +2740,11 @@
   overflow: visible;
   padding: 10px;
 }
+
+/* Empty state inside the sidebar queue board (it used to unmount instead). */
+.sidebarQueueEmpty {
+  padding: 6px 4px 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--dsw-alias-label-secondary);
+}
