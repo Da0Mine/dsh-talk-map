@@ -995,6 +995,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    * strip at the bottom of the rail. They used to vanish the moment their status cleared;
    * keeping the three most recent gives the queue a history.
    */
+  /** Fallback for the reticle: the conversation the shell currently shows, if any. */
+  const mainViewSessionId = useMemo(() => {
+    for (const [sessionId, summary] of Object.entries(sessions.byId)) {
+      if ((summary?.retainedBy?.mainView ?? 0) > 0) return sessionId
+    }
+    return undefined
+  }, [sessions])
+
   const recentEntries = useMemo<StatusRailEntry[]>(() => {
     const listed = new Set(statusEntries.map(entry => entry.sessionId))
     const rows: StatusRailEntry[] = []
@@ -2617,7 +2625,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         onFocus={focusCard}
         onOpen={openRailCard}
         recent={recentEntries}
-        currentSessionId={currentSessionId()}
+        currentSessionId={currentSessionId() ?? mainViewSessionId}
       />
       {batchMode
         ? (

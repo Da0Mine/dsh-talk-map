@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-26 `0.7.2`：① 新增 `src/client/reorder.ts`（`useReorder`：按槽位中心算落点、松手提交），地图侧栏「最近的任务」与外侧栏队列两段都接上拖动改序；② 内侧栏隐藏滚动条（`scrollbar-width: none` + `::-webkit-scrollbar` 归零，实测 `scrollbarWidth=none`），滚动仍可用；③ `.cardReticle` 提到 `z-index: 3`，避免被流光环盖住；`currentSessionId()` 为空时回退到"主视图保留"的会话；④ 外侧栏「最近的任务」卡片补上正文（预览请求从 `rows` 扩到 `rows + recentRows`，`PREVIEW_LIMIT+3`）；⑤ 核对呼吸灯：`.cardLampDone`→`talkmap-lamp-green 2.8s`、`.cardLampWaiting`→`talkmap-lamp-amber 3.4s`、运行卡为 `.cardLampRunning::after` 的 conic 流光（1.8s），三者都在；运行卡的**脉冲**按既有回归项「运行中不呼吸」保持关闭。probe 150/150。
+
 - 2026-11-26 `0.7.1`：修「完成的对话没有待查看样式、直接掉进最近的任务」。根因：`sessionActivity.observe` 只由 `MapCanvas` 调用，**地图关着时没人观察状态变化**，此时完成的会话只能靠宿主 `completionUnread`，宿主不给就没有灯 → 落进最近的任务。改法：`SidebarQueue`（常驻侧栏）里加一个观察 effect，`observe(statusById, sessions.byId, { onlyBackground: true })`；新增 `onlyBackground` 选项跳过"当前主视图会话"避免给自己讨厌的灯。验证：地图关闭时对 s1 跑完 → `lamp-state.finished={s3,s1}`，打开地图 chip=`done`、不在 recent。probe 的旧断言「关着地图时跑完→不亮」按新规则改为「打开后仍是待查看」，150/150。
 
 - 2026-11-26 `0.7.0`：① 两侧栏新增「最近的任务」——无灯无草稿的卡片按 `updatedAt` 倒序最多取 3 张，排在带状态卡片下方（`MapCanvas.recentEntries` → `StatusRail.recent`；`SidebarQueue.recentRows`），分隔标题 `statusRail.recent`；② 当前会话的卡片加"瞄准镜"角标（复用 `.cardReticle`，面板 `currentSessionId` / 侧栏 `currentSessionId()`）；③ 修 issue #7 安全漏洞：`sameOrigin()` 原先比较 `Origin` 与 `Host`（DNS rebinding 下两者都由攻击页控制），抽出 `src/host/origin.ts`，改为 **Host 必须是回环名/127.0.0.0-8**，`Origin` 缺省需回环、`dsh-app://` 允许 `Host: app`；新增 `test/origin.test.mjs` 8 条用例覆盖 issue 复现用例（含 rebinding 两条），全通过。probe 150/150。

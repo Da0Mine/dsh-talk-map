@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { installLiquidGlass } from './liquid-glass.ts'
+import { useReorder } from './reorder.ts'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -158,6 +159,28 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
 
 
   const [order, setOrder] = useState<string[]>(() => readOrder())
+  /** Order of the「最近的任务」strip; independent from the queue's own order. */
+  const [recentOrder, setRecentOrder] = useState<string[]>([])
+  const recentIds = (props.recent ?? []).map(entry => entry.cardId)
+  useEffect(() => {
+    setRecentOrder(current => {
+      const kept = current.filter(id => recentIds.includes(id))
+      const added = recentIds.filter(id => !kept.includes(id))
+      const next = [...kept, ...added]
+      return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentIds.join('|')])
+  const recentDrag = useReorder(recentIds, setRecentOrder)
+  const recentEntriesOrdered = useMemo(() => {
+    const byId = new Map((props.recent ?? []).map(entry => [entry.cardId, entry]))
+    const ordered = recentOrder.map(id => byId.get(id)).filter((entry): entry is StatusRailEntry => entry !== undefined)
+    // Anything the sync effect has not seen yet still shows up, at the end.
+    for (const entry of props.recent ?? []) {
+      if (!recentOrder.includes(entry.cardId)) ordered.push(entry)
+    }
+    return ordered
+  }, [props.recent, recentOrder])
   const [drag, setDrag] = useState<DragState | null>(null)
   const [shift, setShift] = useState<Record<string, number>>({})
   const seenRef = useRef(new Map<string, string>())
@@ -360,10 +383,15 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     })
   }, [])
 
-  const renderCard = (entry: StatusRailEntry, floating: boolean, interactive = true): React.JSX.Element => (
+  const renderCard = (
+    entry: StatusRailEntry,
+    floating: boolean,
+    interactive = true,
+    pointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void,
+  ): React.JSX.Element => (
     <div
       className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
-      onPointerDown={floating || !interactive ? undefined : (event) => { beginDrag(event, entry.cardId) }}
+      onPointerDown={floating || !interactive ? pointerDown : (event) => { beginDrag(event, entry.cardId) }}
       {...(interactive ? {} : { onClick: () => { props.onOpen(entry.cardId) } })}
       title={entry.title}
     >
@@ -446,11 +474,22 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
             ? (
               <>
                 <div className={styles['statusRailRecentHead']}>{t('statusRail.recent')}</div>
-                {props.recent.map(entry => (
-                  <div key={entry.cardId} className={styles['statusRailSlot']}>
-                    {renderCard(entry, false, false)}
-                  </div>
-                ))}
+                {recentEntriesOrdered.map(entry => {
+                  const dragging = recentDrag.draggingId === entry.cardId
+                  return (
+                    <div
+                      key={entry.cardId}
+                      ref={element => { recentDrag.register(entry.cardId, element) }}
+                      className={styles['statusRailSlot']}
+                      style={{
+                        ...(dragging ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 } : {}),
+                        touchAction: 'none',
+                      }}
+                    >
+                      {renderCard(entry, false, true, event => { recentDrag.begin(event, entry.cardId) })}
+                    </div>
+                  )
+                })}
               </>
             )
             : null}

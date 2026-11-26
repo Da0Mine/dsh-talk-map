@@ -2763,3 +2763,20 @@
 .sidebarQueueRecentHead {
   margin: 4px 2px 0;
 }
+
+/* The rail scrolls, but a scrollbar over the glass looked out of place: keep the scrolling,
+   hide the bar. */
+.statusRailPanel {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.statusRailPanel::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Above the lamp ring so the brackets stay visible on a glowing card. */
+.cardReticle {
+  z-index: 3;
+}

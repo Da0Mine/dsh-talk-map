@@ -20,6 +20,7 @@ import { closeMapPanel, currentSessionId, getServices, openSessionInUi } from '.
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
+import { useReorder } from './reorder.ts'
 import { sessionActivity } from './session-activity.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import styles from './talk-map.module.css'
@@ -117,6 +118,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   // Sessions the user just opened from here. The Host clears "unread" only after the shell
   // reports the session as the main view, so without this the card lingers for a while.
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set())
+  /** Manual order for the queue rows (inside each priority bucket) and for the recent strip. */
+  const [queueOrder, setQueueOrder] = useState<string[]>([])
+  const [recentOrder, setRecentOrder] = useState<string[]>([])
   const askedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -204,9 +208,11 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       if (lamp === undefined && !hasDraft) continue
       if (lamp === 'done' && opened.has(sessionId)) continue
       const draftOnly = lamp === undefined
+      const manual = queueOrder.indexOf(sessionId)
       out.push({
         cardId: cardBySession.get(sessionId) ?? sessionId,
         sessionId,
+        ...(manual >= 0 ? { manualIndex: manual } : {}),
         title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
       ...(hasDraft ? { draft: true } : {}),
@@ -216,7 +222,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     }
     // Same rule as the map rail: priority bucket first, then newest inside it.
     return sortQueueRows(out)
-  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder])
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
   const recentRows = useMemo(() => {
@@ -241,10 +247,40 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   }, [rows, sessions, archivedSessionIds])
   const activeSession = currentSessionId()
 
+  const queueIds = rows.map(row => row.sessionId)
+  useEffect(() => {
+    setQueueOrder(current => {
+      const kept = current.filter(id => queueIds.includes(id))
+      const added = queueIds.filter(id => !kept.includes(id))
+      const next = [...kept, ...added]
+      return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueIds.join('|')])
+  const queueDrag = useReorder(queueIds, setQueueOrder)
+
+  const recentIds = recentRows.map(row => row.sessionId)
+  useEffect(() => {
+    setRecentOrder(current => {
+      const kept = current.filter(id => recentIds.includes(id))
+      const added = recentIds.filter(id => !kept.includes(id))
+      const next = [...kept, ...added]
+      return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recentIds.join('|')])
+  const recentDrag = useReorder(recentIds, setRecentOrder)
+  const recentRowsOrdered = useMemo(() => {
+    const byId = new Map(recentRows.map(row => [row.sessionId, row]))
+    const ordered = recentOrder.map(id => byId.get(id)).filter((row): row is (typeof recentRows)[number] => row !== undefined)
+    for (const row of recentRows) if (!recentOrder.includes(row.sessionId)) ordered.push(row)
+    return ordered
+  }, [recentRows, recentOrder])
+
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
-    const wanted = rows
-      .slice(0, PREVIEW_LIMIT)
+    const wanted = [...rows, ...recentRows]
+      .slice(0, PREVIEW_LIMIT + 3)
       .filter(row => !askedRef.current.has(row.sessionId))
       .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
     if (wanted.length === 0) return
@@ -260,7 +296,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         })
       })
       .catch(() => { for (const id of wanted) askedRef.current.delete(id) })
-  }, [rows])
+  }, [rows, recentRows])
 
   // The board stays mounted even with nothing queued: hiding it made the whole section vanish
   // from the sidebar, which read as a bug rather than as "no tasks".
@@ -319,8 +355,20 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
           return (
             <div
               key={row.cardId}
+              ref={element => { queueDrag.register(row.sessionId, element) }}
+              onPointerDown={event => { queueDrag.begin(event, row.sessionId) }}
               className={`${styles['card']} ${row.lamp === undefined ? '' : styles[LAMP_CLASS[row.lamp]] ?? ''} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
-              style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', flex: 'none', alignSelf: 'stretch' }}
+              style={{
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                flex: 'none',
+                alignSelf: 'stretch',
+                touchAction: 'none',
+                ...(queueDrag.draggingId === row.sessionId
+                  ? { transform: `translateY(${queueDrag.offsetY}px)`, zIndex: 3 }
+                  : {}),
+              }}
               data-talkmap-queue={row.sessionId}
               data-lamp={row.lamp ?? 'draft'}
               title={row.title}
@@ -376,7 +424,17 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 <div
                   key={'recent-' + row.sessionId}
                   className={`${styles['card']} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
-                  style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', flex: 'none', alignSelf: 'stretch' }}
+                  style={{
+                    width: '100%',
+                    maxWidth: '100%',
+                    boxSizing: 'border-box',
+                    flex: 'none',
+                    alignSelf: 'stretch',
+                    touchAction: 'none',
+                    ...(recentDrag.draggingId === row.sessionId
+                      ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 }
+                      : {}),
+                  }}
                   data-talkmap-queue-recent={row.sessionId}
                   title={row.title}
                   role="button"
@@ -394,6 +452,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                   <div className={styles['cardTop']}>
                     <span className={styles['cardTitle']}>{row.title}</span>
                   </div>
+                  {(previews[row.sessionId] ?? '').trim() !== ''
+                    ? <div className={styles['cardSummary']}>{previews[row.sessionId]}</div>
+                    : null}
                   <div className={styles['cardFooter']}>
                     <span className={styles['cardTime']}>{relativeTime(row.updatedAt)}</span>
                   </div>
