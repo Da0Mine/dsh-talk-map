@@ -141,15 +141,9 @@ export const sessionActivity = {
         markedEpoch.set(sessionId, panelEpoch)
         changed = true
       }
-      // A mark restored from storage is dropped as soon as the session is on
-      // screen now — the shell had already acknowledged it, someone looked at it
-      // while the app was closed, or (most often) it is the session the new start
-      // restored. Runtime-made marks are never in `hydrated`, so they survive.
-      if (hydrated.has(sessionId) && (row?.retainedBy?.mainView ?? 0) > 0) {
-        hydrated.delete(sessionId)
-        if (finished.delete(sessionId)) changed = true
-        if (interrupted.delete(sessionId)) changed = true
-      }
+      // Restored marks are NOT dropped just because the session is retained by the main view:
+      // a restart reopens the previous sessions as main view, and that rule wiped every unread
+      // lamp on every start. They are released by the two paths below, or by acknowledge().
       // Two ways a mark can be released, and only two:
       //  1. the shell flips completionUnread from true to false — somebody read
       //     it (notification, sidebar, anywhere not this map);

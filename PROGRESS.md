@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-26 `0.6.0`：修「重启后未查看（待查看）标记消失」。持久化本身正常（`localStorage["dsh.talk-map.lamp-state.v1"]`，14 天 TTL，probe 已有「重启后待读还在」检查并通过），真凶是 `session-activity.observe` 里的一条清理规则：`hydrated.has(id) && retainedBy.mainView > 0` → 视为已读并删除。真实重启时 DSH 把上次会话恢复成主视图，于是所有恢复的标记在首轮状态轮询后就被清掉。改为不再因主视图保留而清除；标记只由三条路释放：宿主 `completionUnread` true→false、用户从地图点开（`acknowledge`）、该会话重新运行或等待回答。probe 150/150（首轮 1 条绘制相关 flake，复跑全绿）。
+
 - 2026-11-25 `0.5.9`：修「没有任务时对话界面侧边栏的队列板块消失」。真正卸掉它的是 `SidebarQueue.tsx` 第 236 行 `if (rows.length === 0) return null`（不是地图那边的 `StatusRail`，那个默认是展开的）。改为始终渲染：标题 + 计数（0）+ 一句 `statusRail.empty`（「暂时没有带状态的卡片」），并新增 `.sidebarQueueEmpty` 样式。probe 150/150。
 
 - 2026-11-24 `0.5.8`：① 卡片回退为**不透明**（删掉我们的 `.statusRailPanel .card` 覆盖，回到插件 `bg-layer-1` = `rgb(35,35,36)`）；② 光晕能画到玻璃边界：裁剪来自列表 `overflow-y:auto`（双向裁剪），改为**滚动上移到面板**（`.statusRailPanel{overflow-y:auto}`），列表 `overflow: visible`、面板 `padding: 0`、列表 `padding: 10px`、`.statusRailHead` 补 `10px 10px 0`。实测 `cardBg rgb(35,35,36)`、panel 透明、滤镜在。probe 150/150。
