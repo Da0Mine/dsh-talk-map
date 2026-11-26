@@ -17,6 +17,7 @@ import {
   Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
   SelectionMode, useReactFlow, type Connection, type Edge, type EdgeChange, type FinalConnectionState,
   type NodeChange, type Viewport,
+  useViewport,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import type { RootSlotStandardProps, SessionListState, SessionStatusFact, WorkspaceListState } from './dsh.ts'
@@ -93,7 +94,12 @@ function snap(value: number): number {
  */
 const IMPORT_CAP = 120
 /** Card previews requested per poll tick (each one is a session-surface read on the Host). */
-const PREVIEW_BATCH = 8
+const PREVIEW_BATCH = 4
+/** How often the preview poll runs. Bodies are cosmetic; the Host read behind each one can
+ *  decompress a 37 MB session log (≈116 MB, ≈180 ms), so this stays deliberately slow. */
+const PREVIEW_INTERVAL_MS = 4000
+/** Conservative card height for the viewport test (real heights vary with content). */
+const CARD_MIN_H = 120
 
 /** Sessions eligible for a card: top-level, non-empty logs. */
 function placeableSessionIds(
@@ -312,6 +318,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [batchPicks, setBatchPicks] = useState<ReadonlySet<string>>(new Set())
   const [batchBusy, setBatchBusy] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+  /** Live camera, read by the preview poll so off-screen cards never trigger a Host read. */
+  const camera = useViewport()
+  const cameraRef = useRef(camera)
+  cameraRef.current = camera
+  /** Slot positions, mirrored into a ref so the poll reads the latest without re-subscribing. */
+  const cardLayoutRef = useRef<Record<string, { x: number; y: number }>>({})
   // Slot layout bookkeeping: the card under the pointer renders at its raw
   // drag position (everything else is snapped), and a frame being moved or
   // resized contributes a live rect that the members reflow into before the
@@ -443,7 +455,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
     previewTick.current = tick
     tick()
-    const timer = setInterval(tick, 1500)
+    const timer = setInterval(tick, PREVIEW_INTERVAL_MS)
     return () => { clearInterval(timer) }
   }, [])
 

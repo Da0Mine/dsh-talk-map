@@ -498,7 +498,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b601 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b602 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -691,7 +691,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b601 · Search cards on the map",
+  "global.searchPlaceholder": "b602 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -10360,6 +10360,15 @@ function ReactFlow({ nodes, edges, defaultNodes, defaultEdges, className, nodeTy
   return (0, import_jsx_runtime4.jsx)("div", { "data-testid": "rf__wrapper", ...rest, onScroll: wrapperOnScroll, style: { ...style2, ...wrapperStyle }, ref, className: cc(["react-flow", className, colorModeClassName]), id: id2, role: "application", children: (0, import_jsx_runtime4.jsxs)(Wrapper, { nodes, edges, width, height, fitView, fitViewOptions, minZoom, maxZoom, nodeOrigin, nodeExtent, zIndexMode, children: [(0, import_jsx_runtime4.jsx)(StoreUpdater, { nodes, edges, defaultNodes, defaultEdges, onConnect, onConnectStart, onConnectEnd, onClickConnectStart, onClickConnectEnd, nodesDraggable, autoPanOnNodeFocus, nodesConnectable, nodesFocusable, edgesFocusable, edgesReconnectable, elementsSelectable, elevateNodesOnSelect, elevateEdgesOnSelect, minZoom, maxZoom, nodeExtent, onNodesChange, onEdgesChange, snapToGrid, snapGrid, connectionMode, translateExtent, connectOnClick, defaultEdgeOptions, fitView, fitViewOptions, onNodesDelete, onEdgesDelete, onDelete, onNodeDragStart, onNodeDrag, onNodeDragStop, onSelectionDrag, onSelectionDragStart, onSelectionDragStop, onMove, onMoveStart, onMoveEnd, noPanClassName, nodeOrigin, rfId, autoPanOnConnect, autoPanOnNodeDrag, autoPanSpeed, onError, connectionRadius, isValidConnection, selectNodesOnDrag, nodeDragThreshold, connectionDragThreshold, onBeforeDelete, debug, ariaLabelConfig, zIndexMode }), (0, import_jsx_runtime4.jsx)(GraphView, { onInit, onNodeClick, onEdgeClick, onNodeMouseEnter, onNodeMouseMove, onNodeMouseLeave, onNodeContextMenu, onNodeDoubleClick, nodeTypes: nodeTypes2, edgeTypes: edgeTypes2, connectionLineType, connectionLineStyle, connectionLineComponent, connectionLineContainerStyle, selectionKeyCode, selectionOnDrag, selectionMode, deleteKeyCode, multiSelectionKeyCode, panActivationKeyCode, zoomActivationKeyCode, onlyRenderVisibleElements, defaultViewport: defaultViewport$1, translateExtent, minZoom, maxZoom, preventScrolling, zoomOnScroll, zoomOnPinch, zoomOnDoubleClick, panOnScroll, panOnScrollSpeed, panOnScrollMode, panOnDrag, autoPanOnSelection, onPaneClick, onPaneMouseEnter, onPaneMouseMove, onPaneMouseLeave, onPaneScroll, onPaneContextMenu, paneClickDistance, nodeClickDistance, onSelectionContextMenu, onSelectionStart, onSelectionEnd, onReconnect, onReconnectStart, onReconnectEnd, onEdgeContextMenu, onEdgeDoubleClick, onEdgeMouseEnter, onEdgeMouseMove, onEdgeMouseLeave, reconnectRadius, defaultMarkerColor, noDragClassName, noWheelClassName, noPanClassName, rfId, disableKeyboardA11y, nodeExtent, viewport, onViewportChange, nodesDraggable }), (0, import_jsx_runtime4.jsx)(SelectionListener, { onSelectionChange }), children2, (0, import_jsx_runtime4.jsx)(Attribution, { proOptions, position: attributionPosition }), (0, import_jsx_runtime4.jsx)(A11yDescriptions, { rfId, disableKeyboardA11y })] }) });
 }
 var index = fixedForwardRef(ReactFlow);
+var viewportSelector = (state3) => ({
+  x: state3.transform[0],
+  y: state3.transform[1],
+  zoom: state3.transform[2]
+});
+function useViewport() {
+  const viewport = useStore(viewportSelector, shallow$1);
+  return viewport;
+}
 var error014 = errorMessages["error014"]();
 function LinePattern({ dimensions, lineWidth, variant, className }) {
   return (0, import_jsx_runtime4.jsx)("path", { strokeWidth: lineWidth, d: `M${dimensions[0] / 2} 0 V${dimensions[1]} M0 ${dimensions[1] / 2} H${dimensions[0]}`, className: cc(["react-flow__background-pattern", variant, className]) });
@@ -14542,7 +14551,8 @@ function snap(value) {
   return Math.round(value / GRID) * GRID;
 }
 var IMPORT_CAP = 120;
-var PREVIEW_BATCH = 8;
+var PREVIEW_BATCH = 4;
+var PREVIEW_INTERVAL_MS = 4e3;
 function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
@@ -14695,6 +14705,10 @@ function CanvasInner(props) {
   const [batchPicks, setBatchPicks] = (0, import_react13.useState)(/* @__PURE__ */ new Set());
   const [batchBusy, setBatchBusy] = (0, import_react13.useState)(false);
   const wrapperRef = (0, import_react13.useRef)(null);
+  const camera = useViewport();
+  const cameraRef = (0, import_react13.useRef)(camera);
+  cameraRef.current = camera;
+  const cardLayoutRef = (0, import_react13.useRef)({});
   const [draggingCardId, setDraggingCardId] = (0, import_react13.useState)(null);
   const [liveFrame, setLiveFrame] = (0, import_react13.useState)(null);
   const [blockedFrame, setBlockedFrame] = (0, import_react13.useState)(null);
@@ -14782,7 +14796,7 @@ function CanvasInner(props) {
     };
     previewTick.current = tick;
     tick();
-    const timer4 = setInterval(tick, 1500);
+    const timer4 = setInterval(tick, PREVIEW_INTERVAL_MS);
     return () => {
       clearInterval(timer4);
     };
