@@ -2626,6 +2626,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         onOpen={openRailCard}
         recent={recentEntries}
         currentSessionId={currentSessionId() ?? mainViewSessionId}
+        pinned={pinnedSessions}
       />
       {batchMode
         ? (

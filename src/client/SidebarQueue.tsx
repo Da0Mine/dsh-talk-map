@@ -21,6 +21,7 @@ import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
 import { useReorder } from './reorder.ts'
+import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
 import { sessionActivity } from './session-activity.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import styles from './talk-map.module.css'
@@ -121,6 +122,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   /** Manual order for the queue rows (inside each priority bucket) and for the recent strip. */
   const [queueOrder, setQueueOrder] = useState<string[]>([])
   const [recentOrder, setRecentOrder] = useState<string[]>([])
+  const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const askedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -245,6 +247,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return out.slice(0, 3)
   }, [rows, sessions, archivedSessionIds])
+  const pinnedSessions = useMemo(() => new Set((workspaceState as { pinnedSessionIds?: readonly string[] }).pinnedSessionIds ?? []), [workspaceState])
   const activeSession = currentSessionId()
 
   const queueIds = rows.map(row => row.sessionId)
@@ -333,6 +336,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       >
         <span className={styles['queueGripBar']} />
       </div>
+      {menu !== null
+        ? <RailCardMenu target={menu} onClose={() => { setMenu(null) }} />
+        : null}
       <div className={styles['sidebarQueueHead']}>
         <span className={styles['sidebarQueueHeadText']}>{t('statusRail.title')}</span>
         <span className={styles['sidebarQueueCount']}>{rows.length}</span>
@@ -357,6 +363,16 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
               key={row.cardId}
               ref={element => { queueDrag.register(row.sessionId, element) }}
               onPointerDown={event => { queueDrag.begin(event, row.sessionId) }}
+              onContextMenu={(event) => {
+                event.preventDefault()
+                setMenu({
+                  sessionId: row.sessionId,
+                  title: row.title,
+                  pinned: pinnedSessions.has(row.sessionId),
+                  x: event.clientX,
+                  y: event.clientY,
+                })
+              }}
               className={`${styles['card']} ${row.lamp === undefined ? '' : styles[LAMP_CLASS[row.lamp]] ?? ''} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
               style={{
                 width: '100%',
@@ -392,6 +408,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 openSessionInUi(row.sessionId)
               }}
             >
+              {row.sessionId === activeSession
+                ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
+                : null}
               <div className={styles['cardTop']}>
                 <span className={styles['cardTitle']}>{row.title}</span>
               </div>
@@ -436,6 +455,16 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                       : {}),
                   }}
                   data-talkmap-queue-recent={row.sessionId}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    setMenu({
+                      sessionId: row.sessionId,
+                      title: row.title,
+                      pinned: pinnedSessions.has(row.sessionId),
+                      x: event.clientX,
+                      y: event.clientY,
+                    })
+                  }}
                   title={row.title}
                   role="button"
                   tabIndex={0}

@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { installLiquidGlass } from './liquid-glass.ts'
 import { useReorder } from './reorder.ts'
+import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
 import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
@@ -48,6 +49,8 @@ export interface StatusRailProps {
   recent?: readonly StatusRailEntry[]
   /** The conversation on screen right now: it gets the corner brackets. */
   currentSessionId?: string
+  /** Pinned sessions, so the card menu can show 置顶 / 取消置顶. */
+  pinned?: ReadonlySet<string>
 }
 
 interface DragState {
@@ -161,6 +164,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const [order, setOrder] = useState<string[]>(() => readOrder())
   /** Order of the「最近的任务」strip; independent from the queue's own order. */
   const [recentOrder, setRecentOrder] = useState<string[]>([])
+  const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const recentIds = (props.recent ?? []).map(entry => entry.cardId)
   useEffect(() => {
     setRecentOrder(current => {
@@ -393,6 +397,16 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
       className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
       onPointerDown={floating || !interactive ? pointerDown : (event) => { beginDrag(event, entry.cardId) }}
       {...(interactive ? {} : { onClick: () => { props.onOpen(entry.cardId) } })}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        setMenu({
+          sessionId: entry.sessionId,
+          title: entry.title,
+          pinned: props.pinned?.has(entry.sessionId) === true,
+          x: event.clientX,
+          y: event.clientY,
+        })
+      }}
       title={entry.title}
     >
       {props.currentSessionId !== undefined && entry.sessionId === props.currentSessionId
@@ -486,7 +500,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                         touchAction: 'none',
                       }}
                     >
-                      {renderCard(entry, false, true, event => { recentDrag.begin(event, entry.cardId) })}
+                      {renderCard(entry, false, false, event => { recentDrag.begin(event, entry.cardId) })}
                     </div>
                   )
                 })}
@@ -508,6 +522,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
             {renderCard(floatingEntry, true)}
           </div>
         )
+        : null}
+      {menu !== null
+        ? <RailCardMenu target={menu} onClose={() => { setMenu(null) }} />
         : null}
       <button
         type="button"
