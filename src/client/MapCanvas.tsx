@@ -990,6 +990,31 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return rows
   }, [visibleCards, sessions, renamedTitles, previews, draftTexts, pinnedSessions, statusById, alertById, finishedById])
 
+  /**
+   * Cards with nothing to report (no lamp, no unsent text), newest first — the「最近的任务」
+   * strip at the bottom of the rail. They used to vanish the moment their status cleared;
+   * keeping the three most recent gives the queue a history.
+   */
+  const recentEntries = useMemo<StatusRailEntry[]>(() => {
+    const listed = new Set(statusEntries.map(entry => entry.sessionId))
+    const rows: StatusRailEntry[] = []
+    for (const [cardId, card] of Object.entries(visibleCards)) {
+      if (card.boardId !== INBOX_BOARD_ID) continue
+      if (listed.has(card.sessionId)) continue
+      const summary = sessions.byId[card.sessionId]
+      rows.push({
+        cardId,
+        sessionId: card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        stamp: summary?.updatedAt ?? 0,
+        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+        ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
+      })
+    }
+    rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    return rows.slice(0, 3)
+  }, [visibleCards, sessions, statusEntries, renamedTitles, previews])
+
   /** Bring one card into view and select it (a double click on a rail row). */
   const focusCard = useCallback((cardId: string) => {
     const slot = cardLayout[cardId]
@@ -2591,6 +2616,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         cardWidth={CARD_W}
         onFocus={focusCard}
         onOpen={openRailCard}
+        recent={recentEntries}
+        currentSessionId={currentSessionId()}
       />
       {batchMode
         ? (

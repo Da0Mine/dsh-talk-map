@@ -16,7 +16,7 @@ import { canvas, INBOX_BOARD_ID } from './canvas-store.ts'
 import { readDraftTexts } from './draft-watch.ts'
 import type { SessionListState, SessionStatusFact, SessionSummary } from './dsh.ts'
 import { activeLocale, subscribeLocale, t } from './i18n.ts'
-import { closeMapPanel, getServices, openSessionInUi } from './map-state.ts'
+import { closeMapPanel, currentSessionId, getServices, openSessionInUi } from './map-state.ts'
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
@@ -212,6 +212,29 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     return sortQueueRows(out)
   }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds])
 
+  /** Same idea as the rail: the three most recent sessions with nothing to report. */
+  const recentRows = useMemo(() => {
+    const listed = new Set(rows.map(row => row.sessionId))
+    const out: { sessionId: string; cardId: string; title: string; updatedAt?: number }[] = []
+    for (const sessionId of sessions.ids) {
+      const summary = sessions.byId[sessionId]
+      if (summary === undefined) continue
+      if (summary.blank === true) continue
+      if (summary.origin === 'subagent') continue
+      if (archivedSessionIds.has(sessionId)) continue
+      if (listed.has(sessionId)) continue
+      out.push({
+        sessionId,
+        cardId: sessionId,
+        title: summary.displayTitle ?? sessionId,
+        ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
+      })
+    }
+    out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    return out.slice(0, 3)
+  }, [rows, sessions, archivedSessionIds])
+  const activeSession = currentSessionId()
+
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
     const wanted = rows
@@ -339,6 +362,40 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
             </div>
           )
         })}
+        {recentRows.length > 0
+          ? (
+            <>
+              <div className={styles['sidebarQueueRecentHead']}>{t('statusRail.recent')}</div>
+              {recentRows.map((row) => (
+                <div
+                  key={'recent-' + row.sessionId}
+                  className={`${styles['card']} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
+                  style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', flex: 'none', alignSelf: 'stretch' }}
+                  data-talkmap-queue-recent={row.sessionId}
+                  title={row.title}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    sessionActivity.forget(row.sessionId)
+                    setOpened((current) => new Set(current).add(row.sessionId))
+                    openSessionInUi(row.sessionId)
+                    closeMapPanel()
+                  }}
+                >
+                  {row.sessionId === activeSession
+                    ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
+                    : null}
+                  <div className={styles['cardTop']}>
+                    <span className={styles['cardTitle']}>{row.title}</span>
+                  </div>
+                  <div className={styles['cardFooter']}>
+                    <span className={styles['cardTime']}>{relativeTime(row.updatedAt)}</span>
+                  </div>
+                </div>
+              ))}
+            </>
+          )
+          : null}
       </div>
     </div>
   )

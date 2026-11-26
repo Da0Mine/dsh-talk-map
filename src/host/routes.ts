@@ -5,6 +5,7 @@
  * origin-less local tools (curl); a cross-origin browser POST is refused.
  */
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { sameOrigin } from './origin.ts'
 import { createPreviewCache, runLimited, PREVIEW_CONCURRENCY } from './preview.ts'
 import { mkdir } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -78,18 +79,6 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
     'cache-control': 'no-store',
   })
   response.end(payload)
-}
-
-function sameOrigin(request: IncomingMessage): boolean {
-  const origin = request.headers.origin
-  if (origin === undefined) return true // curl / same-machine tooling
-  const host = request.headers.host
-  if (host === undefined) return false
-  try {
-    return new URL(origin).host === host
-  } catch {
-    return false
-  }
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
@@ -218,7 +207,7 @@ export function mountTalkMapRoutes(
           return
         }
 
-        if (request.method === 'POST' && !sameOrigin(request)) {
+        if (request.method === 'POST' && !sameOrigin(request.headers)) {
           sendJson(response, 403, { error: 'cross-origin request refused' })
           return
         }

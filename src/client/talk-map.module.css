@@ -2748,3 +2748,18 @@
   line-height: 1.5;
   color: var(--dsw-alias-label-secondary);
 }
+
+/* The「最近的任务」divider: cards that lost their status drop here (max three). */
+.statusRailRecentHead,
+.sidebarQueueRecentHead {
+  margin: 6px 2px 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--dsw-alias-label-secondary);
+}
+
+.sidebarQueueRecentHead {
+  margin: 4px 2px 0;
+}

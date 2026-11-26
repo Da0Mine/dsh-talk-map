@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-26 `0.7.0`：① 两侧栏新增「最近的任务」——无灯无草稿的卡片按 `updatedAt` 倒序最多取 3 张，排在带状态卡片下方（`MapCanvas.recentEntries` → `StatusRail.recent`；`SidebarQueue.recentRows`），分隔标题 `statusRail.recent`；② 当前会话的卡片加"瞄准镜"角标（复用 `.cardReticle`，面板 `currentSessionId` / 侧栏 `currentSessionId()`）；③ 修 issue #7 安全漏洞：`sameOrigin()` 原先比较 `Origin` 与 `Host`（DNS rebinding 下两者都由攻击页控制），抽出 `src/host/origin.ts`，改为 **Host 必须是回环名/127.0.0.0-8**，`Origin` 缺省需回环、`dsh-app://` 允许 `Host: app`；新增 `test/origin.test.mjs` 8 条用例覆盖 issue 复现用例（含 rebinding 两条），全通过。probe 150/150。
+
 - 2026-11-26 `0.6.2`：内存/算力审计后的优化。证据：最大的会话日志 37.3 MB → 解压 **115.8 MB / 43262 行 / 181 ms**（第二 30.7 → 124.3 MB / 169 ms），宿主 `/talk-map/last-user` 用 `runtime.sessionQuery.readSurface(id)` 每次读整份会话面，最多并发 3（峰值约 350 MB 瞬时）；客户端预览轮询原为**每 1.5s、每次最多 8 个、遍历全部卡片**（`visibleCards` 是未归档全集，不是视口）。改为 `PREVIEW_INTERVAL_MS 4000`、`PREVIEW_BATCH 4`，并用 `useViewport()` + `cardLayoutRef` 做**视口过滤**（视口外卡片不再触发宿主读）。回归：probe 150/150；拖拽 200 张 18ms/p95 25ms、800 张 18ms/p95 32ms。
 
 - 2026-11-26 `0.6.1`：未读灯重启丢失的**真正缺口**——我们只持久化「地图开着时观察到的 running→idle 转变」，而用户没看过的会话是**宿主**标的 `completionUnread`，宿主自己不跨重启保存，于是重启后什么都恢复不出来。改为 `observe()` 里把 `completionUnread === true` 也导入 `finished` 并 `persist()`。验证：harness 里对一个空闲会话 `hostUnread` → 卡片 chip=`done` → 刷新（等同重启）→ chip 仍 `done`，`localStorage["dsh.talk-map.lamp-state.v1"]` 内含 `finished:{s3,s6}`。probe 150/150。

@@ -43,6 +43,10 @@ export interface StatusRailProps {
   onFocus: (cardId: string) => void
   /** Single click: open that conversation. */
   onOpen: (cardId: string) => void
+  /** Cards with no lamp and no draft, newest first — the「最近的任务」section at the bottom. */
+  recent?: readonly StatusRailEntry[]
+  /** The conversation on screen right now: it gets the corner brackets. */
+  currentSessionId?: string
 }
 
 interface DragState {
@@ -356,12 +360,16 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     })
   }, [])
 
-  const renderCard = (entry: StatusRailEntry, floating: boolean): React.JSX.Element => (
+  const renderCard = (entry: StatusRailEntry, floating: boolean, interactive = true): React.JSX.Element => (
     <div
       className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
-      onPointerDown={floating ? undefined : (event) => { beginDrag(event, entry.cardId) }}
+      onPointerDown={floating || !interactive ? undefined : (event) => { beginDrag(event, entry.cardId) }}
+      {...(interactive ? {} : { onClick: () => { props.onOpen(entry.cardId) } })}
       title={entry.title}
     >
+      {props.currentSessionId !== undefined && entry.sessionId === props.currentSessionId
+        ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
+        : null}
       <div className={styles['cardTop']}>
         <span className={styles['cardTitle']}>{entry.title}</span>
       </div>
@@ -434,6 +442,18 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
               </div>
             )
           })}
+          {props.recent !== undefined && props.recent.length > 0
+            ? (
+              <>
+                <div className={styles['statusRailRecentHead']}>{t('statusRail.recent')}</div>
+                {props.recent.map(entry => (
+                  <div key={entry.cardId} className={styles['statusRailSlot']}>
+                    {renderCard(entry, false, false)}
+                  </div>
+                ))}
+              </>
+            )
+            : null}
         </div>
       </div>
       {drag !== null && floatingEntry !== undefined
