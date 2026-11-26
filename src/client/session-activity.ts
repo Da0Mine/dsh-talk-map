@@ -154,6 +154,14 @@ export const sessionActivity = {
       const unread = fact?.completionUnread
       const previousUnread = lastUnread.get(sessionId)
       if (typeof unread === 'boolean') lastUnread.set(sessionId, unread)
+      // The shell flags a completion as unread whenever the session was not on screen — that
+      // mark is NOT persisted by the host, so a restart lost every lamp for sessions the user
+      // had not opened yet. Import it into our own store so it survives.
+      if (unread === true && !finished.has(sessionId)) {
+        finished.add(sessionId)
+        markedEpoch.set(sessionId, panelEpoch)
+        changed = true
+      }
       if (finished.has(sessionId)) {
         const readElsewhere = previousUnread === true && unread === false
         const cameBackToIt = (row?.retainedBy?.mainView ?? 0) > 0

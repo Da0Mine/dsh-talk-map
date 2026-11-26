@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-26 `0.6.1`：未读灯重启丢失的**真正缺口**——我们只持久化「地图开着时观察到的 running→idle 转变」，而用户没看过的会话是**宿主**标的 `completionUnread`，宿主自己不跨重启保存，于是重启后什么都恢复不出来。改为 `observe()` 里把 `completionUnread === true` 也导入 `finished` 并 `persist()`。验证：harness 里对一个空闲会话 `hostUnread` → 卡片 chip=`done` → 刷新（等同重启）→ chip 仍 `done`，`localStorage["dsh.talk-map.lamp-state.v1"]` 内含 `finished:{s3,s6}`。probe 150/150。
+
 - 2026-11-26 `0.6.0`：修「重启后未查看（待查看）标记消失」。持久化本身正常（`localStorage["dsh.talk-map.lamp-state.v1"]`，14 天 TTL，probe 已有「重启后待读还在」检查并通过），真凶是 `session-activity.observe` 里的一条清理规则：`hydrated.has(id) && retainedBy.mainView > 0` → 视为已读并删除。真实重启时 DSH 把上次会话恢复成主视图，于是所有恢复的标记在首轮状态轮询后就被清掉。改为不再因主视图保留而清除；标记只由三条路释放：宿主 `completionUnread` true→false、用户从地图点开（`acknowledge`）、该会话重新运行或等待回答。probe 150/150（首轮 1 条绘制相关 flake，复跑全绿）。
 
 - 2026-11-25 `0.5.9`：修「没有任务时对话界面侧边栏的队列板块消失」。真正卸掉它的是 `SidebarQueue.tsx` 第 236 行 `if (rows.length === 0) return null`（不是地图那边的 `StatusRail`，那个默认是展开的）。改为始终渲染：标题 + 计数（0）+ 一句 `statusRail.empty`（「暂时没有带状态的卡片」），并新增 `.sidebarQueueEmpty` 样式。probe 150/150。
