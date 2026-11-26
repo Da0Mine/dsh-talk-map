@@ -398,3 +398,19 @@ export function setCardTable(next: CardTableEntry[]): void {
 export function allCards(): CardTableEntry[] {
   return cardTable
 }
+
+/**
+ * "Enter batch mode with this session" handed from a rail to the map panel: the rail can be
+ * outside React (the sidebar queue), so the intent travels through the module instead of props.
+ */
+let pendingBatchSession: string | null = null
+
+export function requestBatch(sessionId: string): void {
+  pendingBatchSession = sessionId
+}
+
+export function claimBatchIntent(): string | null {
+  const value = pendingBatchSession
+  pendingBatchSession = null
+  return value
+}

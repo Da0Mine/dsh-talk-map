@@ -496,8 +496,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                       ref={element => { recentDrag.register(entry.cardId, element) }}
                       className={styles['statusRailSlot']}
                       style={{
-                        ...(dragging ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 } : {}),
+                        transform: `translateY(${dragging ? recentDrag.offsetY : recentDrag.shiftOf(entry.cardId)}px)`,
+                        transition: dragging ? 'none' : 'transform 120ms ease',
                         touchAction: 'none',
+                        ...(dragging ? { zIndex: 3, filter: 'drop-shadow(0 12px 22px rgba(0,0,0,0.5))' } : {}),
                       }}
                     >
                       {renderCard(entry, false, false, event => { recentDrag.begin(event, entry.cardId) })}

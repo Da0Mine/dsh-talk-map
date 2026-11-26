@@ -29,7 +29,7 @@ import { edgeSyncState, lineageSyncState } from './edge-sync.ts'
 import { pickFaces, type Obstacle } from './edge-routing.ts'
 import { lastPushFor, stampPush } from './push-log.ts'
 import { DigestDialog } from './DigestDialog.tsx'
-import { closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
+import { claimBatchIntent, closeMapPanel, currentSessionId, getServices, mapUi, openSessionInUi, uiWorkspaceService } from './map-state.ts'
 import { archiveSessions, deleteSessionsDirect, deleteWorkspaceRegistration, recycleBinReady, setPinned, trashSessions } from './session-actions.ts'
 import { allSessionTitles, setCardTable, setTitleResolver, setTitleTable } from './map-state.ts'
 import { drawerState } from './drawer-state.ts'
@@ -314,6 +314,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [renamedWorkspaces, setRenamedWorkspaces] = useState<Record<string, string>>({})
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
   const [batchMode, setBatchMode] = useState(false)
+  // A rail can ask for batch mode (right-click → 批量操作) before this panel exists; the intent
+  // lands here once the cards are loaded.
+  useEffect(() => {
+    const intent = claimBatchIntent()
+    if (intent === null) return
+    const cardId = Object.keys(canvasState.cards).find(id => canvasState.cards[id]?.sessionId === intent)
+    if (cardId === undefined) return
+    setBatchMode(true)
+    setBatchPicks(new Set([cardId]))
+  }, [canvasState.cards])
   /** The cards picked in batch mode. */
   const [batchPicks, setBatchPicks] = useState<ReadonlySet<string>>(new Set())
   const [batchBusy, setBatchBusy] = useState(false)

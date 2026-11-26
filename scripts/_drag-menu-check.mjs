@@ -46,7 +46,7 @@ const cardBox = await page.evaluate(() => {
 await page.mouse.click(cardBox.x, cardBox.y, { button: 'right' })
 await page.waitForTimeout(400)
 const menu = await page.evaluate(() => {
-  const el = document.querySelector('[class*="railMenu"]')
+  const el = document.querySelector('[role="menu"]')
   if (el === null) return null
   return [...el.querySelectorAll('button')].map(b => (b.textContent ?? '').trim())
 })

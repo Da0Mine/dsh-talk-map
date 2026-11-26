@@ -499,7 +499,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b704 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b705 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -693,7 +693,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b704 · Search cards on the map",
+  "global.searchPlaceholder": "b705 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1336,6 +1336,15 @@ function setCardTable(next) {
 }
 function allCards() {
   return cardTable;
+}
+var pendingBatchSession = null;
+function requestBatch(sessionId) {
+  pendingBatchSession = sessionId;
+}
+function claimBatchIntent() {
+  const value = pendingBatchSession;
+  pendingBatchSession = null;
+  return value;
 }
 
 // src/client/MapOverlay.tsx
@@ -14157,44 +14166,65 @@ function useReorder(ids, apply2) {
   const idsRef = (0, import_react11.useRef)(ids);
   idsRef.current = ids;
   const [drag, setDrag] = (0, import_react11.useState)(null);
+  const [hover, setHover] = (0, import_react11.useState)(-1);
   const [offsetY, setOffsetY] = (0, import_react11.useState)(0);
   const begin = (0, import_react11.useCallback)((event, id2) => {
     if (event.button !== 0) return;
     if (event.target.closest("button") !== null) return;
-    setDrag({ id: id2, startY: event.clientY });
+    const list = idsRef.current;
+    const index2 = list.indexOf(id2);
+    if (index2 < 0) return;
+    const element = slots.current.get(id2);
+    const height = element === void 0 ? 0 : element.getBoundingClientRect().height;
+    const next = slots.current.get(list[index2 + 1]);
+    const gap = element === void 0 || next === void 0 ? 8 : Math.max(0, next.getBoundingClientRect().top - element.getBoundingClientRect().bottom);
+    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap });
+    setHover(index2);
     setOffsetY(0);
+    event.preventDefault();
   }, []);
   const register = (0, import_react11.useCallback)((id2, element) => {
     if (element === null) slots.current.delete(id2);
     else slots.current.set(id2, element);
   }, []);
+  const shiftOf = (0, import_react11.useCallback)((id2) => {
+    if (drag === null || id2 === drag.id || hover < 0) return 0;
+    const index2 = idsRef.current.indexOf(id2);
+    if (index2 < 0) return 0;
+    if (hover > drag.index && index2 > drag.index && index2 <= hover) return -drag.step;
+    if (hover < drag.index && index2 >= hover && index2 < drag.index) return drag.step;
+    return 0;
+  }, [drag, hover]);
   (0, import_react11.useEffect)(() => {
     if (drag === null) return;
-    const onMove = (event) => setOffsetY(event.clientY - drag.startY);
-    const onUp = (event) => {
+    const onMove = (event) => {
+      setOffsetY(event.clientY - drag.startY);
+      const list = idsRef.current;
+      let target = drag.index;
+      let bestDistance = Number.POSITIVE_INFINITY;
+      list.forEach((id2, index2) => {
+        const element = slots.current.get(id2);
+        if (element === void 0) return;
+        const rect = element.getBoundingClientRect();
+        const distance2 = Math.abs(event.clientY - (rect.top + rect.height / 2));
+        if (distance2 < bestDistance) {
+          bestDistance = distance2;
+          target = index2;
+        }
+      });
+      setHover(target);
+    };
+    const onUp = () => {
       const list = idsRef.current;
       const from = list.indexOf(drag.id);
-      if (from >= 0) {
-        let target = from;
-        let bestDistance = Number.POSITIVE_INFINITY;
-        list.forEach((id2, index2) => {
-          const element = slots.current.get(id2);
-          if (element === void 0) return;
-          const rect = element.getBoundingClientRect();
-          const distance2 = Math.abs(event.clientY - (rect.top + rect.height / 2));
-          if (distance2 < bestDistance) {
-            bestDistance = distance2;
-            target = index2;
-          }
-        });
-        if (target !== from) {
-          const next = [...list];
-          next.splice(from, 1);
-          next.splice(target, 0, drag.id);
-          apply2(next);
-        }
+      if (from >= 0 && hover >= 0 && hover !== from) {
+        const next = [...list];
+        next.splice(from, 1);
+        next.splice(hover, 0, drag.id);
+        apply2(next);
       }
       setDrag(null);
+      setHover(-1);
       setOffsetY(0);
     };
     window.addEventListener("pointermove", onMove);
@@ -14205,8 +14235,8 @@ function useReorder(ids, apply2) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [drag, apply2]);
-  return { draggingId: drag?.id, offsetY, begin, register };
+  }, [drag, hover, apply2]);
+  return { draggingId: drag?.id, offsetY, shiftOf, begin, register };
 }
 
 // src/client/rail-menu.tsx
@@ -14341,6 +14371,25 @@ function RailCardMenu(props) {
       label: t("menu.archive"),
       onPick: () => {
         run(() => archiveSessions([props.target.sessionId]));
+      }
+    },
+    {
+      key: "batch",
+      icon: "batch",
+      label: t("menu.batch"),
+      onPick: () => {
+        requestBatch(props.target.sessionId);
+        openMapPanel();
+        props.onClose();
+      }
+    },
+    {
+      key: "delete-session",
+      icon: "delete",
+      label: t("menu.deleteSession"),
+      danger: true,
+      onPick: () => {
+        run(() => trashSessions([props.target.sessionId]));
       }
     }
   ];
@@ -14750,8 +14799,10 @@ function StatusRail(props) {
                     },
                     className: talk_map_default["statusRailSlot"],
                     style: {
-                      ...dragging ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 } : {},
-                      touchAction: "none"
+                      transform: `translateY(${dragging ? recentDrag.offsetY : recentDrag.shiftOf(entry.cardId)}px)`,
+                      transition: dragging ? "none" : "transform 120ms ease",
+                      touchAction: "none",
+                      ...dragging ? { zIndex: 3, filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.5))" } : {}
                     },
                     children: renderCard(entry, false, false, (event) => {
                       recentDrag.begin(event, entry.cardId);
@@ -14992,6 +15043,14 @@ function CanvasInner(props) {
   const [renamedTitles, setRenamedTitles] = (0, import_react15.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react15.useState)({});
   const [batchMode, setBatchMode] = (0, import_react15.useState)(false);
+  (0, import_react15.useEffect)(() => {
+    const intent = claimBatchIntent();
+    if (intent === null) return;
+    const cardId = Object.keys(canvasState.cards).find((id2) => canvasState.cards[id2]?.sessionId === intent);
+    if (cardId === void 0) return;
+    setBatchMode(true);
+    setBatchPicks(/* @__PURE__ */ new Set([cardId]));
+  }, [canvasState.cards]);
   const [batchPicks, setBatchPicks] = (0, import_react15.useState)(/* @__PURE__ */ new Set());
   const [batchBusy, setBatchBusy] = (0, import_react15.useState)(false);
   const wrapperRef = (0, import_react15.useRef)(null);
@@ -17355,7 +17414,7 @@ function SidebarQueue() {
           {
             className: talk_map_default["sidebarQueueList"],
             role: "list",
-            style: { display: "flex", flexDirection: "column", gap: 6, flex: "1 1 auto", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "0 4px 6px", overscrollBehavior: "contain" },
+            style: { display: "flex", flexDirection: "column", gap: 6, flex: "1 1 auto", minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: "10px 16px 12px", overscrollBehavior: "contain" },
             children: [
               rows.length === 0 ? /* @__PURE__ */ (0, import_jsx_runtime20.jsx)("div", { className: talk_map_default["sidebarQueueEmpty"], children: t("statusRail.empty") }) : null,
               rows.map((row) => {
@@ -17389,7 +17448,9 @@ function SidebarQueue() {
                       flex: "none",
                       alignSelf: "stretch",
                       touchAction: "none",
-                      ...queueDrag.draggingId === row.sessionId ? { transform: `translateY(${queueDrag.offsetY}px)`, zIndex: 3 } : {}
+                      transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId)}px)`,
+                      transition: queueDrag.draggingId === row.sessionId ? "none" : "transform 120ms ease",
+                      ...queueDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: "0 12px 30px rgba(0,0,0,0.45)" } : {}
                     },
                     "data-talkmap-queue": row.sessionId,
                     "data-lamp": row.lamp ?? "draft",
@@ -17451,7 +17512,9 @@ function SidebarQueue() {
                       flex: "none",
                       alignSelf: "stretch",
                       touchAction: "none",
-                      ...recentDrag.draggingId === row.sessionId ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 } : {}
+                      transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId)}px)`,
+                      transition: recentDrag.draggingId === row.sessionId ? "none" : "transform 120ms ease",
+                      ...recentDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: "0 12px 30px rgba(0,0,0,0.45)" } : {}
                     },
                     "data-talkmap-queue-recent": row.sessionId,
                     onContextMenu: (event) => {

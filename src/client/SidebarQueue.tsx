@@ -346,7 +346,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       <div
         className={styles['sidebarQueueList']}
         role="list"
-        style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '0 4px 6px', overscrollBehavior: 'contain' }}
+        style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '10px 16px 12px', overscrollBehavior: 'contain' }}
       >
         {rows.length === 0
           ? <div className={styles['sidebarQueueEmpty']}>{t('statusRail.empty')}</div>
@@ -381,9 +381,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 flex: 'none',
                 alignSelf: 'stretch',
                 touchAction: 'none',
-                ...(queueDrag.draggingId === row.sessionId
-                  ? { transform: `translateY(${queueDrag.offsetY}px)`, zIndex: 3 }
-                  : {}),
+                transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId)}px)`,
+                transition: queueDrag.draggingId === row.sessionId ? 'none' : 'transform 120ms ease',
+                ...(queueDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: '0 12px 30px rgba(0,0,0,0.45)' } : {}),
               }}
               data-talkmap-queue={row.sessionId}
               data-lamp={row.lamp ?? 'draft'}
@@ -452,9 +452,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                     flex: 'none',
                     alignSelf: 'stretch',
                     touchAction: 'none',
-                    ...(recentDrag.draggingId === row.sessionId
-                      ? { transform: `translateY(${recentDrag.offsetY}px)`, zIndex: 3 }
-                      : {}),
+                    transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId)}px)`,
+                    transition: recentDrag.draggingId === row.sessionId ? 'none' : 'transform 120ms ease',
+                    ...(recentDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: '0 12px 30px rgba(0,0,0,0.45)' } : {}),
                   }}
                   data-talkmap-queue-recent={row.sessionId}
                   onContextMenu={(event) => {

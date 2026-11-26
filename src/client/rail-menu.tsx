@@ -8,10 +8,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { talkMapApi } from './api.ts'
 import { DigestDialog } from './DigestDialog.tsx'
+import { openMapPanel, requestBatch } from './map-state.ts'
 import { t } from './i18n.ts'
 import { MenuIcon, type MenuIconName } from './MenuIcons.tsx'
 import { callRpc } from './rpc.ts'
-import { archiveSessions, setPinned } from './session-actions.ts'
+import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionActivity } from './session-activity.ts'
 import type { Digest } from '../shared/protocol.ts'
 import styles from './talk-map.module.css'
@@ -147,6 +148,24 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       icon: 'archive',
       label: t('menu.archive'),
       onPick: () => { run(() => archiveSessions([props.target.sessionId])) },
+    },
+    {
+      key: 'batch',
+      icon: 'batch',
+      label: t('menu.batch'),
+      onPick: () => {
+        // Hand the pick to the map panel, which owns batch mode.
+        requestBatch(props.target.sessionId)
+        openMapPanel()
+        props.onClose()
+      },
+    },
+    {
+      key: 'delete-session',
+      icon: 'delete',
+      label: t('menu.deleteSession'),
+      danger: true,
+      onPick: () => { run(() => trashSessions([props.target.sessionId])) },
     },
   ]
 
