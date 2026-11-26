@@ -109,6 +109,7 @@ export const sessionActivity = {
   observe(
     status: ReadonlyMap<string, SessionStatusFact>,
     summaries: Readonly<Record<string, SummaryLike>>,
+    options?: { onlyBackground?: boolean },
   ): void {
     let changed = false
     const ids = new Set<string>([...status.keys(), ...Object.keys(summaries)])
@@ -136,7 +137,10 @@ export const sessionActivity = {
         hydrated.delete(sessionId)
         continue
       }
-      if (wasRunning === true && !finished.has(sessionId)) {
+      // A turn that ends while you are looking at that very conversation needs no lamp; the
+      // always-on observer (the sidebar queue) passes onlyBackground so it never marks it.
+      const onScreen = (row?.retainedBy?.mainView ?? 0) > 0
+      if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId)
         markedEpoch.set(sessionId, panelEpoch)
         changed = true

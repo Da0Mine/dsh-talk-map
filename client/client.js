@@ -499,7 +499,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b700 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b701 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -693,7 +693,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b700 · Search cards on the map",
+  "global.searchPlaceholder": "b701 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11462,7 +11462,7 @@ var sessionActivity = {
     needsBaseline = true;
     panelEpoch += 1;
   },
-  observe(status, summaries) {
+  observe(status, summaries, options) {
     let changed = false;
     const ids = /* @__PURE__ */ new Set([...status.keys(), ...Object.keys(summaries)]);
     if (needsBaseline) {
@@ -11487,7 +11487,8 @@ var sessionActivity = {
         hydrated.delete(sessionId);
         continue;
       }
-      if (wasRunning === true && !finished.has(sessionId)) {
+      const onScreen = (row?.retainedBy?.mainView ?? 0) > 0;
+      if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId);
         markedEpoch.set(sessionId, panelEpoch);
         changed = true;
@@ -16901,6 +16902,9 @@ function SidebarQueue() {
     } catch {
     }
   };
+  (0, import_react18.useEffect)(() => {
+    sessionActivity.observe(statusById, sessions.byId, { onlyBackground: true });
+  }, [statusById, sessions]);
   (0, import_react18.useEffect)(() => {
     for (const sessionId of finished2) {
       const summary = sessions.byId[sessionId];

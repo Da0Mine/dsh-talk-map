@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-26 `0.7.1`：修「完成的对话没有待查看样式、直接掉进最近的任务」。根因：`sessionActivity.observe` 只由 `MapCanvas` 调用，**地图关着时没人观察状态变化**，此时完成的会话只能靠宿主 `completionUnread`，宿主不给就没有灯 → 落进最近的任务。改法：`SidebarQueue`（常驻侧栏）里加一个观察 effect，`observe(statusById, sessions.byId, { onlyBackground: true })`；新增 `onlyBackground` 选项跳过"当前主视图会话"避免给自己讨厌的灯。验证：地图关闭时对 s1 跑完 → `lamp-state.finished={s3,s1}`，打开地图 chip=`done`、不在 recent。probe 的旧断言「关着地图时跑完→不亮」按新规则改为「打开后仍是待查看」，150/150。
+
 - 2026-11-26 `0.7.0`：① 两侧栏新增「最近的任务」——无灯无草稿的卡片按 `updatedAt` 倒序最多取 3 张，排在带状态卡片下方（`MapCanvas.recentEntries` → `StatusRail.recent`；`SidebarQueue.recentRows`），分隔标题 `statusRail.recent`；② 当前会话的卡片加"瞄准镜"角标（复用 `.cardReticle`，面板 `currentSessionId` / 侧栏 `currentSessionId()`）；③ 修 issue #7 安全漏洞：`sameOrigin()` 原先比较 `Origin` 与 `Host`（DNS rebinding 下两者都由攻击页控制），抽出 `src/host/origin.ts`，改为 **Host 必须是回环名/127.0.0.0-8**，`Origin` 缺省需回环、`dsh-app://` 允许 `Host: app`；新增 `test/origin.test.mjs` 8 条用例覆盖 issue 复现用例（含 rebinding 两条），全通过。probe 150/150。
 
 - 2026-11-26 `0.6.2`：内存/算力审计后的优化。证据：最大的会话日志 37.3 MB → 解压 **115.8 MB / 43262 行 / 181 ms**（第二 30.7 → 124.3 MB / 169 ms），宿主 `/talk-map/last-user` 用 `runtime.sessionQuery.readSurface(id)` 每次读整份会话面，最多并发 3（峰值约 350 MB 瞬时）；客户端预览轮询原为**每 1.5s、每次最多 8 个、遍历全部卡片**（`visibleCards` 是未归档全集，不是视口）。改为 `PREVIEW_INTERVAL_MS 4000`、`PREVIEW_BATCH 4`，并用 `useViewport()` + `cardLayoutRef` 做**视口过滤**（视口外卡片不再触发宿主读）。回归：probe 150/150；拖拽 200 张 18ms/p95 25ms、800 张 18ms/p95 32ms。

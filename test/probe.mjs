@@ -811,7 +811,8 @@ try {
 
   // ---- 4c. finished while the map was CLOSED → stay quiet ----------------
   // The mark exists for completions that happen BEHIND the map. If you were
-  // watching the conversation itself, you already saw it — no lamp.
+  // The sidebar queue observes the status store even while the map is closed, so a turn that
+  // ends behind the map still becomes 待查看 until that conversation is opened.
   const quietSession = await page.evaluate(() => {
     const state = window.__harness.state()
     const entry = [...document.querySelectorAll('.react-flow__node')]
@@ -833,7 +834,7 @@ try {
     const chip = card === null ? null : card.querySelector('[data-talkmap-chip]')
     return chip === null ? null : chip.getAttribute('data-talkmap-chip')
   }, quietSession)
-  check('关着地图时跑完 → 不亮「待查看」', closedFinish !== 'done',
+  check('关着地图时跑完 → 打开后仍是「待查看」', closedFinish === 'done',
     String(quietSession) + ' → ' + String(closedFinish))
 
   // ---- 4e. read elsewhere → the map's own mark must go away ---------------

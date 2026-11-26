@@ -153,6 +153,12 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     } catch { /* storage refused: the drag still applies for this session */ }
   }
 
+  // The queue board lives in the sidebar and is therefore always mounted: observing the status
+  // store here is what gives a conversation finished while the map is closed its 待查看 lamp.
+  useEffect(() => {
+    sessionActivity.observe(statusById, sessions.byId, { onlyBackground: true })
+  }, [statusById, sessions])
+
   useEffect(() => {
     for (const sessionId of finished) {
       const summary = sessions.byId[sessionId]
