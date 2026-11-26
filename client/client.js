@@ -499,7 +499,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b705 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b706 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -693,7 +693,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b705 · Search cards on the map",
+  "global.searchPlaceholder": "b706 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14178,7 +14178,13 @@ function useReorder(ids, apply2) {
     const height = element === void 0 ? 0 : element.getBoundingClientRect().height;
     const next = slots.current.get(list[index2 + 1]);
     const gap = element === void 0 || next === void 0 ? 8 : Math.max(0, next.getBoundingClientRect().top - element.getBoundingClientRect().bottom);
-    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap });
+    const centres = list.map((rowId) => {
+      const row = slots.current.get(rowId);
+      if (row === void 0) return Number.NaN;
+      const rect = row.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    });
+    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap, centres });
     setHover(index2);
     setOffsetY(0);
     event.preventDefault();
@@ -14199,14 +14205,11 @@ function useReorder(ids, apply2) {
     if (drag === null) return;
     const onMove = (event) => {
       setOffsetY(event.clientY - drag.startY);
-      const list = idsRef.current;
       let target = drag.index;
       let bestDistance = Number.POSITIVE_INFINITY;
-      list.forEach((id2, index2) => {
-        const element = slots.current.get(id2);
-        if (element === void 0) return;
-        const rect = element.getBoundingClientRect();
-        const distance2 = Math.abs(event.clientY - (rect.top + rect.height / 2));
+      drag.centres.forEach((centre, index2) => {
+        if (Number.isNaN(centre)) return;
+        const distance2 = Math.abs(event.clientY - centre);
         if (distance2 < bestDistance) {
           bestDistance = distance2;
           target = index2;
@@ -14289,7 +14292,6 @@ function RailCardMenu(props) {
     setBusy(true);
     void talkMapApi.ensureDigest(props.target.sessionId).then((result) => {
       setDigest({ title: props.target.title, digest: result.digest });
-      props.onClose();
     }).catch((error) => {
       console.error("[dsh-talk-map] digest fetch failed:", error);
     }).finally(() => {
@@ -14422,7 +14424,8 @@ function RailCardMenu(props) {
 }
 
 // src/client/queue-order.ts
-function queueRank(lamp, draft) {
+function queueRank(lamp, draft, pinned = false) {
+  if (pinned) return -1;
   if (lamp === "error") return 0;
   if (lamp === "waiting") return 1;
   if (lamp === "done") return 2;
@@ -14430,7 +14433,7 @@ function queueRank(lamp, draft) {
   return draft ? 4 : 5;
 }
 function compareQueueRows(a, b) {
-  const byRank = queueRank(a.lamp, a.draft === true) - queueRank(b.lamp, b.draft === true);
+  const byRank = queueRank(a.lamp, a.draft === true, a.pinned === true) - queueRank(b.lamp, b.draft === true, b.pinned === true);
   if (byRank !== 0) return byRank;
   const aIndex = a.manualIndex ?? Number.MAX_SAFE_INTEGER;
   const bIndex = b.manualIndex ?? Number.MAX_SAFE_INTEGER;
@@ -17268,6 +17271,7 @@ function SidebarQueue() {
       return next;
     });
   }, [opened, sessions, statusById, alerts2, finished2]);
+  const pinnedSessions = (0, import_react20.useMemo)(() => new Set(workspaceState.pinnedSessionIds ?? []), [workspaceState]);
   const rows = (0, import_react20.useMemo)(() => {
     const cardBySession = /* @__PURE__ */ new Map();
     for (const [cardId, card] of Object.entries(canvasState.cards)) {
@@ -17291,6 +17295,7 @@ function SidebarQueue() {
         cardId: cardBySession.get(sessionId) ?? sessionId,
         sessionId,
         ...manual >= 0 ? { manualIndex: manual } : {},
+        ...pinnedSessions.has(sessionId) ? { pinned: true } : {},
         title: summary.displayTitle ?? sessionId,
         ...draftOnly ? { draft: true } : { lamp },
         ...hasDraft ? { draft: true } : {},
@@ -17299,7 +17304,7 @@ function SidebarQueue() {
       });
     }
     return sortQueueRows(out);
-  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder]);
+  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions]);
   const recentRows = (0, import_react20.useMemo)(() => {
     const listed = new Set(rows.map((row) => row.sessionId));
     const out = [];
@@ -17320,7 +17325,6 @@ function SidebarQueue() {
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     return out.slice(0, 3);
   }, [rows, sessions, archivedSessionIds]);
-  const pinnedSessions = (0, import_react20.useMemo)(() => new Set(workspaceState.pinnedSessionIds ?? []), [workspaceState]);
   const activeSession = currentSessionId();
   const queueIds = rows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {

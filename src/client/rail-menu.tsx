@@ -82,8 +82,9 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
     setBusy(true)
     void talkMapApi.ensureDigest(props.target.sessionId)
       .then((result) => {
+        // Keep this component mounted: the dialog is rendered by it, and closing the menu here
+        // unmounted the dialog with it (that is why 查看摘要 looked like a no-op).
         setDigest({ title: props.target.title, digest: result.digest })
-        props.onClose()
       })
       .catch((error: unknown) => { console.error('[dsh-talk-map] digest fetch failed:', error) })
       .finally(() => { setBusy(false) })

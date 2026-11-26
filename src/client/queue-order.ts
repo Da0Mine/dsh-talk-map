@@ -11,7 +11,9 @@
 import type { CardGlow } from './SessionCard.tsx'
 
 /** Lower number = shown first. */
-export function queueRank(lamp: CardGlow | undefined, draft: boolean): number {
+export function queueRank(lamp: CardGlow | undefined, draft: boolean, pinned = false): number {
+  // Pinned first: otherwise flipping 置顶 changed nothing visible in a rail.
+  if (pinned) return -1
   if (lamp === 'error') return 0
   if (lamp === 'waiting') return 1
   if (lamp === 'done') return 2
@@ -22,6 +24,7 @@ export function queueRank(lamp: CardGlow | undefined, draft: boolean): number {
 export interface QueueSortable {
   lamp?: CardGlow
   draft?: boolean
+  pinned?: boolean
   updatedAt?: number
   /** Rail only: the user's drag position, applied inside the card's own bucket. */
   manualIndex?: number
@@ -29,7 +32,7 @@ export interface QueueSortable {
 
 /** Priority first, then the user's drag position inside that priority, then newest first. */
 export function compareQueueRows(a: QueueSortable, b: QueueSortable): number {
-  const byRank = queueRank(a.lamp, a.draft === true) - queueRank(b.lamp, b.draft === true)
+  const byRank = queueRank(a.lamp, a.draft === true, a.pinned === true) - queueRank(b.lamp, b.draft === true, b.pinned === true)
   if (byRank !== 0) return byRank
   const aIndex = a.manualIndex ?? Number.MAX_SAFE_INTEGER
   const bIndex = b.manualIndex ?? Number.MAX_SAFE_INTEGER

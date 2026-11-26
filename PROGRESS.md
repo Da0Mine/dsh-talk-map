@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.7.6`：① 修「让位抽搐」：`useReorder` 在按下时一次性冻结各行中心（`centres`），移动中只跟冻结值比较 → 目标索引稳定，不再出现"测量→位移→再测量"的反馈环（SortableJS 同思路）；② 修「查看摘要」点了没反应：摘要弹窗由 `RailCardMenu` 自己渲染，原来 `.then` 里调了 `props.onClose()`，父组件卸载把弹窗一起带走；改为保持挂载；③ 修「置顶没效果」：`queue-order` 的 `queueRank(lamp, draft, pinned)` 让置顶返回 -1（排最前），两侧栏 rows 都带 `pinned`；`SidebarQueue` 里 `pinnedSessions` 声明提到 `rows` 之前（曾因 TDZ 白屏，probe 抓到 `Cannot access before initialization`）。probe 150/150。
+
 - 2026-11-27 `0.7.5`：① 两侧栏拖拽升级为"跟手 + 让位"：`useReorder` 记录按下时行高与间距，拖动中按指针算出目标索引，经过的行用 `shiftOf` 平移让位，被拖行加阴影/`z-index` 且去掉过渡，松手提交（参考地图卡片拖动的手感）；② 右键菜单补齐到与地图一致 7 项（置顶/未读/重命名/查看摘要/归档/批量操作…/删除会话（回收站）），批量通过 `map-state.requestBatch` + `claimBatchIntent` 由地图面板消费；③ 外侧栏发光被裁：列表内边距 `0 4px 6px` → `10px 16px 12px`，左右各留 16px。probe 150/150；实测菜单 7 项、拖动顺序改变。
 
 - 2026-11-27 `0.7.4`：① 外侧栏「最近的任务」拖不动——渲染仍用 `recentRows`（按时间）而拖拽改的是 `recentOrder`，改成 `recentRowsOrdered` 并补 `ref`/`onPointerDown`；② 右键菜单改为复用地图同一套 `.menu` / `.menuItem` / `MenuIcon`（此前用的是自造 `.railMenu` 样式，字重字号都不同），临时样式已删；③ issue #7 已在仓库关闭（`state_reason=completed`），并补一条说明判断逻辑的评论。probe 150/150。

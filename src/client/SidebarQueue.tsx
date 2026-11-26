@@ -187,6 +187,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     })
   }, [opened, sessions, statusById, alerts, finished])
 
+  const pinnedSessions = useMemo(() => new Set((workspaceState as { pinnedSessionIds?: readonly string[] }).pinnedSessionIds ?? []), [workspaceState])
   // Lamped sessions, exactly like the rail — but keyed off the session list, so a
   // conversation that just started shows up without the map panel ever being opened.
   const rows = useMemo(() => {
@@ -215,6 +216,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         cardId: cardBySession.get(sessionId) ?? sessionId,
         sessionId,
         ...(manual >= 0 ? { manualIndex: manual } : {}),
+        ...(pinnedSessions.has(sessionId) ? { pinned: true } : {}),
         title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
       ...(hasDraft ? { draft: true } : {}),
@@ -224,7 +226,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     }
     // Same rule as the map rail: priority bucket first, then newest inside it.
     return sortQueueRows(out)
-  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions])
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
   const recentRows = useMemo(() => {
@@ -247,7 +249,6 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return out.slice(0, 3)
   }, [rows, sessions, archivedSessionIds])
-  const pinnedSessions = useMemo(() => new Set((workspaceState as { pinnedSessionIds?: readonly string[] }).pinnedSessionIds ?? []), [workspaceState])
   const activeSession = currentSessionId()
 
   const queueIds = rows.map(row => row.sessionId)

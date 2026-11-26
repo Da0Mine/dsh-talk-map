@@ -27,6 +27,9 @@ interface DragState {
   startY: number
   /** Row height + gap, measured at the press. */
   step: number
+  /** Row centres captured ONCE at the press: re-measuring while rows slide is what made the
+   *  neighbours jitter back and forth (the measurement fed the shift that changed it). */
+  centres: number[]
 }
 
 export function useReorder(
@@ -53,7 +56,13 @@ export function useReorder(
     const gap = element === undefined || next === undefined
       ? 8
       : Math.max(0, next.getBoundingClientRect().top - element.getBoundingClientRect().bottom)
-    setDrag({ id, index, startY: event.clientY, step: height + gap })
+    const centres = list.map(rowId => {
+      const row = slots.current.get(rowId)
+      if (row === undefined) return Number.NaN
+      const rect = row.getBoundingClientRect()
+      return rect.top + rect.height / 2
+    })
+    setDrag({ id, index, startY: event.clientY, step: height + gap, centres })
     setHover(index)
     setOffsetY(0)
     // Text selection would fight the drag.
@@ -78,14 +87,13 @@ export function useReorder(
     if (drag === null) return
     const onMove = (event: PointerEvent): void => {
       setOffsetY(event.clientY - drag.startY)
-      const list = idsRef.current
+      // Pick the row whose captured centre is nearest — measured positions never move, so the
+      // target index is stable while the rows animate.
       let target = drag.index
       let bestDistance = Number.POSITIVE_INFINITY
-      list.forEach((id, index) => {
-        const element = slots.current.get(id)
-        if (element === undefined) return
-        const rect = element.getBoundingClientRect()
-        const distance = Math.abs(event.clientY - (rect.top + rect.height / 2))
+      drag.centres.forEach((centre, index) => {
+        if (Number.isNaN(centre)) return
+        const distance = Math.abs(event.clientY - centre)
         if (distance < bestDistance) {
           bestDistance = distance
           target = index
