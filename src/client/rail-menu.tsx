@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { talkMapApi } from './api.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { t } from './i18n.ts'
+import { MenuIcon, type MenuIconName } from './MenuIcons.tsx'
 import { callRpc } from './rpc.ts'
 import { archiveSessions, setPinned } from './session-actions.ts'
 import { sessionActivity } from './session-activity.ts'
@@ -126,21 +127,24 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
     )
   }
 
-  const items: { key: string; label: string; onPick: () => void; danger?: boolean }[] = [
+  const items: { key: string; label: string; icon: MenuIconName; onPick: () => void; danger?: boolean }[] = [
     {
       key: 'pin',
+      icon: props.target.pinned ? 'unpin' : 'pin',
       label: props.target.pinned ? t('menu.unpin') : t('menu.pin'),
       onPick: () => { run(() => setPinned(props.target.sessionId, !props.target.pinned)) },
     },
     {
       key: 'unread',
+      icon: 'unread',
       label: t('menu.markUnread'),
       onPick: () => { sessionActivity.markFinished(props.target.sessionId); props.onChanged?.(); props.onClose() },
     },
-    { key: 'rename', label: t('menu.rename'), onPick: () => { setRename(true) } },
-    { key: 'digest', label: t('menu.viewDigest'), onPick: openDigest },
+    { key: 'rename', icon: 'rename', label: t('menu.rename'), onPick: () => { setRename(true) } },
+    { key: 'digest', icon: 'digest', label: t('menu.viewDigest'), onPick: openDigest },
     {
       key: 'archive',
+      icon: 'archive',
       label: t('menu.archive'),
       onPick: () => { run(() => archiveSessions([props.target.sessionId])) },
     },
@@ -151,8 +155,8 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   return (
     <div
       ref={menuRef}
-      className={styles['railMenu']}
-      style={{ left, top }}
+      className={styles['menu']}
+      style={{ left, top, position: 'fixed' }}
       role="menu"
     >
       {items.map(item => (
@@ -160,10 +164,11 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
           key={item.key}
           type="button"
           role="menuitem"
-          className={`${styles['railMenuItem']}${item.danger === true ? ` ${styles['railMenuItemDanger']}` : ''}`}
+          className={`${styles['menuItem']}${item.danger === true ? ` ${styles['menuItemDanger'] ?? ''}` : ''}`}
           disabled={busy}
           onClick={item.onPick}
         >
+          <MenuIcon name={item.icon} />
           {item.label}
         </button>
       ))}

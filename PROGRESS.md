@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.7.4`：① 外侧栏「最近的任务」拖不动——渲染仍用 `recentRows`（按时间）而拖拽改的是 `recentOrder`，改成 `recentRowsOrdered` 并补 `ref`/`onPointerDown`；② 右键菜单改为复用地图同一套 `.menu` / `.menuItem` / `MenuIcon`（此前用的是自造 `.railMenu` 样式，字重字号都不同），临时样式已删；③ issue #7 已在仓库关闭（`state_reason=completed`），并补一条说明判断逻辑的评论。probe 150/150。
+
 - 2026-11-26 `0.7.3`：① 失败邮件根因＝`.github/workflows/publish.yml` 由 `push: tags: v*` 触发（每次建 Release 都会打 v* 标签）→ 和本地已发布版本冲突 → 每次失败；改为仅手动 `workflow_dispatch` + 「版本已存在则跳过」守卫；② 修「最近卡拖不动」：`renderCard(entry, false, true, handler)` 里 `interactive=true` 让 pointerdown 走向旧的队列拖拽，改成 `false` 后自定义处理器才生效（实测拖动后顺序改变）；③ 新增 `src/client/rail-menu.tsx` 右键菜单（置顶/取消置顶、标为未读、重命名、查看摘要、归档会话），两侧栏卡片都挂上，实测菜单 5 项；④ 外侧栏「任务中」卡片补 `.cardReticle`，`pinnedSessions` 由 `workspaces.pinnedSessionIds` 派生。probe 150/150。
 
 - 2026-11-26 `0.7.2`：① 新增 `src/client/reorder.ts`（`useReorder`：按槽位中心算落点、松手提交），地图侧栏「最近的任务」与外侧栏队列两段都接上拖动改序；② 内侧栏隐藏滚动条（`scrollbar-width: none` + `::-webkit-scrollbar` 归零，实测 `scrollbarWidth=none`），滚动仍可用；③ `.cardReticle` 提到 `z-index: 3`，避免被流光环盖住；`currentSessionId()` 为空时回退到"主视图保留"的会话；④ 外侧栏「最近的任务」卡片补上正文（预览请求从 `rows` 扩到 `rows + recentRows`，`PREVIEW_LIMIT+3`）；⑤ 核对呼吸灯：`.cardLampDone`→`talkmap-lamp-green 2.8s`、`.cardLampWaiting`→`talkmap-lamp-amber 3.4s`、运行卡为 `.cardLampRunning::after` 的 conic 流光（1.8s），三者都在；运行卡的**脉冲**按既有回归项「运行中不呼吸」保持关闭。probe 150/150。

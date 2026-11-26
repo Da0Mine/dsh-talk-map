@@ -439,9 +439,11 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
           ? (
             <>
               <div className={styles['sidebarQueueRecentHead']}>{t('statusRail.recent')}</div>
-              {recentRows.map((row) => (
+              {recentRowsOrdered.map((row) => (
                 <div
                   key={'recent-' + row.sessionId}
+                  ref={element => { recentDrag.register(row.sessionId, element) }}
+                  onPointerDown={event => { recentDrag.begin(event, row.sessionId) }}
                   className={`${styles['card']} ${styles['statusRailCard']} ${styles['sidebarQueueCard']}`}
                   style={{
                     width: '100%',
