@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.7.7`：① 拖拽改用**渲染顺序**的 id 列表（此前传的是 props 顺序，向上拖时索引与画面不一致 → 卡片"飞出"、松手排序错乱）；② 侧栏主行拖拽加 `bucketOf` 限制，只能在自己的优先级桶里换位；③ 拖拽后 350ms 内抑制 onClick（`shouldIgnoreClick`），松手不再误进对话，普通单击仍可进；④ 补 host 路由 `POST /talk-map/digest/ensure`——客户端一直在调，host 只有 `/refresh`，所以"查看摘要"永远 404；⑤ 菜单动作失败时把原因显示在菜单里（此前只 console，看不出"置顶没反应"是接口缺失还是失败）。实测：向上拖「云盘同步目录」到首位成功，且拖完地图仍开着；probe 150/150。
+
 - 2026-11-27 `0.7.6`：① 修「让位抽搐」：`useReorder` 在按下时一次性冻结各行中心（`centres`），移动中只跟冻结值比较 → 目标索引稳定，不再出现"测量→位移→再测量"的反馈环（SortableJS 同思路）；② 修「查看摘要」点了没反应：摘要弹窗由 `RailCardMenu` 自己渲染，原来 `.then` 里调了 `props.onClose()`，父组件卸载把弹窗一起带走；改为保持挂载；③ 修「置顶没效果」：`queue-order` 的 `queueRank(lamp, draft, pinned)` 让置顶返回 -1（排最前），两侧栏 rows 都带 `pinned`；`SidebarQueue` 里 `pinnedSessions` 声明提到 `rows` 之前（曾因 TDZ 白屏，probe 抓到 `Cannot access before initialization`）。probe 150/150。
 
 - 2026-11-27 `0.7.5`：① 两侧栏拖拽升级为"跟手 + 让位"：`useReorder` 记录按下时行高与间距，拖动中按指针算出目标索引，经过的行用 `shiftOf` 平移让位，被拖行加阴影/`z-index` 且去掉过渡，松手提交（参考地图卡片拖动的手感）；② 右键菜单补齐到与地图一致 7 项（置顶/未读/重命名/查看摘要/归档/批量操作…/删除会话（回收站）），批量通过 `map-state.requestBatch` + `claimBatchIntent` 由地图面板消费；③ 外侧栏发光被裁：列表内边距 `0 4px 6px` → `10px 16px 12px`，左右各留 16px。probe 150/150；实测菜单 7 项、拖动顺序改变。

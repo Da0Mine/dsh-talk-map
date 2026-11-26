@@ -10,7 +10,7 @@
  *            plugin's own alert + activity stores, i.e. the same inputs `glowOf` uses on
  *            the map (the panel-only `useSessionStatus` hook is not reachable here).
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID } from './canvas-store.ts'
 import { readDraftTexts } from './draft-watch.ts'
@@ -261,7 +261,12 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queueIds.join('|')])
-  const queueDrag = useReorder(queueIds, setQueueOrder)
+  // A drag may only reorder inside one priority bucket, matching the rail's rule.
+  const bucketOfRow = useCallback((sessionId: string): number => {
+    const row = rows.find(entry => entry.sessionId === sessionId)
+    return row === undefined ? 0 : queueRank(row.lamp, row.draft === true, pinnedSessions.has(sessionId))
+  }, [rows, pinnedSessions])
+  const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow })
 
   const recentIds = recentRows.map(row => row.sessionId)
   useEffect(() => {
@@ -273,13 +278,14 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentIds.join('|')])
-  const recentDrag = useReorder(recentIds, setRecentOrder)
   const recentRowsOrdered = useMemo(() => {
     const byId = new Map(recentRows.map(row => [row.sessionId, row]))
     const ordered = recentOrder.map(id => byId.get(id)).filter((row): row is (typeof recentRows)[number] => row !== undefined)
     for (const row of recentRows) if (!recentOrder.includes(row.sessionId)) ordered.push(row)
     return ordered
   }, [recentRows, recentOrder])
+  const recentRenderedIds = recentRowsOrdered.map(row => row.sessionId)
+  const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
@@ -392,6 +398,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
               role="button"
               tabIndex={0}
               onClick={() => {
+                if (queueDrag.shouldIgnoreClick()) return
                 // Drop this plugin's own "finished, unread" mark immediately: it is only
                 // ever cleared when the map panel remounts, which is why the card used to
                 // linger until the map was opened.
@@ -472,6 +479,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                   role="button"
                   tabIndex={0}
                   onClick={() => {
+                    if (recentDrag.shouldIgnoreClick()) return
                     sessionActivity.forget(row.sessionId)
                     setOpened((current) => new Set(current).add(row.sessionId))
                     openSessionInUi(row.sessionId)

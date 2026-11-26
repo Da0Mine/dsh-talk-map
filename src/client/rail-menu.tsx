@@ -37,6 +37,7 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   const [rename, setRename] = useState(false)
   const [renameValue, setRenameValue] = useState(props.target.title)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [digest, setDigest] = useState<{ title: string; digest: Digest | undefined } | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -65,9 +66,14 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   const run = (work: () => Promise<unknown>): void => {
     setBusy(true)
     void work()
-      .then(() => { props.onChanged?.() })
-      .catch((error: unknown) => { console.error('[dsh-talk-map] rail menu action failed:', error) })
-      .finally(() => { setBusy(false); props.onClose() })
+      .then(() => { props.onChanged?.(); setBusy(false); props.onClose() })
+      .catch((cause: unknown) => {
+        // Show it: a silently swallowed rejection is why 置顶 looked like a no-op.
+        const message = cause instanceof Error ? cause.message : String(cause)
+        console.error('[dsh-talk-map] rail menu action failed:', cause)
+        setError(message)
+        setBusy(false)
+      })
   }
 
   const submitRename = (): void => {
@@ -179,6 +185,9 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       style={{ left, top, position: 'fixed' }}
       role="menu"
     >
+      {error !== null
+        ? <div className={styles['menuError']}>{error}</div>
+        : null}
       {items.map(item => (
         <button
           key={item.key}

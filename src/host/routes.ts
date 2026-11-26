@@ -608,6 +608,15 @@ export function mountTalkMapRoutes(
           return
         }
 
+        if (route === 'POST /talk-map/digest/ensure') {
+          // Read the digest that is already stored. The client has asked for this route since it
+          // gained the card menu, but only /refresh existed, so 查看摘要 always 404'd.
+          const body = refreshDigestBody.parse(await readJsonBody(request))
+          const digest = store.digests.get(body.sessionId)
+          sendJson(response, 200, { sessionId: body.sessionId, digest })
+          return
+        }
+
         if (route === 'POST /talk-map/digest/refresh') {
           if (runtime.digest === undefined) {
             sendJson(response, 503, { error: 'digest layer unavailable (llm service missing)' })

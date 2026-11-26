@@ -499,7 +499,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b706 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b707 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -693,7 +693,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b706 · Search cards on the map",
+  "global.searchPlaceholder": "b707 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14161,13 +14161,17 @@ function installLiquidGlass(element, options = {}) {
 
 // src/client/reorder.ts
 var import_react11 = require("react");
-function useReorder(ids, apply2) {
+var CLICK_GUARD_MS = 350;
+function useReorder(ids, apply2, options = {}) {
   const slots = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
   const idsRef = (0, import_react11.useRef)(ids);
   idsRef.current = ids;
+  const bucketRef = (0, import_react11.useRef)(options.bucketOf);
+  bucketRef.current = options.bucketOf;
   const [drag, setDrag] = (0, import_react11.useState)(null);
   const [hover, setHover] = (0, import_react11.useState)(-1);
   const [offsetY, setOffsetY] = (0, import_react11.useState)(0);
+  const dragEndAt = (0, import_react11.useRef)(0);
   const begin = (0, import_react11.useCallback)((event, id2) => {
     if (event.button !== 0) return;
     if (event.target.closest("button") !== null) return;
@@ -14201,14 +14205,20 @@ function useReorder(ids, apply2) {
     if (hover < drag.index && index2 >= hover && index2 < drag.index) return drag.step;
     return 0;
   }, [drag, hover]);
+  const shouldIgnoreClick = (0, import_react11.useCallback)(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, []);
   (0, import_react11.useEffect)(() => {
     if (drag === null) return;
     const onMove = (event) => {
       setOffsetY(event.clientY - drag.startY);
+      const bucketOf = bucketRef.current;
+      const ownBucket = bucketOf === void 0 ? void 0 : bucketOf(drag.id);
       let target = drag.index;
       let bestDistance = Number.POSITIVE_INFINITY;
       drag.centres.forEach((centre, index2) => {
         if (Number.isNaN(centre)) return;
+        const id2 = idsRef.current[index2];
+        if (id2 === void 0) return;
+        if (bucketOf !== void 0 && bucketOf(id2) !== ownBucket) return;
         const distance2 = Math.abs(event.clientY - centre);
         if (distance2 < bestDistance) {
           bestDistance = distance2;
@@ -14220,12 +14230,14 @@ function useReorder(ids, apply2) {
     const onUp = () => {
       const list = idsRef.current;
       const from = list.indexOf(drag.id);
+      const moved = Math.abs(offsetY) > 3 || hover >= 0 && hover !== from;
       if (from >= 0 && hover >= 0 && hover !== from) {
         const next = [...list];
         next.splice(from, 1);
         next.splice(hover, 0, drag.id);
         apply2(next);
       }
+      if (moved) dragEndAt.current = Date.now();
       setDrag(null);
       setHover(-1);
       setOffsetY(0);
@@ -14238,8 +14250,8 @@ function useReorder(ids, apply2) {
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onUp);
     };
-  }, [drag, hover, apply2]);
-  return { draggingId: drag?.id, offsetY, shiftOf, begin, register };
+  }, [drag, hover, offsetY, apply2]);
+  return { draggingId: drag?.id, offsetY, shiftOf, shouldIgnoreClick, begin, register };
 }
 
 // src/client/rail-menu.tsx
@@ -14249,6 +14261,7 @@ function RailCardMenu(props) {
   const [rename, setRename] = (0, import_react12.useState)(false);
   const [renameValue, setRenameValue] = (0, import_react12.useState)(props.target.title);
   const [busy, setBusy] = (0, import_react12.useState)(false);
+  const [error, setError] = (0, import_react12.useState)(null);
   const [digest, setDigest] = (0, import_react12.useState)(null);
   const inputRef = (0, import_react12.useRef)(null);
   const menuRef = (0, import_react12.useRef)(null);
@@ -14274,11 +14287,13 @@ function RailCardMenu(props) {
     setBusy(true);
     void work().then(() => {
       props.onChanged?.();
-    }).catch((error) => {
-      console.error("[dsh-talk-map] rail menu action failed:", error);
-    }).finally(() => {
       setBusy(false);
       props.onClose();
+    }).catch((cause) => {
+      const message = cause instanceof Error ? cause.message : String(cause);
+      console.error("[dsh-talk-map] rail menu action failed:", cause);
+      setError(message);
+      setBusy(false);
     });
   };
   const submitRename = () => {
@@ -14292,8 +14307,8 @@ function RailCardMenu(props) {
     setBusy(true);
     void talkMapApi.ensureDigest(props.target.sessionId).then((result) => {
       setDigest({ title: props.target.title, digest: result.digest });
-    }).catch((error) => {
-      console.error("[dsh-talk-map] digest fetch failed:", error);
+    }).catch((error2) => {
+      console.error("[dsh-talk-map] digest fetch failed:", error2);
     }).finally(() => {
       setBusy(false);
     });
@@ -14397,34 +14412,37 @@ function RailCardMenu(props) {
   ];
   const left = Math.min(props.target.x, window.innerWidth - 200);
   const top = Math.min(props.target.y, window.innerHeight - 40 - items.length * 30);
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
     "div",
     {
       ref: menuRef,
       className: talk_map_default["menu"],
       style: { left, top, position: "fixed" },
       role: "menu",
-      children: items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
-        "button",
-        {
-          type: "button",
-          role: "menuitem",
-          className: `${talk_map_default["menuItem"]}${item.danger === true ? ` ${talk_map_default["menuItemDanger"] ?? ""}` : ""}`,
-          disabled: busy,
-          onClick: item.onPick,
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MenuIcon, { name: item.icon }),
-            item.label
-          ]
-        },
-        item.key
-      ))
+      children: [
+        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
+        items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+          "button",
+          {
+            type: "button",
+            role: "menuitem",
+            className: `${talk_map_default["menuItem"]}${item.danger === true ? ` ${talk_map_default["menuItemDanger"] ?? ""}` : ""}`,
+            disabled: busy,
+            onClick: item.onPick,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MenuIcon, { name: item.icon }),
+              item.label
+            ]
+          },
+          item.key
+        ))
+      ]
     }
   );
 }
 
 // src/client/queue-order.ts
-function queueRank(lamp, draft, pinned = false) {
+function queueRank2(lamp, draft, pinned = false) {
   if (pinned) return -1;
   if (lamp === "error") return 0;
   if (lamp === "waiting") return 1;
@@ -14433,7 +14451,7 @@ function queueRank(lamp, draft, pinned = false) {
   return draft ? 4 : 5;
 }
 function compareQueueRows(a, b) {
-  const byRank = queueRank(a.lamp, a.draft === true, a.pinned === true) - queueRank(b.lamp, b.draft === true, b.pinned === true);
+  const byRank = queueRank2(a.lamp, a.draft === true, a.pinned === true) - queueRank2(b.lamp, b.draft === true, b.pinned === true);
   if (byRank !== 0) return byRank;
   const aIndex = a.manualIndex ?? Number.MAX_SAFE_INTEGER;
   const bIndex = b.manualIndex ?? Number.MAX_SAFE_INTEGER;
@@ -14527,7 +14545,6 @@ function StatusRail(props) {
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [recentIds.join("|")]);
-  const recentDrag = useReorder(recentIds, setRecentOrder);
   const recentEntriesOrdered = (0, import_react13.useMemo)(() => {
     const byId2 = new Map((props.recent ?? []).map((entry) => [entry.cardId, entry]));
     const ordered2 = recentOrder.map((id2) => byId2.get(id2)).filter((entry) => entry !== void 0);
@@ -14536,6 +14553,8 @@ function StatusRail(props) {
     }
     return ordered2;
   }, [props.recent, recentOrder]);
+  const recentRenderedIds = recentEntriesOrdered.map((entry) => entry.cardId);
+  const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   const [drag, setDrag] = (0, import_react13.useState)(null);
   const [shift, setShift] = (0, import_react13.useState)({});
   const seenRef = (0, import_react13.useRef)(/* @__PURE__ */ new Map());
@@ -14711,16 +14730,16 @@ function StatusRail(props) {
       width: rect.width
     });
   }, []);
-  const renderCard = (entry, floating, interactive = true, pointerDown) => /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
+  const renderCard = (entry, floating, interactive = true, pointerDown, onClick) => /* @__PURE__ */ (0, import_jsx_runtime16.jsxs)(
     "div",
     {
       className: `${talk_map_default["card"]} ${entry.lamp === void 0 ? "" : talk_map_default[LAMP_CLASS3[entry.lamp]] ?? ""} ${talk_map_default["statusRailCard"]}${floating ? ` ${talk_map_default["statusRailCardDragging"]}` : ""}`,
       onPointerDown: floating || !interactive ? pointerDown : (event) => {
         beginDrag(event, entry.cardId);
       },
-      ...interactive ? {} : { onClick: () => {
+      ...interactive ? {} : { onClick: onClick ?? (() => {
         props.onOpen(entry.cardId);
-      } },
+      }) },
       onContextMenu: (event) => {
         event.preventDefault();
         setMenu({
@@ -14807,9 +14826,17 @@ function StatusRail(props) {
                       touchAction: "none",
                       ...dragging ? { zIndex: 3, filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.5))" } : {}
                     },
-                    children: renderCard(entry, false, false, (event) => {
-                      recentDrag.begin(event, entry.cardId);
-                    })
+                    children: renderCard(
+                      entry,
+                      false,
+                      false,
+                      (event) => {
+                        recentDrag.begin(event, entry.cardId);
+                      },
+                      () => {
+                        if (!recentDrag.shouldIgnoreClick()) props.onOpen(entry.cardId);
+                      }
+                    )
                   },
                   entry.cardId
                 );
@@ -17335,7 +17362,11 @@ function SidebarQueue() {
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [queueIds.join("|")]);
-  const queueDrag = useReorder(queueIds, setQueueOrder);
+  const bucketOfRow = (0, import_react20.useCallback)((sessionId) => {
+    const row = rows.find((entry) => entry.sessionId === sessionId);
+    return row === void 0 ? 0 : queueRank(row.lamp, row.draft === true, pinnedSessions.has(sessionId));
+  }, [rows, pinnedSessions]);
+  const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow });
   const recentIds = recentRows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {
     setRecentOrder((current) => {
@@ -17345,13 +17376,14 @@ function SidebarQueue() {
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [recentIds.join("|")]);
-  const recentDrag = useReorder(recentIds, setRecentOrder);
   const recentRowsOrdered = (0, import_react20.useMemo)(() => {
     const byId2 = new Map(recentRows.map((row) => [row.sessionId, row]));
     const ordered = recentOrder.map((id2) => byId2.get(id2)).filter((row) => row !== void 0);
     for (const row of recentRows) if (!recentOrder.includes(row.sessionId)) ordered.push(row);
     return ordered;
   }, [recentRows, recentOrder]);
+  const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
+  const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
     const wanted = [...rows, ...recentRows].slice(0, PREVIEW_LIMIT + 3).filter((row) => !askedRef.current.has(row.sessionId)).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }));
     if (wanted.length === 0) return;
@@ -17462,6 +17494,7 @@ function SidebarQueue() {
                     role: "button",
                     tabIndex: 0,
                     onClick: () => {
+                      if (queueDrag.shouldIgnoreClick()) return;
                       sessionActivity.forget(row.sessionId);
                       setOpened((current) => new Set(current).add(row.sessionId));
                       closeMapPanel();
@@ -17535,6 +17568,7 @@ function SidebarQueue() {
                     role: "button",
                     tabIndex: 0,
                     onClick: () => {
+                      if (recentDrag.shouldIgnoreClick()) return;
                       sessionActivity.forget(row.sessionId);
                       setOpened((current) => new Set(current).add(row.sessionId));
                       openSessionInUi(row.sessionId);

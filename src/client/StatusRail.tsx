@@ -175,7 +175,6 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recentIds.join('|')])
-  const recentDrag = useReorder(recentIds, setRecentOrder)
   const recentEntriesOrdered = useMemo(() => {
     const byId = new Map((props.recent ?? []).map(entry => [entry.cardId, entry]))
     const ordered = recentOrder.map(id => byId.get(id)).filter((entry): entry is StatusRailEntry => entry !== undefined)
@@ -185,6 +184,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     }
     return ordered
   }, [props.recent, recentOrder])
+  const recentRenderedIds = recentEntriesOrdered.map(entry => entry.cardId)
+  const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
   const [drag, setDrag] = useState<DragState | null>(null)
   const [shift, setShift] = useState<Record<string, number>>({})
   const seenRef = useRef(new Map<string, string>())
@@ -392,11 +393,12 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     floating: boolean,
     interactive = true,
     pointerDown?: (event: React.PointerEvent<HTMLDivElement>) => void,
+    onClick?: () => void,
   ): React.JSX.Element => (
     <div
       className={`${styles['card']} ${entry.lamp === undefined ? '' : styles[LAMP_CLASS[entry.lamp]] ?? ''} ${styles['statusRailCard']}${floating ? ` ${styles['statusRailCardDragging']}` : ''}`}
       onPointerDown={floating || !interactive ? pointerDown : (event) => { beginDrag(event, entry.cardId) }}
-      {...(interactive ? {} : { onClick: () => { props.onOpen(entry.cardId) } })}
+      {...(interactive ? {} : { onClick: onClick ?? (() => { props.onOpen(entry.cardId) }) })}
       onContextMenu={(event) => {
         event.preventDefault()
         setMenu({
@@ -502,7 +504,13 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                         ...(dragging ? { zIndex: 3, filter: 'drop-shadow(0 12px 22px rgba(0,0,0,0.5))' } : {}),
                       }}
                     >
-                      {renderCard(entry, false, false, event => { recentDrag.begin(event, entry.cardId) })}
+                      {renderCard(
+                        entry,
+                        false,
+                        false,
+                        event => { recentDrag.begin(event, entry.cardId) },
+                        () => { if (!recentDrag.shouldIgnoreClick()) props.onOpen(entry.cardId) },
+                      )}
                     </div>
                   )
                 })}
