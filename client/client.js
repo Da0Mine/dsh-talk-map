@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b803 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b804 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b803 · Search cards on the map",
+  "global.searchPlaceholder": "b804 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1762,80 +1762,6 @@ function GlobalSearch(props) {
     ) : null
   ] });
 }
-
-// src/client/read-archive.ts
-var STORAGE_KEY2 = "dsh.talk-map.read-finished.v1";
-var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
-var listeners4 = /* @__PURE__ */ new Set();
-var read2 = /* @__PURE__ */ new Map();
-var loaded = false;
-function emit2() {
-  for (const listener of listeners4) listener();
-}
-function load() {
-  if (loaded) return;
-  loaded = true;
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY2);
-    if (raw === null) return;
-    const parsed = JSON.parse(raw);
-    if (parsed === null || typeof parsed !== "object") return;
-    const cutoff = Date.now() - MAX_AGE_MS;
-    const next = /* @__PURE__ */ new Map();
-    for (const [id2, at] of Object.entries(parsed)) {
-      if (typeof at !== "number" || at < cutoff) continue;
-      next.set(id2, at);
-    }
-    read2 = next;
-  } catch {
-    read2 = /* @__PURE__ */ new Map();
-  }
-}
-function persist() {
-  try {
-    window.localStorage.setItem(STORAGE_KEY2, JSON.stringify(Object.fromEntries(read2)));
-  } catch {
-  }
-}
-var readArchive = {
-  get() {
-    load();
-    return read2;
-  },
-  has(sessionId) {
-    load();
-    return read2.has(sessionId);
-  },
-  subscribe(listener) {
-    load();
-    listeners4.add(listener);
-    return () => {
-      listeners4.delete(listener);
-    };
-  },
-  /** Called when a 待查看 card is opened (or its lamp is dropped because it was read). */
-  mark(sessionId) {
-    load();
-    const next = new Map(read2);
-    next.set(sessionId, Date.now());
-    read2 = next;
-    persist();
-    emit2();
-  },
-  /**
-   * A session that starts working again leaves the strip: it is back to 任务中, and the next
-   * completion has to be read before it descends again.
-   */
-  forget(sessionId) {
-    load();
-    if (!read2.has(sessionId)) return;
-    const next = new Map(read2);
-    next.delete(sessionId);
-    read2 = next;
-    persist();
-    emit2();
-  }
-};
 
 // src/client/MapCanvas.tsx
 var import_react15 = require("react");
@@ -11024,7 +10950,7 @@ var KEY = "dsh.talk-map.push-log.v1";
 function pairKey(fromCardId, toCardId) {
   return `${fromCardId}>${toCardId}`;
 }
-function read3() {
+function read2() {
   try {
     if (typeof localStorage === "undefined") return {};
     const raw = localStorage.getItem(KEY);
@@ -11038,7 +10964,7 @@ function read3() {
 function stampPush(fromCardId, toCardId) {
   const at = Date.now();
   try {
-    const log = read3();
+    const log = read2();
     log[pairKey(fromCardId, toCardId)] = at;
     if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(log));
   } catch {
@@ -11046,7 +10972,7 @@ function stampPush(fromCardId, toCardId) {
   return at;
 }
 function lastPushFor(fromCardId, toCardId) {
-  const value = read3()[pairKey(fromCardId, toCardId)];
+  const value = read2()[pairKey(fromCardId, toCardId)];
   return typeof value === "number" ? value : void 0;
 }
 
@@ -11335,13 +11261,13 @@ var drawerState = {
 };
 
 // src/client/state-persist.ts
-var STORAGE_KEY3 = "dsh.talk-map.lamp-state.v1";
-var MAX_AGE_MS2 = 14 * 24 * 60 * 60 * 1e3;
-var EMPTY = { version: 1, finished: {}, errors: {}, interrupted: {} };
+var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
+var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
+var EMPTY = { version: 1, finished: {}, errors: {}, interrupted: {}, history: {} };
 function prune(record, now2) {
   const out = {};
   for (const [sessionId, at] of Object.entries(record)) {
-    if (typeof at === "number" && now2 - at < MAX_AGE_MS2) out[sessionId] = at;
+    if (typeof at === "number" && now2 - at < MAX_AGE_MS) out[sessionId] = at;
   }
   return out;
 }
@@ -11351,7 +11277,7 @@ function loadLampState() {
   if (cache !== null) return cache;
   if (typeof localStorage === "undefined") return EMPTY;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY3);
+    const raw = localStorage.getItem(STORAGE_KEY2);
     if (raw === null) {
       cache = EMPTY;
       return cache;
@@ -11361,6 +11287,7 @@ function loadLampState() {
     cache = {
       version: 1,
       finished: prune(parsed.finished ?? {}, now2),
+      history: prune(parsed.history ?? {}, now2),
       errors: parsed.errors ?? {},
       interrupted: prune(parsed.interrupted ?? {}, now2)
     };
@@ -11375,7 +11302,8 @@ function saveLampState(patch) {
     version: 1,
     finished: patch.finished ?? base.finished,
     errors: patch.errors ?? base.errors,
-    interrupted: patch.interrupted ?? base.interrupted
+    interrupted: patch.interrupted ?? base.interrupted,
+    history: patch.history ?? base.history
   };
   if (typeof localStorage === "undefined") return;
   if (timer2 !== void 0) clearTimeout(timer2);
@@ -11390,7 +11318,7 @@ function flushLampState() {
   }
   if (cache === null || typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY3, JSON.stringify(cache));
+    localStorage.setItem(STORAGE_KEY2, JSON.stringify(cache));
   } catch {
   }
 }
@@ -11406,17 +11334,17 @@ function recordRunningAtShutdown(sessionIds) {
 // src/client/session-alerts.ts
 var alerts = /* @__PURE__ */ new Map();
 var snapshot2 = /* @__PURE__ */ new Map();
-var listeners5 = /* @__PURE__ */ new Set();
+var listeners4 = /* @__PURE__ */ new Set();
 for (const [sessionId, detail] of Object.entries(loadLampState().errors)) {
   alerts.set(sessionId, detail);
 }
-function persist2() {
+function persist() {
   saveLampState({ errors: Object.fromEntries(alerts) });
 }
 function publish2() {
   snapshot2 = new Map(alerts);
-  persist2();
-  for (const listener of listeners5) listener();
+  persist();
+  for (const listener of listeners4) listener();
 }
 snapshot2 = new Map(alerts);
 var sessionAlerts = {
@@ -11424,9 +11352,9 @@ var sessionAlerts = {
     return snapshot2;
   },
   subscribe(listener) {
-    listeners5.add(listener);
+    listeners4.add(listener);
     return () => {
-      listeners5.delete(listener);
+      listeners4.delete(listener);
     };
   }
 };
@@ -11481,9 +11409,85 @@ function attachAlertSource(remote, list) {
   };
 }
 
+// src/client/read-archive.ts
+var STORAGE_KEY3 = "dsh.talk-map.read-finished.v1";
+var MAX_AGE_MS2 = 14 * 24 * 60 * 60 * 1e3;
+var listeners5 = /* @__PURE__ */ new Set();
+var read3 = /* @__PURE__ */ new Map();
+var loaded = false;
+function emit2() {
+  for (const listener of listeners5) listener();
+}
+function load() {
+  if (loaded) return;
+  loaded = true;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY3);
+    if (raw === null) return;
+    const parsed = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object") return;
+    const cutoff = Date.now() - MAX_AGE_MS2;
+    const next = /* @__PURE__ */ new Map();
+    for (const [id2, at] of Object.entries(parsed)) {
+      if (typeof at !== "number" || at < cutoff) continue;
+      next.set(id2, at);
+    }
+    read3 = next;
+  } catch {
+    read3 = /* @__PURE__ */ new Map();
+  }
+}
+function persist2() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY3, JSON.stringify(Object.fromEntries(read3)));
+  } catch {
+  }
+}
+var readArchive = {
+  get() {
+    load();
+    return read3;
+  },
+  has(sessionId) {
+    load();
+    return read3.has(sessionId);
+  },
+  subscribe(listener) {
+    load();
+    listeners5.add(listener);
+    return () => {
+      listeners5.delete(listener);
+    };
+  },
+  /** Called when a 待查看 card is opened (or its lamp is dropped because it was read). */
+  mark(sessionId) {
+    load();
+    const next = new Map(read3);
+    next.set(sessionId, Date.now());
+    read3 = next;
+    persist2();
+    emit2();
+  },
+  /**
+   * A session that starts working again leaves the strip: it is back to 任务中, and the next
+   * completion has to be read before it descends again.
+   */
+  forget(sessionId) {
+    load();
+    if (!read3.has(sessionId)) return;
+    const next = new Map(read3);
+    next.delete(sessionId);
+    read3 = next;
+    persist2();
+    emit2();
+  }
+};
+
 // src/client/session-activity.ts
 var lastRunning = /* @__PURE__ */ new Map();
 var finished = /* @__PURE__ */ new Set();
+var history = /* @__PURE__ */ new Map();
+var historySnapshot = /* @__PURE__ */ new Map();
 var interrupted = /* @__PURE__ */ new Set();
 var hydrated = /* @__PURE__ */ new Set();
 var needsBaseline = true;
@@ -11495,6 +11499,7 @@ var interruptedSnapshot = /* @__PURE__ */ new Set();
 var listenerSet = /* @__PURE__ */ new Set();
 function publish3() {
   snapshot3 = new Set(finished);
+  historySnapshot = new Map(history);
   interruptedSnapshot = new Set(interrupted);
   for (const listener of listenerSet) listener();
 }
@@ -11504,7 +11509,7 @@ function persist3() {
   for (const sessionId of finished) finishedRecord[sessionId] = now2;
   const interruptedRecord = {};
   for (const sessionId of interrupted) interruptedRecord[sessionId] = now2;
-  saveLampState({ finished: finishedRecord, interrupted: interruptedRecord });
+  saveLampState({ finished: finishedRecord, interrupted: interruptedRecord, history: Object.fromEntries(history) });
 }
 function hydrate() {
   const stored = loadLampState();
@@ -11512,6 +11517,7 @@ function hydrate() {
     finished.add(sessionId);
     hydrated.add(sessionId);
   }
+  for (const [sessionId, at] of Object.entries(stored.history ?? {})) history.set(sessionId, at);
   for (const sessionId of Object.keys(stored.interrupted)) {
     interrupted.add(sessionId);
     hydrated.add(sessionId);
@@ -11523,6 +11529,10 @@ var sessionActivity = {
   /** Sessions the map believes "finished, unread" (drives the green lamp). */
   getSnapshot() {
     return snapshot3;
+  },
+  /** Every session that has finished at least once (persisted): the feed for「最近的任务」. */
+  history() {
+    return historySnapshot;
   },
   /** Sessions whose run was cut off by a restart ("已中断"). */
   getInterrupted() {
@@ -11585,6 +11595,7 @@ var sessionActivity = {
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId);
         markedEpoch.set(sessionId, panelEpoch);
+        if (!history.has(sessionId)) history.set(sessionId, Date.now());
         changed = true;
       }
       const unread = fact?.completionUnread;
@@ -14324,6 +14335,7 @@ function isPinnedSession(hostPins, sessionId) {
 // src/client/reorder.ts
 var import_react11 = require("react");
 var CLICK_GUARD_MS = 350;
+var FLIP_MIN_DELTA = 24;
 function useReorder(ids, apply2, options = {}) {
   const slots = (0, import_react11.useRef)(/* @__PURE__ */ new Map());
   const idsRef = (0, import_react11.useRef)(ids);
@@ -14403,7 +14415,7 @@ function useReorder(ids, apply2, options = {}) {
         for (const id2 of list) {
           const element = slots.current.get(id2);
           if (element === void 0) continue;
-          before.set(id2, id2 === drag.id ? element.getBoundingClientRect().top : element.offsetTop);
+          before.set(id2, element.getBoundingClientRect().top);
         }
       }
       if (willReorder) {
@@ -14417,15 +14429,17 @@ function useReorder(ids, apply2, options = {}) {
       setHover(-1);
       setOffsetY(0);
       if (before.size === 0) return;
-      const releasedId = drag.id;
       requestAnimationFrame(() => {
         const deltas = {};
         for (const [id2, top] of before) {
           const element = slots.current.get(id2);
           if (element === void 0) continue;
-          const after = id2 === releasedId ? element.getBoundingClientRect().top : element.offsetTop;
+          const after = element.getBoundingClientRect().top;
           const delta = top - after;
           if (Math.abs(delta) > 1) deltas[id2] = delta;
+        }
+        for (const [id2, delta] of Object.entries(deltas)) {
+          if (Math.abs(delta) <= FLIP_MIN_DELTA) delete deltas[id2];
         }
         if (Object.keys(deltas).length === 0) return;
         setFlip(deltas);
@@ -15847,14 +15861,14 @@ function CanvasInner(props) {
     }
     return void 0;
   }, [sessions]);
-  const readFinished = (0, import_react15.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
+  const finishHistory = (0, import_react15.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const recentEntries = (0, import_react15.useMemo)(() => {
     const listed = new Set(statusEntries.map((entry) => entry.sessionId));
     const rows = [];
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue;
       if (listed.has(card.sessionId)) continue;
-      if (!readFinished.has(card.sessionId)) continue;
+      if (!finishHistory.has(card.sessionId)) continue;
       const summary = sessions.byId[card.sessionId];
       rows.push({
         cardId,
@@ -15865,9 +15879,9 @@ function CanvasInner(props) {
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {}
       });
     }
-    rows.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
+    rows.sort((a, b) => (finishHistory.get(b.sessionId) ?? 0) - (finishHistory.get(a.sessionId) ?? 0));
     return rows.slice(0, 3);
-  }, [visibleCards, sessions, statusEntries, renamedTitles, previews]);
+  }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory]);
   const focusCard = (0, import_react15.useCallback)((cardId) => {
     const slot = cardLayout[cardId];
     const card = visibleCards[cardId];
@@ -17618,7 +17632,7 @@ function SidebarQueue() {
     }
     return sortQueueRows(out);
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
-  const readFinished = (0, import_react20.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
+  const finishHistory = (0, import_react20.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const recentRows = (0, import_react20.useMemo)(() => {
     const listed = new Set(rows.map((row) => row.sessionId));
     const out = [];
@@ -17629,7 +17643,7 @@ function SidebarQueue() {
       if (summary.origin === "subagent") continue;
       if (archivedSessionIds.has(sessionId)) continue;
       if (listed.has(sessionId)) continue;
-      if (!readFinished.has(sessionId)) continue;
+      if (!finishHistory.has(sessionId)) continue;
       out.push({
         sessionId,
         cardId: sessionId,
@@ -17639,7 +17653,7 @@ function SidebarQueue() {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     return out.slice(0, 3);
-  }, [rows, sessions, archivedSessionIds, readFinished]);
+  }, [rows, sessions, archivedSessionIds, finishHistory]);
   const activeSession = currentSessionId();
   const queueIds = rows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {

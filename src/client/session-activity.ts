@@ -27,6 +27,9 @@ interface SummaryLike {
 
 const lastRunning = new Map<string, boolean>()
 const finished = new Set<string>()
+/** sessionId → when it finished for the first time. Outlives the 待查看 lamp (「最近的任务」). */
+const history = new Map<string, number>()
+let historySnapshot: ReadonlyMap<string, number> = new Map()
 const interrupted = new Set<string>()
 /** Ids restored from storage: the first observation may clear them (see observe). */
 const hydrated = new Set<string>()
@@ -43,6 +46,7 @@ const listenerSet = new Set<() => void>()
 
 function publish(): void {
   snapshot = new Set(finished)
+  historySnapshot = new Map(history)
   interruptedSnapshot = new Set(interrupted)
   for (const listener of listenerSet) listener()
 }
@@ -53,7 +57,7 @@ function persist(): void {
   for (const sessionId of finished) finishedRecord[sessionId] = now
   const interruptedRecord: Record<string, number> = {}
   for (const sessionId of interrupted) interruptedRecord[sessionId] = now
-  saveLampState({ finished: finishedRecord, interrupted: interruptedRecord })
+  saveLampState({ finished: finishedRecord, interrupted: interruptedRecord, history: Object.fromEntries(history) })
 }
 
 function hydrate(): void {
@@ -62,6 +66,7 @@ function hydrate(): void {
     finished.add(sessionId)
     hydrated.add(sessionId)
   }
+  for (const [sessionId, at] of Object.entries(stored.history ?? {})) history.set(sessionId, at)
   for (const sessionId of Object.keys(stored.interrupted)) {
     interrupted.add(sessionId)
     hydrated.add(sessionId)
@@ -77,6 +82,10 @@ export const sessionActivity = {
   /** Sessions the map believes "finished, unread" (drives the green lamp). */
   getSnapshot(): ReadonlySet<string> {
     return snapshot
+  },
+  /** Every session that has finished at least once (persisted): the feed for「最近的任务」. */
+  history(): ReadonlyMap<string, number> {
+    return historySnapshot
   },
   /** Sessions whose run was cut off by a restart ("已中断"). */
   getInterrupted(): ReadonlySet<string> {
@@ -146,6 +155,7 @@ export const sessionActivity = {
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId)
         markedEpoch.set(sessionId, panelEpoch)
+        if (!history.has(sessionId)) history.set(sessionId, Date.now())
         changed = true
       }
       // Restored marks are NOT dropped just because the session is retained by the main view:

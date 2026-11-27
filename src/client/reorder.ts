@@ -48,6 +48,8 @@ interface DragState {
 }
 
 const CLICK_GUARD_MS = 350
+/** Below this, a correction is snapped instead of animated (see the FLIP block). */
+const FLIP_MIN_DELTA = 24
 
 export function useReorder(
   ids: readonly string[],
@@ -142,7 +144,9 @@ export function useReorder(
         for (const id of list) {
           const element = slots.current.get(id)
           if (element === undefined) continue
-          before.set(id, id === drag.id ? element.getBoundingClientRect().top : element.offsetTop)
+          // Viewport position as DISPLAYED at release. Rows that already slid for the drop have
+          // their new layout slot right here, so their later delta is ~0 and they do not twitch.
+          before.set(id, element.getBoundingClientRect().top)
         }
       }
 
@@ -158,15 +162,23 @@ export function useReorder(
       setOffsetY(0)
 
       if (before.size === 0) return
-      const releasedId = drag.id
       requestAnimationFrame(() => {
         const deltas: Record<string, number> = {}
         for (const [id, top] of before) {
           const element = slots.current.get(id)
           if (element === undefined) continue
-          const after = id === releasedId ? element.getBoundingClientRect().top : element.offsetTop
+          // Same measure after the commit: the shift transforms are gone, so rect.top is the
+          // row's real slot. Comparing like with like is what makes the deltas trustworthy.
+          const after = element.getBoundingClientRect().top
           const delta = top - after
           if (Math.abs(delta) > 1) deltas[id] = delta
+        }
+        // A residual of a few pixels is the difference between the uniform "step" used while
+        // dragging and the real per-row height: animating it is what the user saw as a twitch.
+        // Only the rows that really have to travel (the released one, and cross-bucket slides)
+        // get the animation; the rest are simply already in place.
+        for (const [id, delta] of Object.entries(deltas)) {
+          if (Math.abs(delta) <= FLIP_MIN_DELTA) delete deltas[id]
         }
         if (Object.keys(deltas).length === 0) return
         setFlip(deltas)
