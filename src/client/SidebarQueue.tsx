@@ -21,6 +21,7 @@ import { closeMapPanel, currentSessionId, getServices, openSessionInUi } from '.
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
+import { MAX_RECENT_TASKS, RECENT_PAGE_SIZE } from './StatusRail.tsx'
 import { PinMark } from './PinMark.tsx'
 import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
@@ -125,6 +126,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   /** Manual order for the queue rows (inside each priority bucket) and for the recent strip. */
   const [queueOrder, setQueueOrder] = useState<string[]>([])
   const [recentOrder, setRecentOrder] = useState<string[]>([])
+  /** Mirrors the map rail: five visible, +5 per 「查看更多」 or bottom wheel. */
+  const [recentLimit, setRecentLimit] = useState(RECENT_PAGE_SIZE)
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const moreRef = useRef({ hasMore: false, loadMore: () => {} })
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
   const askedRef = useRef<Set<string>>(new Set())
@@ -259,8 +264,23 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     // Whoever was read last sits on top; completion time is only the fallback.
     const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
     out.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
-    return out.slice(0, 3)
+    return out.slice(0, MAX_RECENT_TASKS)
   }, [rows, sessions, archivedSessionIds, finishHistory, readMarks])
+  // Same pager as the map rail: at the bottom, one more wheel tick loads five more.
+  useEffect(() => {
+    const list = listRef.current
+    if (list === null) return
+    const onWheel = (event: WheelEvent): void => {
+      if (event.deltaY <= 0) return
+      const atBottom = list.scrollTop + list.clientHeight >= list.scrollHeight - 2
+      if (!atBottom || !moreRef.current.hasMore) return
+      event.preventDefault()
+      moreRef.current.loadMore()
+    }
+    list.addEventListener('wheel', onWheel, { passive: false })
+    return () => { list.removeEventListener('wheel', onWheel) }
+  }, [])
+
   const activeSession = currentSessionId()
 
   const queueIds = rows.map(row => row.sessionId)
@@ -308,6 +328,12 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       pinned: true,
     })), [recentRowsOrdered, localPinSet])
   const unpinnedRecentRows = recentRowsOrdered.filter(row => !isPinnedSession(localPinSet, row.sessionId))
+  const visibleRecentRows = unpinnedRecentRows.slice(0, recentLimit)
+  const hasMoreRecent = unpinnedRecentRows.length > visibleRecentRows.length
+  moreRef.current = {
+    hasMore: hasMoreRecent,
+    loadMore: () => { setRecentLimit(current => current + RECENT_PAGE_SIZE) },
+  }
   const recentRenderedIds = recentRowsOrdered.map(row => row.sessionId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
 
@@ -375,6 +401,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         <span className={styles['sidebarQueueCount']}>{rows.length}</span>
       </div>
       <div
+        ref={listRef}
         className={styles['sidebarQueueList']}
         role="list"
         style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 auto', minHeight: 0, overflowY: 'auto', overflowX: 'hidden', padding: '10px 16px 12px', overscrollBehavior: 'contain' }}
@@ -500,7 +527,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
           ? (
             <>
               <div className={styles['sidebarQueueRecentHead']}>{t('statusRail.recent')}</div>
-              {recentRowsOrdered.map((row) => (
+              {visibleRecentRows.map((row) => (
                 <div
                   key={'recent-' + row.sessionId}
                   ref={element => { recentDrag.register(row.sessionId, element) }}
@@ -556,6 +583,17 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                   </div>
                 </div>
               ))}
+              {hasMoreRecent
+                ? (
+                    <button
+                      type="button"
+                      className={styles['sidebarQueueMore']}
+                      onClick={() => { setRecentLimit(current => current + RECENT_PAGE_SIZE) }}
+                    >
+                      {t('statusRail.more')}
+                    </button>
+                  )
+                : null}
             </>
           )
           : null}

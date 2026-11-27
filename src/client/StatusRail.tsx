@@ -26,7 +26,7 @@ import styles from './talk-map.module.css'
 /** How many finished-and-read tasks the plugin keeps around for「最近的任务」. */
 export const MAX_RECENT_TASKS = 30
 /** How many of them are on screen before「查看更多」. */
-const RECENT_PAGE_SIZE = 5
+export const RECENT_PAGE_SIZE = 5
 
 export type StatusLamp = CardGlow
 

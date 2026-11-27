@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.8.13`：外侧栏（对话侧栏队列）与内侧栏统一分页：默认显示 5 条、底部「查看更多」+5、列表滚到底再往下滚一次也 +5；数据窗口同为 30（`recentRows` 的 `slice(0,3)` → `slice(0, MAX_RECENT_TASKS)`）。实现上把 `MAX_RECENT_TASKS` / `RECENT_PAGE_SIZE` 从 StatusRail 导出给 SidebarQueue 复用，列表容器加 `listRef` + `wheel {passive:false}` 监听（仅触底且还有更多时生效），新增 `.sidebarQueueMore` 样式。构建时发现 `RECENT_PAGE_SIZE` 漏了 export（esbuild 直接报 No matching export），已补。probe 150/150。
+
 - 2026-11-27 `0.8.12`：左侧栏「最近的任务」改成分页：默认显示 **5 条**，底部有「查看更多」，点一次 +5；面板滚到最底再往下滚一次也 +5（`wheel` 监听 `{passive:false}`，仅 `deltaY>0` 且已触底且还有更多时才 `preventDefault`）。数据侧：`MapCanvas` 最近区窗口 `slice(0,3)` → `slice(0, MAX_RECENT_TASKS=30)`；`state-persist` 新增 `pruneHistory`，历史**最多保留 30 条**（按时间取最新，仍受 14 天限制）。实测：预置多张已完成记录 → 初始 5 张 + 有「查看更多」，点一次后 +1（板上可入列的会话共 6 张，已到底故按钮消失）。probe 150/150。
 
 - 2026-11-27 `0.8.11`：修「外侧栏里刚开跑的任务掉到待发送卡片后面」。0.8.5 为了支持跨优先级拖动，把外侧栏排序改成"用户顺序优先"，于是卡片优先级变化（待发送→运行中）时仍占着旧位置，直到重排。改为**与她栏一致**的规则：`sortQueueRows` 优先级优先（error > waiting > done > running > draft）、桶内按 `manualIndex`。让位动画不受影响（拖动时的目标索引仍自由），只是跨优先级的落位会回到新优先级的位置。probe 150/150。
