@@ -12,6 +12,7 @@
  * Interaction: right/middle-drag pans, plain right-click opens the context
  * menu, left-drag box-selects on the pane and drags nodes.
  */
+import { computeRecentTasks } from './recent-tasks.ts'
 import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
@@ -1056,31 +1057,18 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   const finishHistory = useSyncExternalStore(sessionActivity.subscribe, () => sessionActivity.history())
   const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
-  const recentEntries = useMemo<StatusRailEntry[]>(() => {
-    const listed = new Set(statusEntries.map(entry => entry.sessionId))
-    const rows: StatusRailEntry[] = []
-    for (const [cardId, card] of Object.entries(visibleCards)) {
-      if (card.boardId !== INBOX_BOARD_ID) continue
-      if (listed.has(card.sessionId)) continue
-      // 「最近的任务」= 任务中 → 待查看 → 看过；没走完这条链的不入列。
-      if (!finishHistory.has(card.sessionId)) continue
-      const summary = sessions.byId[card.sessionId]
-      rows.push({
-        cardId,
-        sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
-        stamp: summary?.updatedAt ?? 0,
-        ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
-        ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
-      })
-    }
-    // Newest READ first: finishing order says nothing about which one you actually looked at
-    // last, and that is what decides the order here.
-    const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
-    rows.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
-    // The rail paginates (5 at a time); it needs the whole window, not just the first three.
-    return rows.slice(0, MAX_RECENT_TASKS)
-  }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks])
+  const recentEntries = useMemo<StatusRailEntry[]>(() => computeRecentTasks({
+    cards: Object.entries(visibleCards)
+      .filter(([, card]) => card.boardId === INBOX_BOARD_ID)
+      .map(([cardId, card]) => ({ cardId, sessionId: card.sessionId })),
+    listed: new Set(statusEntries.map(entry => entry.sessionId)),
+    history: finishHistory,
+    readMarks,
+    title: sessionId => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? sessionId,
+    updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
+    preview: sessionId => previews[sessionId],
+    limit: MAX_RECENT_TASKS,
+  }), [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks])
 
   /** Bring one card into view and select it (a double click on a rail row). */
   const focusCard = useCallback((cardId: string) => {

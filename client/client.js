@@ -505,7 +505,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b814 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b815 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -705,7 +705,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b814 · Search cards on the map",
+  "global.searchPlaceholder": "b815 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1763,6 +1763,28 @@ function GlobalSearch(props) {
       }
     ) : null
   ] });
+}
+
+// src/client/recent-tasks.ts
+function computeRecentTasks(input) {
+  const rows = [];
+  for (const card of input.cards) {
+    if (input.listed.has(card.sessionId)) continue;
+    if (!input.history.has(card.sessionId)) continue;
+    const updatedAt = input.updatedAt(card.sessionId);
+    const preview = input.preview(card.sessionId);
+    rows.push({
+      cardId: card.cardId,
+      sessionId: card.sessionId,
+      title: input.title(card.sessionId),
+      stamp: updatedAt ?? 0,
+      ...updatedAt !== void 0 ? { updatedAt } : {},
+      ...preview !== void 0 && preview !== "" ? { preview } : {}
+    });
+  }
+  const seenAt = (sessionId) => input.readMarks.get(sessionId) ?? input.history.get(sessionId) ?? 0;
+  rows.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId));
+  return rows.slice(0, input.limit);
 }
 
 // src/client/read-archive.ts
@@ -15982,27 +16004,16 @@ function CanvasInner(props) {
   }, [sessions]);
   const finishHistory = (0, import_react15.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const readMarks = (0, import_react15.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
-  const recentEntries = (0, import_react15.useMemo)(() => {
-    const listed = new Set(statusEntries.map((entry) => entry.sessionId));
-    const rows = [];
-    for (const [cardId, card] of Object.entries(visibleCards)) {
-      if (card.boardId !== INBOX_BOARD_ID) continue;
-      if (listed.has(card.sessionId)) continue;
-      if (!finishHistory.has(card.sessionId)) continue;
-      const summary = sessions.byId[card.sessionId];
-      rows.push({
-        cardId,
-        sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
-        stamp: summary?.updatedAt ?? 0,
-        ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
-        ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {}
-      });
-    }
-    const seenAt = (sessionId) => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0;
-    rows.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId));
-    return rows.slice(0, MAX_RECENT_TASKS);
-  }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks]);
+  const recentEntries = (0, import_react15.useMemo)(() => computeRecentTasks({
+    cards: Object.entries(visibleCards).filter(([, card]) => card.boardId === INBOX_BOARD_ID).map(([cardId, card]) => ({ cardId, sessionId: card.sessionId })),
+    listed: new Set(statusEntries.map((entry) => entry.sessionId)),
+    history: finishHistory,
+    readMarks,
+    title: (sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? sessionId,
+    updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
+    preview: (sessionId) => previews[sessionId],
+    limit: MAX_RECENT_TASKS
+  }), [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks]);
   const focusCard = (0, import_react15.useCallback)((cardId) => {
     const slot = cardLayout[cardId];
     const card = visibleCards[cardId];
@@ -17668,7 +17679,7 @@ function SidebarQueue() {
   } });
   const [menu, setMenu] = (0, import_react20.useState)(null);
   const localPinSet = (0, import_react20.useSyncExternalStore)(localPins.subscribe, () => localPins.get());
-  const askedRef = (0, import_react20.useRef)(/* @__PURE__ */ new Set());
+  const askedRef = (0, import_react20.useRef)(/* @__PURE__ */ new Map());
   (0, import_react20.useEffect)(() => {
     const timer4 = setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
@@ -17759,28 +17770,19 @@ function SidebarQueue() {
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
   const finishHistory = (0, import_react20.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const readMarks = (0, import_react20.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
-  const recentRows = (0, import_react20.useMemo)(() => {
-    const listed = new Set(rows.map((row) => row.sessionId));
-    const out = [];
-    for (const sessionId of sessions.ids) {
-      const summary = sessions.byId[sessionId];
-      if (summary === void 0) continue;
-      if (summary.blank === true) continue;
-      if (summary.origin === "subagent") continue;
-      if (archivedSessionIds.has(sessionId)) continue;
-      if (listed.has(sessionId)) continue;
-      if (!finishHistory.has(sessionId)) continue;
-      out.push({
-        sessionId,
-        cardId: sessionId,
-        title: summary.displayTitle ?? sessionId,
-        ...summary.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
-      });
-    }
-    const seenAt = (sessionId) => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0;
-    out.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId));
-    return out.slice(0, MAX_RECENT_TASKS);
-  }, [rows, sessions, archivedSessionIds, finishHistory, readMarks]);
+  const recentRows = (0, import_react20.useMemo)(
+    () => computeRecentTasks({
+      cards: Object.entries(canvasState.cards).filter(([, card]) => card.boardId === "inbox").map(([cardId, card]) => ({ cardId, sessionId: card.sessionId })),
+      listed: new Set(rows.map((row) => row.sessionId)),
+      history: finishHistory,
+      readMarks,
+      title: (sessionId) => sessions.byId[sessionId]?.displayTitle ?? sessionId,
+      updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
+      preview: (sessionId) => previews[sessionId],
+      limit: MAX_RECENT_TASKS
+    }).map((entry) => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...entry.updatedAt !== void 0 ? { updatedAt: entry.updatedAt } : {} })),
+    [canvasState.cards, rows, sessions, finishHistory, readMarks, previews]
+  );
   (0, import_react20.useEffect)(() => {
     const list2 = listRef.current;
     if (list2 === null) return;
@@ -17843,9 +17845,10 @@ function SidebarQueue() {
   const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
-    const wanted = [...rows, ...recentRows].slice(0, PREVIEW_LIMIT + 3).filter((row) => !askedRef.current.has(row.sessionId)).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }));
+    const pick = (list2, cap) => list2.slice(0, cap).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 })).filter((item) => askedRef.current.get(item.id) !== item.stamp);
+    const wanted = [...pick(rows, PREVIEW_LIMIT), ...pick(recentRows, 10)];
     if (wanted.length === 0) return;
-    for (const item of wanted) askedRef.current.add(item.id);
+    for (const item of wanted) askedRef.current.set(item.id, item.stamp);
     void talkMapApi.lastUserMessages(wanted).then((page) => {
       setPreviews((current) => {
         const next = { ...current };
@@ -17855,7 +17858,7 @@ function SidebarQueue() {
         return next;
       });
     }).catch(() => {
-      for (const id2 of wanted) askedRef.current.delete(id2);
+      for (const item of wanted) askedRef.current.delete(item.id);
     });
   }, [rows, recentRows]);
   return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(

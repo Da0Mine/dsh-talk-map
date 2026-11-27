@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-28 `0.8.15`：① 两侧「最近的任务」**合用一个计算函数** `src/client/recent-tasks.ts`（`computeRecentTasks`）：来源统一为"看板卡片 ∩ 完成历史 − 队列中已列 − 未完成"，按最后看完时间倒序、上限 30。此前内侧取看板卡、外侧取会话列表，来源不同必然不一致；② 外侧卡片没有正文：预览请求原来是 `[...rows, ...recentRows].slice(0, 17)`，把最近卡整段截掉；改为**分开预算**（队列行 14 张 + 最近 10 张），并把去重键从 `Set<sessionId>` 换成 `Map<sessionId, stamp>`，会话更新后会重新拉。probe 150/150；分页回归（预置多条 → 初始 5 张 + 查看更多 → 点击 +5）通过。
+
 - 2026-11-27 `0.8.14`：卡片正文改为**启动即预热**。原来只有 4 秒一轮、每轮 4 张的滴灌（为千卡看板设计），启动后侧栏只能先看到标题，正文要等几十秒才陆续出现。新增 warm-up：`visibleCards` 变化时把尚未取过的会话按 **12 张/批、批间隔 80ms** 连续拉完（`PREVIEW_WARM_BATCH` / `PREVIEW_WARM_GAP_MS`），结果写回 `setPreviews` 并同步到滴灌的 `previewStamp` 以免重复读；原有 4 秒滴灌保留用于增量更新。实测：清空缓存启动后 **295ms** 已有 3 张卡带正文。probe 150/150。
 
 - 2026-11-27 `0.8.13`：外侧栏（对话侧栏队列）与内侧栏统一分页：默认显示 5 条、底部「查看更多」+5、列表滚到底再往下滚一次也 +5；数据窗口同为 30（`recentRows` 的 `slice(0,3)` → `slice(0, MAX_RECENT_TASKS)`）。实现上把 `MAX_RECENT_TASKS` / `RECENT_PAGE_SIZE` 从 StatusRail 导出给 SidebarQueue 复用，列表容器加 `listRef` + `wheel {passive:false}` 监听（仅触底且还有更多时生效），新增 `.sidebarQueueMore` 样式。构建时发现 `RECENT_PAGE_SIZE` 漏了 export（esbuild 直接报 No matching export），已补。probe 150/150。

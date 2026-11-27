@@ -10,6 +10,7 @@
  *            plugin's own alert + activity stores, i.e. the same inputs `glowOf` uses on
  *            the map (the panel-only `useSessionStatus` hook is not reachable here).
  */
+import { computeRecentTasks } from './recent-tasks.ts'
 import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { talkMapApi } from './api.ts'
@@ -132,7 +133,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const moreRef = useRef({ hasMore: false, loadMore: () => {} })
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
-  const askedRef = useRef<Set<string>>(new Set())
+  /** sessionId → the stamp we already asked for; a newer stamp means ask again. */
+  const askedRef = useRef<Map<string, number>>(new Map())
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -242,30 +244,20 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
   const finishHistory = useSyncExternalStore(sessionActivity.subscribe, () => sessionActivity.history())
   const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
-  const recentRows = useMemo(() => {
-    const listed = new Set(rows.map(row => row.sessionId))
-    const out: { sessionId: string; cardId: string; title: string; updatedAt?: number }[] = []
-    for (const sessionId of sessions.ids) {
-      const summary = sessions.byId[sessionId]
-      if (summary === undefined) continue
-      if (summary.blank === true) continue
-      if (summary.origin === 'subagent') continue
-      if (archivedSessionIds.has(sessionId)) continue
-      if (listed.has(sessionId)) continue
-      // 只有"待查看且已看过"的会话才落到最近的任务。
-      if (!finishHistory.has(sessionId)) continue
-      out.push({
-        sessionId,
-        cardId: sessionId,
-        title: summary.displayTitle ?? sessionId,
-        ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
-      })
-    }
-    // Whoever was read last sits on top; completion time is only the fallback.
-    const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
-    out.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
-    return out.slice(0, MAX_RECENT_TASKS)
-  }, [rows, sessions, archivedSessionIds, finishHistory, readMarks])
+  // Same computation as the map rail — one source, so the two lists cannot disagree.
+  const recentRows = useMemo(() => computeRecentTasks({
+    cards: Object.entries(canvasState.cards)
+      .filter(([, card]) => (card as { boardId?: string }).boardId === 'inbox')
+      .map(([cardId, card]) => ({ cardId, sessionId: card.sessionId })),
+    listed: new Set(rows.map(row => row.sessionId)),
+    history: finishHistory,
+    readMarks,
+    title: sessionId => sessions.byId[sessionId]?.displayTitle ?? sessionId,
+    updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
+    preview: sessionId => previews[sessionId],
+    limit: MAX_RECENT_TASKS,
+  }).map(entry => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...(entry.updatedAt !== undefined ? { updatedAt: entry.updatedAt } : {}) })),
+  [canvasState.cards, rows, sessions, finishHistory, readMarks, previews])
   // Same pager as the map rail: at the bottom, one more wheel tick loads five more.
   useEffect(() => {
     const list = listRef.current
@@ -339,12 +331,16 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
-    const wanted = [...rows, ...recentRows]
-      .slice(0, PREVIEW_LIMIT + 3)
-      .filter(row => !askedRef.current.has(row.sessionId))
-      .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
+    // Queue rows and recent rows get their own budgets: slicing the concatenation meant the
+    // recent cards were the first thing dropped, which is why they showed no text at all.
+    const pick = (list: readonly { sessionId: string; updatedAt?: number }[], cap: number): { id: string; stamp: number }[] =>
+      list
+        .slice(0, cap)
+        .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
+        .filter(item => askedRef.current.get(item.id) !== item.stamp)
+    const wanted = [...pick(rows, PREVIEW_LIMIT), ...pick(recentRows, 10)]
     if (wanted.length === 0) return
-    for (const item of wanted) askedRef.current.add(item.id)
+    for (const item of wanted) askedRef.current.set(item.id, item.stamp)
     void talkMapApi.lastUserMessages(wanted)
       .then((page) => {
         setPreviews((current) => {
@@ -355,7 +351,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
           return next
         })
       })
-      .catch(() => { for (const id of wanted) askedRef.current.delete(id) })
+      .catch(() => { for (const item of wanted) askedRef.current.delete(item.id) })
   }, [rows, recentRows])
 
   // The board stays mounted even with nothing queued: hiding it made the whole section vanish
