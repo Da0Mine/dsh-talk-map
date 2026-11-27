@@ -505,7 +505,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b815 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b816 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -705,7 +705,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b815 · Search cards on the map",
+  "global.searchPlaceholder": "b816 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -15315,8 +15315,10 @@ function snap(value) {
 var IMPORT_CAP = 120;
 var PREVIEW_BATCH = 4;
 var PREVIEW_INTERVAL_MS = 4e3;
-var PREVIEW_WARM_BATCH = 12;
-var PREVIEW_WARM_GAP_MS = 80;
+var PREVIEW_WARM_BATCH = 3;
+var PREVIEW_WARM_GAP_MS = 400;
+var PREVIEW_WARM_GAP_MIN = 400;
+var PREVIEW_WARM_GAP_MAX = 4e3;
 function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
@@ -15578,15 +15580,18 @@ function CanvasInner(props) {
   }, [visibleCards]);
   const warmed = (0, import_react15.useRef)(/* @__PURE__ */ new Set());
   (0, import_react15.useEffect)(() => {
+    if (sessions.ids.length === 0) return;
     const ids = Object.values(visibleCards).map((card) => card.sessionId);
     const todo = ids.filter((sessionId) => !warmed.current.has(sessionId));
     if (todo.length === 0) return;
     let cancelled = false;
+    let gap = PREVIEW_WARM_GAP_MS;
     const step2 = () => {
       if (cancelled) return;
       const chunk = todo.splice(0, PREVIEW_WARM_BATCH);
       if (chunk.length === 0) return;
       for (const sessionId of chunk) warmed.current.add(sessionId);
+      const startedAt = Date.now();
       void talkMapApi.lastUserMessages(chunk.map((sessionId) => ({ id: sessionId }))).then(({ texts }) => {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
@@ -15599,7 +15604,8 @@ function CanvasInner(props) {
           setPreviews((previous) => ({ ...previous, ...cleaned }));
         }
       }).catch(() => void 0).finally(() => {
-        if (!cancelled) setTimeout(step2, PREVIEW_WARM_GAP_MS);
+        gap = Math.min(PREVIEW_WARM_GAP_MAX, Math.max(PREVIEW_WARM_GAP_MIN, (Date.now() - startedAt) * 4));
+        if (!cancelled) setTimeout(step2, gap);
       });
     };
     step2();
@@ -16140,7 +16146,7 @@ function CanvasInner(props) {
       if (!index2.has(card.sessionId)) index2.set(card.sessionId, cardId);
     }
     return index2;
-  }, [visibleCards]);
+  }, [visibleCards, sessions.ids.length]);
   const lastPushOf = (fromCardId, toCardId) => {
     for (const edge of Object.values(canvasState.edges)) {
       const same = edge.fromCardId === fromCardId && edge.toCardId === toCardId || edge.fromCardId === toCardId && edge.toCardId === fromCardId;
@@ -17630,7 +17636,7 @@ function storedHeight() {
     return void 0;
   }
 }
-var PREVIEW_LIMIT = 14;
+var PREVIEW_PAGE = 5;
 function lampOf(sessionId, status, summary, alerts2, finished2) {
   if (alerts2.has(sessionId)) return "error";
   if (status?.pendingInteraction !== void 0) return "waiting";
@@ -17667,7 +17673,7 @@ function SidebarQueue() {
   const finished2 = (0, import_react20.useSyncExternalStore)(sessionActivity.subscribe, sessionActivity.getSnapshot);
   const locale = (0, import_react20.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const [drafts, setDrafts] = (0, import_react20.useState)(() => readDraftTexts());
-  const [previews, setPreviews] = (0, import_react20.useState)({});
+  const [previews, setPreviews] = (0, import_react20.useState)(readPreviewTexts);
   const [height, setHeight] = (0, import_react20.useState)(() => storedHeight());
   const drag = (0, import_react20.useRef)(null);
   const [opened, setOpened] = (0, import_react20.useState)(() => /* @__PURE__ */ new Set());
@@ -17846,7 +17852,7 @@ function SidebarQueue() {
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
     const pick = (list2, cap) => list2.slice(0, cap).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 })).filter((item) => askedRef.current.get(item.id) !== item.stamp);
-    const wanted = [...pick(rows, PREVIEW_LIMIT), ...pick(recentRows, 10)];
+    const wanted = [...pick(rows, PREVIEW_PAGE), ...pick(recentRows, PREVIEW_PAGE)].slice(0, PREVIEW_PAGE * 2);
     if (wanted.length === 0) return;
     for (const item of wanted) askedRef.current.set(item.id, item.stamp);
     void talkMapApi.lastUserMessages(wanted).then((page) => {

@@ -27,6 +27,7 @@ import { PinMark } from './PinMark.tsx'
 import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
 import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
+import { readPreviewTexts } from './preview-cache.ts'
 import { sessionActivity } from './session-activity.ts'
 import { sessionAlerts } from './session-alerts.ts'
 import styles from './talk-map.module.css'
@@ -58,6 +59,8 @@ function storedHeight(): number | undefined {
 
 /** How many cards get a body preview (the Host reads one session surface each). */
 const PREVIEW_LIMIT = 14
+/** Reads are expensive (one session surface each): ask for a few, then the next pass. */
+const PREVIEW_PAGE = 5
 
 /** The rail's lamp rules, over sources a sidebar action can actually read. */
 /**
@@ -117,7 +120,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const finished = useSyncExternalStore(sessionActivity.subscribe, sessionActivity.getSnapshot)
   const locale = useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
   const [drafts, setDrafts] = useState<Record<string, string>>(() => readDraftTexts())
-  const [previews, setPreviews] = useState<Record<string, string>>({})
+  const [previews, setPreviews] = useState<Record<string, string>>(readPreviewTexts)
   // Manual height: undefined = fit the cards, a number = what the user dragged to.
   const [height, setHeight] = useState<number | undefined>(() => storedHeight())
   const drag = useRef<{ startY: number; startHeight: number } | null>(null)
@@ -338,7 +341,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         .slice(0, cap)
         .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
         .filter(item => askedRef.current.get(item.id) !== item.stamp)
-    const wanted = [...pick(rows, PREVIEW_LIMIT), ...pick(recentRows, 10)]
+    const wanted = [...pick(rows, PREVIEW_PAGE), ...pick(recentRows, PREVIEW_PAGE)].slice(0, PREVIEW_PAGE * 2)
     if (wanted.length === 0) return
     for (const item of wanted) askedRef.current.set(item.id, item.stamp)
     void talkMapApi.lastUserMessages(wanted)

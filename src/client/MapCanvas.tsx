@@ -101,8 +101,11 @@ const PREVIEW_BATCH = 4
  *  decompress a 37 MB session log (≈116 MB, ≈180 ms), so this stays deliberately slow. */
 const PREVIEW_INTERVAL_MS = 4000
 /** Startup warm-up: how many sessions per request, and the pause between chunks. */
-const PREVIEW_WARM_BATCH = 12
-const PREVIEW_WARM_GAP_MS = 80
+const PREVIEW_WARM_BATCH = 3
+const PREVIEW_WARM_GAP_MS = 400
+/** Never wait less than this, and never more: the Host reads a whole session surface per call. */
+const PREVIEW_WARM_GAP_MIN = 400
+const PREVIEW_WARM_GAP_MAX = 4000
 /** Conservative card height for the viewport test (real heights vary with content). */
 const CARD_MIN_H = 120
 
@@ -485,15 +488,20 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
    */
   const warmed = useRef(new Set<string>())
   useEffect(() => {
+    // Wait for the session list: firing session-surface reads while it is still hydrating is what
+    // starved the shell and left every card as a ghost for minutes.
+    if (sessions.ids.length === 0) return
     const ids = Object.values(visibleCards).map(card => card.sessionId)
     const todo = ids.filter(sessionId => !warmed.current.has(sessionId))
     if (todo.length === 0) return
     let cancelled = false
+    let gap = PREVIEW_WARM_GAP_MS
     const step = (): void => {
       if (cancelled) return
       const chunk = todo.splice(0, PREVIEW_WARM_BATCH)
       if (chunk.length === 0) return
       for (const sessionId of chunk) warmed.current.add(sessionId)
+      const startedAt = Date.now()
       void talkMapApi.lastUserMessages(chunk.map(sessionId => ({ id: sessionId })))
         .then(({ texts }) => {
           const cleaned: Record<string, string> = {}
@@ -509,7 +517,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           }
         })
         .catch(() => undefined)
-        .finally(() => { if (!cancelled) setTimeout(step, PREVIEW_WARM_GAP_MS) })
+        .finally(() => {
+          // Back off when the Host is slow: three surface reads already take a while, and
+          // hammering the queue makes the whole shell feel stuck.
+          gap = Math.min(PREVIEW_WARM_GAP_MAX, Math.max(PREVIEW_WARM_GAP_MIN, (Date.now() - startedAt) * 4))
+          if (!cancelled) setTimeout(step, gap)
+        })
     }
     step()
     return () => { cancelled = true }
@@ -1211,7 +1224,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       if (!index.has(card.sessionId)) index.set(card.sessionId, cardId)
     }
     return index
-  }, [visibleCards])
+  }, [visibleCards, sessions.ids.length])
 
   /** Last delivery for a card pair: the edge's own stamp, else the push log. */
   const lastPushOf = (fromCardId: string, toCardId: string): number | undefined => {
