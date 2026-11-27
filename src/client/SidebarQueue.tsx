@@ -10,6 +10,7 @@
  *            plugin's own alert + activity stores, i.e. the same inputs `glowOf` uses on
  *            the map (the panel-only `useSessionStatus` hook is not reachable here).
  */
+import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID } from './canvas-store.ts'
@@ -239,6 +240,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
   const finishHistory = useSyncExternalStore(sessionActivity.subscribe, () => sessionActivity.history())
+  const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
   const recentRows = useMemo(() => {
     const listed = new Set(rows.map(row => row.sessionId))
     const out: { sessionId: string; cardId: string; title: string; updatedAt?: number }[] = []
@@ -258,9 +260,11 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
       })
     }
-    out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
+    // Whoever was read last sits on top; completion time is only the fallback.
+    const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
+    out.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
     return out.slice(0, 3)
-  }, [rows, sessions, archivedSessionIds, finishHistory])
+  }, [rows, sessions, archivedSessionIds, finishHistory, readMarks])
   const activeSession = currentSessionId()
 
   const queueIds = rows.map(row => row.sessionId)

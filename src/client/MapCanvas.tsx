@@ -12,6 +12,7 @@
  * Interaction: right/middle-drag pans, plain right-click opens the context
  * menu, left-drag box-selects on the pane and drags nodes.
  */
+import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
@@ -1014,6 +1015,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   }, [sessions])
 
   const finishHistory = useSyncExternalStore(sessionActivity.subscribe, () => sessionActivity.history())
+  const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
   const recentEntries = useMemo<StatusRailEntry[]>(() => {
     const listed = new Set(statusEntries.map(entry => entry.sessionId))
     const rows: StatusRailEntry[] = []
@@ -1032,10 +1034,12 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
       })
     }
-    // Newest completion first: updatedAt stops moving once the 待查看 is read.
-    rows.sort((a, b) => (finishHistory.get(b.sessionId) ?? 0) - (finishHistory.get(a.sessionId) ?? 0))
+    // Newest READ first: finishing order says nothing about which one you actually looked at
+    // last, and that is what decides the order here.
+    const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
+    rows.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
     return rows.slice(0, 3)
-  }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory])
+  }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks])
 
   /** Bring one card into view and select it (a double click on a rail row). */
   const focusCard = useCallback((cardId: string) => {
