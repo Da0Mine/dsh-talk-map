@@ -20,6 +20,7 @@ import { closeMapPanel, currentSessionId, getServices, openSessionInUi } from '.
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
+import { PinMark } from './PinMark.tsx'
 import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
 import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
@@ -374,7 +375,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
           ? <div className={styles['sidebarQueueEmpty']}>{t('statusRail.empty')}</div>
           : null}
         {pinnedExtraRows.map((row) => {
-          // Pinned recent sessions rendered with the queue row look (and the 📌 marker).
+          // Pinned recent sessions rendered with the queue row look (and the pin mark).
           return (
             <div
               key={`pin-${row.sessionId}`}
@@ -387,8 +388,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
               }}
             >
               <div className={styles[`cardTop`]}>
+                <PinMark />
                 <span className={styles[`cardTitle`]}>{row.title}</span>
-                <span className={styles[`cardPinIcon`]} title="已置顶" aria-hidden="true">📌</span>
               </div>
               {(previews[row.sessionId] ?? '').trim() !== ''
                 ? <div className={styles[`cardSummary`]}>{previews[row.sessionId]}</div>
@@ -461,10 +462,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
                 : null}
               <div className={styles['cardTop']}>
-                <span className={styles['cardTitle']}>{row.title}</span>
-                {isPinnedSession(localPinSet, row.sessionId)
-                  ? <span className={styles['cardPinIcon']} title="已置顶" aria-hidden="true">📌</span>
-                  : null}
+                <>
+        {isPinnedSession(localPinSet, row.sessionId) ? <PinMark /> : null}
+        <span className={styles['cardTitle']}>{row.title}</span>
+      </>
               </div>
               {body !== undefined && body.trim() !== ''
                 ? <div className={styles['cardSummary']}>{body}</div>
@@ -534,7 +535,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                     ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
                     : null}
                   <div className={styles['cardTop']}>
-                    <span className={styles['cardTitle']}>{row.title}</span>
+                    <>
+        {isPinnedSession(localPinSet, row.sessionId) ? <PinMark /> : null}
+        <span className={styles['cardTitle']}>{row.title}</span>
+      </>
                   </div>
                   {(previews[row.sessionId] ?? '').trim() !== ''
                     ? <div className={styles['cardSummary']}>{previews[row.sessionId]}</div>

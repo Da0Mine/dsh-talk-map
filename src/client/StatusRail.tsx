@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { installLiquidGlass } from './liquid-glass.ts'
+import { PinMark } from './PinMark.tsx'
 import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
 import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
@@ -423,10 +424,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         ? <span className={styles['cardReticle']} aria-hidden="true"><i /><i /><i /><i /></span>
         : null}
       <div className={styles['cardTop']}>
+        <>
+        {isPinnedSession(localPinSet, entry.sessionId) ? <PinMark /> : null}
         <span className={styles['cardTitle']}>{entry.title}</span>
-        {isPinnedSession(localPinSet, entry.sessionId)
-          ? <span className={styles['cardPinIcon']} title="已置顶" aria-hidden="true">📌</span>
-          : null}
+      </>
       </div>
       {entry.preview !== undefined && entry.preview !== ''
         ? <div className={styles['cardSummary']}>{entry.preview}</div>

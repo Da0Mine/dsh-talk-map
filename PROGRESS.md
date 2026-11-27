@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.8.1`：置顶图标改为与地图卡片同款——抽出共享组件 `src/client/PinMark.tsx`（Material push_pin SVG + `.cardPin` 金色 drop-shadow + `talkmap-pin-glow` 呼吸），地图 `SessionCard` 与两侧栏都用它，删掉临时的 emoji `📌` 与 `.cardPinIcon` 样式。实测侧栏 pin 计算样式：`color rgb(255,214,106)`、`filter drop-shadow(… 6.06px)`、`animation tm_talkmap-pin-glow`、宽 13px，与地图同源。probe 150/150。
+
 - 2026-11-27 `0.8.0`：① **侧栏置顶与地图置顶彻底分开**：原来点侧栏置顶会顺带调宿主 `setPinned`，把地图里的卡片也置顶了；现在侧栏置顶只写 `localPins`（不发宿主请求），语义＝"在侧栏队列里置顶"；② 置顶卡有明显标记（`📌` `cardPinIcon`）并**浮到整列最前**（原来只能在所属区段内移动：无灯卡在「最近的任务」区里排前，看不到效果）；置顶的无灯卡会从「最近的任务」区提到主列表顶部，两侧栏都这样；③ 查看摘要改为**先读 `/talk-map/state` 里已存的 digest**，失败再退 `/digest/ensure`——之前直接调 ensure，对不在运行的会话会被拒，外侧栏点的多是旧卡所以报"摘要失败"；④ 菜单动作仍有 toast 反馈（0.7.9）。probe 150/150；harness 实测：置顶后 `pins=["s5"]`，该卡从第 6 位升到第 1 位。
 
 - 2026-11-27 `0.7.9`：菜单动作结果改为**应用内 toast**（`railMenuToast`，body portal，4 秒）：置顶→「已置顶（本地）」、标未读→「已标为未读」、摘要→「摘要已打开」/「这个会话还没有摘要（摘要层未生成）」、失败→「失败：<原因>」。此前只有 `console.error`，用户侧完全看不到执行没执行。用途：用户点一次即可报出真实失败原因，避免我们盲改。probe 150/150；harness 内点置顶后 `pins=["s5"]` 且最近区顺序改变。
