@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b801 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b802 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b801 · Search cards on the map",
+  "global.searchPlaceholder": "b802 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14256,6 +14256,10 @@ function useReorder(ids, apply2, options = {}) {
   const [drag, setDrag] = (0, import_react11.useState)(null);
   const [hover, setHover] = (0, import_react11.useState)(-1);
   const [offsetY, setOffsetY] = (0, import_react11.useState)(0);
+  const [flip, setFlip] = (0, import_react11.useState)({});
+  const [flipPhase, setFlipPhase] = (0, import_react11.useState)(2);
+  const pendingFlip = (0, import_react11.useRef)(null);
+  const dragEndedId = (0, import_react11.useRef)(null);
   const dragEndAt = (0, import_react11.useRef)(0);
   const begin = (0, import_react11.useCallback)((event, id2) => {
     if (event.button !== 0) return;
@@ -14291,6 +14295,39 @@ function useReorder(ids, apply2, options = {}) {
     return 0;
   }, [drag, hover]);
   const shouldIgnoreClick = (0, import_react11.useCallback)(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, []);
+  const flipOf = (0, import_react11.useCallback)((id2) => flip[id2] ?? 0, [flip]);
+  (0, import_react11.useEffect)(() => {
+    const before = pendingFlip.current;
+    if (before === null) return;
+    pendingFlip.current = null;
+    const deltas = {};
+    for (const [id2, top] of before) {
+      const element = slots.current.get(id2);
+      if (element === void 0) continue;
+      const after = id2 === dragEndedId.current ? element.getBoundingClientRect().top : element.offsetTop;
+      const delta = top - after;
+      if (Math.abs(delta) > 1) deltas[id2] = delta;
+    }
+    if (Object.keys(deltas).length === 0) return;
+    setFlip(deltas);
+    setFlipPhase(0);
+    let inner = 0;
+    let last = 0;
+    const outer = requestAnimationFrame(() => {
+      setFlipPhase(1);
+      inner = requestAnimationFrame(() => {
+        last = requestAnimationFrame(() => {
+          setFlip({});
+          setFlipPhase(2);
+        });
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner !== 0) cancelAnimationFrame(inner);
+      if (last !== 0) cancelAnimationFrame(last);
+    };
+  }, [ids]);
   (0, import_react11.useEffect)(() => {
     if (drag === null) return;
     const onMove = (event) => {
@@ -14317,12 +14354,23 @@ function useReorder(ids, apply2, options = {}) {
       const from = list.indexOf(drag.id);
       const moved = Math.abs(offsetY) > 3 || hover >= 0 && hover !== from;
       if (from >= 0 && hover >= 0 && hover !== from) {
+        const origin = slots.current.get(drag.id)?.offsetParent;
+        void origin;
+        pendingFlip.current = new Map(
+          list.map((id2) => {
+            const element = slots.current.get(id2);
+            if (element === void 0) return [id2, Number.NaN];
+            const top = id2 === drag.id ? element.getBoundingClientRect().top : element.offsetTop;
+            return [id2, top];
+          }).filter(([, top]) => !Number.isNaN(top))
+        );
         const next = [...list];
         next.splice(from, 1);
         next.splice(hover, 0, drag.id);
         apply2(next);
       }
       if (moved) dragEndAt.current = Date.now();
+      dragEndedId.current = moved ? drag.id : null;
       setDrag(null);
       setHover(-1);
       setOffsetY(0);
@@ -14336,7 +14384,16 @@ function useReorder(ids, apply2, options = {}) {
       window.removeEventListener("pointercancel", onUp);
     };
   }, [drag, hover, offsetY, apply2]);
-  return { draggingId: drag?.id, offsetY, shiftOf, shouldIgnoreClick, begin, register };
+  return {
+    draggingId: drag?.id,
+    offsetY,
+    shiftOf,
+    flipOf,
+    flipping: flipPhase === 0,
+    shouldIgnoreClick,
+    begin,
+    register
+  };
 }
 
 // src/client/rail-menu.tsx
@@ -14969,8 +15026,8 @@ function StatusRail(props) {
                     },
                     className: talk_map_default["statusRailSlot"],
                     style: {
-                      transform: `translateY(${dragging ? recentDrag.offsetY : recentDrag.shiftOf(entry.cardId)}px)`,
-                      transition: dragging ? "none" : "transform 120ms ease",
+                      transform: `translateY(${dragging ? recentDrag.offsetY : recentDrag.shiftOf(entry.cardId) + recentDrag.flipOf(entry.cardId)}px)`,
+                      transition: dragging || recentDrag.flipping ? "none" : "transform 150ms ease",
                       touchAction: "none",
                       ...dragging ? { zIndex: 3, filter: "drop-shadow(0 12px 22px rgba(0,0,0,0.5))" } : {}
                     },
@@ -17683,8 +17740,8 @@ function SidebarQueue() {
                       flex: "none",
                       alignSelf: "stretch",
                       touchAction: "none",
-                      transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId)}px)`,
-                      transition: queueDrag.draggingId === row.sessionId ? "none" : "transform 120ms ease",
+                      transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId) + queueDrag.flipOf(row.sessionId)}px)`,
+                      transition: queueDrag.draggingId === row.sessionId || queueDrag.flipping ? "none" : "transform 150ms ease",
                       ...queueDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: "0 12px 30px rgba(0,0,0,0.45)" } : {}
                     },
                     "data-talkmap-queue": row.sessionId,
@@ -17751,8 +17808,8 @@ function SidebarQueue() {
                       flex: "none",
                       alignSelf: "stretch",
                       touchAction: "none",
-                      transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId)}px)`,
-                      transition: recentDrag.draggingId === row.sessionId ? "none" : "transform 120ms ease",
+                      transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId) + recentDrag.flipOf(row.sessionId)}px)`,
+                      transition: recentDrag.draggingId === row.sessionId || recentDrag.flipping ? "none" : "transform 150ms ease",
                       ...recentDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: "0 12px 30px rgba(0,0,0,0.45)" } : {}
                     },
                     "data-talkmap-queue-recent": row.sessionId,

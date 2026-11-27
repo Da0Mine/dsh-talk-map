@@ -430,8 +430,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 flex: 'none',
                 alignSelf: 'stretch',
                 touchAction: 'none',
-                transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId)}px)`,
-                transition: queueDrag.draggingId === row.sessionId ? 'none' : 'transform 120ms ease',
+                transform: `translateY(${queueDrag.draggingId === row.sessionId ? queueDrag.offsetY : queueDrag.shiftOf(row.sessionId) + queueDrag.flipOf(row.sessionId)}px)`,
+                transition: queueDrag.draggingId === row.sessionId || queueDrag.flipping ? 'none' : 'transform 150ms ease',
                 ...(queueDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: '0 12px 30px rgba(0,0,0,0.45)' } : {}),
               }}
               data-talkmap-queue={row.sessionId}
@@ -505,8 +505,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                     flex: 'none',
                     alignSelf: 'stretch',
                     touchAction: 'none',
-                    transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId)}px)`,
-                    transition: recentDrag.draggingId === row.sessionId ? 'none' : 'transform 120ms ease',
+                    transform: `translateY(${recentDrag.draggingId === row.sessionId ? recentDrag.offsetY : recentDrag.shiftOf(row.sessionId) + recentDrag.flipOf(row.sessionId)}px)`,
+                    transition: recentDrag.draggingId === row.sessionId || recentDrag.flipping ? 'none' : 'transform 150ms ease',
                     ...(recentDrag.draggingId === row.sessionId ? { zIndex: 3, boxShadow: '0 12px 30px rgba(0,0,0,0.45)' } : {}),
                   }}
                   data-talkmap-queue-recent={row.sessionId}
