@@ -23,6 +23,11 @@ import { t } from './i18n.ts'
 import { sortQueueRows } from './queue-order.ts'
 import styles from './talk-map.module.css'
 
+/** How many finished-and-read tasks the plugin keeps around for「最近的任务」. */
+export const MAX_RECENT_TASKS = 30
+/** How many of them are on screen before「查看更多」. */
+const RECENT_PAGE_SIZE = 5
+
 export type StatusLamp = CardGlow
 
 export interface StatusRailEntry {
@@ -167,6 +172,8 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const [order, setOrder] = useState<string[]>(() => readOrder())
   /** Order of the「最近的任务」strip; independent from the queue's own order. */
   const [recentOrder, setRecentOrder] = useState<string[]>([])
+  /** How many recent tasks are on screen; +RECENT_PAGE_SIZE per 「查看更多」/ bottom wheel. */
+  const [recentLimit, setRecentLimit] = useState(RECENT_PAGE_SIZE)
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
   const recentIds = (props.recent ?? []).map(entry => entry.cardId)
@@ -216,15 +223,39 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [readMarks])
+  const visibleRecentEntries = unpinnedRecentEntries.slice(0, recentLimit)
+  const hasMoreRecent = unpinnedRecentEntries.length > visibleRecentEntries.length
   const recentRenderedIds = recentEntriesOrdered.map(entry => entry.cardId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
+
   const [drag, setDrag] = useState<DragState | null>(null)
   const [shift, setShift] = useState<Record<string, number>>({})
   const seenRef = useRef(new Map<string, string>())
   const slotsRef = useRef(new Map<string, HTMLDivElement>())
   const prevTops = useRef(new Map<string, number>())
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const moreRef = useRef({ hasMore: false, loadMore: () => {} })
+  moreRef.current = {
+    hasMore: hasMoreRecent,
+    loadMore: () => { setRecentLimit(current => current + RECENT_PAGE_SIZE) },
+  }
+
   const tabRef = useRef<HTMLButtonElement | null>(null)
+
+  // Wheel at the very bottom is the second way to page (the button is the first).
+  useEffect(() => {
+    const panel = panelRef.current
+    if (panel === null) return
+    const onWheel = (event: WheelEvent): void => {
+      if (event.deltaY <= 0) return
+      const atBottom = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2
+      if (!atBottom || !moreRef.current.hasMore) return
+      event.preventDefault()
+      moreRef.current.loadMore()
+    }
+    panel.addEventListener('wheel', onWheel, { passive: false })
+    return () => { panel.removeEventListener('wheel', onWheel) }
+  }, [open])
 
   const orderRef = useRef(order)
   orderRef.current = order
@@ -526,11 +557,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
               </div>
             )
           })}
-          {props.recent !== undefined && unpinnedRecentEntries.length > 0
+          {visibleRecentEntries.length > 0
             ? (
               <>
                 <div className={styles['statusRailRecentHead']}>{t('statusRail.recent')}</div>
-                {unpinnedRecentEntries.map(entry => {
+                {visibleRecentEntries.map(entry => {
                   const dragging = recentDrag.draggingId === entry.cardId
                   return (
                     <div
@@ -554,6 +585,17 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
                     </div>
                   )
                 })}
+                {hasMoreRecent
+                  ? (
+                      <button
+                        type="button"
+                        className={styles[`statusRailMore`]}
+                        onClick={() => { setRecentLimit(current => current + RECENT_PAGE_SIZE) }}
+                      >
+                        {t(`statusRail.more`)}
+                      </button>
+                    )
+                  : null}
               </>
             )
             : null}

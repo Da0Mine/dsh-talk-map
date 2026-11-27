@@ -27,6 +27,17 @@ export interface PersistedLampState {
 
 const EMPTY: PersistedLampState = { version: 1, finished: {}, errors: {}, interrupted: {}, history: {} }
 
+/** Newest N only: the rail pages through at most this many finished tasks. */
+const MAX_HISTORY = 30
+
+function pruneHistory(record: Record<string, number>, now: number): Record<string, number> {
+  const fresh = Object.entries(record)
+    .filter(([, at]) => typeof at === 'number' && now - at < MAX_AGE_MS)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_HISTORY)
+  return Object.fromEntries(fresh)
+}
+
 function prune(record: Record<string, number>, now: number): Record<string, number> {
   const out: Record<string, number> = {}
   for (const [sessionId, at] of Object.entries(record)) {
@@ -52,7 +63,7 @@ export function loadLampState(): PersistedLampState {
     cache = {
       version: 1,
       finished: prune(parsed.finished ?? {}, now),
-    history: prune(parsed.history ?? {}, now),
+    history: pruneHistory(parsed.history ?? {}, now),
       errors: parsed.errors ?? {},
       interrupted: prune(parsed.interrupted ?? {}, now),
     }
@@ -70,7 +81,7 @@ export function saveLampState(patch: Partial<Omit<PersistedLampState, 'version'>
     finished: patch.finished ?? base.finished,
     errors: patch.errors ?? base.errors,
     interrupted: patch.interrupted ?? base.interrupted,
-    history: patch.history ?? base.history,
+    history: patch.history === undefined ? base.history : pruneHistory(patch.history, Date.now()),
   }
   if (typeof localStorage === 'undefined') return
   if (timer !== undefined) clearTimeout(timer)

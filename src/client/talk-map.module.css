@@ -2797,3 +2797,21 @@
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
+
+/* 「查看更多」: the second half of the recent-tasks pager (scrolling at the bottom is the first). */
+.statusRailMore {
+  margin: 2px 2px 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.14));
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dsw-alias-label-secondary, rgba(255, 255, 255, 0.7));
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.statusRailMore:hover {
+  color: var(--dsw-alias-label-primary, #fff);
+  border-color: var(--dsw-alias-border-l3, rgba(255, 255, 255, 0.24));
+}

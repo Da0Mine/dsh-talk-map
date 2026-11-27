@@ -57,7 +57,7 @@ import {
 } from './grid-layout.ts'
 import { StackDrawer, type StackEntry } from './StackDrawer.tsx'
 import { StackNode, type StackNodeType } from './StackNode.tsx'
-import { StatusRail, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
+import { MAX_RECENT_TASKS, StatusRail, type StatusRailEntry, type StatusLamp } from './StatusRail.tsx'
 import { useDsDarkTheme } from './use-dark.ts'
 import styles from './talk-map.module.css'
 
@@ -1038,7 +1038,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     // last, and that is what decides the order here.
     const seenAt = (sessionId: string): number => readMarks.get(sessionId) ?? finishHistory.get(sessionId) ?? 0
     rows.sort((a, b) => seenAt(b.sessionId) - seenAt(a.sessionId))
-    return rows.slice(0, 3)
+    // The rail paginates (5 at a time); it needs the whole window, not just the first three.
+    return rows.slice(0, MAX_RECENT_TASKS)
   }, [visibleCards, sessions, statusEntries, renamedTitles, previews, finishHistory, readMarks])
 
   /** Bring one card into view and select it (a double click on a rail row). */
