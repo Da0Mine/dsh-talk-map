@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b805 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b806 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b805 · Search cards on the map",
+  "global.searchPlaceholder": "b806 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14354,17 +14354,21 @@ function useReorder(ids, apply2, options = {}) {
     const list = idsRef.current;
     const index2 = list.indexOf(id2);
     if (index2 < 0) return;
-    const element = slots.current.get(id2);
+    const element = slots2.current.get(id2);
     const height = element === void 0 ? 0 : element.getBoundingClientRect().height;
-    const next = slots.current.get(list[index2 + 1]);
+    const next = slots2.current.get(list[index2 + 1]);
     const gap = element === void 0 || next === void 0 ? 8 : Math.max(0, next.getBoundingClientRect().top - element.getBoundingClientRect().bottom);
     const centres = list.map((rowId) => {
-      const row = slots.current.get(rowId);
+      const row = slots2.current.get(rowId);
       if (row === void 0) return Number.NaN;
       const rect = row.getBoundingClientRect();
       return rect.top + rect.height / 2;
     });
-    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap, centres });
+    const slots2 = list.map((rowId) => {
+      const row = slots2.current.get(rowId);
+      return row === void 0 ? Number.NaN : row.getBoundingClientRect().top;
+    });
+    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap, centres, slots: slots2 });
     setHover(index2);
     setOffsetY(0);
     event.preventDefault();
@@ -14375,11 +14379,19 @@ function useReorder(ids, apply2, options = {}) {
   }, []);
   const shiftOf = (0, import_react11.useCallback)((id2) => {
     if (drag === null || id2 === drag.id || hover < 0) return 0;
-    const index2 = idsRef.current.indexOf(id2);
-    if (index2 < 0) return 0;
-    if (hover > drag.index && index2 > drag.index && index2 <= hover) return -drag.step;
-    if (hover < drag.index && index2 >= hover && index2 < drag.index) return drag.step;
-    return 0;
+    const list = idsRef.current;
+    const from = list.indexOf(id2);
+    if (from < 0 || hover === drag.index) return 0;
+    const next = [...list];
+    next.splice(drag.index, 1);
+    next.splice(hover, 0, drag.id);
+    const to = next.indexOf(id2);
+    if (to < 0 || to === from) return 0;
+    const fromTop = drag.slots[from];
+    const toTop = drag.slots[to];
+    if (fromTop === void 0 || toTop === void 0) return 0;
+    if (Number.isNaN(fromTop) || Number.isNaN(toTop)) return 0;
+    return toTop - fromTop;
   }, [drag, hover]);
   const flipOf = (0, import_react11.useCallback)((id2) => flip[id2] ?? 0, [flip]);
   const shouldIgnoreClick = (0, import_react11.useCallback)(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, []);

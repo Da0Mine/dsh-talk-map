@@ -2,7 +2,7 @@ import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path'
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const { chromium } = require('playwright-core')
-const PORT = 8793, CDP = 10190
+const PORT = 8793, CDP = 10197
 const EDGE=['C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe','C:/Program Files/Microsoft/Edge/Application/msedge.exe'].find(c=>fs.existsSync(c))
 const child=spawn(EDGE,[`--remote-debugging-port=${CDP}`,`--user-data-dir=${path.join(os.tmpdir(),'twitch-'+Date.now())}`,'--no-first-run','--headless=new','--window-size=1500,950','about:blank'],{stdio:'ignore'})
 let ready=false; const t0=Date.now()
