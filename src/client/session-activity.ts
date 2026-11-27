@@ -152,10 +152,16 @@ export const sessionActivity = {
       // Back to 任务中: it leaves「最近的任务」and the next completion must be read again.
       if (running === true) readArchive.forget(sessionId)
       const onScreen = (row?.retainedBy?.mainView ?? 0) > 0
+      // Completion history is unconditional: a turn that ends in the conversation you are looking
+      // at gets no lamp (you already saw it), but it is still a finished task and belongs in
+      // 「最近的任务」instead of vanishing from every list.
+      if (wasRunning === true && !history.has(sessionId)) {
+        history.set(sessionId, Date.now())
+        changed = true
+      }
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId)
         markedEpoch.set(sessionId, panelEpoch)
-        if (!history.has(sessionId)) history.set(sessionId, Date.now())
         changed = true
       }
       // Restored marks are NOT dropped just because the session is retained by the main view:

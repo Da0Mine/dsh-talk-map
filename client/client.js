@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b806 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b807 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b806 · Search cards on the map",
+  "global.searchPlaceholder": "b807 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -11592,10 +11592,13 @@ var sessionActivity = {
       }
       if (running === true) readArchive.forget(sessionId);
       const onScreen = (row?.retainedBy?.mainView ?? 0) > 0;
+      if (wasRunning === true && !history.has(sessionId)) {
+        history.set(sessionId, Date.now());
+        changed = true;
+      }
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId);
         markedEpoch.set(sessionId, panelEpoch);
-        if (!history.has(sessionId)) history.set(sessionId, Date.now());
         changed = true;
       }
       const unread = fact?.completionUnread;
@@ -14354,21 +14357,21 @@ function useReorder(ids, apply2, options = {}) {
     const list = idsRef.current;
     const index2 = list.indexOf(id2);
     if (index2 < 0) return;
-    const element = slots2.current.get(id2);
+    const element = slots.current.get(id2);
     const height = element === void 0 ? 0 : element.getBoundingClientRect().height;
-    const next = slots2.current.get(list[index2 + 1]);
+    const next = slots.current.get(list[index2 + 1]);
     const gap = element === void 0 || next === void 0 ? 8 : Math.max(0, next.getBoundingClientRect().top - element.getBoundingClientRect().bottom);
     const centres = list.map((rowId) => {
-      const row = slots2.current.get(rowId);
+      const row = slots.current.get(rowId);
       if (row === void 0) return Number.NaN;
       const rect = row.getBoundingClientRect();
       return rect.top + rect.height / 2;
     });
-    const slots2 = list.map((rowId) => {
-      const row = slots2.current.get(rowId);
+    const slotTops = list.map((rowId) => {
+      const row = slots.current.get(rowId);
       return row === void 0 ? Number.NaN : row.getBoundingClientRect().top;
     });
-    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap, centres, slots: slots2 });
+    setDrag({ id: id2, index: index2, startY: event.clientY, step: height + gap, centres, slots: slotTops });
     setHover(index2);
     setOffsetY(0);
     event.preventDefault();
