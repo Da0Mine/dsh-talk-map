@@ -227,8 +227,14 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         ...(summary.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
       })
     }
-    // Same rule as the map rail: priority bucket first, then newest inside it.
-    return sortQueueRows(out)
+    // The sidebar queue follows the user's own order once they drag: dragged rows keep their
+    // place, rows that appeared later fall in behind by priority. Forcing the rail's priority
+    // buckets here made a cross-bucket drag impossible — which looked like "no 让位 at all".
+    const ranked = sortQueueRows(out)
+    const byId = new Map(ranked.map(row => [row.sessionId, row]))
+    const ordered = queueOrder.map(id => byId.get(id)).filter((row): row is (typeof ranked)[number] => row !== undefined)
+    for (const row of ranked) if (!queueOrder.includes(row.sessionId)) ordered.push(row)
+    return ordered
   }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet])
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
@@ -267,12 +273,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queueIds.join('|')])
-  // A drag may only reorder inside one priority bucket, matching the rail's rule.
-  const bucketOfRow = useCallback((sessionId: string): number => {
-    const row = rows.find(entry => entry.sessionId === sessionId)
-    return row === undefined ? 0 : queueRank(row.lamp, row.draft === true, isPinnedSession(localPinSet, sessionId))
-  }, [rows, pinnedSessions, localPinSet])
-  const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow })
+  // No bucket restriction here: the queue is a flat list and the user expects 让位 in both
+  // directions, including across priorities.
+  const queueDrag = useReorder(queueIds, setQueueOrder)
 
   const recentIds = recentRows.map(row => row.sessionId)
   useEffect(() => {

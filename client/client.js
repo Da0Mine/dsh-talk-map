@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b804 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b805 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b804 · Search cards on the map",
+  "global.searchPlaceholder": "b805 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14712,7 +14712,7 @@ function RailCardMenu(props) {
 }
 
 // src/client/queue-order.ts
-function queueRank2(lamp, draft, pinned2 = false) {
+function queueRank(lamp, draft, pinned2 = false) {
   if (pinned2) return -1;
   if (lamp === "error") return 0;
   if (lamp === "waiting") return 1;
@@ -14721,7 +14721,7 @@ function queueRank2(lamp, draft, pinned2 = false) {
   return draft ? 4 : 5;
 }
 function compareQueueRows(a, b) {
-  const byRank = queueRank2(a.lamp, a.draft === true, a.pinned === true) - queueRank2(b.lamp, b.draft === true, b.pinned === true);
+  const byRank = queueRank(a.lamp, a.draft === true, a.pinned === true) - queueRank(b.lamp, b.draft === true, b.pinned === true);
   if (byRank !== 0) return byRank;
   const aIndex = a.manualIndex ?? Number.MAX_SAFE_INTEGER;
   const bIndex = b.manualIndex ?? Number.MAX_SAFE_INTEGER;
@@ -17630,7 +17630,11 @@ function SidebarQueue() {
         ...summary.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
     }
-    return sortQueueRows(out);
+    const ranked = sortQueueRows(out);
+    const byId2 = new Map(ranked.map((row) => [row.sessionId, row]));
+    const ordered = queueOrder.map((id2) => byId2.get(id2)).filter((row) => row !== void 0);
+    for (const row of ranked) if (!queueOrder.includes(row.sessionId)) ordered.push(row);
+    return ordered;
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
   const finishHistory = (0, import_react20.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const recentRows = (0, import_react20.useMemo)(() => {
@@ -17664,11 +17668,7 @@ function SidebarQueue() {
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [queueIds.join("|")]);
-  const bucketOfRow = (0, import_react20.useCallback)((sessionId) => {
-    const row = rows.find((entry) => entry.sessionId === sessionId);
-    return row === void 0 ? 0 : queueRank(row.lamp, row.draft === true, isPinnedSession(localPinSet, sessionId));
-  }, [rows, pinnedSessions, localPinSet]);
-  const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow });
+  const queueDrag = useReorder(queueIds, setQueueOrder);
   const recentIds = recentRows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {
     setRecentOrder((current) => {
