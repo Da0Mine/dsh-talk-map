@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { installLiquidGlass } from './liquid-glass.ts'
+import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
 import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
 import { relativeTime, LAMP_CHIP, type CardGlow } from './SessionCard.tsx'
@@ -165,6 +166,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   /** Order of the「最近的任务」strip; independent from the queue's own order. */
   const [recentOrder, setRecentOrder] = useState<string[]>([])
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
+  const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
   const recentIds = (props.recent ?? []).map(entry => entry.cardId)
   useEffect(() => {
     setRecentOrder(current => {
@@ -182,8 +184,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     for (const entry of props.recent ?? []) {
       if (!recentOrder.includes(entry.cardId)) ordered.push(entry)
     }
-    return ordered
-  }, [props.recent, recentOrder])
+    // Pinned first inside the strip, manual order preserved within each group.
+    const pinnedFirst = ordered.filter(entry => isPinnedSession(localPinSet, entry.sessionId))
+    const rest = ordered.filter(entry => !isPinnedSession(localPinSet, entry.sessionId))
+    return [...pinnedFirst, ...rest]
+  }, [props.recent, recentOrder, localPinSet])
   const recentRenderedIds = recentEntriesOrdered.map(entry => entry.cardId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -404,7 +409,7 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         setMenu({
           sessionId: entry.sessionId,
           title: entry.title,
-          pinned: props.pinned?.has(entry.sessionId) === true,
+          pinned: isPinnedSession(localPinSet, entry.sessionId) || props.pinned?.has(entry.sessionId) === true,
           x: event.clientX,
           y: event.clientY,
         })

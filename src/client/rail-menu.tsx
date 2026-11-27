@@ -6,12 +6,14 @@
  * pin, mark unread, rename, view digest, archive.
  */
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { talkMapApi } from './api.ts'
 import { DigestDialog } from './DigestDialog.tsx'
 import { openMapPanel, requestBatch } from './map-state.ts'
 import { t } from './i18n.ts'
 import { MenuIcon, type MenuIconName } from './MenuIcons.tsx'
 import { callRpc } from './rpc.ts'
+import { localPins } from './pins.ts'
 import { archiveSessions, setPinned, trashSessions } from './session-actions.ts'
 import { sessionActivity } from './session-activity.ts'
 import type { Digest } from '../shared/protocol.ts'
@@ -97,11 +99,14 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   }
 
   if (digest !== null) {
-    return <DigestDialog title={digest.title} digest={digest.digest} onClose={() => { setDigest(null) }} />
+    return createPortal(
+      <DigestDialog title={digest.title} digest={digest.digest} onClose={() => { setDigest(null) }} />,
+      document.body,
+    )
   }
 
   if (rename) {
-    return (
+    return createPortal(
       <div className={styles['renameBackdrop']} onPointerDown={() => { props.onClose() }}>
         <div
           className={styles['renameDialog']}
@@ -131,7 +136,8 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
     )
   }
 
@@ -140,7 +146,16 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       key: 'pin',
       icon: props.target.pinned ? 'unpin' : 'pin',
       label: props.target.pinned ? t('menu.unpin') : t('menu.pin'),
-      onPick: () => { run(() => setPinned(props.target.sessionId, !props.target.pinned)) },
+      onPick: () => {
+        const next = !props.target.pinned
+        // Our own set first: some builds do not expose the workspace pin, and 置顶 must still work.
+        localPins.set(props.target.sessionId, next)
+        props.onChanged?.()
+        props.onClose()
+        void setPinned(props.target.sessionId, next).catch((cause: unknown) => {
+          console.warn('[dsh-talk-map] workspace pin unavailable, kept the local pin:', cause)
+        })
+      },
     },
     {
       key: 'unread',
@@ -178,11 +193,11 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
 
   const left = Math.min(props.target.x, window.innerWidth - 200)
   const top = Math.min(props.target.y, window.innerHeight - 40 - items.length * 30)
-  return (
+  return createPortal(
     <div
       ref={menuRef}
       className={styles['menu']}
-      style={{ left, top, position: 'fixed' }}
+      style={{ left, top, position: 'fixed', zIndex: 9999, pointerEvents: 'auto' }}
       role="menu"
     >
       {error !== null
@@ -201,6 +216,7 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
           {item.label}
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   )
 }

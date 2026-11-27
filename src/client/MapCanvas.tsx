@@ -1926,8 +1926,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   /** Flip the shipped pin for one card (mirrors the sidebar's 置顶). */
   const togglePin = (cardId: string): void => {
-    const card = visibleCards[cardId]
-    if (card === undefined) return
+    // Fall back to the full card table: a card can be outside `visibleCards`
+    // (filtered/folded) while its menu is still open, and a silent `return`
+    // there is indistinguishable from a broken button (reported 2026-11-27).
+    const card = visibleCards[cardId] ?? canvasState.cards[cardId]
+    if (card === undefined) {
+      showToast(`${t('toast.pinFailed')}${t('toast.cardMissing')}`)
+      return
+    }
     const next = !pinnedSessions.has(card.sessionId)
     void setPinned(card.sessionId, next).then(() => {
       showToast(next ? t('toast.pinned') : t('toast.unpinned'))
@@ -2358,20 +2364,34 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
           }
         },
       })
-      // Read-only: exactly the text this card would push to another session.
+      // Read-only when a digest exists: exactly the text this card would push to
+      // another session. When it does NOT exist yet, the same entry GENERATES it —
+      // a disabled row reads as "broken" (reported 2026-11-27).
+      const cardDigest = card === undefined ? undefined : canvasState.digests[card.sessionId]
+      const digestMissing = card === undefined || digestIsEmpty(cardDigest)
       items.push({
         key: 'view-digest',
         icon: 'digest',
-        label: t('menu.viewDigest'),
-        ...(card === undefined || digestIsEmpty(canvasState.digests[card.sessionId])
-          ? { hint: t('digest.empty'), disabled: true }
-          : {}),
+        label: t(digestMissing ? 'menu.generateDigest' : 'menu.viewDigest'),
+        ...(card === undefined ? { disabled: true } : {}),
         onPick: () => {
           close()
           if (card === undefined) return
+          if (digestMissing) {
+            showToast(t('toast.digestGenerating'))
+            void talkMapApi
+              .refreshDigest(card.sessionId)
+              .then(() => {
+                showToast(t('toast.digestReady'))
+              })
+              .catch((error: unknown) => {
+                showToast(`${t('toast.digestFailed')}${String(error)}`)
+              })
+            return
+          }
           setDigestTarget({
             title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
-            digest: canvasState.digests[card.sessionId],
+            digest: cardDigest,
           })
         },
       })

@@ -493,13 +493,18 @@ var zh = {
   "menu.open": "打开对话",
   "menu.markUnread": "标为未读",
   "menu.viewDigest": "查看摘要",
+  "menu.generateDigest": "生成摘要",
+  "toast.digestGenerating": "正在生成摘要…",
+  "toast.digestReady": "摘要已生成",
+  "toast.digestFailed": "生成摘要失败：",
+  "toast.cardMissing": "卡片已不在画布上",
   "digest.title": "这会推送到其他会话的摘要",
   "digest.pushLabel": "推送时（带时间戳的更新）",
   "digest.injectLabel": "新建会话时（背景注入）",
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b707 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b708 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -576,6 +581,11 @@ var en = {
   "time.h": "h ago",
   "time.d": "d ago",
   "card.refresh": "Regenerate digest",
+  "menu.generateDigest": "Generate digest",
+  "toast.digestGenerating": "Generating digest…",
+  "toast.digestReady": "Digest generated",
+  "toast.digestFailed": "Digest failed: ",
+  "toast.cardMissing": "card is no longer on the map",
   "edge.injected": "injected",
   "edge.context": "injected · current context",
   "spawn.heading": "Fork with context",
@@ -693,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b707 · Search cards on the map",
+  "global.searchPlaceholder": "b708 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -2749,7 +2759,7 @@ function defaultTouchable() {
   return navigator.maxTouchPoints || "ontouchstart" in this;
 }
 function drag_default() {
-  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners6 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
+  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners7 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
   function drag(selection2) {
     selection2.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved, nonpassive).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -2812,7 +2822,7 @@ function drag_default() {
     }
   }
   function beforestart(that, container2, event, d, identifier, touch) {
-    var dispatch2 = listeners6.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
+    var dispatch2 = listeners7.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
     if ((s = subject.call(that, new DragEvent("beforestart", {
       sourceEvent: event,
       target: drag,
@@ -2871,8 +2881,8 @@ function drag_default() {
     return arguments.length ? (touchable = typeof _ === "function" ? _ : constant_default2(!!_), drag) : touchable;
   };
   drag.on = function() {
-    var value = listeners6.on.apply(listeners6, arguments);
-    return value === listeners6 ? drag : value;
+    var value = listeners7.on.apply(listeners7, arguments);
+    return value === listeners7 ? drag : value;
   };
   drag.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
@@ -4474,7 +4484,7 @@ function defaultConstrain(transform2, extent, translateExtent) {
   );
 }
 function zoom_default2() {
-  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners6 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
+  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners7 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
   function zoom(selection2) {
     selection2.property("__zoom", defaultTransform).on("wheel.zoom", wheeled, { passive: false }).on("mousedown.zoom", mousedowned).on("dblclick.zoom", dblclicked).filter(touchable).on("touchstart.zoom", touchstarted).on("touchmove.zoom", touchmoved).on("touchend.zoom touchcancel.zoom", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -4586,7 +4596,7 @@ function zoom_default2() {
     },
     emit: function(type) {
       var d = select_default2(this.that).datum();
-      listeners6.call(
+      listeners7.call(
         type,
         this.that,
         new ZoomEvent(type, {
@@ -4594,7 +4604,7 @@ function zoom_default2() {
           target: zoom,
           type,
           transform: this.that.__zoom,
-          dispatch: listeners6
+          dispatch: listeners7
         }),
         d
       );
@@ -4744,8 +4754,8 @@ function zoom_default2() {
     return arguments.length ? (interpolate = _, zoom) : interpolate;
   };
   zoom.on = function() {
-    var value = listeners6.on.apply(listeners6, arguments);
-    return value === listeners6 ? zoom : value;
+    var value = listeners7.on.apply(listeners7, arguments);
+    return value === listeners7 ? zoom : value;
   };
   zoom.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, zoom) : Math.sqrt(clickDistance2);
@@ -7450,20 +7460,20 @@ var import_with_selector = __toESM(require_with_selector(), 1);
 var import_meta = {};
 var createStoreImpl = (createState) => {
   let state3;
-  const listeners6 = /* @__PURE__ */ new Set();
+  const listeners7 = /* @__PURE__ */ new Set();
   const setState2 = (partial, replace) => {
     const nextState = typeof partial === "function" ? partial(state3) : partial;
     if (!Object.is(nextState, state3)) {
       const previousState = state3;
       state3 = (replace != null ? replace : typeof nextState !== "object" || nextState === null) ? nextState : Object.assign({}, state3, nextState);
-      listeners6.forEach((listener) => listener(state3, previousState));
+      listeners7.forEach((listener) => listener(state3, previousState));
     }
   };
   const getState = () => state3;
   const getInitialState2 = () => initialState;
   const subscribe2 = (listener) => {
-    listeners6.add(listener);
-    return () => listeners6.delete(listener);
+    listeners7.add(listener);
+    return () => listeners7.delete(listener);
   };
   const destroy = () => {
     if ((import_meta.env ? import_meta.env.MODE : void 0) !== "production") {
@@ -7471,7 +7481,7 @@ var createStoreImpl = (createState) => {
         "[DEPRECATED] The `destroy` method will be unsupported in a future version. Instead use unsubscribe function returned by subscribe. Everything will be garbage-collected if store is garbage-collected."
       );
     }
-    listeners6.clear();
+    listeners7.clear();
   };
   const api = { setState: setState2, getState, getInitialState: getInitialState2, subscribe: subscribe2, destroy };
   const initialState = state3 = createState(setState2, getState, api);
@@ -11182,9 +11192,9 @@ async function archiveSessions(sessionIds) {
   }
   return done;
 }
-async function setPinned(sessionId, pinned) {
+async function setPinned(sessionId, pinned2) {
   const ui = uiWorkspaceService();
-  const call = pinned ? ui?.pinSession : ui?.unpinSession;
+  const call = pinned2 ? ui?.pinSession : ui?.unpinSession;
   if (ui === void 0 || typeof call !== "function") {
     throw new Error("这个构建没有暴露置顶接口");
   }
@@ -14159,6 +14169,69 @@ function installLiquidGlass(element, options = {}) {
   };
 }
 
+// src/client/pins.ts
+var STORAGE_KEY4 = "dsh.talk-map.pins.v1";
+var listeners6 = /* @__PURE__ */ new Set();
+var pinned = /* @__PURE__ */ new Set();
+var loaded = false;
+function emit2() {
+  for (const listener of listeners6) listener();
+}
+function readStored() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY4);
+    if (raw === null) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
+  } catch {
+    return [];
+  }
+}
+function ensureLoaded() {
+  if (loaded) return;
+  loaded = true;
+  const stored = readStored();
+  if (stored.length > 0) pinned = new Set(stored);
+}
+function persist4() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY4, JSON.stringify([...pinned]));
+  } catch {
+  }
+}
+var localPins = {
+  get() {
+    ensureLoaded();
+    return pinned;
+  },
+  subscribe(listener) {
+    ensureLoaded();
+    listeners6.add(listener);
+    return () => {
+      listeners6.delete(listener);
+    };
+  },
+  set(sessionId, next) {
+    ensureLoaded();
+    if (pinned.has(sessionId) === next) return;
+    const copy = new Set(pinned);
+    if (next) copy.add(sessionId);
+    else copy.delete(sessionId);
+    pinned = copy;
+    persist4();
+    emit2();
+  },
+  toggle(sessionId) {
+    ensureLoaded();
+    const next = !pinned.has(sessionId);
+    localPins.set(sessionId, next);
+    return next;
+  }
+};
+function isPinnedSession(hostPins, sessionId) {
+  return hostPins.has(sessionId) || localPins.get().has(sessionId);
+}
+
 // src/client/reorder.ts
 var import_react11 = require("react");
 var CLICK_GUARD_MS = 350;
@@ -14256,6 +14329,7 @@ function useReorder(ids, apply2, options = {}) {
 
 // src/client/rail-menu.tsx
 var import_react12 = require("react");
+var import_react_dom2 = require("react-dom");
 var import_jsx_runtime15 = require("react/jsx-runtime");
 function RailCardMenu(props) {
   const [rename, setRename] = (0, import_react12.useState)(false);
@@ -14314,50 +14388,56 @@ function RailCardMenu(props) {
     });
   };
   if (digest !== null) {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(DigestDialog, { title: digest.title, digest: digest.digest, onClose: () => {
-      setDigest(null);
-    } });
+    return (0, import_react_dom2.createPortal)(
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(DigestDialog, { title: digest.title, digest: digest.digest, onClose: () => {
+        setDigest(null);
+      } }),
+      document.body
+    );
   }
   if (rename) {
-    return /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["renameBackdrop"], onPointerDown: () => {
-      props.onClose();
-    }, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
-      "div",
-      {
-        className: talk_map_default["renameDialog"],
-        onPointerDown: (event) => {
-          event.stopPropagation();
-        },
-        role: "dialog",
-        "aria-label": t("rename.title"),
-        children: [
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
-            "input",
-            {
-              ref: inputRef,
-              className: talk_map_default["renameInput"],
-              value: renameValue,
-              maxLength: 120,
-              placeholder: t("rename.placeholder"),
-              onChange: (event) => {
-                setRenameValue(event.target.value);
-              },
-              onKeyDown: (event) => {
-                if (event.key === "Enter") submitRename();
-                if (event.key === "Escape") props.onClose();
+    return (0, import_react_dom2.createPortal)(
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["renameBackdrop"], onPointerDown: () => {
+        props.onClose();
+      }, children: /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+        "div",
+        {
+          className: talk_map_default["renameDialog"],
+          onPointerDown: (event) => {
+            event.stopPropagation();
+          },
+          role: "dialog",
+          "aria-label": t("rename.title"),
+          children: [
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["renameHeading"], children: t("rename.title") }),
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(
+              "input",
+              {
+                ref: inputRef,
+                className: talk_map_default["renameInput"],
+                value: renameValue,
+                maxLength: 120,
+                placeholder: t("rename.placeholder"),
+                onChange: (event) => {
+                  setRenameValue(event.target.value);
+                },
+                onKeyDown: (event) => {
+                  if (event.key === "Enter") submitRename();
+                  if (event.key === "Escape") props.onClose();
+                }
               }
-            }
-          ),
-          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["renameActions"], children: [
-            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: talk_map_default["renameCancel"], onClick: () => {
-              props.onClose();
-            }, children: t("rename.cancel") }),
-            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: talk_map_default["renameConfirm"], disabled: busy, onClick: submitRename, children: t("rename.confirm") })
-          ] })
-        ]
-      }
-    ) });
+            ),
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: talk_map_default["renameActions"], children: [
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: talk_map_default["renameCancel"], onClick: () => {
+                props.onClose();
+              }, children: t("rename.cancel") }),
+              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: talk_map_default["renameConfirm"], disabled: busy, onClick: submitRename, children: t("rename.confirm") })
+            ] })
+          ]
+        }
+      ) }),
+      document.body
+    );
   }
   const items = [
     {
@@ -14365,7 +14445,13 @@ function RailCardMenu(props) {
       icon: props.target.pinned ? "unpin" : "pin",
       label: props.target.pinned ? t("menu.unpin") : t("menu.pin"),
       onPick: () => {
-        run(() => setPinned(props.target.sessionId, !props.target.pinned));
+        const next = !props.target.pinned;
+        localPins.set(props.target.sessionId, next);
+        props.onChanged?.();
+        props.onClose();
+        void setPinned(props.target.sessionId, next).catch((cause) => {
+          console.warn("[dsh-talk-map] workspace pin unavailable, kept the local pin:", cause);
+        });
       }
     },
     {
@@ -14412,38 +14498,41 @@ function RailCardMenu(props) {
   ];
   const left = Math.min(props.target.x, window.innerWidth - 200);
   const top = Math.min(props.target.y, window.innerHeight - 40 - items.length * 30);
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
-    "div",
-    {
-      ref: menuRef,
-      className: talk_map_default["menu"],
-      style: { left, top, position: "fixed" },
-      role: "menu",
-      children: [
-        error !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
-        items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
-          "button",
-          {
-            type: "button",
-            role: "menuitem",
-            className: `${talk_map_default["menuItem"]}${item.danger === true ? ` ${talk_map_default["menuItemDanger"] ?? ""}` : ""}`,
-            disabled: busy,
-            onClick: item.onPick,
-            children: [
-              /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MenuIcon, { name: item.icon }),
-              item.label
-            ]
-          },
-          item.key
-        ))
-      ]
-    }
+  return (0, import_react_dom2.createPortal)(
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+      "div",
+      {
+        ref: menuRef,
+        className: talk_map_default["menu"],
+        style: { left, top, position: "fixed", zIndex: 9999, pointerEvents: "auto" },
+        role: "menu",
+        children: [
+          error !== null ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("div", { className: talk_map_default["menuError"], children: error }) : null,
+          items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(
+            "button",
+            {
+              type: "button",
+              role: "menuitem",
+              className: `${talk_map_default["menuItem"]}${item.danger === true ? ` ${talk_map_default["menuItemDanger"] ?? ""}` : ""}`,
+              disabled: busy,
+              onClick: item.onPick,
+              children: [
+                /* @__PURE__ */ (0, import_jsx_runtime15.jsx)(MenuIcon, { name: item.icon }),
+                item.label
+              ]
+            },
+            item.key
+          ))
+        ]
+      }
+    ),
+    document.body
   );
 }
 
 // src/client/queue-order.ts
-function queueRank2(lamp, draft, pinned = false) {
-  if (pinned) return -1;
+function queueRank2(lamp, draft, pinned2 = false) {
+  if (pinned2) return -1;
   if (lamp === "error") return 0;
   if (lamp === "waiting") return 1;
   if (lamp === "done") return 2;
@@ -14536,6 +14625,7 @@ function StatusRail(props) {
   const [order, setOrder] = (0, import_react13.useState)(() => readOrder());
   const [recentOrder, setRecentOrder] = (0, import_react13.useState)([]);
   const [menu, setMenu] = (0, import_react13.useState)(null);
+  const localPinSet = (0, import_react13.useSyncExternalStore)(localPins.subscribe, () => localPins.get());
   const recentIds = (props.recent ?? []).map((entry) => entry.cardId);
   (0, import_react13.useEffect)(() => {
     setRecentOrder((current) => {
@@ -14551,8 +14641,10 @@ function StatusRail(props) {
     for (const entry of props.recent ?? []) {
       if (!recentOrder.includes(entry.cardId)) ordered2.push(entry);
     }
-    return ordered2;
-  }, [props.recent, recentOrder]);
+    const pinnedFirst = ordered2.filter((entry) => isPinnedSession(localPinSet, entry.sessionId));
+    const rest = ordered2.filter((entry) => !isPinnedSession(localPinSet, entry.sessionId));
+    return [...pinnedFirst, ...rest];
+  }, [props.recent, recentOrder, localPinSet]);
   const recentRenderedIds = recentEntriesOrdered.map((entry) => entry.cardId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   const [drag, setDrag] = (0, import_react13.useState)(null);
@@ -14745,7 +14837,7 @@ function StatusRail(props) {
         setMenu({
           sessionId: entry.sessionId,
           title: entry.title,
-          pinned: props.pinned?.has(entry.sessionId) === true,
+          pinned: isPinnedSession(localPinSet, entry.sessionId) || props.pinned?.has(entry.sessionId) === true,
           x: event.clientX,
           y: event.clientY
         });
@@ -16252,8 +16344,11 @@ function CanvasInner(props) {
     return items;
   };
   const togglePin = (cardId) => {
-    const card = visibleCards[cardId];
-    if (card === void 0) return;
+    const card = visibleCards[cardId] ?? canvasState.cards[cardId];
+    if (card === void 0) {
+      showToast(`${t("toast.pinFailed")}${t("toast.cardMissing")}`);
+      return;
+    }
     const next = !pinnedSessions.has(card.sessionId);
     void setPinned(card.sessionId, next).then(() => {
       showToast(next ? t("toast.pinned") : t("toast.unpinned"));
@@ -16601,17 +16696,28 @@ function CanvasInner(props) {
           }
         }
       });
+      const cardDigest = card === void 0 ? void 0 : canvasState.digests[card.sessionId];
+      const digestMissing = card === void 0 || digestIsEmpty2(cardDigest);
       items.push({
         key: "view-digest",
         icon: "digest",
-        label: t("menu.viewDigest"),
-        ...card === void 0 || digestIsEmpty2(canvasState.digests[card.sessionId]) ? { hint: t("digest.empty"), disabled: true } : {},
+        label: t(digestMissing ? "menu.generateDigest" : "menu.viewDigest"),
+        ...card === void 0 ? { disabled: true } : {},
         onPick: () => {
           close();
           if (card === void 0) return;
+          if (digestMissing) {
+            showToast(t("toast.digestGenerating"));
+            void talkMapApi.refreshDigest(card.sessionId).then(() => {
+              showToast(t("toast.digestReady"));
+            }).catch((error) => {
+              showToast(`${t("toast.digestFailed")}${String(error)}`);
+            });
+            return;
+          }
           setDigestTarget({
             title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.sessionId,
-            digest: canvasState.digests[card.sessionId]
+            digest: cardDigest
           });
         }
       });
@@ -17243,6 +17349,7 @@ function SidebarQueue() {
   const [queueOrder, setQueueOrder] = (0, import_react20.useState)([]);
   const [recentOrder, setRecentOrder] = (0, import_react20.useState)([]);
   const [menu, setMenu] = (0, import_react20.useState)(null);
+  const localPinSet = (0, import_react20.useSyncExternalStore)(localPins.subscribe, () => localPins.get());
   const askedRef = (0, import_react20.useRef)(/* @__PURE__ */ new Set());
   (0, import_react20.useEffect)(() => {
     const timer4 = setInterval(() => {
@@ -17322,7 +17429,7 @@ function SidebarQueue() {
         cardId: cardBySession.get(sessionId) ?? sessionId,
         sessionId,
         ...manual >= 0 ? { manualIndex: manual } : {},
-        ...pinnedSessions.has(sessionId) ? { pinned: true } : {},
+        ...isPinnedSession(localPinSet, sessionId) ? { pinned: true } : {},
         title: summary.displayTitle ?? sessionId,
         ...draftOnly ? { draft: true } : { lamp },
         ...hasDraft ? { draft: true } : {},
@@ -17331,7 +17438,7 @@ function SidebarQueue() {
       });
     }
     return sortQueueRows(out);
-  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions]);
+  }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
   const recentRows = (0, import_react20.useMemo)(() => {
     const listed = new Set(rows.map((row) => row.sessionId));
     const out = [];
@@ -17364,8 +17471,8 @@ function SidebarQueue() {
   }, [queueIds.join("|")]);
   const bucketOfRow = (0, import_react20.useCallback)((sessionId) => {
     const row = rows.find((entry) => entry.sessionId === sessionId);
-    return row === void 0 ? 0 : queueRank(row.lamp, row.draft === true, pinnedSessions.has(sessionId));
-  }, [rows, pinnedSessions]);
+    return row === void 0 ? 0 : queueRank(row.lamp, row.draft === true, isPinnedSession(localPinSet, sessionId));
+  }, [rows, pinnedSessions, localPinSet]);
   const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow });
   const recentIds = recentRows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {
@@ -17380,8 +17487,10 @@ function SidebarQueue() {
     const byId2 = new Map(recentRows.map((row) => [row.sessionId, row]));
     const ordered = recentOrder.map((id2) => byId2.get(id2)).filter((row) => row !== void 0);
     for (const row of recentRows) if (!recentOrder.includes(row.sessionId)) ordered.push(row);
-    return ordered;
-  }, [recentRows, recentOrder]);
+    const pinnedFirst = ordered.filter((row) => isPinnedSession(localPinSet, row.sessionId));
+    const rest = ordered.filter((row) => !isPinnedSession(localPinSet, row.sessionId));
+    return [...pinnedFirst, ...rest];
+  }, [recentRows, recentOrder, localPinSet]);
   const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
@@ -17471,7 +17580,7 @@ function SidebarQueue() {
                       setMenu({
                         sessionId: row.sessionId,
                         title: row.title,
-                        pinned: pinnedSessions.has(row.sessionId),
+                        pinned: isPinnedSession(localPinSet, row.sessionId) || pinnedSessions.has(row.sessionId),
                         x: event.clientX,
                         y: event.clientY
                       });
@@ -17559,7 +17668,7 @@ function SidebarQueue() {
                       setMenu({
                         sessionId: row.sessionId,
                         title: row.title,
-                        pinned: pinnedSessions.has(row.sessionId),
+                        pinned: isPinnedSession(localPinSet, row.sessionId) || pinnedSessions.has(row.sessionId),
                         x: event.clientX,
                         y: event.clientY
                       });

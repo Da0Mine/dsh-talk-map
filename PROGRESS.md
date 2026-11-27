@@ -2,13 +2,13 @@
 
 ## 恢复块
 - 目标：dsh-talk-map（DSH 对话地图插件）持续迭代，npm `dsh-talk-map` 已到 `0.1.96`，仓库 Da0Mine/dsh-talk-map
-- 当前阶段：0.1.96 已发布（地图侧栏液态玻璃 + 拖动时冻结模糊），等用户重启验收
-- 已完成（本轮）：液态玻璃（高光/折射边/流动光带/玻璃卡）+ 拖动降级（独立 store，不触发画布重渲染）
-- 下一步：用户重启后确认玻璃观感与拖拽帧率；若观感偏灰可调 `--dsw-alias-bg-elevated` 的混合比例
-- 决策：性能优先——画布移动时用静态渐变替代 `backdrop-filter`，静止时恢复 16px 模糊
+- 当前阶段：0.7.7 之后补丁——修**画布右键菜单**的「置顶 / 查看摘要」两处无反应；`client/client.js` 已 `build-client --publish`，等重启验收
+- 已完成（本轮）：① 画布菜单「查看摘要」在摘要为空时不再 `disabled`（点击=触发生成 + toast）；② 画布菜单「置顶」不再静默 `return`（回退到 `canvasState.cards`，找不到卡也会提示）；probe 150/150
+- 下一步：重启 DSH 后分别在**地图画布右键**与**侧栏卡片右键**点「置顶会话」「查看摘要」，两处都要有明确反馈；若仍无任何提示，则问题在「点击没进菜单」（pointerdown 吞事件），需另查
+- 决策：菜单项永不静默失败——要么执行、要么给可见提示，disabled 一律改成「可点并说明」
 - 未决风险：浅色主题只在离线 harness 里验过（真实宿主浅色未验）；鼠标拖拽期间若高频起停可能看到模糊切换
-- 关键文件：`src/client/talk-map.module.css`（玻璃层）、`src/client/rail-glass.ts`、`src/client/StatusRail.tsx`、`src/client/MapCanvas.tsx`
-- 验证：probe 148/148；玻璃开/关 A/B 拖拽均中位 17ms、p95 19ms；`data-frozen` 拖动中 1、松手 400ms 后 0
+- 关键文件：`src/client/MapCanvas.tsx`（画布菜单）、`src/client/rail-menu.tsx`（侧栏菜单）、`src/client/i18n.ts`、`src/client/talk-map.module.css`（玻璃层）
+- 验证：probe 150/150；发布包内含 `menu.generateDigest` / `digestMissing` / `toast.cardMissing`
 
 ## 当前目标
 
@@ -17,6 +17,10 @@
 
 
 ## 已完成
+
+- 2026-11-27 `0.7.8`：① 菜单点不动/点穿的根因是挂载位置：`.statusRail` 根节点是 `pointer-events: none`（点击落到卡片上 → 内侧栏"查看摘要"变成打开会话），`.sidebarQueue` 是 `overflow: hidden`（菜单被裁 → 外侧栏"没反应"）；改成 `createPortal(..., document.body)` + `position: fixed; zIndex: 9999; pointerEvents: auto`，重命名/摘要弹层一并 portal；② 置顶改成本地集合 `localPins`（`dsh.talk-map.pins.v1`）先落地，宿主 `pinSession` 变为尽力而为（某些构建没暴露），两侧栏排序都并集本地置顶，最近区也按置顶前置；实测点置顶后 `pins=["s5"]`、最近区顺序改变（`reordered:true`）。③ 实测：标为未读后出现 done 灯；查看摘要不再跳转（地图仍开、弹层或错误行出现、无 pageerror）。probe 150/150。
+
+- 2026-11-27 画布右键菜单两处「点了没反应」：①「查看摘要」在摘要为空时是 `disabled: true`（灰掉，点了必然无反应）→ 改成「点它=触发生成」并带 toast（`menu.generateDigest` / `toast.digestGenerating|Ready|Failed`）；②「置顶」在 `visibleCards[cardId]` 缺失时**静默 return** → 回退到 `canvasState.cards[cardId]`，仍找不到则 toast `toast.cardMissing`。侧栏菜单（`rail-menu.tsx`）早有同类修复，本次补齐画布侧。probe 150/150。
 
 - 2026-11-27 `0.7.7`：① 拖拽改用**渲染顺序**的 id 列表（此前传的是 props 顺序，向上拖时索引与画面不一致 → 卡片"飞出"、松手排序错乱）；② 侧栏主行拖拽加 `bucketOf` 限制，只能在自己的优先级桶里换位；③ 拖拽后 350ms 内抑制 onClick（`shouldIgnoreClick`），松手不再误进对话，普通单击仍可进；④ 补 host 路由 `POST /talk-map/digest/ensure`——客户端一直在调，host 只有 `/refresh`，所以"查看摘要"永远 404；⑤ 菜单动作失败时把原因显示在菜单里（此前只 console，看不出"置顶没反应"是接口缺失还是失败）。实测：向上拖「云盘同步目录」到首位成功，且拖完地图仍开着；probe 150/150。
 

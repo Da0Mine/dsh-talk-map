@@ -20,6 +20,7 @@ import { closeMapPanel, currentSessionId, getServices, openSessionInUi } from '.
 import type { CardGlow } from './SessionCard.tsx'
 import { LAMP_CHIP, LAMP_CLASS, relativeTime } from './SessionCard.tsx'
 import { sortQueueRows } from './queue-order.ts'
+import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
 import { RailCardMenu, type RailMenuTarget } from './rail-menu.tsx'
 import { sessionActivity } from './session-activity.ts'
@@ -123,6 +124,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const [queueOrder, setQueueOrder] = useState<string[]>([])
   const [recentOrder, setRecentOrder] = useState<string[]>([])
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
+  const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
   const askedRef = useRef<Set<string>>(new Set())
 
   useEffect(() => {
@@ -216,7 +218,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         cardId: cardBySession.get(sessionId) ?? sessionId,
         sessionId,
         ...(manual >= 0 ? { manualIndex: manual } : {}),
-        ...(pinnedSessions.has(sessionId) ? { pinned: true } : {}),
+        ...(isPinnedSession(localPinSet, sessionId) ? { pinned: true } : {}),
         title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
       ...(hasDraft ? { draft: true } : {}),
@@ -226,7 +228,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     }
     // Same rule as the map rail: priority bucket first, then newest inside it.
     return sortQueueRows(out)
-  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions])
+  }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet])
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
   const recentRows = useMemo(() => {
@@ -264,8 +266,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   // A drag may only reorder inside one priority bucket, matching the rail's rule.
   const bucketOfRow = useCallback((sessionId: string): number => {
     const row = rows.find(entry => entry.sessionId === sessionId)
-    return row === undefined ? 0 : queueRank(row.lamp, row.draft === true, pinnedSessions.has(sessionId))
-  }, [rows, pinnedSessions])
+    return row === undefined ? 0 : queueRank(row.lamp, row.draft === true, isPinnedSession(localPinSet, sessionId))
+  }, [rows, pinnedSessions, localPinSet])
   const queueDrag = useReorder(queueIds, setQueueOrder, { bucketOf: bucketOfRow })
 
   const recentIds = recentRows.map(row => row.sessionId)
@@ -282,8 +284,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     const byId = new Map(recentRows.map(row => [row.sessionId, row]))
     const ordered = recentOrder.map(id => byId.get(id)).filter((row): row is (typeof recentRows)[number] => row !== undefined)
     for (const row of recentRows) if (!recentOrder.includes(row.sessionId)) ordered.push(row)
-    return ordered
-  }, [recentRows, recentOrder])
+    const pinnedFirst = ordered.filter(row => isPinnedSession(localPinSet, row.sessionId))
+    const rest = ordered.filter(row => !isPinnedSession(localPinSet, row.sessionId))
+    return [...pinnedFirst, ...rest]
+  }, [recentRows, recentOrder, localPinSet])
   const recentRenderedIds = recentRowsOrdered.map(row => row.sessionId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
 
@@ -375,7 +379,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                 setMenu({
                   sessionId: row.sessionId,
                   title: row.title,
-                  pinned: pinnedSessions.has(row.sessionId),
+                  pinned: isPinnedSession(localPinSet, row.sessionId) || pinnedSessions.has(row.sessionId),
                   x: event.clientX,
                   y: event.clientY,
                 })
@@ -470,7 +474,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
                     setMenu({
                       sessionId: row.sessionId,
                       title: row.title,
-                      pinned: pinnedSessions.has(row.sessionId),
+                      pinned: isPinnedSession(localPinSet, row.sessionId) || pinnedSessions.has(row.sessionId),
                       x: event.clientX,
                       y: event.clientY,
                     })
