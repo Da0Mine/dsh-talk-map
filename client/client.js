@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b802 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b803 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b802 · Search cards on the map",
+  "global.searchPlaceholder": "b803 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1763,6 +1763,80 @@ function GlobalSearch(props) {
   ] });
 }
 
+// src/client/read-archive.ts
+var STORAGE_KEY2 = "dsh.talk-map.read-finished.v1";
+var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
+var listeners4 = /* @__PURE__ */ new Set();
+var read2 = /* @__PURE__ */ new Map();
+var loaded = false;
+function emit2() {
+  for (const listener of listeners4) listener();
+}
+function load() {
+  if (loaded) return;
+  loaded = true;
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY2);
+    if (raw === null) return;
+    const parsed = JSON.parse(raw);
+    if (parsed === null || typeof parsed !== "object") return;
+    const cutoff = Date.now() - MAX_AGE_MS;
+    const next = /* @__PURE__ */ new Map();
+    for (const [id2, at] of Object.entries(parsed)) {
+      if (typeof at !== "number" || at < cutoff) continue;
+      next.set(id2, at);
+    }
+    read2 = next;
+  } catch {
+    read2 = /* @__PURE__ */ new Map();
+  }
+}
+function persist() {
+  try {
+    window.localStorage.setItem(STORAGE_KEY2, JSON.stringify(Object.fromEntries(read2)));
+  } catch {
+  }
+}
+var readArchive = {
+  get() {
+    load();
+    return read2;
+  },
+  has(sessionId) {
+    load();
+    return read2.has(sessionId);
+  },
+  subscribe(listener) {
+    load();
+    listeners4.add(listener);
+    return () => {
+      listeners4.delete(listener);
+    };
+  },
+  /** Called when a 待查看 card is opened (or its lamp is dropped because it was read). */
+  mark(sessionId) {
+    load();
+    const next = new Map(read2);
+    next.set(sessionId, Date.now());
+    read2 = next;
+    persist();
+    emit2();
+  },
+  /**
+   * A session that starts working again leaves the strip: it is back to 任务中, and the next
+   * completion has to be read before it descends again.
+   */
+  forget(sessionId) {
+    load();
+    if (!read2.has(sessionId)) return;
+    const next = new Map(read2);
+    next.delete(sessionId);
+    read2 = next;
+    persist();
+    emit2();
+  }
+};
+
 // src/client/MapCanvas.tsx
 var import_react15 = require("react");
 
@@ -2759,7 +2833,7 @@ function defaultTouchable() {
   return navigator.maxTouchPoints || "ontouchstart" in this;
 }
 function drag_default() {
-  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners7 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
+  var filter2 = defaultFilter, container = defaultContainer, subject = defaultSubject, touchable = defaultTouchable, gestures = {}, listeners8 = dispatch_default("start", "drag", "end"), active = 0, mousedownx, mousedowny, mousemoving, touchending, clickDistance2 = 0;
   function drag(selection2) {
     selection2.on("mousedown.drag", mousedowned).filter(touchable).on("touchstart.drag", touchstarted).on("touchmove.drag", touchmoved, nonpassive).on("touchend.drag touchcancel.drag", touchended).style("touch-action", "none").style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -2822,7 +2896,7 @@ function drag_default() {
     }
   }
   function beforestart(that, container2, event, d, identifier, touch) {
-    var dispatch2 = listeners7.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
+    var dispatch2 = listeners8.copy(), p = pointer_default(touch || event, container2), dx, dy, s;
     if ((s = subject.call(that, new DragEvent("beforestart", {
       sourceEvent: event,
       target: drag,
@@ -2881,8 +2955,8 @@ function drag_default() {
     return arguments.length ? (touchable = typeof _ === "function" ? _ : constant_default2(!!_), drag) : touchable;
   };
   drag.on = function() {
-    var value = listeners7.on.apply(listeners7, arguments);
-    return value === listeners7 ? drag : value;
+    var value = listeners8.on.apply(listeners8, arguments);
+    return value === listeners8 ? drag : value;
   };
   drag.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, drag) : Math.sqrt(clickDistance2);
@@ -4484,7 +4558,7 @@ function defaultConstrain(transform2, extent, translateExtent) {
   );
 }
 function zoom_default2() {
-  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners7 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
+  var filter2 = defaultFilter2, extent = defaultExtent, constrain = defaultConstrain, wheelDelta2 = defaultWheelDelta, touchable = defaultTouchable2, scaleExtent = [0, Infinity], translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]], duration = 250, interpolate = zoom_default, listeners8 = dispatch_default("start", "zoom", "end"), touchstarting, touchfirst, touchending, touchDelay = 500, wheelDelay = 150, clickDistance2 = 0, tapDistance = 10;
   function zoom(selection2) {
     selection2.property("__zoom", defaultTransform).on("wheel.zoom", wheeled, { passive: false }).on("mousedown.zoom", mousedowned).on("dblclick.zoom", dblclicked).filter(touchable).on("touchstart.zoom", touchstarted).on("touchmove.zoom", touchmoved).on("touchend.zoom touchcancel.zoom", touchended).style("-webkit-tap-highlight-color", "rgba(0,0,0,0)");
   }
@@ -4596,7 +4670,7 @@ function zoom_default2() {
     },
     emit: function(type) {
       var d = select_default2(this.that).datum();
-      listeners7.call(
+      listeners8.call(
         type,
         this.that,
         new ZoomEvent(type, {
@@ -4604,7 +4678,7 @@ function zoom_default2() {
           target: zoom,
           type,
           transform: this.that.__zoom,
-          dispatch: listeners7
+          dispatch: listeners8
         }),
         d
       );
@@ -4754,8 +4828,8 @@ function zoom_default2() {
     return arguments.length ? (interpolate = _, zoom) : interpolate;
   };
   zoom.on = function() {
-    var value = listeners7.on.apply(listeners7, arguments);
-    return value === listeners7 ? zoom : value;
+    var value = listeners8.on.apply(listeners8, arguments);
+    return value === listeners8 ? zoom : value;
   };
   zoom.clickDistance = function(_) {
     return arguments.length ? (clickDistance2 = (_ = +_) * _, zoom) : Math.sqrt(clickDistance2);
@@ -7460,20 +7534,20 @@ var import_with_selector = __toESM(require_with_selector(), 1);
 var import_meta = {};
 var createStoreImpl = (createState) => {
   let state3;
-  const listeners7 = /* @__PURE__ */ new Set();
+  const listeners8 = /* @__PURE__ */ new Set();
   const setState2 = (partial, replace) => {
     const nextState = typeof partial === "function" ? partial(state3) : partial;
     if (!Object.is(nextState, state3)) {
       const previousState = state3;
       state3 = (replace != null ? replace : typeof nextState !== "object" || nextState === null) ? nextState : Object.assign({}, state3, nextState);
-      listeners7.forEach((listener) => listener(state3, previousState));
+      listeners8.forEach((listener) => listener(state3, previousState));
     }
   };
   const getState = () => state3;
   const getInitialState2 = () => initialState;
   const subscribe2 = (listener) => {
-    listeners7.add(listener);
-    return () => listeners7.delete(listener);
+    listeners8.add(listener);
+    return () => listeners8.delete(listener);
   };
   const destroy = () => {
     if ((import_meta.env ? import_meta.env.MODE : void 0) !== "production") {
@@ -7481,7 +7555,7 @@ var createStoreImpl = (createState) => {
         "[DEPRECATED] The `destroy` method will be unsupported in a future version. Instead use unsubscribe function returned by subscribe. Everything will be garbage-collected if store is garbage-collected."
       );
     }
-    listeners7.clear();
+    listeners8.clear();
   };
   const api = { setState: setState2, getState, getInitialState: getInitialState2, subscribe: subscribe2, destroy };
   const initialState = state3 = createState(setState2, getState, api);
@@ -10950,7 +11024,7 @@ var KEY = "dsh.talk-map.push-log.v1";
 function pairKey(fromCardId, toCardId) {
   return `${fromCardId}>${toCardId}`;
 }
-function read2() {
+function read3() {
   try {
     if (typeof localStorage === "undefined") return {};
     const raw = localStorage.getItem(KEY);
@@ -10964,7 +11038,7 @@ function read2() {
 function stampPush(fromCardId, toCardId) {
   const at = Date.now();
   try {
-    const log = read2();
+    const log = read3();
     log[pairKey(fromCardId, toCardId)] = at;
     if (typeof localStorage !== "undefined") localStorage.setItem(KEY, JSON.stringify(log));
   } catch {
@@ -10972,7 +11046,7 @@ function stampPush(fromCardId, toCardId) {
   return at;
 }
 function lastPushFor(fromCardId, toCardId) {
-  const value = read2()[pairKey(fromCardId, toCardId)];
+  const value = read3()[pairKey(fromCardId, toCardId)];
   return typeof value === "number" ? value : void 0;
 }
 
@@ -11261,13 +11335,13 @@ var drawerState = {
 };
 
 // src/client/state-persist.ts
-var STORAGE_KEY2 = "dsh.talk-map.lamp-state.v1";
-var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
+var STORAGE_KEY3 = "dsh.talk-map.lamp-state.v1";
+var MAX_AGE_MS2 = 14 * 24 * 60 * 60 * 1e3;
 var EMPTY = { version: 1, finished: {}, errors: {}, interrupted: {} };
 function prune(record, now2) {
   const out = {};
   for (const [sessionId, at] of Object.entries(record)) {
-    if (typeof at === "number" && now2 - at < MAX_AGE_MS) out[sessionId] = at;
+    if (typeof at === "number" && now2 - at < MAX_AGE_MS2) out[sessionId] = at;
   }
   return out;
 }
@@ -11277,7 +11351,7 @@ function loadLampState() {
   if (cache !== null) return cache;
   if (typeof localStorage === "undefined") return EMPTY;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY2);
+    const raw = localStorage.getItem(STORAGE_KEY3);
     if (raw === null) {
       cache = EMPTY;
       return cache;
@@ -11316,7 +11390,7 @@ function flushLampState() {
   }
   if (cache === null || typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY2, JSON.stringify(cache));
+    localStorage.setItem(STORAGE_KEY3, JSON.stringify(cache));
   } catch {
   }
 }
@@ -11332,17 +11406,17 @@ function recordRunningAtShutdown(sessionIds) {
 // src/client/session-alerts.ts
 var alerts = /* @__PURE__ */ new Map();
 var snapshot2 = /* @__PURE__ */ new Map();
-var listeners4 = /* @__PURE__ */ new Set();
+var listeners5 = /* @__PURE__ */ new Set();
 for (const [sessionId, detail] of Object.entries(loadLampState().errors)) {
   alerts.set(sessionId, detail);
 }
-function persist() {
+function persist2() {
   saveLampState({ errors: Object.fromEntries(alerts) });
 }
 function publish2() {
   snapshot2 = new Map(alerts);
-  persist();
-  for (const listener of listeners4) listener();
+  persist2();
+  for (const listener of listeners5) listener();
 }
 snapshot2 = new Map(alerts);
 var sessionAlerts = {
@@ -11350,9 +11424,9 @@ var sessionAlerts = {
     return snapshot2;
   },
   subscribe(listener) {
-    listeners4.add(listener);
+    listeners5.add(listener);
     return () => {
-      listeners4.delete(listener);
+      listeners5.delete(listener);
     };
   }
 };
@@ -11424,7 +11498,7 @@ function publish3() {
   interruptedSnapshot = new Set(interrupted);
   for (const listener of listenerSet) listener();
 }
-function persist2() {
+function persist3() {
   const now2 = Date.now();
   const finishedRecord = {};
   for (const sessionId of finished) finishedRecord[sessionId] = now2;
@@ -11506,6 +11580,7 @@ var sessionActivity = {
         hydrated.delete(sessionId);
         continue;
       }
+      if (running === true) readArchive.forget(sessionId);
       const onScreen = (row?.retainedBy?.mainView ?? 0) > 0;
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId);
@@ -11531,7 +11606,7 @@ var sessionActivity = {
       }
     }
     if (changed) {
-      persist2();
+      persist3();
       publish3();
     }
   },
@@ -11543,26 +11618,28 @@ var sessionActivity = {
     hydrated.delete(sessionId);
     if (finished.has(sessionId)) return;
     finished.add(sessionId);
-    persist2();
+    persist3();
     publish3();
   },
   /** The user is looking at it now: stop advertising it as unread/interrupted. */
   acknowledge(sessionId) {
+    readArchive.mark(sessionId);
     hydrated.delete(sessionId);
     const removedFinished = finished.delete(sessionId);
     const removedInterrupted = interrupted.delete(sessionId);
     if (removedFinished || removedInterrupted) {
-      persist2();
+      persist3();
       publish3();
     }
   },
   /** The session is gone (deleted / archived): drop both records. */
   forget(sessionId) {
+    if (finished.has(sessionId)) readArchive.mark(sessionId);
     lastRunning.delete(sessionId);
     hydrated.delete(sessionId);
     const removed = finished.delete(sessionId) || interrupted.delete(sessionId);
     if (removed) {
-      persist2();
+      persist3();
       publish3();
     }
   },
@@ -11595,10 +11672,10 @@ function draftTextOf(value) {
   return "";
 }
 var snapshot4 = /* @__PURE__ */ new Set();
-var listeners5 = /* @__PURE__ */ new Set();
+var listeners6 = /* @__PURE__ */ new Set();
 function publish4(next) {
   snapshot4 = next;
-  for (const listener of listeners5) listener();
+  for (const listener of listeners6) listener();
 }
 function sameSet(a, b) {
   if (a.size !== b.size) return false;
@@ -11656,9 +11733,9 @@ var draftWatch = {
     return snapshot4;
   },
   subscribe(listener) {
-    listeners5.add(listener);
+    listeners6.add(listener);
     return () => {
-      listeners5.delete(listener);
+      listeners6.delete(listener);
     };
   },
   /** Re-read the store; publishes only when the set actually changed. */
@@ -11675,7 +11752,7 @@ function cleanPreviewText(text) {
 }
 
 // src/client/preview-cache.ts
-var STORAGE_KEY3 = "dsh.talk-map.previews.v1";
+var STORAGE_KEY4 = "dsh.talk-map.previews.v1";
 var MAX_RAW = 600;
 var MAX_ENTRIES = 300;
 var cache2 = null;
@@ -11687,7 +11764,7 @@ function loadPreviewCache() {
     return cache2;
   }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY3);
+    const raw = localStorage.getItem(STORAGE_KEY4);
     const parsed = raw === null ? null : JSON.parse(raw);
     cache2 = parsed !== null && typeof parsed === "object" ? parsed : {};
   } catch {
@@ -11704,10 +11781,10 @@ function readPreviewTexts() {
   }
   return out;
 }
-function persist3() {
+function persist4() {
   if (typeof localStorage === "undefined" || cache2 === null) return;
   try {
-    localStorage.setItem(STORAGE_KEY3, JSON.stringify(cache2));
+    localStorage.setItem(STORAGE_KEY4, JSON.stringify(cache2));
   } catch {
     cache2 = {};
   }
@@ -11716,7 +11793,7 @@ function scheduleSave() {
   if (timer3 !== void 0) clearTimeout(timer3);
   timer3 = setTimeout(() => {
     timer3 = void 0;
-    persist3();
+    persist4();
   }, 400);
 }
 function putPreview(sessionId, text, stamp) {
@@ -14182,16 +14259,16 @@ function installLiquidGlass(element, options = {}) {
 }
 
 // src/client/pins.ts
-var STORAGE_KEY4 = "dsh.talk-map.pins.v1";
-var listeners6 = /* @__PURE__ */ new Set();
+var STORAGE_KEY5 = "dsh.talk-map.pins.v1";
+var listeners7 = /* @__PURE__ */ new Set();
 var pinned = /* @__PURE__ */ new Set();
-var loaded = false;
-function emit2() {
-  for (const listener of listeners6) listener();
+var loaded2 = false;
+function emit3() {
+  for (const listener of listeners7) listener();
 }
 function readStored() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY4);
+    const raw = window.localStorage.getItem(STORAGE_KEY5);
     if (raw === null) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
@@ -14200,14 +14277,14 @@ function readStored() {
   }
 }
 function ensureLoaded() {
-  if (loaded) return;
-  loaded = true;
+  if (loaded2) return;
+  loaded2 = true;
   const stored = readStored();
   if (stored.length > 0) pinned = new Set(stored);
 }
-function persist4() {
+function persist5() {
   try {
-    window.localStorage.setItem(STORAGE_KEY4, JSON.stringify([...pinned]));
+    window.localStorage.setItem(STORAGE_KEY5, JSON.stringify([...pinned]));
   } catch {
   }
 }
@@ -14218,9 +14295,9 @@ var localPins = {
   },
   subscribe(listener) {
     ensureLoaded();
-    listeners6.add(listener);
+    listeners7.add(listener);
     return () => {
-      listeners6.delete(listener);
+      listeners7.delete(listener);
     };
   },
   set(sessionId, next) {
@@ -14230,8 +14307,8 @@ var localPins = {
     if (next) copy.add(sessionId);
     else copy.delete(sessionId);
     pinned = copy;
-    persist4();
-    emit2();
+    persist5();
+    emit3();
   },
   toggle(sessionId) {
     ensureLoaded();
@@ -14258,8 +14335,6 @@ function useReorder(ids, apply2, options = {}) {
   const [offsetY, setOffsetY] = (0, import_react11.useState)(0);
   const [flip, setFlip] = (0, import_react11.useState)({});
   const [flipPhase, setFlipPhase] = (0, import_react11.useState)(2);
-  const pendingFlip = (0, import_react11.useRef)(null);
-  const dragEndedId = (0, import_react11.useRef)(null);
   const dragEndAt = (0, import_react11.useRef)(0);
   const begin = (0, import_react11.useCallback)((event, id2) => {
     if (event.button !== 0) return;
@@ -14294,40 +14369,8 @@ function useReorder(ids, apply2, options = {}) {
     if (hover < drag.index && index2 >= hover && index2 < drag.index) return drag.step;
     return 0;
   }, [drag, hover]);
-  const shouldIgnoreClick = (0, import_react11.useCallback)(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, []);
   const flipOf = (0, import_react11.useCallback)((id2) => flip[id2] ?? 0, [flip]);
-  (0, import_react11.useEffect)(() => {
-    const before = pendingFlip.current;
-    if (before === null) return;
-    pendingFlip.current = null;
-    const deltas = {};
-    for (const [id2, top] of before) {
-      const element = slots.current.get(id2);
-      if (element === void 0) continue;
-      const after = id2 === dragEndedId.current ? element.getBoundingClientRect().top : element.offsetTop;
-      const delta = top - after;
-      if (Math.abs(delta) > 1) deltas[id2] = delta;
-    }
-    if (Object.keys(deltas).length === 0) return;
-    setFlip(deltas);
-    setFlipPhase(0);
-    let inner = 0;
-    let last = 0;
-    const outer = requestAnimationFrame(() => {
-      setFlipPhase(1);
-      inner = requestAnimationFrame(() => {
-        last = requestAnimationFrame(() => {
-          setFlip({});
-          setFlipPhase(2);
-        });
-      });
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      if (inner !== 0) cancelAnimationFrame(inner);
-      if (last !== 0) cancelAnimationFrame(last);
-    };
-  }, [ids]);
+  const shouldIgnoreClick = (0, import_react11.useCallback)(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, []);
   (0, import_react11.useEffect)(() => {
     if (drag === null) return;
     const onMove = (event) => {
@@ -14352,28 +14395,49 @@ function useReorder(ids, apply2, options = {}) {
     const onUp = () => {
       const list = idsRef.current;
       const from = list.indexOf(drag.id);
-      const moved = Math.abs(offsetY) > 3 || hover >= 0 && hover !== from;
-      if (from >= 0 && hover >= 0 && hover !== from) {
-        const origin = slots.current.get(drag.id)?.offsetParent;
-        void origin;
-        pendingFlip.current = new Map(
-          list.map((id2) => {
-            const element = slots.current.get(id2);
-            if (element === void 0) return [id2, Number.NaN];
-            const top = id2 === drag.id ? element.getBoundingClientRect().top : element.offsetTop;
-            return [id2, top];
-          }).filter(([, top]) => !Number.isNaN(top))
-        );
+      const target = hover;
+      const moved = Math.abs(offsetY) > 3 || target >= 0 && target !== from;
+      const willReorder = from >= 0 && target >= 0 && target !== from;
+      const before = /* @__PURE__ */ new Map();
+      if (willReorder) {
+        for (const id2 of list) {
+          const element = slots.current.get(id2);
+          if (element === void 0) continue;
+          before.set(id2, id2 === drag.id ? element.getBoundingClientRect().top : element.offsetTop);
+        }
+      }
+      if (willReorder) {
         const next = [...list];
         next.splice(from, 1);
-        next.splice(hover, 0, drag.id);
+        next.splice(target, 0, drag.id);
         apply2(next);
       }
       if (moved) dragEndAt.current = Date.now();
-      dragEndedId.current = moved ? drag.id : null;
       setDrag(null);
       setHover(-1);
       setOffsetY(0);
+      if (before.size === 0) return;
+      const releasedId = drag.id;
+      requestAnimationFrame(() => {
+        const deltas = {};
+        for (const [id2, top] of before) {
+          const element = slots.current.get(id2);
+          if (element === void 0) continue;
+          const after = id2 === releasedId ? element.getBoundingClientRect().top : element.offsetTop;
+          const delta = top - after;
+          if (Math.abs(delta) > 1) deltas[id2] = delta;
+        }
+        if (Object.keys(deltas).length === 0) return;
+        setFlip(deltas);
+        setFlipPhase(0);
+        requestAnimationFrame(() => {
+          setFlipPhase(1);
+          requestAnimationFrame(() => {
+            setFlip({});
+            setFlipPhase(2);
+          });
+        });
+      });
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
@@ -15783,12 +15847,14 @@ function CanvasInner(props) {
     }
     return void 0;
   }, [sessions]);
+  const readFinished = (0, import_react15.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
   const recentEntries = (0, import_react15.useMemo)(() => {
     const listed = new Set(statusEntries.map((entry) => entry.sessionId));
     const rows = [];
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue;
       if (listed.has(card.sessionId)) continue;
+      if (!readFinished.has(card.sessionId)) continue;
       const summary = sessions.byId[card.sessionId];
       rows.push({
         cardId,
@@ -17552,6 +17618,7 @@ function SidebarQueue() {
     }
     return sortQueueRows(out);
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
+  const readFinished = (0, import_react20.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
   const recentRows = (0, import_react20.useMemo)(() => {
     const listed = new Set(rows.map((row) => row.sessionId));
     const out = [];
@@ -17562,6 +17629,7 @@ function SidebarQueue() {
       if (summary.origin === "subagent") continue;
       if (archivedSessionIds.has(sessionId)) continue;
       if (listed.has(sessionId)) continue;
+      if (!readFinished.has(sessionId)) continue;
       out.push({
         sessionId,
         cardId: sessionId,
@@ -17571,7 +17639,7 @@ function SidebarQueue() {
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0));
     return out.slice(0, 3);
-  }, [rows, sessions, archivedSessionIds]);
+  }, [rows, sessions, archivedSessionIds, readFinished]);
   const activeSession = currentSessionId();
   const queueIds = rows.map((row) => row.sessionId);
   (0, import_react20.useEffect)(() => {

@@ -15,6 +15,7 @@
  * Both sets are persisted (see state-persist.ts) so a restart does not wipe the
  * green "待查看" lamps — or the "已中断" notes of runs that were cut off.
  */
+import { readArchive } from './read-archive.ts'
 import type { SessionStatusFact } from './dsh.ts'
 import { loadLampState, recordRunningAtShutdown, saveLampState } from './state-persist.ts'
 
@@ -139,6 +140,8 @@ export const sessionActivity = {
       }
       // A turn that ends while you are looking at that very conversation needs no lamp; the
       // always-on observer (the sidebar queue) passes onlyBackground so it never marks it.
+      // Back to 任务中: it leaves「最近的任务」and the next completion must be read again.
+      if (running === true) readArchive.forget(sessionId)
       const onScreen = (row?.retainedBy?.mainView ?? 0) > 0
       if (wasRunning === true && !finished.has(sessionId) && !(options?.onlyBackground === true && onScreen)) {
         finished.add(sessionId)
@@ -195,6 +198,7 @@ export const sessionActivity = {
   },
   /** The user is looking at it now: stop advertising it as unread/interrupted. */
   acknowledge(sessionId: string): void {
+    readArchive.mark(sessionId)
     hydrated.delete(sessionId)
     const removedFinished = finished.delete(sessionId)
     const removedInterrupted = interrupted.delete(sessionId)
@@ -205,6 +209,7 @@ export const sessionActivity = {
   },
   /** The session is gone (deleted / archived): drop both records. */
   forget(sessionId: string): void {
+    if (finished.has(sessionId)) readArchive.mark(sessionId)
     lastRunning.delete(sessionId)
     hydrated.delete(sessionId)
     const removed = finished.delete(sessionId) || interrupted.delete(sessionId)

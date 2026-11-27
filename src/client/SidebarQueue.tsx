@@ -10,6 +10,7 @@
  *            plugin's own alert + activity stores, i.e. the same inputs `glowOf` uses on
  *            the map (the panel-only `useSessionStatus` hook is not reachable here).
  */
+import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { talkMapApi } from './api.ts'
 import { canvas, INBOX_BOARD_ID } from './canvas-store.ts'
@@ -232,6 +233,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   }, [canvasState.cards, sessions, statusById, alerts, finished, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet])
 
   /** Same idea as the rail: the three most recent sessions with nothing to report. */
+  const readFinished = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
   const recentRows = useMemo(() => {
     const listed = new Set(rows.map(row => row.sessionId))
     const out: { sessionId: string; cardId: string; title: string; updatedAt?: number }[] = []
@@ -242,6 +244,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       if (summary.origin === 'subagent') continue
       if (archivedSessionIds.has(sessionId)) continue
       if (listed.has(sessionId)) continue
+      // 只有"待查看且已看过"的会话才落到最近的任务。
+      if (!readFinished.has(sessionId)) continue
       out.push({
         sessionId,
         cardId: sessionId,
@@ -251,7 +255,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     }
     out.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))
     return out.slice(0, 3)
-  }, [rows, sessions, archivedSessionIds])
+  }, [rows, sessions, archivedSessionIds, readFinished])
   const activeSession = currentSessionId()
 
   const queueIds = rows.map(row => row.sessionId)

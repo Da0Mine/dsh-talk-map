@@ -12,6 +12,7 @@
  * Interaction: right/middle-drag pans, plain right-click opens the context
  * menu, left-drag box-selects on the pane and drags nodes.
  */
+import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   Background, BackgroundVariant, ConnectionMode, ControlButton, Controls, MarkerType, ReactFlow, ReactFlowProvider,
@@ -1013,12 +1014,15 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     return undefined
   }, [sessions])
 
+  const readFinished = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
   const recentEntries = useMemo<StatusRailEntry[]>(() => {
     const listed = new Set(statusEntries.map(entry => entry.sessionId))
     const rows: StatusRailEntry[] = []
     for (const [cardId, card] of Object.entries(visibleCards)) {
       if (card.boardId !== INBOX_BOARD_ID) continue
       if (listed.has(card.sessionId)) continue
+      // 「最近的任务」= 任务中 → 待查看 → 看过；没走完这条链的不入列。
+      if (!readFinished.has(card.sessionId)) continue
       const summary = sessions.byId[card.sessionId]
       rows.push({
         cardId,

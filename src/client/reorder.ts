@@ -2,12 +2,16 @@
  * Vertical drag-to-reorder for short card lists (the「最近的任务」strip and the sidebar queue).
  *
  * Behaves like the map's card drag: the picked row follows the pointer, rows it passes slide out of
- * the way, and the commit happens on release. Two details matter and both were wrong before:
+ * the way, and on release every row glides to its new position (FLIP). Three details matter, and
+ * each one has been a bug at least once:
  *
  *  - Row centres are captured ONCE at the press. Measuring live positions fed the shift back into
  *    the measurement and made the neighbours jitter.
- *  - The id list must be the RENDERED order. Passing a differently-sorted array committed a
- *    sequence the list never showed.
+ *  - The id list must be the RENDERED order, otherwise the committed sequence is one the list
+ *    never showed.
+ *  - The FLIP correction is driven by requestAnimationFrame from the release handler, NOT by an
+ *    effect keyed on the id array: a fresh array identity every render tore down the animation
+ *    frames, so the correction stayed on screen and the rows looked teleported.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 
@@ -23,15 +27,13 @@ export interface ReorderApi {
   offsetY: number
   /** How far a given row should slide to open a gap. */
   shiftOf: (id: string) => number
-  /** Post-commit correction (FLIP) so a released row settles instead of jumping. */
+  /** Post-commit correction (FLIP), so a released row settles instead of jumping. */
   flipOf: (id: string) => number
-  /** True while the row must move without a transition (the first FLIP frame). */
+  /** True only on the first FLIP frame, where the row must not animate toward its offset. */
   flipping: boolean
   /** True right after a real drag, so the row's own click does not fire. */
   shouldIgnoreClick: () => boolean
-  /** Attach to each row: `onPointerDown={event => api.begin(event, id)}`. */
   begin: (event: React.PointerEvent<HTMLElement>, id: string) => void
-  /** Attach to each row so the hook can measure it. */
   register: (id: string, element: HTMLElement | null) => void
 }
 
@@ -61,10 +63,7 @@ export function useReorder(
   const [hover, setHover] = useState(-1)
   const [offsetY, setOffsetY] = useState(0)
   const [flip, setFlip] = useState<Record<string, number>>({})
-  /** 0 = sitting at the old position without transition, 1 = transition armed, 2 = released. */
   const [flipPhase, setFlipPhase] = useState<0 | 1 | 2>(2)
-  const pendingFlip = useRef<Map<string, number> | null>(null)
-  const dragEndedId = useRef<string | null>(null)
   const dragEndAt = useRef(0)
 
   const begin = useCallback((event: React.PointerEvent<HTMLElement>, id: string) => {
@@ -105,51 +104,8 @@ export function useReorder(
     return 0
   }, [drag, hover])
 
-  const shouldIgnoreClick = useCallback(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, [])
-
   const flipOf = useCallback((id: string): number => flip[id] ?? 0, [flip])
-
-  // FLIP: after the new order is in the DOM, put every moved row back where it was, then let it
-  // transition to its real position. Without this the rows that slide for the drop and the rows
-  // that move because of the new order do both at once — the jitter the user sees.
-  useEffect(() => {
-    const before = pendingFlip.current
-    if (before === null) return
-    pendingFlip.current = null
-    const deltas: Record<string, number> = {}
-    for (const [id, top] of before) {
-      const element = slots.current.get(id)
-      if (element === undefined) continue
-      // Same measure as the capture: layout position, except the released row, which settles from
-      // wherever it was dropped.
-      const after = id === dragEndedId.current
-        ? element.getBoundingClientRect().top
-        : element.offsetTop
-      const delta = top - after
-      if (Math.abs(delta) > 1) deltas[id] = delta
-    }
-    if (Object.keys(deltas).length === 0) return
-    setFlip(deltas)
-    setFlipPhase(0)
-    let inner = 0
-    let last = 0
-    const outer = requestAnimationFrame(() => {
-      // Arm the transition while the row is still parked at the old position, otherwise the
-      // change to zero happens in the same style resolution and the browser skips the animation.
-      setFlipPhase(1)
-      inner = requestAnimationFrame(() => {
-        last = requestAnimationFrame(() => {
-          setFlip({})
-          setFlipPhase(2)
-        })
-      })
-    })
-    return () => {
-      cancelAnimationFrame(outer)
-      if (inner !== 0) cancelAnimationFrame(inner)
-      if (last !== 0) cancelAnimationFrame(last)
-    }
-  }, [ids])
+  const shouldIgnoreClick = useCallback(() => Date.now() - dragEndAt.current < CLICK_GUARD_MS, [])
 
   useEffect(() => {
     if (drag === null) return
@@ -159,7 +115,6 @@ export function useReorder(
       const ownBucket = bucketOf === undefined ? undefined : bucketOf(drag.id)
       let target = drag.index
       let bestDistance = Number.POSITIVE_INFINITY
-      // Only rows from the captured list take part; their centres never move during the drag.
       drag.centres.forEach((centre, index) => {
         if (Number.isNaN(centre)) return
         const id = idsRef.current[index]
@@ -176,33 +131,55 @@ export function useReorder(
     const onUp = (): void => {
       const list = idsRef.current
       const from = list.indexOf(drag.id)
-      const moved = Math.abs(offsetY) > 3 || (hover >= 0 && hover !== from)
-      if (from >= 0 && hover >= 0 && hover !== from) {
-        // Remember where every row is BEFORE the new order renders. offsetTop ignores the drag
-        // transforms: measuring the visual rect here folded the shift into the delta, which is
-        // what showed up as the row jumping past its slot and snapping back.
-        const origin = slots.current.get(drag.id)?.offsetParent as HTMLElement | null
-        void origin
-        pendingFlip.current = new Map(
-          list.map(id => {
-            const element = slots.current.get(id)
-            if (element === undefined) return [id, Number.NaN] as const
-            const top = id === drag.id
-              ? element.getBoundingClientRect().top // where the pointer left it
-              : element.offsetTop
-            return [id, top] as const
-          }).filter(([, top]) => !Number.isNaN(top)),
-        )
+      const target = hover
+      const moved = Math.abs(offsetY) > 3 || (target >= 0 && target !== from)
+      const willReorder = from >= 0 && target >= 0 && target !== from
+
+      // Layout positions BEFORE the new order renders. offsetTop ignores the drag transforms;
+      // the dragged row uses its visual top so it settles from where the pointer left it.
+      const before = new Map<string, number>()
+      if (willReorder) {
+        for (const id of list) {
+          const element = slots.current.get(id)
+          if (element === undefined) continue
+          before.set(id, id === drag.id ? element.getBoundingClientRect().top : element.offsetTop)
+        }
+      }
+
+      if (willReorder) {
         const next = [...list]
         next.splice(from, 1)
-        next.splice(hover, 0, drag.id)
+        next.splice(target, 0, drag.id)
         apply(next)
       }
       if (moved) dragEndAt.current = Date.now()
-      dragEndedId.current = moved ? drag.id : null
       setDrag(null)
       setHover(-1)
       setOffsetY(0)
+
+      if (before.size === 0) return
+      const releasedId = drag.id
+      requestAnimationFrame(() => {
+        const deltas: Record<string, number> = {}
+        for (const [id, top] of before) {
+          const element = slots.current.get(id)
+          if (element === undefined) continue
+          const after = id === releasedId ? element.getBoundingClientRect().top : element.offsetTop
+          const delta = top - after
+          if (Math.abs(delta) > 1) deltas[id] = delta
+        }
+        if (Object.keys(deltas).length === 0) return
+        setFlip(deltas)
+        setFlipPhase(0)
+        requestAnimationFrame(() => {
+          // Arm the transition while the rows are still parked, then release them.
+          setFlipPhase(1)
+          requestAnimationFrame(() => {
+            setFlip({})
+            setFlipPhase(2)
+          })
+        })
+      })
     }
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
