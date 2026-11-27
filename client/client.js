@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b810 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b811 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b810 · Search cards on the map",
+  "global.searchPlaceholder": "b811 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -17672,11 +17672,7 @@ function SidebarQueue() {
         ...summary.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {}
       });
     }
-    const ranked = sortQueueRows(out);
-    const byId2 = new Map(ranked.map((row) => [row.sessionId, row]));
-    const ordered = queueOrder.map((id2) => byId2.get(id2)).filter((row) => row !== void 0);
-    for (const row of ranked) if (!queueOrder.includes(row.sessionId)) ordered.push(row);
-    return ordered;
+    return sortQueueRows(out);
   }, [canvasState.cards, sessions, statusById, alerts2, finished2, drafts, opened, archivedSessionIds, queueOrder, pinnedSessions, localPinSet]);
   const finishHistory = (0, import_react20.useSyncExternalStore)(sessionActivity.subscribe, () => sessionActivity.history());
   const readMarks = (0, import_react20.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
