@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-27 `0.7.9`：菜单动作结果改为**应用内 toast**（`railMenuToast`，body portal，4 秒）：置顶→「已置顶（本地）」、标未读→「已标为未读」、摘要→「摘要已打开」/「这个会话还没有摘要（摘要层未生成）」、失败→「失败：<原因>」。此前只有 `console.error`，用户侧完全看不到执行没执行。用途：用户点一次即可报出真实失败原因，避免我们盲改。probe 150/150；harness 内点置顶后 `pins=["s5"]` 且最近区顺序改变。
+
 - 2026-11-27 `0.7.8`：① 菜单点不动/点穿的根因是挂载位置：`.statusRail` 根节点是 `pointer-events: none`（点击落到卡片上 → 内侧栏"查看摘要"变成打开会话），`.sidebarQueue` 是 `overflow: hidden`（菜单被裁 → 外侧栏"没反应"）；改成 `createPortal(..., document.body)` + `position: fixed; zIndex: 9999; pointerEvents: auto`，重命名/摘要弹层一并 portal；② 置顶改成本地集合 `localPins`（`dsh.talk-map.pins.v1`）先落地，宿主 `pinSession` 变为尽力而为（某些构建没暴露），两侧栏排序都并集本地置顶，最近区也按置顶前置；实测点置顶后 `pins=["s5"]`、最近区顺序改变（`reordered:true`）。③ 实测：标为未读后出现 done 灯；查看摘要不再跳转（地图仍开、弹层或错误行出现、无 pageerror）。probe 150/150。
 
 - 2026-11-27 画布右键菜单两处「点了没反应」：①「查看摘要」在摘要为空时是 `disabled: true`（灰掉，点了必然无反应）→ 改成「点它=触发生成」并带 toast（`menu.generateDigest` / `toast.digestGenerating|Ready|Failed`）；②「置顶」在 `visibleCards[cardId]` 缺失时**静默 return** → 回退到 `canvasState.cards[cardId]`，仍找不到则 toast `toast.cardMissing`。侧栏菜单（`rail-menu.tsx`）早有同类修复，本次补齐画布侧。probe 150/150。

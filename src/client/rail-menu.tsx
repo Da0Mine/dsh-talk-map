@@ -40,6 +40,11 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   const [renameValue, setRenameValue] = useState(props.target.title)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const flash = (text: string): void => {
+    setNotice(text)
+    window.setTimeout(() => { setNotice(null) }, 4000)
+  }
   const [digest, setDigest] = useState<{ title: string; digest: Digest | undefined } | null>(null)
   const inputRef = useRef<HTMLInputElement | null>(null)
   const menuRef = useRef<HTMLDivElement | null>(null)
@@ -68,12 +73,13 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
   const run = (work: () => Promise<unknown>): void => {
     setBusy(true)
     void work()
-      .then(() => { props.onChanged?.(); setBusy(false); props.onClose() })
+      .then(() => { props.onChanged?.(); setBusy(false); flash('已执行'); props.onClose() })
       .catch((cause: unknown) => {
         // Show it: a silently swallowed rejection is why 置顶 looked like a no-op.
         const message = cause instanceof Error ? cause.message : String(cause)
         console.error('[dsh-talk-map] rail menu action failed:', cause)
         setError(message)
+        flash('失败：' + message)
         setBusy(false)
       })
   }
@@ -92,9 +98,15 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       .then((result) => {
         // Keep this component mounted: the dialog is rendered by it, and closing the menu here
         // unmounted the dialog with it (that is why 查看摘要 looked like a no-op).
+        const hasDigest = result.digest !== undefined && result.digest !== null
+        flash(hasDigest ? '摘要已打开' : '这个会话还没有摘要（摘要层未生成）')
         setDigest({ title: props.target.title, digest: result.digest })
       })
-      .catch((error: unknown) => { console.error('[dsh-talk-map] digest fetch failed:', error) })
+      .catch((cause: unknown) => {
+        const message = cause instanceof Error ? cause.message : String(cause)
+        console.error('[dsh-talk-map] digest fetch failed:', cause)
+        flash('摘要失败：' + message)
+      })
       .finally(() => { setBusy(false) })
   }
 
@@ -150,6 +162,7 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
         const next = !props.target.pinned
         // Our own set first: some builds do not expose the workspace pin, and 置顶 must still work.
         localPins.set(props.target.sessionId, next)
+        flash(next ? '已置顶（本地）' : '已取消置顶（本地）')
         props.onChanged?.()
         props.onClose()
         void setPinned(props.target.sessionId, next).catch((cause: unknown) => {
@@ -161,7 +174,7 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       key: 'unread',
       icon: 'unread',
       label: t('menu.markUnread'),
-      onPick: () => { sessionActivity.markFinished(props.target.sessionId); props.onChanged?.(); props.onClose() },
+      onPick: () => { sessionActivity.markFinished(props.target.sessionId); flash('已标为未读'); props.onChanged?.(); props.onClose() },
     },
     { key: 'rename', icon: 'rename', label: t('menu.rename'), onPick: () => { setRename(true) } },
     { key: 'digest', icon: 'digest', label: t('menu.viewDigest'), onPick: openDigest },
@@ -191,9 +204,18 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
     },
   ]
 
+  const toast = notice === null
+    ? null
+    : createPortal(
+        <div className={styles['railMenuToast']}>{notice}</div>,
+        document.body,
+      )
+
   const left = Math.min(props.target.x, window.innerWidth - 200)
   const top = Math.min(props.target.y, window.innerHeight - 40 - items.length * 30)
   return createPortal(
+    <>
+    {toast}
     <div
       ref={menuRef}
       className={styles['menu']}
@@ -216,7 +238,8 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
           {item.label}
         </button>
       ))}
-    </div>,
+    </div>
+    </>,
     document.body,
   )
 }
