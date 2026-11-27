@@ -505,7 +505,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b813 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b814 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -705,7 +705,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b813 · Search cards on the map",
+  "global.searchPlaceholder": "b814 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -15293,6 +15293,8 @@ function snap(value) {
 var IMPORT_CAP = 120;
 var PREVIEW_BATCH = 4;
 var PREVIEW_INTERVAL_MS = 4e3;
+var PREVIEW_WARM_BATCH = 12;
+var PREVIEW_WARM_GAP_MS = 80;
 function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
@@ -15551,6 +15553,37 @@ function CanvasInner(props) {
   }, []);
   (0, import_react15.useEffect)(() => {
     previewTick.current();
+  }, [visibleCards]);
+  const warmed = (0, import_react15.useRef)(/* @__PURE__ */ new Set());
+  (0, import_react15.useEffect)(() => {
+    const ids = Object.values(visibleCards).map((card) => card.sessionId);
+    const todo = ids.filter((sessionId) => !warmed.current.has(sessionId));
+    if (todo.length === 0) return;
+    let cancelled = false;
+    const step2 = () => {
+      if (cancelled) return;
+      const chunk = todo.splice(0, PREVIEW_WARM_BATCH);
+      if (chunk.length === 0) return;
+      for (const sessionId of chunk) warmed.current.add(sessionId);
+      void talkMapApi.lastUserMessages(chunk.map((sessionId) => ({ id: sessionId }))).then(({ texts }) => {
+        const cleaned = {};
+        for (const [sessionId, text] of Object.entries(texts)) {
+          putPreview(sessionId, text, 0);
+          previewStamp.current.set(sessionId, 0);
+          const value = cleanPreviewText(text).slice(0, 240);
+          if (value !== "") cleaned[sessionId] = value;
+        }
+        if (!cancelled && Object.keys(cleaned).length > 0) {
+          setPreviews((previous) => ({ ...previous, ...cleaned }));
+        }
+      }).catch(() => void 0).finally(() => {
+        if (!cancelled) setTimeout(step2, PREVIEW_WARM_GAP_MS);
+      });
+    };
+    step2();
+    return () => {
+      cancelled = true;
+    };
   }, [visibleCards]);
   const membersByGroup = (0, import_react15.useMemo)(() => {
     const index2 = /* @__PURE__ */ new Map();
