@@ -176,11 +176,17 @@ export function useReorder(
         apply(next)
       }
       if (moved) dragEndAt.current = Date.now()
+      // Freeze transitions on the very frame the rows are released: their layout slot changes by
+      // the same amount the shift transform is dropped, and animating that looks like a twitch.
+      setFlipPhase(0)
       setDrag(null)
       setHover(-1)
       setOffsetY(0)
 
-      if (before.size === 0) return
+      if (before.size === 0) {
+        requestAnimationFrame(() => { setFlipPhase(2) })
+        return
+      }
       requestAnimationFrame(() => {
         const deltas: Record<string, number> = {}
         for (const [id, top] of before) {
@@ -199,9 +205,12 @@ export function useReorder(
         for (const [id, delta] of Object.entries(deltas)) {
           if (Math.abs(delta) <= FLIP_MIN_DELTA) delete deltas[id]
         }
-        if (Object.keys(deltas).length === 0) return
         setFlip(deltas)
-        setFlipPhase(0)
+        if (Object.keys(deltas).length === 0) {
+          // Nothing has to travel: just hand the transitions back next frame.
+          requestAnimationFrame(() => { setFlipPhase(2) })
+          return
+        }
         requestAnimationFrame(() => {
           // Arm the transition while the rows are still parked, then release them.
           setFlipPhase(1)
