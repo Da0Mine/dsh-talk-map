@@ -506,7 +506,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b818 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b819 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -707,7 +707,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b818 · Search cards on the map",
+  "global.searchPlaceholder": "b819 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -883,12 +883,12 @@ var canvas = {
   ensureLoaded() {
     if (state.phase === "loading" || state.phase === "ready") return;
     setState({ phase: "loading", error: void 0 });
-    const timer4 = setTimeout(() => {
+    const timer5 = setTimeout(() => {
       if (state.phase !== "loading") return;
       setState({ phase: "error", error: "timeout" });
     }, 12e3);
     talkMapApi.getState().then((payload) => {
-      clearTimeout(timer4);
+      clearTimeout(timer5);
       setState({
         phase: "ready",
         cards: payload.cards,
@@ -897,7 +897,7 @@ var canvas = {
         global: payload.global
       });
     }).catch((error) => {
-      clearTimeout(timer4);
+      clearTimeout(timer5);
       setState({ phase: "error", error: String(error) });
     });
   },
@@ -1780,6 +1780,62 @@ function GlobalSearch(props) {
   ] });
 }
 
+// src/client/title-cache.ts
+var STORAGE_KEY2 = "dsh.talk-map.titles.v1";
+var MAX_ENTRIES = 300;
+var MAX_AGE_MS = 30 * 24 * 60 * 60 * 1e3;
+var cache = null;
+var timer;
+function load() {
+  if (cache !== null) return cache;
+  if (typeof localStorage === "undefined") {
+    cache = {};
+    return cache;
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY2);
+    const parsed = raw === null ? {} : JSON.parse(raw);
+    const cutoff = Date.now() - MAX_AGE_MS;
+    const out = {};
+    if (parsed !== null && typeof parsed === "object") {
+      for (const [sessionId, value] of Object.entries(parsed)) {
+        const entry = value;
+        if (entry === null || typeof entry !== "object") continue;
+        if (typeof entry.title !== "string" || typeof entry.at !== "number") continue;
+        if (entry.at < cutoff) continue;
+        out[sessionId] = { title: entry.title, at: entry.at };
+      }
+    }
+    cache = out;
+  } catch {
+    cache = {};
+  }
+  return cache;
+}
+function persist() {
+  if (cache === null || typeof localStorage === "undefined") return;
+  if (timer !== void 0) clearTimeout(timer);
+  timer = setTimeout(() => {
+    try {
+      const entries = Object.entries(load()).sort((a, b) => b[1].at - a[1].at).slice(0, MAX_ENTRIES);
+      localStorage.setItem(STORAGE_KEY2, JSON.stringify(Object.fromEntries(entries)));
+    } catch {
+    }
+  }, 250);
+}
+function readTitles() {
+  const out = {};
+  for (const [sessionId, entry] of Object.entries(load())) out[sessionId] = entry.title;
+  return out;
+}
+function putTitle(sessionId, title) {
+  const store = load();
+  const current = store[sessionId];
+  if (current !== void 0 && current.title === title) return;
+  store[sessionId] = { title, at: Date.now() };
+  persist();
+}
+
 // src/client/recent-tasks.ts
 function computeRecentTasks(input) {
   const rows = [];
@@ -1803,23 +1859,23 @@ function computeRecentTasks(input) {
 }
 
 // src/client/read-archive.ts
-var STORAGE_KEY2 = "dsh.talk-map.read-finished.v1";
-var MAX_AGE_MS = 14 * 24 * 60 * 60 * 1e3;
+var STORAGE_KEY3 = "dsh.talk-map.read-finished.v1";
+var MAX_AGE_MS2 = 14 * 24 * 60 * 60 * 1e3;
 var listeners4 = /* @__PURE__ */ new Set();
 var read2 = /* @__PURE__ */ new Map();
 var loaded = false;
 function emit2() {
   for (const listener of listeners4) listener();
 }
-function load() {
+function load2() {
   if (loaded) return;
   loaded = true;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY2);
+    const raw = window.localStorage.getItem(STORAGE_KEY3);
     if (raw === null) return;
     const parsed = JSON.parse(raw);
     if (parsed === null || typeof parsed !== "object") return;
-    const cutoff = Date.now() - MAX_AGE_MS;
+    const cutoff = Date.now() - MAX_AGE_MS2;
     const next = /* @__PURE__ */ new Map();
     for (const [id2, at] of Object.entries(parsed)) {
       if (typeof at !== "number" || at < cutoff) continue;
@@ -1830,23 +1886,23 @@ function load() {
     read2 = /* @__PURE__ */ new Map();
   }
 }
-function persist() {
+function persist2() {
   try {
-    window.localStorage.setItem(STORAGE_KEY2, JSON.stringify(Object.fromEntries(read2)));
+    window.localStorage.setItem(STORAGE_KEY3, JSON.stringify(Object.fromEntries(read2)));
   } catch {
   }
 }
 var readArchive = {
   get() {
-    load();
+    load2();
     return read2;
   },
   has(sessionId) {
-    load();
+    load2();
     return read2.has(sessionId);
   },
   subscribe(listener) {
-    load();
+    load2();
     listeners4.add(listener);
     return () => {
       listeners4.delete(listener);
@@ -1854,11 +1910,11 @@ var readArchive = {
   },
   /** Called when a 待查看 card is opened (or its lamp is dropped because it was read). */
   mark(sessionId) {
-    load();
+    load2();
     const next = new Map(read2);
     next.set(sessionId, Date.now());
     read2 = next;
-    persist();
+    persist2();
     emit2();
   },
   /**
@@ -1866,12 +1922,12 @@ var readArchive = {
    * completion has to be read before it descends again.
    */
   forget(sessionId) {
-    load();
+    load2();
     if (!read2.has(sessionId)) return;
     const next = new Map(read2);
     next.delete(sessionId);
     read2 = next;
-    persist();
+    persist2();
     emit2();
   }
 };
@@ -3706,7 +3762,7 @@ function clearNow() {
 function Timer() {
   this._call = this._time = this._next = null;
 }
-Timer.prototype = timer.prototype = {
+Timer.prototype = timer2.prototype = {
   constructor: Timer,
   restart: function(callback, delay, time) {
     if (typeof callback !== "function") throw new TypeError("callback is not a function");
@@ -3728,7 +3784,7 @@ Timer.prototype = timer.prototype = {
     }
   }
 };
-function timer(callback, delay, time) {
+function timer2(callback, delay, time) {
   var t2 = new Timer();
   t2.restart(callback, delay, time);
   return t2;
@@ -3844,7 +3900,7 @@ function get2(node, id2) {
 function create(node, id2, self) {
   var schedules = node.__transition, tween;
   schedules[id2] = self;
-  self.timer = timer(schedule, 0, self.time);
+  self.timer = timer2(schedule, 0, self.time);
   function schedule(elapsed) {
     self.state = SCHEDULED;
     self.timer.restart(start2, self.delay, self.time);
@@ -11374,35 +11430,35 @@ var drawerState = {
 };
 
 // src/client/state-persist.ts
-var STORAGE_KEY3 = "dsh.talk-map.lamp-state.v1";
-var MAX_AGE_MS2 = 14 * 24 * 60 * 60 * 1e3;
+var STORAGE_KEY4 = "dsh.talk-map.lamp-state.v1";
+var MAX_AGE_MS3 = 14 * 24 * 60 * 60 * 1e3;
 var EMPTY = { version: 1, finished: {}, errors: {}, interrupted: {}, history: {} };
 var MAX_HISTORY = 30;
 function pruneHistory(record, now2) {
-  const fresh = Object.entries(record).filter(([, at]) => typeof at === "number" && now2 - at < MAX_AGE_MS2).sort((a, b) => b[1] - a[1]).slice(0, MAX_HISTORY);
+  const fresh = Object.entries(record).filter(([, at]) => typeof at === "number" && now2 - at < MAX_AGE_MS3).sort((a, b) => b[1] - a[1]).slice(0, MAX_HISTORY);
   return Object.fromEntries(fresh);
 }
 function prune(record, now2) {
   const out = {};
   for (const [sessionId, at] of Object.entries(record)) {
-    if (typeof at === "number" && now2 - at < MAX_AGE_MS2) out[sessionId] = at;
+    if (typeof at === "number" && now2 - at < MAX_AGE_MS3) out[sessionId] = at;
   }
   return out;
 }
-var cache = null;
-var timer2;
+var cache2 = null;
+var timer3;
 function loadLampState() {
-  if (cache !== null) return cache;
+  if (cache2 !== null) return cache2;
   if (typeof localStorage === "undefined") return EMPTY;
   try {
-    const raw = localStorage.getItem(STORAGE_KEY3);
+    const raw = localStorage.getItem(STORAGE_KEY4);
     if (raw === null) {
-      cache = EMPTY;
-      return cache;
+      cache2 = EMPTY;
+      return cache2;
     }
     const parsed = JSON.parse(raw);
     const now2 = Date.now();
-    cache = {
+    cache2 = {
       version: 1,
       finished: prune(parsed.finished ?? {}, now2),
       history: pruneHistory(parsed.history ?? {}, now2),
@@ -11410,13 +11466,13 @@ function loadLampState() {
       interrupted: prune(parsed.interrupted ?? {}, now2)
     };
   } catch {
-    cache = EMPTY;
+    cache2 = EMPTY;
   }
-  return cache;
+  return cache2;
 }
 function saveLampState(patch) {
   const base = loadLampState();
-  cache = {
+  cache2 = {
     version: 1,
     finished: patch.finished ?? base.finished,
     errors: patch.errors ?? base.errors,
@@ -11424,19 +11480,19 @@ function saveLampState(patch) {
     history: patch.history === void 0 ? base.history : pruneHistory(patch.history, Date.now())
   };
   if (typeof localStorage === "undefined") return;
-  if (timer2 !== void 0) clearTimeout(timer2);
-  timer2 = setTimeout(() => {
+  if (timer3 !== void 0) clearTimeout(timer3);
+  timer3 = setTimeout(() => {
     flushLampState();
   }, 250);
 }
 function flushLampState() {
-  if (timer2 !== void 0) {
-    clearTimeout(timer2);
-    timer2 = void 0;
+  if (timer3 !== void 0) {
+    clearTimeout(timer3);
+    timer3 = void 0;
   }
-  if (cache === null || typeof localStorage === "undefined") return;
+  if (cache2 === null || typeof localStorage === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY3, JSON.stringify(cache));
+    localStorage.setItem(STORAGE_KEY4, JSON.stringify(cache2));
   } catch {
   }
 }
@@ -11456,12 +11512,12 @@ var listeners5 = /* @__PURE__ */ new Set();
 for (const [sessionId, detail] of Object.entries(loadLampState().errors)) {
   alerts.set(sessionId, detail);
 }
-function persist2() {
+function persist3() {
   saveLampState({ errors: Object.fromEntries(alerts) });
 }
 function publish2() {
   snapshot2 = new Map(alerts);
-  persist2();
+  persist3();
   for (const listener of listeners5) listener();
 }
 snapshot2 = new Map(alerts);
@@ -11547,7 +11603,7 @@ function publish3() {
   interruptedSnapshot = new Set(interrupted);
   for (const listener of listenerSet) listener();
 }
-function persist3() {
+function persist4() {
   const now2 = Date.now();
   const finishedRecord = {};
   for (const sessionId of finished) finishedRecord[sessionId] = now2;
@@ -11664,7 +11720,7 @@ var sessionActivity = {
       }
     }
     if (changed) {
-      persist3();
+      persist4();
       publish3();
     }
   },
@@ -11676,7 +11732,7 @@ var sessionActivity = {
     hydrated.delete(sessionId);
     if (finished.has(sessionId)) return;
     finished.add(sessionId);
-    persist3();
+    persist4();
     publish3();
   },
   /** The user is looking at it now: stop advertising it as unread/interrupted. */
@@ -11686,7 +11742,7 @@ var sessionActivity = {
     const removedFinished = finished.delete(sessionId);
     const removedInterrupted = interrupted.delete(sessionId);
     if (removedFinished || removedInterrupted) {
-      persist3();
+      persist4();
       publish3();
     }
   },
@@ -11697,7 +11753,7 @@ var sessionActivity = {
     hydrated.delete(sessionId);
     const removed = finished.delete(sessionId) || interrupted.delete(sessionId);
     if (removed) {
-      persist3();
+      persist4();
       publish3();
     }
   },
@@ -11810,25 +11866,25 @@ function cleanPreviewText(text) {
 }
 
 // src/client/preview-cache.ts
-var STORAGE_KEY4 = "dsh.talk-map.previews.v1";
+var STORAGE_KEY5 = "dsh.talk-map.previews.v1";
 var MAX_RAW = 600;
-var MAX_ENTRIES = 300;
-var cache2 = null;
-var timer3;
+var MAX_ENTRIES2 = 300;
+var cache3 = null;
+var timer4;
 function loadPreviewCache() {
-  if (cache2 !== null) return cache2;
+  if (cache3 !== null) return cache3;
   if (typeof localStorage === "undefined") {
-    cache2 = {};
-    return cache2;
+    cache3 = {};
+    return cache3;
   }
   try {
-    const raw = localStorage.getItem(STORAGE_KEY4);
+    const raw = localStorage.getItem(STORAGE_KEY5);
     const parsed = raw === null ? null : JSON.parse(raw);
-    cache2 = parsed !== null && typeof parsed === "object" ? parsed : {};
+    cache3 = parsed !== null && typeof parsed === "object" ? parsed : {};
   } catch {
-    cache2 = {};
+    cache3 = {};
   }
-  return cache2;
+  return cache3;
 }
 function readPreviewTexts() {
   const out = {};
@@ -11839,28 +11895,28 @@ function readPreviewTexts() {
   }
   return out;
 }
-function persist4() {
-  if (typeof localStorage === "undefined" || cache2 === null) return;
+function persist5() {
+  if (typeof localStorage === "undefined" || cache3 === null) return;
   try {
-    localStorage.setItem(STORAGE_KEY4, JSON.stringify(cache2));
+    localStorage.setItem(STORAGE_KEY5, JSON.stringify(cache3));
   } catch {
-    cache2 = {};
+    cache3 = {};
   }
 }
 function scheduleSave() {
-  if (timer3 !== void 0) clearTimeout(timer3);
-  timer3 = setTimeout(() => {
-    timer3 = void 0;
-    persist4();
+  if (timer4 !== void 0) clearTimeout(timer4);
+  timer4 = setTimeout(() => {
+    timer4 = void 0;
+    persist5();
   }, 400);
 }
 function putPreview(sessionId, text, stamp) {
   const store = loadPreviewCache();
   store[sessionId] = { text: text.slice(0, MAX_RAW), stamp };
   const keys = Object.keys(store);
-  if (keys.length > MAX_ENTRIES) {
+  if (keys.length > MAX_ENTRIES2) {
     const ordered = keys.map((key) => ({ key, stamp: store[key]?.stamp ?? 0 })).sort((a, b) => a.stamp - b.stamp);
-    for (const entry of ordered.slice(0, keys.length - MAX_ENTRIES)) delete store[entry.key];
+    for (const entry of ordered.slice(0, keys.length - MAX_ENTRIES2)) delete store[entry.key];
   }
   scheduleSave();
 }
@@ -14252,7 +14308,7 @@ function installLiquidGlass(element, options = {}) {
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   svg.append(defs);
   document.body.append(svg);
-  let timer4;
+  let timer5;
   const writeFilter = (markup) => {
     const old = defs.querySelector(`#${filterId}`);
     old?.remove();
@@ -14295,8 +14351,8 @@ function installLiquidGlass(element, options = {}) {
     writeFilter(buildSVGFilter(filterId, dispUrl, specUrl, scale, width, height, specularOpacity));
   };
   const schedule = () => {
-    clearTimeout(timer4);
-    timer4 = setTimeout(() => {
+    clearTimeout(timer5);
+    timer5 = setTimeout(() => {
       rebuild();
       applyBackdropFilter();
     }, 50);
@@ -14308,7 +14364,7 @@ function installLiquidGlass(element, options = {}) {
   observer.observe(element);
   return () => {
     observer.disconnect();
-    clearTimeout(timer4);
+    clearTimeout(timer5);
     svg.remove();
     element.style.removeProperty("backdrop-filter");
     element.style.removeProperty("-webkit-backdrop-filter");
@@ -14317,7 +14373,7 @@ function installLiquidGlass(element, options = {}) {
 }
 
 // src/client/pins.ts
-var STORAGE_KEY5 = "dsh.talk-map.pins.v1";
+var STORAGE_KEY6 = "dsh.talk-map.pins.v1";
 var listeners7 = /* @__PURE__ */ new Set();
 var pinned = /* @__PURE__ */ new Set();
 var loaded2 = false;
@@ -14326,7 +14382,7 @@ function emit3() {
 }
 function readStored() {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY5);
+    const raw = window.localStorage.getItem(STORAGE_KEY6);
     if (raw === null) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed.filter((value) => typeof value === "string") : [];
@@ -14340,9 +14396,9 @@ function ensureLoaded() {
   const stored = readStored();
   if (stored.length > 0) pinned = new Set(stored);
 }
-function persist5() {
+function persist6() {
   try {
-    window.localStorage.setItem(STORAGE_KEY5, JSON.stringify([...pinned]));
+    window.localStorage.setItem(STORAGE_KEY6, JSON.stringify([...pinned]));
   } catch {
   }
 }
@@ -14365,7 +14421,7 @@ var localPins = {
     if (next) copy.add(sessionId);
     else copy.delete(sessionId);
     pinned = copy;
-    persist5();
+    persist6();
     emit3();
   },
   toggle(sessionId) {
@@ -15410,12 +15466,12 @@ function CanvasInner(props) {
       });
     };
     syncTexts();
-    const timer4 = setInterval(() => {
+    const timer5 = setInterval(() => {
       draftWatch.refresh();
       syncTexts();
     }, 1500);
     return () => {
-      clearInterval(timer4);
+      clearInterval(timer5);
     };
   }, []);
   const [previews, setPreviews] = (0, import_react15.useState)(readPreviewTexts);
@@ -15495,6 +15551,23 @@ function CanvasInner(props) {
       canvas.setCardTitle(cardId, title);
     }
   }, [canvasState.cards, sessions, canvas]);
+  const [cachedTitles, setCachedTitles] = (0, import_react15.useState)(readTitles);
+  (0, import_react15.useEffect)(() => {
+    setCachedTitles((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const [sessionId, summary] of Object.entries(sessions.byId)) {
+        const title = summary?.displayTitle;
+        if (title === void 0 || title === "") continue;
+        putTitle(sessionId, title);
+        if (next[sessionId] !== title) {
+          next[sessionId] = title;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [sessions]);
   const [renamedTitles, setRenamedTitles] = (0, import_react15.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react15.useState)({});
   const [batchMode, setBatchMode] = (0, import_react15.useState)(false);
@@ -15607,9 +15680,9 @@ function CanvasInner(props) {
     setTimeout(() => {
       previewDripAllowed.current = true;
     }, PREVIEW_WARM_DELAY_MS);
-    const timer4 = setInterval(tick, PREVIEW_INTERVAL_MS);
+    const timer5 = setInterval(tick, PREVIEW_INTERVAL_MS);
     return () => {
-      clearInterval(timer4);
+      clearInterval(timer5);
     };
   }, []);
   (0, import_react15.useEffect)(() => {
@@ -15725,7 +15798,7 @@ function CanvasInner(props) {
   (0, import_react15.useEffect)(() => {
     if (canvasState.phase !== "ready") return;
     if (draggingCardId !== null || liveFrame !== null) return;
-    const timer4 = window.setTimeout(() => {
+    const timer5 = window.setTimeout(() => {
       const stale = {};
       for (const [cardId, point] of Object.entries(cardLayout)) {
         const card = canvasState.cards[cardId];
@@ -15735,7 +15808,7 @@ function CanvasInner(props) {
       }
       if (Object.keys(stale).length > 0) canvas.moveCards(stale);
     }, 140);
-    return () => window.clearTimeout(timer4);
+    return () => window.clearTimeout(timer5);
   }, [cardLayout, canvasState.cards, canvasState.phase, draggingCardId, liveFrame]);
   const foldedSet = (0, import_react15.useMemo)(() => new Set(Object.values(foldedCards).flat()), [foldedCards]);
   (0, import_react15.useEffect)(() => {
@@ -16023,7 +16096,7 @@ function CanvasInner(props) {
         rows.push({
           cardId,
           sessionId: card.sessionId,
-          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
+          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t("card.loadingTitle"),
           stamp: draftSummary?.updatedAt ?? 0,
           draft: true,
           ...draftSummary?.updatedAt !== void 0 ? { updatedAt: draftSummary.updatedAt } : {},
@@ -16036,7 +16109,7 @@ function CanvasInner(props) {
       rows.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t("card.loadingTitle"),
         lamp,
         // A lamped card can still hold unsent text: the footer shows both chips.
         ...(draftTexts[card.sessionId] ?? "").trim() !== "" ? { draft: true } : {},
@@ -16119,7 +16192,7 @@ function CanvasInner(props) {
       const data = {
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t("card.loadingTitle"),
         running: status?.running ?? summary?.running ?? false,
         ghost: summary === void 0,
         updatedAt: summary?.updatedAt,
@@ -16222,8 +16295,8 @@ function CanvasInner(props) {
   const CARD_PAINTED_H = 129;
   const [boardTick, setBoardTick] = (0, import_react15.useState)(0);
   (0, import_react15.useEffect)(() => {
-    const timer4 = window.setTimeout(() => setBoardTick((value) => value + 1), 150);
-    return () => window.clearTimeout(timer4);
+    const timer5 = window.setTimeout(() => setBoardTick((value) => value + 1), 150);
+    return () => window.clearTimeout(timer5);
   }, []);
   const obstaclesFor = (fromCardId, toCardId) => {
     const rendered = renderedBoxes();
@@ -16701,7 +16774,7 @@ function CanvasInner(props) {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t("card.loadingTitle"),
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -17721,6 +17794,23 @@ function SidebarQueue() {
   const locale = (0, import_react20.useSyncExternalStore)(subscribeLocale, activeLocale, activeLocale);
   const [drafts, setDrafts] = (0, import_react20.useState)(() => readDraftTexts());
   const [previews, setPreviews] = (0, import_react20.useState)(readPreviewTexts);
+  const [cachedTitles, setCachedTitles] = (0, import_react20.useState)(readTitles);
+  (0, import_react20.useEffect)(() => {
+    setCachedTitles((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const [sessionId, summary] of Object.entries(sessions.byId)) {
+        const title = summary?.displayTitle;
+        if (title === void 0 || title === "") continue;
+        putTitle(sessionId, title);
+        if (next[sessionId] !== title) {
+          next[sessionId] = title;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [sessions]);
   const [height, setHeight] = (0, import_react20.useState)(() => storedHeight());
   const drag = (0, import_react20.useRef)(null);
   const [opened, setOpened] = (0, import_react20.useState)(() => /* @__PURE__ */ new Set());
@@ -17736,12 +17826,12 @@ function SidebarQueue() {
   const [previewAllowed, setPreviewAllowed] = (0, import_react20.useState)(false);
   const PREVIEW_REFRESH_MS = 25e3;
   (0, import_react20.useEffect)(() => {
-    const timer4 = setInterval(() => {
+    const timer5 = setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
       setDrafts(readDraftTexts());
     }, 1500);
     return () => {
-      clearInterval(timer4);
+      clearInterval(timer5);
     };
   }, []);
   const onGripDown = (event) => {
@@ -17831,7 +17921,7 @@ function SidebarQueue() {
       listed: new Set(rows.map((row) => row.sessionId)),
       history: finishHistory,
       readMarks,
-      title: (sessionId) => sessions.byId[sessionId]?.displayTitle ?? Object.values(canvasState.cards).find((card) => card.sessionId === sessionId)?.title ?? sessionId,
+      title: (sessionId) => sessions.byId[sessionId]?.displayTitle ?? Object.values(canvasState.cards).find((card) => card.sessionId === sessionId)?.title ?? cachedTitles[sessionId] ?? sessionId,
       updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
       preview: (sessionId) => previews[sessionId],
       limit: MAX_RECENT_TASKS
@@ -17900,11 +17990,11 @@ function SidebarQueue() {
   const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
-    const timer4 = setTimeout(() => {
+    const timer5 = setTimeout(() => {
       setPreviewAllowed(true);
     }, PREVIEW_START_DELAY_MS);
     return () => {
-      clearTimeout(timer4);
+      clearTimeout(timer5);
     };
   }, []);
   (0, import_react20.useEffect)(() => {
