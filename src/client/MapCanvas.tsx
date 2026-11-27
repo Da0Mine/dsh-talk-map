@@ -12,8 +12,6 @@
  * Interaction: right/middle-drag pans, plain right-click opens the context
  * menu, left-drag box-selects on the pane and drags nodes.
  */
-import { putCards, readCards } from './card-cache.ts'
-import { putTitle, readTitles } from './title-cache.ts'
 import { computeRecentTasks } from './recent-tasks.ts'
 import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
@@ -340,25 +338,6 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     }
   }, [canvasState.cards, sessions, canvas])
 
-  /** Card projection from the last run: paints the rail before /talk-map/state returns. */
-  const cachedCards = useMemo<Record<string, Card>>(() => readCards(), [])
-  useEffect(() => { putCards(canvasState.cards) }, [canvasState.cards])
-
-  /** Titles known from the last run: they paint before the session list hydrates. */
-  const [cachedTitles, setCachedTitles] = useState<Record<string, string>>(readTitles)
-  useEffect(() => {
-    setCachedTitles(current => {
-      let changed = false
-      const next = { ...current }
-      for (const [sessionId, summary] of Object.entries(sessions.byId)) {
-        const title = summary?.displayTitle
-        if (title === undefined || title === '') continue
-        putTitle(sessionId, title)
-        if (next[sessionId] !== title) { next[sessionId] = title; changed = true }
-      }
-      return changed ? next : current
-    })
-  }, [sessions])
   const [renamedTitles, setRenamedTitles] = useState<Record<string, string>>({})
   const [renamedWorkspaces, setRenamedWorkspaces] = useState<Record<string, string>>({})
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
@@ -1085,7 +1064,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               rows.push({
                 cardId,
                 sessionId: card.sessionId,
-                title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+                title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
                 stamp: draftSummary?.updatedAt ?? 0,
                 draft: true,
                 ...(draftSummary?.updatedAt !== undefined ? { updatedAt: draftSummary.updatedAt } : {}),
@@ -1098,7 +1077,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       rows.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
         lamp,
         // A lamped card can still hold unsent text: the footer shows both chips.
         ...((draftTexts[card.sessionId] ?? '').trim() !== '' ? { draft: true } : {}),
@@ -1203,7 +1182,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const data: SessionCardData = {
           cardId,
           sessionId: card.sessionId,
-          title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+          title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
           running: status?.running ?? summary?.running ?? false,
           ghost: sessionsReady && summary === undefined,
           updatedAt: summary?.updatedAt,
@@ -1830,8 +1809,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     const fromCard = canvasState.cards[fromCardId]
     const toCard = canvasState.cards[toCardId]
     if (fromCard === undefined || toCard === undefined) return
-    const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.title ?? cachedTitles[fromCard.sessionId] ?? t('card.loadingTitle')
-    const toTitle = sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.title ?? cachedTitles[toCard.sessionId] ?? t('card.loadingTitle')
+    const fromTitle = sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.title ?? t('card.loadingTitle')
+    const toTitle = sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.title ?? t('card.loadingTitle')
     try {
       // The digest is not kept warm any more: refresh it here, but only when
       // this conversation actually changed (the Host skips the LLM call).
@@ -1960,7 +1939,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
 
   const toHitView = (hit: ContentHit): DrawerSearchHit => ({
     sessionId: hit.sessionId,
-    title: renamedTitles[hit.sessionId] ?? sessions.byId[hit.sessionId]?.displayTitle ?? canvasState.cards[hit.cardId]?.title ?? cachedTitles[hit.sessionId] ?? t('card.loadingTitle'),
+    title: renamedTitles[hit.sessionId] ?? sessions.byId[hit.sessionId]?.displayTitle ?? canvasState.cards[hit.cardId]?.title ?? t('card.loadingTitle'),
     blocks: hit.blocks,
     seqs: hit.seqs,
     roles: hit.roles,
@@ -1973,7 +1952,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     setCardTable(Object.entries(canvasState.cards).map(([cardId, card]) => ({
       cardId,
       sessionId: card.sessionId,
-      title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+      title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? t('card.loadingTitle'),
       preview: previews[card.sessionId] ?? '',
       workspaceTitle: wsTitles.get(sessionWs.get(card.sessionId) ?? '') ?? '',
     })))
@@ -1996,7 +1975,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       if (sessionWs.get(otherSessionId) !== groupId) continue
       out.push({
         toCardId: other,
-        title: renamedTitles[otherSessionId] ?? sessions.byId[otherSessionId]?.displayTitle ?? cachedTitles[otherSessionId] ?? t('card.loadingTitle'),
+        title: renamedTitles[otherSessionId] ?? sessions.byId[otherSessionId]?.displayTitle ?? t('card.loadingTitle'),
         kind: edge.injection?.kind ?? 'link',
         outgoing: edge.fromCardId === cardId,
       })
@@ -2017,7 +1996,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -2403,7 +2382,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       for (const sessionId of candidates) {
         items.push({
           key: sessionId,
-          label: sessions.byId[sessionId]?.displayTitle ?? cachedTitles[sessionId] ?? t('card.loadingTitle'),
+          label: sessions.byId[sessionId]?.displayTitle ?? t('card.loadingTitle'),
           onPick: () => {
             importSession(sessionId, menu.flowX, menu.flowY)
             close()
@@ -2472,7 +2451,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             setRenameTarget({
               kind: 'session',
               id: card.sessionId,
-              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+              title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? t('card.loadingTitle'),
             })
           }
         },
@@ -2503,7 +2482,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
             return
           }
           setDigestTarget({
-            title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
+            title: renamedTitles[card.sessionId] ?? sessions.byId[card.sessionId]?.displayTitle ?? card.title ?? t('card.loadingTitle'),
             digest: cardDigest,
           })
         },
@@ -2548,10 +2527,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       const fromCard = canvasState.cards[edgeFrom]
       const toCard = canvasState.cards[edgeTo]
       const fromTitle = fromCard !== undefined
-        ? sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.title ?? cachedTitles[fromCard.sessionId] ?? t('card.loadingTitle')
+        ? sessions.byId[fromCard.sessionId]?.displayTitle ?? fromCard.title ?? t('card.loadingTitle')
         : '?'
       const toTitle = toCard !== undefined
-        ? sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.title ?? cachedTitles[toCard.sessionId] ?? t('card.loadingTitle')
+        ? sessions.byId[toCard.sessionId]?.displayTitle ?? toCard.title ?? t('card.loadingTitle')
         : '?'
       title = `${fromTitle} → ${toTitle}`
       const digest = fromCard !== undefined ? canvasState.digests[fromCard.sessionId] : undefined

@@ -10,7 +10,6 @@
  *            plugin's own alert + activity stores, i.e. the same inputs `glowOf` uses on
  *            the map (the panel-only `useSessionStatus` hook is not reachable here).
  */
-import { putTitle, readTitles } from './title-cache.ts'
 import { computeRecentTasks } from './recent-tasks.ts'
 import { readArchive } from './read-archive.ts'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
@@ -124,20 +123,6 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const locale = useSyncExternalStore(subscribeLocale, activeLocale, activeLocale)
   const [drafts, setDrafts] = useState<Record<string, string>>(() => readDraftTexts())
   const [previews, setPreviews] = useState<Record<string, string>>(readPreviewTexts)
-  const [cachedTitles, setCachedTitles] = useState<Record<string, string>>(readTitles)
-  useEffect(() => {
-    setCachedTitles(current => {
-      let changed = false
-      const next = { ...current }
-      for (const [sessionId, summary] of Object.entries(sessions.byId)) {
-        const title = summary?.displayTitle
-        if (title === undefined || title === '') continue
-        putTitle(sessionId, title)
-        if (next[sessionId] !== title) { next[sessionId] = title; changed = true }
-      }
-      return changed ? next : current
-    })
-  }, [sessions])
   // Manual height: undefined = fit the cards, a number = what the user dragged to.
   const [height, setHeight] = useState<number | undefined>(() => storedHeight())
   const drag = useRef<{ startY: number; startHeight: number } | null>(null)
@@ -253,7 +238,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         sessionId,
         ...(manual >= 0 ? { manualIndex: manual } : {}),
         ...(isPinnedSession(localPinSet, sessionId) ? { pinned: true } : {}),
-        title: summary.displayTitle ?? cachedTitles[sessionId] ?? sessionId,
+        title: summary.displayTitle ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
       ...(hasDraft ? { draft: true } : {}),
         ...(draftText !== undefined ? { draftText } : {}),
@@ -279,7 +264,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     readMarks,
     title: sessionId => sessions.byId[sessionId]?.displayTitle
       ?? Object.values(canvasState.cards).find(card => card.sessionId === sessionId)?.title
-      ?? cachedTitles[sessionId]
+     
       ?? sessionId,
     updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
     preview: sessionId => previews[sessionId],
