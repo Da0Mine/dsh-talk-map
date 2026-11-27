@@ -13,6 +13,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { installLiquidGlass } from './liquid-glass.ts'
+import { readArchive } from './read-archive.ts'
 import { PinMark } from './PinMark.tsx'
 import { isPinnedSession, localPins } from './pins.ts'
 import { useReorder } from './reorder.ts'
@@ -173,7 +174,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     setRecentOrder(current => {
       const kept = current.filter(id => recentIds.includes(id))
       const added = recentIds.filter(id => !kept.includes(id))
-      const next = [...kept, ...added]
+      // New arrivals go on TOP: this list is ordered by "last read", so appending them at the
+      // end was exactly why a task you just looked at sank to the bottom.
+      const next = [...added, ...kept]
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -181,10 +184,10 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   const recentEntriesOrdered = useMemo(() => {
     const byId = new Map((props.recent ?? []).map(entry => [entry.cardId, entry]))
     const ordered = recentOrder.map(id => byId.get(id)).filter((entry): entry is StatusRailEntry => entry !== undefined)
-    // Anything the sync effect has not seen yet still shows up, at the end.
-    for (const entry of props.recent ?? []) {
-      if (!recentOrder.includes(entry.cardId)) ordered.push(entry)
-    }
+    // Anything the sync effect has not seen yet is BRAND NEW (just read): it belongs on top.
+    // Appending it to the end was why a freshly viewed task landed at the bottom.
+    const fresh = (props.recent ?? []).filter(entry => !recentOrder.includes(entry.cardId))
+    ordered.unshift(...fresh)
     // Pinned first inside the strip, manual order preserved within each group.
     const pinnedFirst = ordered.filter(entry => isPinnedSession(localPinSet, entry.sessionId))
     const rest = ordered.filter(entry => !isPinnedSession(localPinSet, entry.sessionId))
@@ -193,6 +196,26 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
   // Pinned cards leave the「最近的任务」strip and float to the very top of the list.
   const pinnedRecentEntries = recentEntriesOrdered.filter(entry => isPinnedSession(localPinSet, entry.sessionId))
   const unpinnedRecentEntries = recentEntriesOrdered.filter(entry => !isPinnedSession(localPinSet, entry.sessionId))
+  // Re-reading an old task must also lift it: compare the read marks and move whoever changed.
+  const lastReadAt = useRef<Map<string, number>>(new Map())
+  const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
+  useEffect(() => {
+    const lifted: string[] = []
+    for (const [sessionId, at] of readMarks) {
+      if (lastReadAt.current.get(sessionId) !== at) lifted.push(sessionId)
+    }
+    lastReadAt.current = new Map(readMarks)
+    if (lifted.length === 0) return
+    setRecentOrder(current => {
+      const byCard = new Map((props.recent ?? []).map(entry => [entry.sessionId, entry.cardId]))
+      const moved = lifted
+        .map(sessionId => byCard.get(sessionId))
+        .filter((cardId): cardId is string => cardId !== undefined && current.includes(cardId))
+      if (moved.length === 0) return current
+      return [...moved, ...current.filter(cardId => !moved.includes(cardId))]
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [readMarks])
   const recentRenderedIds = recentEntriesOrdered.map(entry => entry.cardId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
   const [drag, setDrag] = useState<DragState | null>(null)

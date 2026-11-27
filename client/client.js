@@ -504,7 +504,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b809 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b810 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -703,7 +703,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b809 · Search cards on the map",
+  "global.searchPlaceholder": "b810 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -14837,22 +14837,37 @@ function StatusRail(props) {
     setRecentOrder((current) => {
       const kept = current.filter((id2) => recentIds.includes(id2));
       const added = recentIds.filter((id2) => !kept.includes(id2));
-      const next = [...kept, ...added];
+      const next = [...added, ...kept];
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [recentIds.join("|")]);
   const recentEntriesOrdered = (0, import_react13.useMemo)(() => {
     const byId2 = new Map((props.recent ?? []).map((entry) => [entry.cardId, entry]));
     const ordered2 = recentOrder.map((id2) => byId2.get(id2)).filter((entry) => entry !== void 0);
-    for (const entry of props.recent ?? []) {
-      if (!recentOrder.includes(entry.cardId)) ordered2.push(entry);
-    }
+    const fresh = (props.recent ?? []).filter((entry) => !recentOrder.includes(entry.cardId));
+    ordered2.unshift(...fresh);
     const pinnedFirst = ordered2.filter((entry) => isPinnedSession(localPinSet, entry.sessionId));
     const rest = ordered2.filter((entry) => !isPinnedSession(localPinSet, entry.sessionId));
     return [...pinnedFirst, ...rest];
   }, [props.recent, recentOrder, localPinSet]);
   const pinnedRecentEntries = recentEntriesOrdered.filter((entry) => isPinnedSession(localPinSet, entry.sessionId));
   const unpinnedRecentEntries = recentEntriesOrdered.filter((entry) => !isPinnedSession(localPinSet, entry.sessionId));
+  const lastReadAt = (0, import_react13.useRef)(/* @__PURE__ */ new Map());
+  const readMarks = (0, import_react13.useSyncExternalStore)(readArchive.subscribe, () => readArchive.get());
+  (0, import_react13.useEffect)(() => {
+    const lifted = [];
+    for (const [sessionId, at] of readMarks) {
+      if (lastReadAt.current.get(sessionId) !== at) lifted.push(sessionId);
+    }
+    lastReadAt.current = new Map(readMarks);
+    if (lifted.length === 0) return;
+    setRecentOrder((current) => {
+      const byCard = new Map((props.recent ?? []).map((entry) => [entry.sessionId, entry.cardId]));
+      const moved = lifted.map((sessionId) => byCard.get(sessionId)).filter((cardId) => cardId !== void 0 && current.includes(cardId));
+      if (moved.length === 0) return current;
+      return [...moved, ...current.filter((cardId) => !moved.includes(cardId))];
+    });
+  }, [readMarks]);
   const recentRenderedIds = recentEntriesOrdered.map((entry) => entry.cardId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   const [drag, setDrag] = (0, import_react13.useState)(null);
@@ -17703,7 +17718,7 @@ function SidebarQueue() {
     setRecentOrder((current) => {
       const kept = current.filter((id2) => recentIds.includes(id2));
       const added = recentIds.filter((id2) => !kept.includes(id2));
-      const next = [...kept, ...added];
+      const next = [...added, ...kept];
       return next.length === current.length && next.every((id2, index2) => id2 === current[index2]) ? current : next;
     });
   }, [recentIds.join("|")]);

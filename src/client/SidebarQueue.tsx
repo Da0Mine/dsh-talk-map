@@ -286,7 +286,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     setRecentOrder(current => {
       const kept = current.filter(id => recentIds.includes(id))
       const added = recentIds.filter(id => !kept.includes(id))
-      const next = [...kept, ...added]
+      // New arrivals go on TOP: this list is ordered by "last read", so appending them at the
+      // end was exactly why a task you just looked at sank to the bottom.
+      const next = [...added, ...kept]
       return next.length === current.length && next.every((id, index) => id === current[index]) ? current : next
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
