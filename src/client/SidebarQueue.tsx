@@ -60,7 +60,9 @@ function storedHeight(): number | undefined {
 /** How many cards get a body preview (the Host reads one session surface each). */
 const PREVIEW_LIMIT = 14
 /** Reads are expensive (one session surface each): ask for a few, then the next pass. */
-const PREVIEW_PAGE = 5
+const PREVIEW_PAGE = 3
+/** Wait for the shell to hydrate titles before spending surface reads. */
+const PREVIEW_START_DELAY_MS = 5000
 
 /** The rail's lamp rules, over sources a sidebar action can actually read. */
 /**
@@ -141,6 +143,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
    * session's updatedAt changes constantly; keying on the stamp meant re-reading forever.
    */
   const askedRef = useRef<Map<string, number>>(new Map())
+  const [previewAllowed, setPreviewAllowed] = useState(false)
   const PREVIEW_REFRESH_MS = 25000
 
   useEffect(() => {
@@ -259,7 +262,9 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     listed: new Set(rows.map(row => row.sessionId)),
     history: finishHistory,
     readMarks,
-    title: sessionId => sessions.byId[sessionId]?.displayTitle ?? sessionId,
+    title: sessionId => sessions.byId[sessionId]?.displayTitle
+      ?? Object.values(canvasState.cards).find(card => card.sessionId === sessionId)?.title
+      ?? sessionId,
     updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
     preview: sessionId => previews[sessionId],
     limit: MAX_RECENT_TASKS,
@@ -338,6 +343,12 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
 
   // Card bodies: unsent draft first, else the user's last message (one batched Host call).
   useEffect(() => {
+    const timer = setTimeout(() => { setPreviewAllowed(true) }, PREVIEW_START_DELAY_MS)
+    return () => { clearTimeout(timer) }
+  }, [])
+
+  useEffect(() => {
+    if (!previewAllowed) return
     // Queue rows and recent rows get their own budgets: slicing the concatenation meant the
     // recent cards were the first thing dropped, which is why they showed no text at all.
     const pick = (list: readonly { sessionId: string; updatedAt?: number }[], cap: number): { id: string; stamp: number }[] =>
@@ -359,7 +370,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         })
       })
       .catch(() => { for (const item of wanted) askedRef.current.delete(item.id) })
-  }, [rows, recentRows])
+  }, [rows, recentRows, previewAllowed])
 
   // The board stays mounted even with nothing queued: hiding it made the whole section vanish
   // from the sidebar, which read as a bug rather than as "no tasks".

@@ -101,11 +101,13 @@ const PREVIEW_BATCH = 4
  *  decompress a 37 MB session log (≈116 MB, ≈180 ms), so this stays deliberately slow. */
 const PREVIEW_INTERVAL_MS = 4000
 /** Startup warm-up: how many sessions per request, and the pause between chunks. */
-const PREVIEW_WARM_BATCH = 3
-const PREVIEW_WARM_GAP_MS = 400
+const PREVIEW_WARM_BATCH = 1
+const PREVIEW_WARM_GAP_MS = 1200
+/** Give the shell time to finish hydrating titles before any surface read happens. */
+const PREVIEW_WARM_DELAY_MS = 4000
 /** Never wait less than this, and never more: the Host reads a whole session surface per call. */
-const PREVIEW_WARM_GAP_MIN = 400
-const PREVIEW_WARM_GAP_MAX = 4000
+const PREVIEW_WARM_GAP_MIN = 1200
+const PREVIEW_WARM_GAP_MAX = 6000
 /** Conservative card height for the viewport test (real heights vary with content). */
 const CARD_MIN_H = 120
 
@@ -242,6 +244,8 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   // First paint comes from the cache; the network only tops it up.
   const [previews, setPreviews] = useState<Record<string, string>>(readPreviewTexts)
   /** Last time we actually read each session's surface — the reads are heavy, so throttle them. */
+  /** The periodic drip also waits: its reads would compete with the initial hydration. */
+  const previewDripAllowed = useRef(false)
   const lastPreviewAt = useRef<Map<string, number>>(new Map())
   const PREVIEW_MIN_INTERVAL_MS = 25000
   const previewStamp = useRef<Map<string, number>>(
@@ -321,6 +325,19 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null)
   // Renamed titles we already know: the card updates at once instead of waiting
   // for the session list to round-trip.
+  /** Cards from an older build have no title snapshot: fill them in once the list is up. */
+  const titleBackfilled = useRef(new Set<string>())
+  useEffect(() => {
+    for (const [cardId, card] of Object.entries(canvasState.cards)) {
+      if (card.title !== undefined) continue
+      const title = sessions.byId[card.sessionId]?.displayTitle
+      if (title === undefined || title === '') continue
+      if (titleBackfilled.current.has(cardId)) continue
+      titleBackfilled.current.add(cardId)
+      canvas.setCardTitle(cardId, title)
+    }
+  }, [canvasState.cards, sessions, canvas])
+
   const [renamedTitles, setRenamedTitles] = useState<Record<string, string>>({})
   const [renamedWorkspaces, setRenamedWorkspaces] = useState<Record<string, string>>({})
   /** Batch mode: the canvas selection IS the batch; the bar acts on it. */
@@ -441,6 +458,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
   const previewTick = useRef<() => void>(() => {})
   useEffect(() => {
     const tick = (): void => {
+      if (!previewDripAllowed.current) return
       // Nothing is visible: do not spend Host reads on a hidden window.
       if (typeof document !== 'undefined' && document.hidden) return
       const { cards, sessions: latest } = previewInputs.current
@@ -481,7 +499,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         .catch(() => undefined)
     }
     previewTick.current = tick
-    tick()
+    setTimeout(() => { previewDripAllowed.current = true }, PREVIEW_WARM_DELAY_MS)
     const timer = setInterval(tick, PREVIEW_INTERVAL_MS)
     return () => { clearInterval(timer) }
   }, [])
@@ -505,7 +523,14 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     if (todo.length === 0) return
     let cancelled = false
     let gap = PREVIEW_WARM_GAP_MS
+    let started = false
     const step = (): void => {
+      if (!started) {
+        started = true
+        // First call is delayed: reading surfaces at t=0 is what delayed the session list.
+        setTimeout(() => { if (!cancelled) step() }, PREVIEW_WARM_DELAY_MS)
+        return
+      }
       if (cancelled) return
       const chunk = todo.splice(0, PREVIEW_WARM_BATCH)
       if (chunk.length === 0) return
@@ -1039,7 +1064,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
               rows.push({
                 cardId,
                 sessionId: card.sessionId,
-                title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? t('card.loadingTitle'),
+                title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
                 stamp: draftSummary?.updatedAt ?? 0,
                 draft: true,
                 ...(draftSummary?.updatedAt !== undefined ? { updatedAt: draftSummary.updatedAt } : {}),
@@ -1052,7 +1077,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       rows.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t('card.loadingTitle'),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
         lamp,
         // A lamped card can still hold unsent text: the footer shows both chips.
         ...((draftTexts[card.sessionId] ?? '').trim() !== '' ? { draft: true } : {}),
@@ -1087,7 +1112,10 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
     listed: new Set(statusEntries.map(entry => entry.sessionId)),
     history: finishHistory,
     readMarks,
-    title: sessionId => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? t('card.loadingTitle'),
+    title: sessionId => renamedTitles[sessionId]
+      ?? sessions.byId[sessionId]?.displayTitle
+      ?? Object.values(canvasState.cards).find(card => card.sessionId === sessionId)?.title
+      ?? t('card.loadingTitle'),
     updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
     preview: sessionId => previews[sessionId],
     limit: MAX_RECENT_TASKS,
@@ -1150,7 +1178,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const data: SessionCardData = {
           cardId,
           sessionId: card.sessionId,
-          title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t('card.loadingTitle'),
+          title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
           running: status?.running ?? summary?.running ?? false,
           ghost: summary === undefined,
           updatedAt: summary?.updatedAt,
@@ -1964,7 +1992,7 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t('card.loadingTitle'),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t('card.loadingTitle'),
         ...(previews[card.sessionId] !== undefined ? { preview: previews[card.sessionId] } : {}),
         ...(summary?.updatedAt !== undefined ? { updatedAt: summary.updatedAt } : {}),
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,

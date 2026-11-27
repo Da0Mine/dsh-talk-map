@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-28 `0.8.18`：① **标题不再依赖会话列表推送**：`Card` 新增可选 `title` 快照（`shared/model.ts` + host `cardSchema`），建卡时写入、旧卡用 `canvas.setCardTitle` 一次性回填（`titleBackfilled` 去重），渲染兜底链变成 `重命名 → 会话标题 → 卡片快照 → 会话加载中…`；② 预览读取进一步让路：地图预热改为**会话列表就绪后再等 4 秒、单张、间隔 1.2 秒**，滴灌同样推迟 4 秒才启用；外侧栏首次请求延迟 5 秒（`previewAllowed` state 进 deps，保证到点真的触发）、每次 3 张。probe 150/150。
+
 - 2026-11-28 `0.8.17`：修「标题久久不出来、显示成一串 id」。根因是**预览重读风暴**：去重键用的是会话 `updatedAt`，而运行中的会话这个值一直在变 → 每 4 秒（外侧栏是每次 rows 变化）就重读一次**整条会话表面**，把宿主事件循环占满，`sessions.byId` 迟迟不 hydrate，标题只能回退成 `card.sessionId`（看起来像乱码）。改法：① 两侧都加 **25 秒最短重读间隔**（`PREVIEW_MIN_INTERVAL_MS` / `PREVIEW_REFRESH_MS`，按 sessionId 记"上次读取时间"，不再按 stamp）；② 标题兜底不再用 sessionId，改为 `card.loadingTitle`（「会话加载中…」/「Loading session…」）。probe 150/150。
 
 - 2026-11-28 `0.8.16`：修「刷新/重启后卡片几分钟都显示『会话已不存在』」。根因：`/talk-map/last-user` 每张卡都要读**整条会话表面**（重），而我把预热写成 12 张/80ms、外侧栏一次 24 张 —— 宿主事件循环被塞满，**会话列表迟迟没加载完**，于是所有卡片走 `card.ghostTitle`（会话已不存在）。改法：① 预热改为 **3 张/批**、间隔 `max(400ms, 本轮耗时×4)` 自适应（上限 4s），并**等 `sessions.ids` 非空**后才启动；② 外侧栏正文初始值改为 `readPreviewTexts()`（缓存播种，重启即有字），请求每次 **5 张**。probe 150/150。

@@ -12,6 +12,8 @@ export interface Card {
   colorTag?: string
   /** Map-level group override — the canvas's own organizational layer. */
   wsOverride?: string
+  /** Title snapshot: lets a restart paint the rail before the session list hydrates. */
+  title?: string
   createdAt: number
 }
 

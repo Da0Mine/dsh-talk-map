@@ -359,6 +359,20 @@ export const canvas = {
     }))
   },
 
+  /**
+   * Remember the session title on the card. Purely a cache: it lets a restart paint the rail
+   * before the session list hydrates, which is what made titles lag by ten seconds.
+   */
+  setCardTitle(id: string, title: string): void {
+    const card = state.cards[id]
+    if (card === undefined || card.title === title) return
+    const next = { ...card, title }
+    setState({ cards: { ...state.cards, [id]: next } })
+    void talkMapApi.upsertCards({ [id]: next }).catch((error) => {
+      console.error('[dsh-talk-map] card title save failed:', error)
+    })
+  },
+
   /** Adopt a card into another workspace's frame (map-level membership). */
   setCardWorkspaceOverride(id: string, wsOverride: string | undefined): void {
     const card = state.cards[id]

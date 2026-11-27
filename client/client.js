@@ -506,7 +506,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b817 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b818 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -707,7 +707,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b817 · Search cards on the map",
+  "global.searchPlaceholder": "b818 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -1038,6 +1038,19 @@ var canvas = {
     trackCardWrite(talkMapApi.deleteCards([id2]).catch((error) => {
       console.error("[dsh-talk-map] card delete failed:", error);
     }));
+  },
+  /**
+   * Remember the session title on the card. Purely a cache: it lets a restart paint the rail
+   * before the session list hydrates, which is what made titles lag by ten seconds.
+   */
+  setCardTitle(id2, title) {
+    const card = state.cards[id2];
+    if (card === void 0 || card.title === title) return;
+    const next = { ...card, title };
+    setState({ cards: { ...state.cards, [id2]: next } });
+    void talkMapApi.upsertCards({ [id2]: next }).catch((error) => {
+      console.error("[dsh-talk-map] card title save failed:", error);
+    });
   },
   /** Adopt a card into another workspace's frame (map-level membership). */
   setCardWorkspaceOverride(id2, wsOverride) {
@@ -15317,10 +15330,11 @@ function snap(value) {
 var IMPORT_CAP = 120;
 var PREVIEW_BATCH = 4;
 var PREVIEW_INTERVAL_MS = 4e3;
-var PREVIEW_WARM_BATCH = 3;
-var PREVIEW_WARM_GAP_MS = 400;
-var PREVIEW_WARM_GAP_MIN = 400;
-var PREVIEW_WARM_GAP_MAX = 4e3;
+var PREVIEW_WARM_BATCH = 1;
+var PREVIEW_WARM_GAP_MS = 1200;
+var PREVIEW_WARM_DELAY_MS = 4e3;
+var PREVIEW_WARM_GAP_MIN = 1200;
+var PREVIEW_WARM_GAP_MAX = 6e3;
 function placeableSessionIds(sessions, archived) {
   return sessions.ids.filter((id2) => {
     const summary = sessions.byId[id2];
@@ -15405,6 +15419,7 @@ function CanvasInner(props) {
     };
   }, []);
   const [previews, setPreviews] = (0, import_react15.useState)(readPreviewTexts);
+  const previewDripAllowed = (0, import_react15.useRef)(false);
   const lastPreviewAt = (0, import_react15.useRef)(/* @__PURE__ */ new Map());
   const PREVIEW_MIN_INTERVAL_MS = 25e3;
   const previewStamp = (0, import_react15.useRef)(
@@ -15469,6 +15484,17 @@ function CanvasInner(props) {
     }
   };
   const [renameTarget, setRenameTarget] = (0, import_react15.useState)(null);
+  const titleBackfilled = (0, import_react15.useRef)(/* @__PURE__ */ new Set());
+  (0, import_react15.useEffect)(() => {
+    for (const [cardId, card] of Object.entries(canvasState.cards)) {
+      if (card.title !== void 0) continue;
+      const title = sessions.byId[card.sessionId]?.displayTitle;
+      if (title === void 0 || title === "") continue;
+      if (titleBackfilled.current.has(cardId)) continue;
+      titleBackfilled.current.add(cardId);
+      canvas.setCardTitle(cardId, title);
+    }
+  }, [canvasState.cards, sessions, canvas]);
   const [renamedTitles, setRenamedTitles] = (0, import_react15.useState)({});
   const [renamedWorkspaces, setRenamedWorkspaces] = (0, import_react15.useState)({});
   const [batchMode, setBatchMode] = (0, import_react15.useState)(false);
@@ -15545,6 +15571,7 @@ function CanvasInner(props) {
   });
   (0, import_react15.useEffect)(() => {
     const tick = () => {
+      if (!previewDripAllowed.current) return;
       if (typeof document !== "undefined" && document.hidden) return;
       const { cards, sessions: latest } = previewInputs.current;
       const pending = [];
@@ -15577,7 +15604,9 @@ function CanvasInner(props) {
       }).catch(() => void 0);
     };
     previewTick.current = tick;
-    tick();
+    setTimeout(() => {
+      previewDripAllowed.current = true;
+    }, PREVIEW_WARM_DELAY_MS);
     const timer4 = setInterval(tick, PREVIEW_INTERVAL_MS);
     return () => {
       clearInterval(timer4);
@@ -15594,7 +15623,15 @@ function CanvasInner(props) {
     if (todo.length === 0) return;
     let cancelled = false;
     let gap = PREVIEW_WARM_GAP_MS;
+    let started = false;
     const step2 = () => {
+      if (!started) {
+        started = true;
+        setTimeout(() => {
+          if (!cancelled) step2();
+        }, PREVIEW_WARM_DELAY_MS);
+        return;
+      }
       if (cancelled) return;
       const chunk = todo.splice(0, PREVIEW_WARM_BATCH);
       if (chunk.length === 0) return;
@@ -15986,7 +16023,7 @@ function CanvasInner(props) {
         rows.push({
           cardId,
           sessionId: card.sessionId,
-          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? t("card.loadingTitle"),
+          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
           stamp: draftSummary?.updatedAt ?? 0,
           draft: true,
           ...draftSummary?.updatedAt !== void 0 ? { updatedAt: draftSummary.updatedAt } : {},
@@ -15999,7 +16036,7 @@ function CanvasInner(props) {
       rows.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
         lamp,
         // A lamped card can still hold unsent text: the footer shows both chips.
         ...(draftTexts[card.sessionId] ?? "").trim() !== "" ? { draft: true } : {},
@@ -16024,7 +16061,7 @@ function CanvasInner(props) {
     listed: new Set(statusEntries.map((entry) => entry.sessionId)),
     history: finishHistory,
     readMarks,
-    title: (sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? t("card.loadingTitle"),
+    title: (sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? Object.values(canvasState.cards).find((card) => card.sessionId === sessionId)?.title ?? t("card.loadingTitle"),
     updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
     preview: (sessionId) => previews[sessionId],
     limit: MAX_RECENT_TASKS
@@ -16082,7 +16119,7 @@ function CanvasInner(props) {
       const data = {
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
         running: status?.running ?? summary?.running ?? false,
         ghost: summary === void 0,
         updatedAt: summary?.updatedAt,
@@ -16664,7 +16701,7 @@ function CanvasInner(props) {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? t("card.loadingTitle"),
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -17645,7 +17682,8 @@ function storedHeight() {
     return void 0;
   }
 }
-var PREVIEW_PAGE = 5;
+var PREVIEW_PAGE = 3;
+var PREVIEW_START_DELAY_MS = 5e3;
 function lampOf(sessionId, status, summary, alerts2, finished2) {
   if (alerts2.has(sessionId)) return "error";
   if (status?.pendingInteraction !== void 0) return "waiting";
@@ -17695,6 +17733,7 @@ function SidebarQueue() {
   const [menu, setMenu] = (0, import_react20.useState)(null);
   const localPinSet = (0, import_react20.useSyncExternalStore)(localPins.subscribe, () => localPins.get());
   const askedRef = (0, import_react20.useRef)(/* @__PURE__ */ new Map());
+  const [previewAllowed, setPreviewAllowed] = (0, import_react20.useState)(false);
   const PREVIEW_REFRESH_MS = 25e3;
   (0, import_react20.useEffect)(() => {
     const timer4 = setInterval(() => {
@@ -17792,7 +17831,7 @@ function SidebarQueue() {
       listed: new Set(rows.map((row) => row.sessionId)),
       history: finishHistory,
       readMarks,
-      title: (sessionId) => sessions.byId[sessionId]?.displayTitle ?? sessionId,
+      title: (sessionId) => sessions.byId[sessionId]?.displayTitle ?? Object.values(canvasState.cards).find((card) => card.sessionId === sessionId)?.title ?? sessionId,
       updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
       preview: (sessionId) => previews[sessionId],
       limit: MAX_RECENT_TASKS
@@ -17861,6 +17900,15 @@ function SidebarQueue() {
   const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
+    const timer4 = setTimeout(() => {
+      setPreviewAllowed(true);
+    }, PREVIEW_START_DELAY_MS);
+    return () => {
+      clearTimeout(timer4);
+    };
+  }, []);
+  (0, import_react20.useEffect)(() => {
+    if (!previewAllowed) return;
     const pick = (list2, cap) => list2.slice(0, cap).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 })).filter((item) => Date.now() - (askedRef.current.get(item.id) ?? 0) > PREVIEW_REFRESH_MS);
     const wanted = [...pick(rows, PREVIEW_PAGE), ...pick(recentRows, PREVIEW_PAGE)].slice(0, PREVIEW_PAGE * 2);
     if (wanted.length === 0) return;
@@ -17876,7 +17924,7 @@ function SidebarQueue() {
     }).catch(() => {
       for (const item of wanted) askedRef.current.delete(item.id);
     });
-  }, [rows, recentRows]);
+  }, [rows, recentRows, previewAllowed]);
   return /* @__PURE__ */ (0, import_jsx_runtime21.jsxs)(
     "div",
     {

@@ -122,6 +122,7 @@ const spawnBody = z.object({
   x: z.number(),
   y: z.number(),
   wsOverride: z.string().optional(),
+  title: z.string().optional(),
 })
 const refreshDigestBody = z.object({
   sessionId: z.string(),
