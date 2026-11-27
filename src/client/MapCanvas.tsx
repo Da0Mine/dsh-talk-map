@@ -1191,12 +1191,16 @@ function CanvasInner(props: RootSlotStandardProps): React.JSX.Element {
         const status = statusById.get(card.sessionId)
         const slot = cardLayout[cardId]
         const dragging = draggingCardId === cardId
+        // A card is only a ghost once the session list has actually loaded and the session is
+        // missing. Treating "list not here yet" as ghost is what kept the title away: the card
+        // rendered 「会话已不存在」 instead of the cached title until hydration finished.
+        const sessionsReady = sessions.ids.length > 0
         const data: SessionCardData = {
           cardId,
           sessionId: card.sessionId,
           title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.title ?? cachedTitles[card.sessionId] ?? t('card.loadingTitle'),
           running: status?.running ?? summary?.running ?? false,
-          ghost: summary === undefined,
+          ghost: sessionsReady && summary === undefined,
           updatedAt: summary?.updatedAt,
           // 待发送优先：卡片正文显示草稿本身，而不是上一句已发送的内容。
           ...((draftTexts[card.sessionId] ?? '') !== ''

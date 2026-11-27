@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-28 `0.8.20`：修「标题要等一会儿才出来」的真因——`ghost: summary === undefined`。会话列表还没 hydrate 时 `summary` 必然是 undefined，于是**每张卡都被判成幽灵卡**，`SessionCard` 直接渲染 `card.ghostTitle`（会话已不存在），把 0.8.19 的缓存标题完全盖住；列表一到才变回真标题。改为 `ghost: sessions.ids.length > 0 && summary === undefined`：只有"列表已加载且确实找不到该会话"才是 ghost。probe 150/150。
+
 - 2026-11-28 `0.8.19`：**标题也用本地缓存**（与正文同思路）。新增 `src/client/title-cache.ts`（`dsh.talk-map.titles.v1`，300 条上限、30 天过期、250ms 防抖写盘）：组件初始 state 直接 `readTitles()` → 首帧就能画出上次的标题；会话列表到了再 `putTitle` 回写并覆盖显示。渲染兜底链：重命名 → 会话标题 → 卡片快照 → **本地缓存** → 「会话加载中…」。两侧栏都接入。实测：加载后 `titles.v1` 已写入，二次重载标题沿用缓存。probe 150/150。
 
 - 2026-11-28 `0.8.18`：① **标题不再依赖会话列表推送**：`Card` 新增可选 `title` 快照（`shared/model.ts` + host `cardSchema`），建卡时写入、旧卡用 `canvas.setCardTitle` 一次性回填（`titleBackfilled` 去重），渲染兜底链变成 `重命名 → 会话标题 → 卡片快照 → 会话加载中…`；② 预览读取进一步让路：地图预热改为**会话列表就绪后再等 4 秒、单张、间隔 1.2 秒**，滴灌同样推迟 4 秒才启用；外侧栏首次请求延迟 5 秒（`previewAllowed` state 进 deps，保证到点真的触发）、每次 3 张。probe 150/150。
