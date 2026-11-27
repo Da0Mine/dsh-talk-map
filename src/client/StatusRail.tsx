@@ -189,6 +189,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
     const rest = ordered.filter(entry => !isPinnedSession(localPinSet, entry.sessionId))
     return [...pinnedFirst, ...rest]
   }, [props.recent, recentOrder, localPinSet])
+  // Pinned cards leave the「最近的任务」strip and float to the very top of the list.
+  const pinnedRecentEntries = recentEntriesOrdered.filter(entry => isPinnedSession(localPinSet, entry.sessionId))
+  const unpinnedRecentEntries = recentEntriesOrdered.filter(entry => !isPinnedSession(localPinSet, entry.sessionId))
   const recentRenderedIds = recentEntriesOrdered.map(entry => entry.cardId)
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder)
   const [drag, setDrag] = useState<DragState | null>(null)
@@ -421,6 +424,9 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
         : null}
       <div className={styles['cardTop']}>
         <span className={styles['cardTitle']}>{entry.title}</span>
+        {isPinnedSession(localPinSet, entry.sessionId)
+          ? <span className={styles['cardPinIcon']} title="已置顶" aria-hidden="true">📌</span>
+          : null}
       </div>
       {entry.preview !== undefined && entry.preview !== ''
         ? <div className={styles['cardSummary']}>{entry.preview}</div>
@@ -460,6 +466,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
           {ordered.length === 0
             ? <div className={styles['statusRailEmpty']}>{t('statusRail.empty')}</div>
             : null}
+          {pinnedRecentEntries.map(entry => (
+            <div key={entry.cardId} className={styles[`statusRailSlot`] ?? undefined}>
+              {renderCard(entry, false, false, event => { recentDrag.begin(event, entry.cardId) }, () => { if (!recentDrag.shouldIgnoreClick()) props.onOpen(entry.cardId) })}
+            </div>
+          ))}
           {ordered.map((entry, index) => {
             const dragging = drag !== null && drag.cardId === entry.cardId
             // Cards between the old and the new index slide one row out of the way; the
@@ -491,11 +502,11 @@ export function StatusRail(props: StatusRailProps): React.JSX.Element {
               </div>
             )
           })}
-          {props.recent !== undefined && props.recent.length > 0
+          {props.recent !== undefined && unpinnedRecentEntries.length > 0
             ? (
               <>
                 <div className={styles['statusRailRecentHead']}>{t('statusRail.recent')}</div>
-                {recentEntriesOrdered.map(entry => {
+                {unpinnedRecentEntries.map(entry => {
                   const dragging = recentDrag.draggingId === entry.cardId
                   return (
                     <div

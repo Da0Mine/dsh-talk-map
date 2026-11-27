@@ -94,7 +94,24 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
 
   const openDigest = (): void => {
     setBusy(true)
-    void talkMapApi.ensureDigest(props.target.sessionId)
+    const loadDigest = async (): Promise<{ digest: import('../shared/model.ts').Digest | undefined }> => {
+      // The state payload already carries the stored digests: read it first, since /digest/ensure
+      // is refused for sessions that are not live (which is exactly the case for old rail cards).
+      try {
+        const state = await talkMapApi.getState()
+        const stored = state.digests?.[props.target.sessionId]
+        if (stored !== undefined) return { digest: stored }
+      } catch (cause) {
+        console.warn('[dsh-talk-map] digest: state read failed, trying ensure:', cause)
+      }
+      try {
+        return await talkMapApi.ensureDigest(props.target.sessionId)
+      } catch (cause) {
+        console.warn('[dsh-talk-map] digest: ensure failed too:', cause)
+        return { digest: undefined }
+      }
+    }
+    void loadDigest()
       .then((result) => {
         // Keep this component mounted: the dialog is rendered by it, and closing the menu here
         // unmounted the dialog with it (that is why 查看摘要 looked like a no-op).
@@ -161,13 +178,12 @@ export function RailCardMenu(props: RailCardMenuProps): React.JSX.Element {
       onPick: () => {
         const next = !props.target.pinned
         // Our own set first: some builds do not expose the workspace pin, and 置顶 must still work.
+        // Rail pins are the rail's own: they must not touch the workspace pin, which reorders
+        // the map's folders (that is a different 置顶 with different meaning).
         localPins.set(props.target.sessionId, next)
-        flash(next ? '已置顶（本地）' : '已取消置顶（本地）')
+        flash(next ? '已置顶（仅侧栏队列）' : '已取消置顶')
         props.onChanged?.()
         props.onClose()
-        void setPinned(props.target.sessionId, next).catch((cause: unknown) => {
-          console.warn('[dsh-talk-map] workspace pin unavailable, kept the local pin:', cause)
-        })
       },
     },
     {
