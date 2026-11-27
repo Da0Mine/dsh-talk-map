@@ -253,7 +253,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
         sessionId,
         ...(manual >= 0 ? { manualIndex: manual } : {}),
         ...(isPinnedSession(localPinSet, sessionId) ? { pinned: true } : {}),
-        title: summary.displayTitle ?? sessionId,
+        title: summary.displayTitle ?? cachedTitles[sessionId] ?? sessionId,
         ...(draftOnly ? { draft: true } : { lamp }),
       ...(hasDraft ? { draft: true } : {}),
         ...(draftText !== undefined ? { draftText } : {}),
