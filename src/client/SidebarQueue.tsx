@@ -136,8 +136,12 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const moreRef = useRef({ hasMore: false, loadMore: () => {} })
   const [menu, setMenu] = useState<RailMenuTarget | null>(null)
   const localPinSet = useSyncExternalStore(localPins.subscribe, () => localPins.get())
-  /** sessionId → the stamp we already asked for; a newer stamp means ask again. */
+  /**
+   * sessionId → when we last asked. Reads cost a whole session surface each, and a running
+   * session's updatedAt changes constantly; keying on the stamp meant re-reading forever.
+   */
   const askedRef = useRef<Map<string, number>>(new Map())
+  const PREVIEW_REFRESH_MS = 25000
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -340,10 +344,10 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
       list
         .slice(0, cap)
         .map(row => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 }))
-        .filter(item => askedRef.current.get(item.id) !== item.stamp)
+        .filter(item => (Date.now() - (askedRef.current.get(item.id) ?? 0)) > PREVIEW_REFRESH_MS)
     const wanted = [...pick(rows, PREVIEW_PAGE), ...pick(recentRows, PREVIEW_PAGE)].slice(0, PREVIEW_PAGE * 2)
     if (wanted.length === 0) return
-    for (const item of wanted) askedRef.current.set(item.id, item.stamp)
+    for (const item of wanted) askedRef.current.set(item.id, Date.now())
     void talkMapApi.lastUserMessages(wanted)
       .then((page) => {
         setPreviews((current) => {

@@ -368,6 +368,7 @@ var zh = {
   "map.loadError": "地图数据加载失败：",
   "card.running": "正在运行",
   "card.ghostTitle": "会话已不存在",
+  "card.loadingTitle": "会话加载中…",
   "card.remove": "移除卡片",
   "card.next": "下一步",
   "card.stale": "摘要已过期",
@@ -505,7 +506,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b816 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b817 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -575,6 +576,7 @@ var en = {
   "map.loadError": "Failed to load map data:",
   "card.running": "running",
   "card.ghostTitle": "Session no longer exists",
+  "card.loadingTitle": "Loading session…",
   "card.remove": "Remove card",
   "card.next": "Next",
   "card.stale": "digest stale",
@@ -705,7 +707,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b816 · Search cards on the map",
+  "global.searchPlaceholder": "b817 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -15403,6 +15405,8 @@ function CanvasInner(props) {
     };
   }, []);
   const [previews, setPreviews] = (0, import_react15.useState)(readPreviewTexts);
+  const lastPreviewAt = (0, import_react15.useRef)(/* @__PURE__ */ new Map());
+  const PREVIEW_MIN_INTERVAL_MS = 25e3;
   const previewStamp = (0, import_react15.useRef)(
     // Only entries that still make a usable body count as cached: a rule fix that
     // empties an old entry must trigger a refetch, not leave a blank card.
@@ -15548,6 +15552,7 @@ function CanvasInner(props) {
       for (const card of Object.values(cards)) {
         const stamp = latest.byId[card.sessionId]?.updatedAt ?? 0;
         if (previewStamp.current.get(card.sessionId) === stamp) continue;
+        if (Date.now() - (lastPreviewAt.current.get(card.sessionId) ?? 0) < PREVIEW_MIN_INTERVAL_MS) continue;
         pending.push(card.sessionId);
         stamps.push([card.sessionId, stamp]);
       }
@@ -15555,7 +15560,10 @@ function CanvasInner(props) {
       stamps.sort((a, b) => b[1] - a[1]);
       const batchStamps = stamps.slice(0, PREVIEW_BATCH);
       const batch = batchStamps.map(([id2]) => id2);
-      for (const [sessionId, stamp] of batchStamps) previewStamp.current.set(sessionId, stamp);
+      for (const [sessionId, stamp] of batchStamps) {
+        previewStamp.current.set(sessionId, stamp);
+        lastPreviewAt.current.set(sessionId, Date.now());
+      }
       void talkMapApi.lastUserMessages(batchStamps.map(([id2, stamp]) => ({ id: id2, stamp }))).then(({ texts }) => {
         const cleaned = {};
         for (const [sessionId, text] of Object.entries(texts)) {
@@ -15597,6 +15605,7 @@ function CanvasInner(props) {
         for (const [sessionId, text] of Object.entries(texts)) {
           putPreview(sessionId, text, 0);
           previewStamp.current.set(sessionId, 0);
+          lastPreviewAt.current.set(sessionId, Date.now());
           const value = cleanPreviewText(text).slice(0, 240);
           if (value !== "") cleaned[sessionId] = value;
         }
@@ -15977,7 +15986,7 @@ function CanvasInner(props) {
         rows.push({
           cardId,
           sessionId: card.sessionId,
-          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? card.sessionId,
+          title: renamedTitles[card.sessionId] ?? draftSummary?.displayTitle ?? t("card.loadingTitle"),
           stamp: draftSummary?.updatedAt ?? 0,
           draft: true,
           ...draftSummary?.updatedAt !== void 0 ? { updatedAt: draftSummary.updatedAt } : {},
@@ -15990,7 +15999,7 @@ function CanvasInner(props) {
       rows.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
         lamp,
         // A lamped card can still hold unsent text: the footer shows both chips.
         ...(draftTexts[card.sessionId] ?? "").trim() !== "" ? { draft: true } : {},
@@ -16015,7 +16024,7 @@ function CanvasInner(props) {
     listed: new Set(statusEntries.map((entry) => entry.sessionId)),
     history: finishHistory,
     readMarks,
-    title: (sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? sessionId,
+    title: (sessionId) => renamedTitles[sessionId] ?? sessions.byId[sessionId]?.displayTitle ?? t("card.loadingTitle"),
     updatedAt: (sessionId) => sessions.byId[sessionId]?.updatedAt,
     preview: (sessionId) => previews[sessionId],
     limit: MAX_RECENT_TASKS
@@ -16073,7 +16082,7 @@ function CanvasInner(props) {
       const data = {
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
         running: status?.running ?? summary?.running ?? false,
         ghost: summary === void 0,
         updatedAt: summary?.updatedAt,
@@ -16655,7 +16664,7 @@ function CanvasInner(props) {
       items.push({
         cardId,
         sessionId: card.sessionId,
-        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? card.sessionId,
+        title: renamedTitles[card.sessionId] ?? summary?.displayTitle ?? t("card.loadingTitle"),
         ...previews[card.sessionId] !== void 0 ? { preview: previews[card.sessionId] } : {},
         ...summary?.updatedAt !== void 0 ? { updatedAt: summary.updatedAt } : {},
         running: statusById.get(card.sessionId)?.running ?? summary?.running ?? false,
@@ -17686,6 +17695,7 @@ function SidebarQueue() {
   const [menu, setMenu] = (0, import_react20.useState)(null);
   const localPinSet = (0, import_react20.useSyncExternalStore)(localPins.subscribe, () => localPins.get());
   const askedRef = (0, import_react20.useRef)(/* @__PURE__ */ new Map());
+  const PREVIEW_REFRESH_MS = 25e3;
   (0, import_react20.useEffect)(() => {
     const timer4 = setInterval(() => {
       if (typeof document !== "undefined" && document.hidden) return;
@@ -17851,10 +17861,10 @@ function SidebarQueue() {
   const recentRenderedIds = recentRowsOrdered.map((row) => row.sessionId);
   const recentDrag = useReorder(recentRenderedIds, setRecentOrder);
   (0, import_react20.useEffect)(() => {
-    const pick = (list2, cap) => list2.slice(0, cap).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 })).filter((item) => askedRef.current.get(item.id) !== item.stamp);
+    const pick = (list2, cap) => list2.slice(0, cap).map((row) => ({ id: row.sessionId, stamp: row.updatedAt ?? 0 })).filter((item) => Date.now() - (askedRef.current.get(item.id) ?? 0) > PREVIEW_REFRESH_MS);
     const wanted = [...pick(rows, PREVIEW_PAGE), ...pick(recentRows, PREVIEW_PAGE)].slice(0, PREVIEW_PAGE * 2);
     if (wanted.length === 0) return;
-    for (const item of wanted) askedRef.current.set(item.id, item.stamp);
+    for (const item of wanted) askedRef.current.set(item.id, Date.now());
     void talkMapApi.lastUserMessages(wanted).then((page) => {
       setPreviews((current) => {
         const next = { ...current };
