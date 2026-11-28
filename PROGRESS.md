@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-28 `0.8.24`：修「外侧栏冒出一堆莫名其妙的会话（Mnemon · Idle review / review this finished conversation…）」。截图里那些是 **dsh-mnemon 派生的 subagent 会话**，被我 0.8.23 的合成条目从 `finishHistory` 里直接捞了出来——`rows` 本来有 `summary.origin === "subagent"` 过滤，合成条目这条新路径没有。改法：合成条目要求 `sessions.byId[id]` 存在且 `origin !== "subagent"`、`blank !== true`、未归档；依赖补 `archivedSessionIds`。probe 150/150。
+
 - 2026-11-28 `0.8.23`：修「外侧栏里跑完的会话直接消失，要开一次地图才回来」。根因：外侧栏的最近任务从**看板卡片**里取，而卡片是由**地图面板的 auto-sync 创建**的——地图没开过时，刚跑完的会话根本没有卡片 → 既不在队列（无灯）也不在最近任务（无卡）。改法：外侧栏的 `computeRecentTasks` 输入里补**合成条目**（`cardId = sessionId`），来源是 `finishHistory` 中不在板上的会话；点击仍走 `openSessionInUi(sessionId)`，不依赖卡片。地图侧不变（那里的行要能定位卡片）。probe 150/150。
 
 - 2026-11-28 `0.8.22`：**按用户要求回退标题加载方式**——撤掉 `title-cache.ts` 与 `card-cache.ts` 两层本地缓存（文件已移入回收区，batch `20261127T174952746Z-7cdb`），标题恢复为"重命名 → 会话列表标题 → 卡片快照 → 会话加载中…"，`visibleCards` 重新只用宿主 `/talk-map/state` 的卡片。**保留**的其他改动：ghost 判定（列表未就绪不算幽灵卡）、正文启动预热（3 张/批、1.2s、延迟 4s、25s 重读节流）、两侧栏分页（5 条 + 查看更多 + 触底）、最近任务共用计算与按最后看完排序、卡片 `title` 快照字段。probe 150/150；构建 823.0 kB。

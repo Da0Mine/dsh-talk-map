@@ -506,7 +506,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b823 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b824 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -707,7 +707,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b823 · Search cards on the map",
+  "global.searchPlaceholder": "b824 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -17829,7 +17829,14 @@ function SidebarQueue() {
   const recentRows = (0, import_react20.useMemo)(() => {
     const boardCards = Object.entries(canvasState.cards).filter(([, card]) => card.boardId === "inbox").map(([cardId, card]) => ({ cardId, sessionId: card.sessionId }));
     const onBoard = new Set(boardCards.map((card) => card.sessionId));
-    const synthetic = [...finishHistory.keys()].filter((sessionId) => !onBoard.has(sessionId)).map((sessionId) => ({ cardId: sessionId, sessionId }));
+    const synthetic = [...finishHistory.keys()].filter((sessionId) => !onBoard.has(sessionId)).filter((sessionId) => {
+      const summary = sessions.byId[sessionId];
+      if (summary === void 0) return false;
+      if (summary.origin === "subagent") return false;
+      if (summary.blank === true) return false;
+      if (archivedSessionIds.has(sessionId)) return false;
+      return true;
+    }).map((sessionId) => ({ cardId: sessionId, sessionId }));
     return computeRecentTasks({
       cards: [...boardCards, ...synthetic],
       listed: new Set(rows.map((row) => row.sessionId)),
@@ -17840,7 +17847,7 @@ function SidebarQueue() {
       preview: (sessionId) => previews[sessionId],
       limit: MAX_RECENT_TASKS
     }).map((entry) => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...entry.updatedAt !== void 0 ? { updatedAt: entry.updatedAt } : {} }));
-  }, [canvasState.cards, rows, sessions, finishHistory, readMarks, previews]);
+  }, [canvasState.cards, rows, sessions, finishHistory, readMarks, previews, archivedSessionIds]);
   (0, import_react20.useEffect)(() => {
     const list2 = listRef.current;
     if (list2 === null) return;

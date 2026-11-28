@@ -265,6 +265,17 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     const onBoard = new Set(boardCards.map(card => card.sessionId))
     const synthetic = [...finishHistory.keys()]
       .filter(sessionId => !onBoard.has(sessionId))
+      // Only real sessions of the loaded list: subagent runs (dsh-mnemon spawns a lot of them,
+      // e.g. "Mnemon · Idle review") and sessions from other workspaces have no business in a
+      // user-facing queue — they were showing up as unexplained cards.
+      .filter(sessionId => {
+        const summary = sessions.byId[sessionId]
+        if (summary === undefined) return false
+        if (summary.origin === 'subagent') return false
+        if (summary.blank === true) return false
+        if (archivedSessionIds.has(sessionId)) return false
+        return true
+      })
       .map(sessionId => ({ cardId: sessionId, sessionId }))
     return computeRecentTasks({
       cards: [...boardCards, ...synthetic],
@@ -279,7 +290,7 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     preview: sessionId => previews[sessionId],
     limit: MAX_RECENT_TASKS,
   }).map(entry => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...(entry.updatedAt !== undefined ? { updatedAt: entry.updatedAt } : {}) }))
-  }, [canvasState.cards, rows, sessions, finishHistory, readMarks, previews])
+  }, [canvasState.cards, rows, sessions, finishHistory, readMarks, previews, archivedSessionIds])
   // Same pager as the map rail: at the bottom, one more wheel tick loads five more.
   useEffect(() => {
     const list = listRef.current
