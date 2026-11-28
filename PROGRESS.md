@@ -18,6 +18,8 @@
 
 ## 已完成
 
+- 2026-11-28 `0.8.25`：修「侧栏有、地图上没有这张卡」。地图的 auto-sync 只在两种情形建卡：①会话属于某工作区且该工作区**还没有画框**（newcomers）；②工作区**有画框**（按框内网格补位）。`sessionWs.get(id) === undefined`（不属于任何已知工作区）或"有画框但没有可用 rect"的会话被**静默跳过**，于是侧栏列得出、地图上没有。新增第三段兜底：这类会话在现有卡片下方按 4 列排一张"散卡"，`added` 上限与原有逻辑一致，依赖补 `archivedSessionIds`。probe 150/150。
+
 - 2026-11-28 `0.8.24`：修「外侧栏冒出一堆莫名其妙的会话（Mnemon · Idle review / review this finished conversation…）」。截图里那些是 **dsh-mnemon 派生的 subagent 会话**，被我 0.8.23 的合成条目从 `finishHistory` 里直接捞了出来——`rows` 本来有 `summary.origin === "subagent"` 过滤，合成条目这条新路径没有。改法：合成条目要求 `sessions.byId[id]` 存在且 `origin !== "subagent"`、`blank !== true`、未归档；依赖补 `archivedSessionIds`。probe 150/150。
 
 - 2026-11-28 `0.8.23`：修「外侧栏里跑完的会话直接消失，要开一次地图才回来」。根因：外侧栏的最近任务从**看板卡片**里取，而卡片是由**地图面板的 auto-sync 创建**的——地图没开过时，刚跑完的会话根本没有卡片 → 既不在队列（无灯）也不在最近任务（无卡）。改法：外侧栏的 `computeRecentTasks` 输入里补**合成条目**（`cardId = sessionId`），来源是 `finishHistory` 中不在板上的会话；点击仍走 `openSessionInUi(sessionId)`，不依赖卡片。地图侧不变（那里的行要能定位卡片）。probe 150/150。

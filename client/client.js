@@ -506,7 +506,7 @@ var zh = {
   "digest.empty": "这条对话还没有摘要，先刷新摘要再来看。",
   "digest.copy": "复制",
   "digest.close": "关闭",
-  "global.searchPlaceholder": "b824 · 搜地图上的卡片（标题/正文）",
+  "global.searchPlaceholder": "b825 · 搜地图上的卡片（标题/正文）",
   "global.searchRun": "搜索",
   "global.searchTitle": "搜索地图",
   "font.group": "文字大小",
@@ -707,7 +707,7 @@ var en = {
   "menu.noGroup": "Remove from group (free card)",
   "menu.open": "Open conversation",
   "menu.markUnread": "Mark as unread",
-  "global.searchPlaceholder": "b824 · Search cards on the map",
+  "global.searchPlaceholder": "b825 · Search cards on the map",
   "global.searchRun": "Search",
   "global.searchTitle": "Search the map",
   "font.group": "Text size",
@@ -15832,8 +15832,28 @@ function CanvasInner(props) {
         };
       });
     }
+    const framedGroups = new Set(Object.keys(wsFrames));
+    const loose = placeableSessionIds(sessions, archivedSessionIds).filter((id2) => !boardSessionIds.has(id2)).filter((id2) => {
+      const groupId = sessionWs.get(id2);
+      if (groupId === void 0) return true;
+      if (!framedGroups.has(groupId)) return false;
+      return frameRects[groupId] === void 0;
+    });
+    if (loose.length > 0) {
+      const existing = Object.values(canvasState.cards);
+      const bottom = existing.length === 0 ? 0 : Math.max(...existing.map((card) => card.y + CARD_H + GAP_Y));
+      loose.sort((a, b) => (sessions.byId[b]?.updatedAt ?? 0) - (sessions.byId[a]?.updatedAt ?? 0)).forEach((sessionId, index2) => {
+        added[newCardId()] = {
+          boardId: INBOX_BOARD_ID,
+          sessionId,
+          x: snap(index2 % 4 * (CARD_W + GAP_X)),
+          y: snap(bottom + Math.floor(index2 / 4) * (CARD_H + GAP_Y)),
+          createdAt: Date.now()
+        };
+      });
+    }
     if (Object.keys(added).length > 0) canvas.addCards(added);
-  }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds]);
+  }, [canvasState.phase, canvasState.cards, canvasState.global, workspacesReady, wsFrames, frameRects, membersByGroup, sessions, sessionWs, boardSessionIds, archivedSessionIds]);
   (0, import_react15.useEffect)(() => {
     if (!connecting) return;
     const release = mapUi.claimEscape("connecting");
