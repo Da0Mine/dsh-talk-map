@@ -255,10 +255,19 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
   const finishHistory = useSyncExternalStore(sessionActivity.subscribe, () => sessionActivity.history())
   const readMarks = useSyncExternalStore(readArchive.subscribe, () => readArchive.get())
   // Same computation as the map rail — one source, so the two lists cannot disagree.
-  const recentRows = useMemo(() => computeRecentTasks({
-    cards: Object.entries(canvasState.cards)
+  const recentRows = useMemo(() => {
+    const boardCards = Object.entries(canvasState.cards)
       .filter(([, card]) => (card as { boardId?: string }).boardId === 'inbox')
-      .map(([cardId, card]) => ({ cardId, sessionId: card.sessionId })),
+      .map(([cardId, card]) => ({ cardId, sessionId: card.sessionId }))
+    // Cards are created by the map's auto-sync, so a session that finished while the map was
+    // closed has no card yet — which is why it vanished from this queue until the map was opened.
+    // Synthesize an entry straight from the finish history: clicking it opens the session anyway.
+    const onBoard = new Set(boardCards.map(card => card.sessionId))
+    const synthetic = [...finishHistory.keys()]
+      .filter(sessionId => !onBoard.has(sessionId))
+      .map(sessionId => ({ cardId: sessionId, sessionId }))
+    return computeRecentTasks({
+      cards: [...boardCards, ...synthetic],
     listed: new Set(rows.map(row => row.sessionId)),
     history: finishHistory,
     readMarks,
@@ -269,8 +278,8 @@ const emptyWorkspaces = (): { archivedSessionIds?: readonly string[] } => EMPTY_
     updatedAt: sessionId => sessions.byId[sessionId]?.updatedAt,
     preview: sessionId => previews[sessionId],
     limit: MAX_RECENT_TASKS,
-  }).map(entry => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...(entry.updatedAt !== undefined ? { updatedAt: entry.updatedAt } : {}) })),
-  [canvasState.cards, rows, sessions, finishHistory, readMarks, previews])
+  }).map(entry => ({ sessionId: entry.sessionId, cardId: entry.cardId, title: entry.title, ...(entry.updatedAt !== undefined ? { updatedAt: entry.updatedAt } : {}) }))
+  }, [canvasState.cards, rows, sessions, finishHistory, readMarks, previews])
   // Same pager as the map rail: at the bottom, one more wheel tick loads five more.
   useEffect(() => {
     const list = listRef.current
